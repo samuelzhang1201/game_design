@@ -13,7 +13,7 @@ static func initialize(repo: DataRepository, state: GameState) -> Dictionary:
 	if int(state.military_migration.get("version", 0)) == VERSION:
 		if state.military_rosters.is_empty() or state.military_cohorts.is_empty():
 			return {"error": "Military initialization marker has no personnel ledger."}
-		var integrity := _integrity_error(state)
+		var integrity := _integrity_error(repo, state)
 		if integrity != "":
 			return {"error": integrity}
 		return {"status": "unchanged"}
@@ -28,27 +28,54 @@ static func initialize(repo: DataRepository, state: GameState) -> Dictionary:
 	# Mobilization and every appointment succeed on a private candidate first.
 	# No failed late appointment leaves an earlier origin reserved in live state.
 	var candidate := GameState.from_dict(state.to_dict(), false)
-	var result := Roster.mobilize(repo, candidate, INITIAL_EVENT, plan["recruits"], "Opening military service")
+	# Build a disposable personnel plan, partition with the saved-unit allocator,
+	# then enlist only the capped leaves through the ordinary ledger boundary.
+	for raw: Dictionary in plan["recruits"]:
+		var cohort := raw.duplicate(true)
+		cohort.initial = int(cohort.count)
+		cohort.fit = int(cohort.count)
+		cohort.erase("count")
+		for status: String in ["wounded", "captured_current", "dead", "released"]: cohort[status] = 0
+		candidate.military_cohorts[cohort.id] = cohort
+		var code := String(cohort.unit_code)
+		if not candidate.military_rosters.has(code):
+			candidate.military_rosters[code] = {"commander_id": "", "cohort_ids": []}
+		candidate.military_rosters[code].cohort_ids.append(cohort.id)
+	for code: String in plan["appointments"]:
+		candidate.military_rosters[code].commander_cohort_id = "initial:" + code + ":commander"
+	var partition := MilitaryReorganization.reconcile(repo, candidate)
+	if partition.has("error") or partition.get("status") != "complete":
+		return partition
+	var recruits: Array = []
+	for cohort: Dictionary in candidate.military_cohorts.values():
+		if int(cohort.initial) == 0: continue
+		var row := cohort.duplicate(true)
+		row.count = int(cohort.initial)
+		recruits.append(row)
+	candidate.military_cohorts.clear()
+	candidate.military_rosters.clear()
+	var result := Roster.mobilize(repo, candidate, INITIAL_EVENT, recruits, "Opening military service")
 	if result.has("error"):
 		return result
 	for code: String in plan["appointments"]:
 		result = Roster.assign_commander(repo, candidate, code, plan["appointments"][code], "Opening military command")
 		if result.has("error"):
 			return result
-	state.military_rosters = candidate.military_rosters
-	state.military_cohorts = candidate.military_cohorts
-	state.military_events = candidate.military_events
-	state.military_migration = {"version": VERSION, "status": "initialized",
-		"origin_rule": "opening_province_recruitment_weights", "organization_version": 1, "event_id": INITIAL_EVENT}
+	candidate.military_migration.merge({"version": VERSION, "status": "initialized",
+		"origin_rule": "opening_province_recruitment_weights", "organization_version": 1, "event_id": INITIAL_EVENT}, true)
+	for field: String in ["army_roster", "military_rosters", "military_cohorts", "military_events", "military_migration"]:
+		state.set(field, candidate.get(field))
 	return {"status": "initialized", "units": state.military_rosters.size()}
 
-static func _integrity_error(state: GameState) -> String:
+static func _integrity_error(repo: DataRepository, state: GameState) -> String:
+	var pending := RecruitmentSystem.pending_new_units(repo, state)
+	if pending.has("error"): return String(pending.error)
 	for code: String in state.army_roster:
 		if not state.military_rosters.has(code):
 			return "Initialized unit has no personnel roster: " + code
 	var referenced: Dictionary = {}
 	for code: String in state.military_rosters:
-		if not state.army_roster.has(code):
+		if not state.army_roster.has(code) and not pending.units.has(code):
 			return "Personnel roster has no saved equipment unit: " + code
 		var ids: Array = state.military_rosters[code].get("cohort_ids", [])
 		if ids.is_empty():
@@ -358,7 +385,7 @@ static func _migration_cohort(state: GameState, code: String, origin: Dictionary
 	state.military_rosters[code]["cohort_ids"].append(id)
 
 static func _migration_integrity_error(repo: DataRepository, state: GameState) -> String:
-	var integrity := _integrity_error(state)
+	var integrity := _integrity_error(repo, state)
 	if integrity != "":
 		return integrity
 	if state.military_cohorts.is_empty():

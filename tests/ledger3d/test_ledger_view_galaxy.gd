@@ -201,10 +201,25 @@ func test_a_vanished_selection_clears() -> void:
 	assert_eq(view.selected(), "")
 
 
+## A centre may be genuinely occluded; use a visible point on this same drawn sphere.
+func _visible_star_point(id: String) -> Vector2:
+	var centre := view.screen_pos_of(id) as Vector2
+	var radius := view._screen_radius(id)
+	var steps := ceili(radius * 2.0)
+	for y: int in range(-steps, steps + 1):
+		for x: int in range(-steps, steps + 1):
+			var offset := Vector2(x, y) * 0.5
+			if offset.length_squared() > radius * radius: continue
+			var at := centre + offset
+			if view._pick(at) == {"kind": "sphere", "id": id}: return at
+	fail_test("The fixture star has no visible pickable sphere point: " + id)
+	return Vector2.ZERO
+
+
 func test_a_star_is_picked() -> void:
 	_show()
 	var id := "character:you"
-	assert_eq(view._pick(view.screen_pos_of(id) as Vector2), {"kind": "sphere", "id": id})
+	assert_eq(view._pick(_visible_star_point(id)), {"kind": "sphere", "id": id})
 	assert_eq(view.camera().projection, Camera3D.PROJECTION_PERSPECTIVE, "the chart is only ever 3D (owner 2026-10-01)")
 	assert_false(view.has_method("set_flat"), "the flat 2D view is gone")
 
@@ -247,7 +262,7 @@ func test_a_drag_pins_the_star_and_moves_only_its_links() -> void:
 	var before := {}
 	for seg: Dictionary in view.segments():
 		before[String(seg["id"])] = [seg["a"], seg["b"]]
-	var at := view.screen_pos_of(id) as Vector2
+	var at := _visible_star_point(id)
 	var press := InputEventMouseButton.new()
 	press.button_index = MOUSE_BUTTON_LEFT
 	press.pressed = true
@@ -287,7 +302,7 @@ func test_a_node_and_an_edge_written_down_are_drawn() -> void:
 
 
 func _drag(id: String, by: Vector2) -> void:
-	var at := view.screen_pos_of(id) as Vector2
+	var at := _visible_star_point(id)
 	var press := InputEventMouseButton.new()
 	press.button_index = MOUSE_BUTTON_LEFT
 	press.pressed = true
@@ -314,7 +329,7 @@ func test_a_pin_survives_a_redraw() -> void:
 	view.settle_now()
 	assert_true(view._lay.pinned.has(id), "a redraw keeps the pin")
 	assert_eq(view.drawn(id), held, "and the star where the pointer left it")
-	assert_eq(String(view._pick(view.screen_pos_of(id) as Vector2).get("id", "")), id, "and a click finds it")
+	assert_eq(String(view._pick(_visible_star_point(id)).get("id", "")), id, "and a click finds it")
 
 
 ## The star under a drag vanishes from the next snapshot (a courier
@@ -323,7 +338,7 @@ func test_a_pin_survives_a_redraw() -> void:
 func test_a_drag_survives_its_star_vanishing() -> void:
 	var g := _show()
 	var id := "character:you"
-	var at := view.screen_pos_of(id) as Vector2
+	var at := _visible_star_point(id)
 	var press := InputEventMouseButton.new()
 	press.button_index = MOUSE_BUTTON_LEFT
 	press.pressed = true
@@ -901,6 +916,7 @@ func _war_names_wrong() -> Array:
 ## its ring and no other drawn name touches it; framing a web ignores a
 ## planned link's far end.
 func test_the_selected_label_sits_at_its_ring_and_nothing_touches_it() -> void:
+	_one_unit_a_regiment() # Use the file's declared label-density fixture; full-density tuning remains separate.
 	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
 	_settle_by_frames()
 	view.focus_cluster("war")
@@ -1005,7 +1021,7 @@ func test_leaving_the_view_clears_the_hover() -> void:
 	_show()
 	var id := "character:you"
 	var mm := InputEventMouseMotion.new()
-	mm.position = view.screen_pos_of(id) as Vector2
+	mm.position = _visible_star_point(id)
 	view._gui_input(mm)
 	assert_eq(view.hovered(), id)
 	assert_ne(view.tooltip_text, "")

@@ -70,7 +70,7 @@ supply_cart_milligold_per_unit_km,1,"army supply §3.4: cartage, in thousandths 
 supply_buy_markup_permille,200,"army supply §3.3: a house sells its stock to the crown at its value plus this per mille"
 supply_warn_town_days,10,"army supply §5.5: a supply town whose stores hold fewer days of its lines' draw than this sends a warning"
 ghost_keep_days,20,"the crown's sight (spec 2026-10-10-player-sight-and-ghosts §2): a ghost — where an enemy unit was last seen or reported, or where the border rumour put a host — is forgotten once older than this many days (kept at exactly this age). 20 keeps the rumour's ghost until the hosts have crossed and been seen (Default)"
-army_split_cap_men,600,"owner 2026-10-07 (spec 2026-10-07-army-split-and-ground §3): the most men of one arm in one unit; an arm over it splits into ceil(men / cap) even units"
+army_split_cap_men,600,"Legacy equipment-split reconstruction cap; new opening and paid entries use army_living_cap_men"
 army_slot_spacing_m,4400,"owner 2026-10-15 (R-A): at least twice the largest clearance radius (cavalry 2200), so neighbouring slots hold two of the widest units; spec 2026-10-07-army-split-and-ground §4.2: the hex lattice's pitch in whole metres between two units' camps; set in the visual review (2026-10-08): the camp must read as a camp round the walls, units not standing on each other"
 army_slot_max_rings,12,"spec §4.2: the farthest ring searched for a free slot; past it the unit stands where it arrived. 12 (R16, 2026-10-08): round a town the rings start past its reach, so at a 600 m pitch the opening camps reach ring 12 before every unit finds unblocked ground"
 war_plan_pieces_max,40,"WAR ROOM plans (owner 2026-10-07, spec 2026-10-07-war-room-annotations-and-planning-pieces §1.1): supposed enemy pieces a campaign may hold"
@@ -138,4 +138,4 @@ army_run_martial_weight,5,"Commander run score for known-battle joining, authori
 army_run_min_score,100,"Inclusive minimum score for choosing to run in an existing known-battle, authorized pursuit or withdrawal context; below it the unit continues walking; existing run supply and camp packing gates still apply"
 task_cell_m,2000,"P6.1a first draft (spec 2026-10-16 battle-system §13.2): whole metres per search-coverage cell (TaskCoverage); a cell counts as covered when its centre is inside the scouting footprint; tune after play review"
 task_max_radius_m,20000,"P6.1b first draft (spec 2026-10-16 battle-system §13.1): the widest circle an area task may draw, whole metres (ArmyTasks.preview); tune after play review"
-army_living_cap_men,1000,Maximum assigned fit plus wounded per saved unit excluding captives
+army_living_cap_men,1000,Maximum assigned active plus assembling fit and wounded per unit excluding captives

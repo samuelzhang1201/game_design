@@ -51,6 +51,7 @@ static func mobilize(repo: DataRepository, state: GameState, event_id: String, r
 		return {"error": "Enlistment needs people."}
 	var additions: Dictionary = {}
 	var reserved: Dictionary = {}
+	var unit_additions: Dictionary = {}
 	var people: Dictionary = {}
 	for cohort: Dictionary in state.military_cohorts.values():
 		var person := String(cohort.get("person_id", ""))
@@ -92,6 +93,12 @@ static func mobilize(repo: DataRepository, state: GameState, event_id: String, r
 			"dead": 0, "released": 0}
 		if person != "":
 			additions[id]["person_id"] = person
+	for cohort: Dictionary in additions.values():
+		var code := String(cohort.unit_code)
+		unit_additions[code] = int(unit_additions.get(code, 0)) + int(cohort.fit)
+	for code: String in unit_additions:
+		var refusal := capacity_error(repo, state, code, int(unit_additions[code]))
+		if refusal != "": return {"error": refusal}
 	for id: String in additions:
 		var cohort: Dictionary = additions[id]
 		state.military_cohorts[id] = cohort
@@ -99,6 +106,7 @@ static func mobilize(repo: DataRepository, state: GameState, event_id: String, r
 		if not state.military_rosters.has(code):
 			state.military_rosters[code] = {"commander_id": "", "cohort_ids": []}
 		state.military_rosters[code]["cohort_ids"].append(id)
+		state.military_rosters[code]["living_cap_men"] = int(repo.bal("army_living_cap_men"))
 	return _record(state, event_id, request, {"status": "applied", "cohort_ids": additions.keys()})
 
 ## Apply every cohort change and every originating population loss, or none.
@@ -246,7 +254,7 @@ static func assign_commander(repo: DataRepository, state: GameState, code: Strin
 	return Commanders.assign(repo, state, code, character_id, reason)
 
 ## Complete a paid assembly without creating people or reversing casualties.
-static func activate(state: GameState, event_id: String, ids: Array, reason: String) -> Dictionary:
+static func activate(state: GameState, event_id: String, ids: Array, reason: String, repo: DataRepository = null) -> Dictionary:
 	var request := {"kind": "activate", "cohort_ids": ids.duplicate(), "reason": reason}
 	var replay := _replay(state, event_id, request, reason)
 	if not replay.is_empty():
@@ -260,8 +268,30 @@ static func activate(state: GameState, event_id: String, ids: Array, reason: Str
 			return {"error": "Activation needs unique assembling cohorts."}
 		seen[id] = true
 	for id: String in ids:
+		var code := String(state.military_cohorts[id].unit_code)
+		var cap := int(repo.bal("army_living_cap_men")) if repo != null else int(state.military_rosters.get(code, {}).get("living_cap_men", 0))
+		if cap <= 0 or assigned_living(state, code) > cap:
+			return {"error": "Activation requires reconciled assigned living personnel within its cap."}
+	for id: String in ids:
 		state.military_cohorts[id]["stage"] = "active"
 	return _record(state, event_id, request, {"status": "active", "cohort_ids": ids.duplicate()})
+
+## Active and paid assembling people share one reservation budget; custody does not.
+static func assigned_living(state: GameState, code: String) -> int:
+	var total := 0
+	for id: String in state.military_rosters.get(code, {}).get("cohort_ids", []):
+		var cohort: Dictionary = state.military_cohorts[id]
+		if cohort.get("stage", "") in ["active", "assembling"]:
+			total += int(cohort.get("fit", 0)) + int(cohort.get("wounded", 0))
+	return total
+
+static func capacity_error(repo: DataRepository, state: GameState, code: String, added := 0) -> String:
+	var cap := int(repo.bal("army_living_cap_men"))
+	if cap <= 0: return "Living personnel capacity must be positive."
+	var remaining := maxi(0, cap - assigned_living(state, code))
+	if added > remaining or assigned_living(state, code) > cap:
+		return "Unit limit is %d fit plus wounded including assembling personnel; %d places remain." % [cap, remaining]
+	return ""
 
 ## Captives and released civilians never remain in their original fighting unit.
 static func living(state: GameState, code: String) -> int:

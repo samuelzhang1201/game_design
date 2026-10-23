@@ -33,6 +33,45 @@ static func _reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 	codes.sort()
 	var deferred: Array = []
 	var changed := false
+	var pending := RecruitmentSystem.pending_new_units(repo, state)
+	if pending.has("error"): return {"status": "error", "error": pending.error}
+	var pending_codes: Array = pending.units.keys()
+	pending_codes.sort()
+	for code: String in pending_codes:
+		if state.army_roster.has(code): continue
+		var project: Dictionary = state.recruitment_projects[pending.units[code]]
+		var arm := String(project.quote.get("arm", ""))
+		var types := repo.world_table("military", "unit_types")
+		if not types.has(arm) or not ArmySplit.is_whole_count(types[arm].get("crew", 0)) or int(types[arm].get("crew", 0)) <= 0:
+			return {"status": "error", "error": "Saved new assembly needs a valid equipment crew."}
+		var equipment := 0
+		for kind: String in project.equipment:
+			if kind != arm or not ArmySplit.is_whole_count(project.equipment[kind]):
+				return {"status": "error", "error": "Saved new assembly has invalid paid equipment."}
+			equipment += int(project.equipment[kind])
+		if equipment <= 0: return {"status": "error", "error": "Saved new assembly has no paid equipment."}
+		for id: String in state.military_rosters[code].cohort_ids:
+			var cohort: Dictionary = state.military_cohorts[id]
+			var error := Roster.cohort_error(repo, cohort)
+			if error != "" or (cohort.has("person_id") and int(cohort.initial) != 1):
+				return {"status": "error", "error": "Invalid reserved new personnel: " + id}
+		var living := Roster.assigned_living(state, code)
+		if living <= cap: continue
+		var targets := ArmySplit.halves(living, cap)
+		var paths: Array[String] = []
+		_paths(living, cap, "", paths)
+		var children: Array = [code]
+		for i: int in range(1, targets.size()):
+			var child := code + ":living:v2:" + paths[i]
+			if state.army_roster.has(child) or state.military_rosters.has(child):
+				return {"status": "error", "error": "Living organization unit ID already exists: " + child}
+			children.append(child)
+		# Future units have no camp or active equipment yet; split only their paid reservation.
+		var error := _personnel(state, code, children, targets, paths, cohorts)
+		if error == "": error = _projects(repo, state, code, children, targets, cohorts)
+		if error != "": return {"status": "error", "error": error}
+		mapping[code] = children
+		changed = true
 	for code: String in codes:
 		var validation := _validate(repo, state, code)
 		if validation.has("error"):

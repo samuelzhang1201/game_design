@@ -136,7 +136,7 @@ func test_invalid_counts_commander_and_unfinished_journal_refuse_atomically() ->
 	var system := _system()
 	if system == null: return
 	for patch: Dictionary in [{"total": 600.5}, {"noble_permille": 101}, {"commander_id": "you"},
-		{"source_province": "unknown"}, {"assembly_town": "unknown"}, {"total": 601}]:
+		{"source_province": "unknown"}, {"assembly_town": "unknown"}, {"total": 1001}]:
 		var bad := request.duplicate(true)
 		bad.merge(patch, true)
 		var before := SaveLoad.state_hash(state)
@@ -297,14 +297,16 @@ func test_fleet_crews_assemble_at_real_water_and_can_receive_port_reinforcements
 	assert_eq(MilitaryRoster.fit(state, code), 300)
 	assert_eq(int(state.army_roster[code]["fleet"]), 3)
 
-func test_reinforcement_equipment_rounding_cannot_exceed_personnel_cap() -> void:
+func test_reinforcement_equipment_capacity_does_not_replace_living_cap() -> void:
 	var system := _system()
 	if system == null: return
 	repo.world_table("military", "unit_types")["infantry"]["crew"] = "7"
 	var code := _ready_unit(system, 399)
 	var req := _reinforcement(code, 199)
 	var before := SaveLoad.state_hash(state)
-	assert_true(system.recruit(repo, state, req).has("error"), "598 people need 602 equipment places with seven-person crews, over the cap")
+	var offer: Dictionary = system.quote(repo, state, req)
+	assert_false(offer.has("error"), str(offer))
+	assert_eq(offer.get("equipment"), {"infantry": 29}, "598 people use 602 equipment places; spare places are not people")
 	assert_eq(SaveLoad.state_hash(state), before)
 
 func test_paid_reinforcement_keeps_its_people_after_later_casualties_and_reports_actual_share() -> void:
@@ -402,3 +404,183 @@ func test_released_commander_is_civilian_and_reenlists_only_after_promise_and_ne
 	assert_eq(state.military_cohorts.old_officer.released, 1)
 	assert_eq(MilitaryRoster.living(state, "captured_unit"), 0)
 	assert_eq(person.family_name, (state.characters[officer] as Character).family_name)
+
+func test_all_arms_reserve_living_headroom_before_payment() -> void:
+	for arm: String in ["infantry", "artillery", "fleet"]:
+		before_each()
+		state.metrics["treasury"] = 100000
+		state.world[MilitaryPopulation.path(province, "rural_population")] = 10000
+		repo.world_row("military", "unit_types", arm)["crew"] = "1"
+		repo.recruitment[arm] = repo.recruitment["infantry"].duplicate(true)
+		var choices := RecruitmentSystem.available_commanders(repo, state, arm)
+		assert_false(choices.is_empty())
+		if choices.is_empty(): continue
+		if arm == "fleet":
+			for burg: String in repo.burgs:
+				if String(repo.burgs[burg].get("is_port", "0")) == "1" and ArmyGround.holds(repo, state, repo.resolve_realm("player_realm"), burg):
+					town = burg
+					break
+			province = String(repo.burgs[town]["province_code"])
+			state.world[MilitaryPopulation.path(province, "rural_population")] = 10000
+		request.merge({"arm": arm, "commander_id": choices[0], "total": 900,
+			"source_province": province, "assembly_town": town}, true)
+		# A stationary fixture permits the same contract test for naval crews.
+		var code := _ready_unit(_system(), 900)
+		assert_false(code.is_empty())
+		if code.is_empty(): continue
+		var req := _reinforcement(code, 101)
+		var before := SaveLoad.state_hash(state)
+		var refused := RecruitmentSystem.recruit(repo, state, req)
+		assert_true(refused.has("error"), arm)
+		assert_true(String(refused.get("error", "")).contains("1000"), str(refused))
+		assert_eq(SaveLoad.state_hash(state), before)
+		req["total"] = 100
+		var gold := int(state.metrics.treasury)
+		var paid := RecruitmentSystem.recruit(repo, state, req)
+		assert_false(paid.has("error"), str(paid))
+		assert_eq(paid.get("gold"), 240, "95 commoners at2 +5 nobles at10; serving officer has no new fee")
+		assert_eq(int(state.metrics.treasury), gold - 240)
+		before = SaveLoad.state_hash(state)
+		assert_eq(RecruitmentSystem.recruit(repo, state, req), paid)
+		assert_eq(SaveLoad.state_hash(state), before)
+		var extra := req.duplicate(true)
+		extra.merge({"request_id": "extra", "total": 1}, true)
+		assert_true(RecruitmentSystem.recruit(repo, state, extra).has("error"))
+		assert_eq(SaveLoad.state_hash(state), before)
+
+func test_new_overcap_request_refuses_with_limit_before_debit() -> void:
+	for total: int in [1001, 2500]:
+		request["total"] = total
+		var before := SaveLoad.state_hash(state)
+		var result := RecruitmentSystem.recruit(repo, state, request)
+		assert_true(result.has("error"))
+		assert_true(String(result.get("error", "")).contains("1000"), str(result))
+		assert_eq(SaveLoad.state_hash(state), before)
+
+func test_pending_new_unit_survives_real_save_load_and_migration() -> void:
+	state = SuiteData.campaign(repo, 42)
+	state.metrics.treasury = 1000000
+	state.world[MilitaryPopulation.path(province, "rural_population")] = 100000
+	request["commander_id"] = RecruitmentSystem.available_commanders(repo, state, "infantry")[0]
+	var receipt := RecruitmentSystem.recruit(repo, state, request)
+	assert_false(receipt.has("error"), str(receipt))
+	if receipt.has("error"): return
+	var path := "user://pending_new_living_cap.json"
+	assert_true(SaveLoad.save_game(state, path))
+	state = SaveLoad.load_game(path)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	var before := SaveLoad.state_hash(state)
+	var migrated := MilitaryBootstrap.migrate(repo, state)
+	assert_false(migrated.has("error"), str(migrated))
+	if migrated.has("error"): return
+	assert_eq(MilitaryReorganization.reconcile(repo, state).get("status"), "complete")
+	assert_eq(RecruitmentSystem.recruit(repo, state, request), receipt)
+	assert_eq(SaveLoad.state_hash(state), before, "loading never re-enlists, pays or activates the pending new unit")
+	RecruitmentSystem.step_day(repo, state)
+	state.day += 1
+	RecruitmentSystem.step_day(repo, state)
+	assert_eq(state.recruitment_projects[request.request_id].status, "complete")
+	assert_eq(MilitaryRoster.fit(state, receipt.unit_code), 600)
+
+func test_legacy_paid_new_fleet_is_partitioned_and_completes_once() -> void:
+	state = SuiteData.campaign(repo, 42)
+	state.metrics.treasury = 1000000
+	for burg: String in repo.burgs:
+		if String(repo.burgs[burg].get("is_port", "0")) == "1" and ArmyGround.holds(repo, state, repo.resolve_realm("player_realm"), burg):
+			town = burg
+			break
+	province = String(repo.burgs[town].province_code)
+	state.world[MilitaryPopulation.path(province, "urban_population")] = 100000
+	repo.recruitment.fleet = {"commoner_gold": "1", "noble_gold": "2", "commander_gold": "11",
+		"equipment_gold_per_element": "3", "build_days": "2", "requires_port": "1"}
+	request.merge({"request_id": "legacy-new-fleet", "arm": "fleet", "total": 2500,
+		"source_province": province, "source_population_field": "urban_population", "assembly_town": town,
+		"commander_id": RecruitmentSystem.available_commanders(repo, state, "fleet")[0]}, true)
+	# Reproduce an already-paid historical fleet contract, then restore today's cap.
+	repo.balance.army_living_cap_men = 3000
+	var receipt := RecruitmentSystem.recruit(repo, state, request)
+	repo.balance.army_living_cap_men = 1000
+	assert_false(receipt.has("error"), str(receipt))
+	if receipt.has("error"): return
+	assert_eq(receipt.gold, 2711, "2375 commoners +125 nobles×2 +25 ships×3 +11 officer fee")
+	var gold := int(state.metrics.treasury)
+	var residents := state.world.duplicate(true)
+	state.military_migration.erase("living_cap_version")
+	state.military_migration.organization_pending = true
+	state = GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())), false)
+	state.day_resolution = DayResolution.begin(state.day, false, state.absolute_day(), int(repo.bal("battle_substeps")))
+	var frozen := SaveLoad.state_hash(state)
+	assert_eq(MilitaryReorganization.reconcile(repo, state).get("status"), "deferred")
+	assert_eq(SaveLoad.state_hash(state), frozen, "a frozen day never partitions its future units early")
+	state.day_resolution.clear()
+	var conflict := GameState.from_dict(state.to_dict(), false)
+	conflict.military_rosters[String(receipt.unit_code) + ":living:v2:01"] = {"commander_id": "", "cohort_ids": []}
+	var conflict_hash := SaveLoad.state_hash(conflict)
+	var refused := MilitaryReorganization.reconcile(repo, conflict)
+	assert_true(refused.has("error"))
+	assert_true(String(refused.get("error", "")).contains("already exists"))
+	assert_eq(SaveLoad.state_hash(conflict), conflict_hash, "failed future-unit allocation publishes no reservations or payment changes")
+	var migrated := MilitaryBootstrap.migrate(repo, state)
+	assert_false(migrated.has("error"), str(migrated))
+	if migrated.has("error"): return
+	assert_eq(MilitaryReorganization.reconcile(repo, state).get("status"), "complete")
+	var project: Dictionary = state.recruitment_projects[request.request_id]
+	var codes: Array = project.get("unit_codes", [receipt.unit_code])
+	assert_eq(codes.size(), 4)
+	for code: String in codes:
+		assert_eq(MilitaryRoster.assigned_living(state, code), 625)
+		assert_false(state.army_roster.has(code), "reserved new detachments are not deployed before completion")
+	var reserved := SaveLoad.state_hash(state)
+	state = GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())), false)
+	assert_false(MilitaryBootstrap.migrate(repo, state).has("error"))
+	assert_eq(MilitaryReorganization.reconcile(repo, state).get("status"), "complete")
+	assert_eq(SaveLoad.state_hash(state), reserved, "allocated future-unit reservations reload without a second split")
+	RecruitmentSystem.step_day(repo, state)
+	state.day += 1
+	RecruitmentSystem.step_day(repo, state)
+	project = state.recruitment_projects[request.request_id]
+	assert_eq(project.status, "complete", str(project.get("pause_reason", "")))
+	var people := 0
+	var ships := 0
+	var officers := 0
+	var equipment: Array = []
+	var source_parts := 0
+	for code: String in codes:
+		people += MilitaryRoster.fit(state, code)
+		ships += int(state.army_roster.get(code, {}).get("fleet", 0))
+		equipment.append(int(state.army_roster.get(code, {}).get("fleet", 0)))
+		for part: Dictionary in state.army_roster.get(code, {}).get("source_parts", []):
+			assert_eq(part.regiment_code, "recruit:" + String(request.request_id))
+			source_parts += int(part.equipment_count)
+		assert_eq(int(state.regiments.get(code, {}).get("supplies", -1)), 0)
+		assert_false(MapEconomy.contains_land(repo, ArmySystem.position_of(repo, state, state.army_roster[code])))
+		if state.military_rosters[code].get("commander_id", "") != "": officers += 1
+	assert_eq(people, 2500)
+	assert_eq(ships, 25)
+	assert_eq(equipment, [7, 6, 6, 6], "whole ships use larger-remainder priority; no fractional or invented vessel")
+	assert_eq(source_parts, 25)
+	assert_eq(officers, 1)
+	assert_eq(int(state.metrics.treasury), gold)
+	assert_eq(state.world, residents)
+	assert_eq(project.result, receipt)
+	state = GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())), false)
+	var before := SaveLoad.state_hash(state)
+	RecruitmentSystem.step_day(repo, state)
+	assert_eq(RecruitmentSystem.recruit(repo, state, request), receipt)
+	assert_eq(SaveLoad.state_hash(state), before)
+
+func test_pending_new_save_requires_the_original_paid_contract_and_unique_cohorts() -> void:
+	state = SuiteData.campaign(repo, 42)
+	state.metrics.treasury = 1000000
+	state.world[MilitaryPopulation.path(province, "rural_population")] = 100000
+	request.commander_id = RecruitmentSystem.available_commanders(repo, state, "infantry")[0]
+	assert_false(RecruitmentSystem.recruit(repo, state, request).has("error"))
+	var original := state.to_dict()
+	var code := String(state.recruitment_projects[request.request_id].unit_code)
+	for patch: Dictionary in [{"quote": {}}, {"result": {}}, {"equipment": {}}, {"cohort_ids": ["missing"]},
+		{"equipment_by_unit": {code: {"infantry": 601}}}, {"equipment_by_unit": {}}, {"last_processed_day": {}}]:
+		state = GameState.from_dict(original, false)
+		state.recruitment_projects[request.request_id].merge(patch, true)
+		var before := SaveLoad.state_hash(state)
+		assert_true(MilitaryBootstrap.migrate(repo, state).has("error"), str(patch))
+		assert_eq(SaveLoad.state_hash(state), before)

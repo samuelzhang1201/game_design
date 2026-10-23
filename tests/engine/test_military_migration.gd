@@ -521,7 +521,7 @@ func test_main_authored_multi_source_train_never_moves_all_crew_to_capital() -> 
 	for part: Dictionary in s.army_roster.saved.source_parts:
 		assert_false(part.has("origin_basis"), "recorded source provenance stays recorded")
 
-func test_main_new_campaign_all_player_and_raider_units_have_one_counted_commander() -> void:
+func test_main_new_campaign_retains_unique_source_commanders_without_inventing_child_officers() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 71)
 	assert_eq(state.military_migration.get("organization_version", 0), 1)
@@ -533,13 +533,18 @@ func test_main_new_campaign_all_player_and_raider_units_have_one_counted_command
 		checked += 1
 		var roster: Dictionary = state.military_rosters.get(code, {})
 		var commander := String(roster.get("commander_id", ""))
+		if row.get("organization_parent", code) != code:
+			assert_eq(commander, "", code + " keeps its deliberate vacancy")
+			for id: String in roster.get("cohort_ids", []):
+				assert_eq(String(state.military_cohorts[id].get("person_id", "")), "", "no fabricated named personnel")
+			continue
 		assert_ne(commander, "", code)
 		assert_false(named.has(commander), code)
 		named[commander] = true
 		var matches := 0
 		for id: String in roster.get("cohort_ids", []):
 			var cohort: Dictionary = state.military_cohorts[id]
-			if String(cohort.get("person_id", "")) == commander:
+			if commander != "" and String(cohort.get("person_id", "")) == commander:
 				matches += 1
 				assert_eq(cohort.identity, "noble")
 				assert_eq(cohort.initial, 1)

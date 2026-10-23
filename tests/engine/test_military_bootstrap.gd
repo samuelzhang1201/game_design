@@ -109,10 +109,11 @@ func test_every_real_unit_has_a_unique_eligible_commander_without_extra_heads() 
 	var assigned: Dictionary = {}
 	for code: String in state.army_roster:
 		var person := String(state.military_rosters.get(code, {}).get("commander_id", ""))
-		assert_ne(person, "", code)
-		assert_false(assigned.has(person), "no commander can occupy two military units")
-		assigned[person] = true
-		assert_eq(Roster.fit(state, code), Roster.personnel_capacity(repo, state.army_roster[code]))
+		if person != "":
+			assert_false(assigned.has(person), "no commander can occupy two military units")
+			assigned[person] = true
+		assert_lte(Roster.living(state, code), int(repo.bal("army_living_cap_men")))
+	assert_eq(assigned.size(), ArmySplit.opening_sources(repo)["roster"].size())
 
 func test_invalid_origin_and_partial_initialization_are_atomic() -> void:
 	state.army_roster["u"] = _unit("u", "infantry", 100, [_source("unknown", "infantry", 100, 1)])
@@ -132,3 +133,41 @@ func test_completed_marker_cannot_hide_missing_cohort() -> void:
 	var before := SaveLoad.state_hash(state)
 	assert_true(_initialize().has("error"), "a marker is not proof of a complete roster")
 	assert_eq(SaveLoad.state_hash(state), before)
+
+func test_opening_partitions_personnel_before_capped_mobilization() -> void:
+	state.world[_path(province, "rural_population")] = 10000
+	state.world[_path(province, "urban_population")] = 10000
+	for count: int in [2500, 1001]:
+		state.army_roster = {"u": _unit("u", "infantry", count, [_source(province, "infantry", count, 1)])}
+		var capital: Dictionary = repo.burgs[repo.kingdoms[repo.resolve_realm("player_realm")].capital_burg]
+		state.army_roster["u"].merge({"x": capital.x, "y": capital.y, "camp_town": "", "is_royal": "1"})
+		state.military_cohorts.clear()
+		state.military_rosters.clear()
+		state.military_events.clear()
+		state.military_migration.clear()
+		var result := _initialize()
+		assert_false(result.has("error"), str(result))
+		var living: Array = []
+		var officers := 0
+		for code: String in state.army_roster:
+			living.append(Roster.living(state, code))
+			if state.military_rosters[code].get("commander_id", "") != "": officers += 1
+		assert_eq(living, [625, 625, 625, 625] if count == 2500 else [501, 500])
+		assert_eq(_counts("source_province", province), count)
+		assert_eq(officers, 1, "partition never invents officers or extra people")
+
+func test_opening_bad_provenance_refuses_without_reservations() -> void:
+	for parts: Array in [[_source(province, "infantry", 99, 1)], [_source(province, "infantry", 100, 2)]]:
+		state.army_roster = {"u": _unit("u", "infantry", 100, parts)}
+		var before := SaveLoad.state_hash(state)
+		assert_true(_initialize().has("error"))
+		assert_eq(SaveLoad.state_hash(state), before)
+
+func test_opening_never_consolidates_below_cap_sources() -> void:
+	repo.commanders = SuiteData.repo().commanders
+	state.army_roster = {"u": _unit("u", "infantry", 400, [_source(province, "infantry", 400, 1)]),
+		"v": _unit("v", "infantry", 400, [_source(province, "infantry", 400, 1)])}
+	assert_false(_initialize().has("error"))
+	assert_eq(state.army_roster.size(), 2)
+	assert_eq(Roster.living(state, "u"), 400)
+	assert_eq(Roster.living(state, "v"), 400)

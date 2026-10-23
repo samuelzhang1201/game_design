@@ -1,15 +1,7 @@
 class_name ArmySplit
 extends RefCounted
-## The opening army as UNITS (owner 2026-10-07, spec docs/superpowers/specs/
-## 2026-10-07-army-split-and-ground-design.md §3): every pack regiment split
-## into pure-arm units of at most army_split_cap_men PERSONNEL, as even as
-## equipment crews allow; a
-## kingdom's guns pooled into ONE royal train at its capital; fleets as they
-## are. Every unit is placed on its own camp (ArmyGround) around its
-## regiment's town (or its own point in the field) and every held town's seat
-## is filled by the camp's most infantry. Pure and deterministic — the same
-## pack, the same roster. GameState.new_campaign writes it into the save;
-## ArmySystem.roster falls back to it where there is no campaign.
+## Pure-arm opening sources and a whole-equipment capped preview.
+## Actual campaigns partition their source-derived living plan in bootstrap.
 
 static var _cache: Dictionary = {}
 
@@ -82,10 +74,15 @@ static func element_shares(elements: int, crew: int, cap_men: int) -> Array:
 	return shares(elements, cap_men / crew)
 
 
-static func _make(repo: DataRepository) -> Dictionary:
-	var cap := int(repo.bal("army_split_cap_men"))
+## Unpartitioned sources are consumed once by the personnel bootstrap.
+static func opening_sources(repo: DataRepository) -> Dictionary:
+	return _make(repo, true)
+
+
+static func _make(repo: DataRepository, unpartitioned := false) -> Dictionary:
+	var cap := int(repo.bal("army_living_cap_men"))
 	var rows: Array = repo.world_table("military", "regiments").values()
-	var error := _configuration_error(repo, rows, cap)
+	var error := _configuration_error(repo, rows, cap, unpartitioned)
 	if not error.is_empty():
 		return {"error": error, "roster": {}, "seats": {}}
 	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -132,14 +129,12 @@ static func _make(repo: DataRepository) -> Dictionary:
 			var equipment := int(float(row.get(arm, 0)))
 			if equipment <= 0:
 				continue
-			var crew := int(repo.world_row("military", "unit_types", arm)["crew"])
-			@warning_ignore("integer_division")
-			var element_cap := cap / crew
-			var parts := shares(equipment, element_cap)
+			var parts := [equipment]
 			for i in parts.size():
 				var unit := _unit(repo, row, arm_row, i, parts.size(), int(parts[i]), armed == 1)
 				unit["camp_town"] = town
-				_place(repo, unit, centre, arm, taken, town)
+				if not _place(repo, unit, centre, arm, taken, town, unpartitioned):
+					return {"error": "No legal opening camp for " + String(unit.regiment_code), "roster": {}, "seats": {}}
 				roster[String(unit["regiment_code"])] = unit
 	var ks := guns.keys()
 	ks.sort()
@@ -149,21 +144,67 @@ static func _make(repo: DataRepository) -> Dictionary:
 			train["source_parts"] = gun_sources[k]
 			var t_town := String(train["camp_town"])
 			var t_centre: Vector2i = ArmyGround.town_point_m(repo, t_town) if t_town != "" else home[k]["centre"]
-			_place(repo, train, t_centre, String(train["_arm"]), taken, t_town)
+			if not _place(repo, train, t_centre, String(train["_arm"]), taken, t_town, unpartitioned):
+				return {"error": "No legal opening camp for " + String(train.regiment_code), "roster": {}, "seats": {}}
 			train.erase("_arm")
 			roster[String(train["regiment_code"])] = train
+	if not unpartitioned:
+		var preview := _preview_crews(repo, roster, cap)
+		if preview.has("error"):
+			return {"error": preview["error"], "roster": {}, "seats": {}}
 	_crown(repo, rows, roster)
 	return {"roster": roster, "seats": _seat(repo, roster)}
 
 
+## Preview every arm with whole crews; binary IDs share the actual sources.
+static func _preview_crews(repo: DataRepository, roster: Dictionary, cap: int) -> Dictionary:
+	var taken := ArmyGround.new_taken(repo)
+	for row: Dictionary in roster.values():
+		if String(row.get("is_naval", "0")) != "1":
+			ArmyGround.take(taken, ArmySystem.pack_to_metres(repo, Vector2(float(row.x), float(row.y))), ArmyGround.arm_radius(repo, MapObjects.regiment_arm(repo, row)))
+	for code: String in roster.keys():
+		var source: Dictionary = roster[code]
+		var arm := MapObjects.regiment_arm(repo, source)
+		var crew := int(repo.world_row("military", "unit_types", arm)["crew"])
+		@warning_ignore("integer_division")
+		var element_cap := cap / crew
+		var amounts := halves(int(source.get(arm, 0)), element_cap)
+		if amounts.is_empty(): return {"error": "Equipment crew exceeds the preview personnel cap: " + arm}
+		var paths: Array[String] = []
+		MilitaryReorganization._paths(int(source.get(arm, 0)), element_cap, "", paths)
+		var parts: Array = source.source_parts.duplicate(true)
+		var part_index := 0
+		for i: int in amounts.size():
+			var row := source.duplicate(true)
+			var child := code if i == 0 else code + ":living:v2:" + paths[i]
+			if i > 0 and roster.has(child): return {"error": "Opening preview unit ID collision: " + child}
+			row.regiment_code = child
+			if amounts.size() > 1: row.label = String(source.label) + " " + roman(i + 1)
+			if i > 0 and row.get("is_naval", "0") == "1": row.parent_code = code
+			row[arm] = str(amounts[i])
+			row.source_parts = []
+			var left := int(amounts[i])
+			while left > 0:
+				var part: Dictionary = parts[part_index]
+				var take := mini(left, int(part.equipment_count))
+				var piece := part.duplicate(true)
+				piece.equipment_count = take
+				row.source_parts.append(piece)
+				part.equipment_count -= take
+				left -= take
+				if int(part.equipment_count) == 0: part_index += 1
+			if i > 0 and row.get("is_naval", "0") != "1":
+				_place(repo, row, ArmySystem.pack_to_metres(repo, Vector2(float(source.x), float(source.y))), arm, taken, String(row.camp_town))
+			roster[child] = row
+	return {}
+
+
 ## Validate the whole construction before placing any unit. Callers must
 ## propagate refusal instead of creating a campaign with a partial army.
-static func _configuration_error(repo: DataRepository, rows: Array, cap: int) -> String:
+static func _configuration_error(repo: DataRepository, rows: Array, cap: int, unpartitioned := false) -> String:
 	if cap <= 0:
 		return "Army personnel split cap must be positive."
 	for row: Dictionary in rows:
-		# Fleets and pooled guns are exempt from subdivision, not from having
-		# valid crews. Their saved provenance must also account for people.
 		for arm: String in repo.world_table("military", "unit_types"):
 			if int(float(row.get(arm, 0))) <= 0:
 				continue
@@ -179,7 +220,7 @@ static func _configuration_error(repo: DataRepository, rows: Array, cap: int) ->
 			var crew := int(repo.world_row("military", "unit_types", arm).get("crew", 0))
 			if crew <= 0:
 				return "Army arm %s requires a positive crew size." % arm
-			if crew > cap:
+			if crew > cap and not unpartitioned:
 				return "Army arm %s crew exceeds the personnel split cap." % arm
 	return ""
 
@@ -195,14 +236,16 @@ static func _held(repo: DataRepository, town: String, k: String) -> String:
 ## Put `unit` on the first free slot round `centre` — round `town` ("" in the
 ## field) outside its reach (R16) — its centre when none is free.
 static func _place(repo: DataRepository, unit: Dictionary, centre: Vector2i, arm: String,
-		taken: Dictionary, town: String) -> void:
+		taken: Dictionary, town: String, strict := false) -> bool:
 	var slot := ArmyGround.free_slot(repo, centre, arm, taken, town)
 	if slot == ArmyGround.NONE:  # a town among the blocked terrains camps on them
 		slot = ArmyGround.free_slot(repo, centre, arm, taken, town, true)
 	if slot == ArmyGround.NONE:
+		if strict: return false
 		slot = centre
 	ArmyGround.take(taken, slot, ArmyGround.arm_radius(repo, arm))
 	_put(repo, unit, slot)
+	return true
 
 
 static func _put(repo: DataRepository, unit: Dictionary, p_m: Vector2i) -> void:

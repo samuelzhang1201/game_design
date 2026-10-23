@@ -351,6 +351,7 @@ func test_pursuit_round_uses_existing_attack_cost_and_json_replay() -> void:
 
 func test_targeted_pursuit_freezes_distinct_loss_rates_and_costs_after_failed_commit() -> void:
 	var f := _fixture()
+	f.state.regiments[f.a].stance = "hold" # Isolate frozen costs from autonomous low-odds retreat.
 	f.battle.att = [f.a]
 	f.battle.def = [f.enemy, f.b]
 	var at := BattleSystem._at_m(f.repo, f.state, f.a)

@@ -169,7 +169,7 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 	var checked := 0
 	for r: Dictionary in MapObjects.regiments_of(Game.data, mine, Game.state):
 		var code := String(r["regiment_code"])
-		var card := MapObjects.army_card(Game.data, code)
+		var card := MapObjects.army_card(Game.data, code, Game.state)
 		assert_eq(String(card["kind"]), "army")
 		assert_eq(String(card["title"]), String(r["label"]))
 		var piece := MapObjects.army_piece(Game.data, r)
@@ -189,7 +189,7 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 			assert_eq(keys.has(unit), n > 0, "%s: %s shown only when mustered" % [code, unit])
 			if n > 0:
 				assert_eq(keys[unit], str(n))
-		assert_eq(keys["army"], str(ArmySystem.personnel_capacity(Game.data, r)), "the host under arms")
+		assert_eq(keys["army"], "%d (%d wounded)" % [ArmySystem.living_count(Game.data, Game.state, code), ArmySystem.wounded_count(Game.data, Game.state, code)], "the host under arms")
 		checked += 1
 	assert_gt(checked, 0)
 	assert_true(MapObjects.army_card(Game.data, "no_such_regiment").is_empty())

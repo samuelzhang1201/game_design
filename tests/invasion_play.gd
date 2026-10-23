@@ -57,12 +57,14 @@ static func letters(s: GameState, kind: String) -> Array:
 	return s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == kind)
 
 
-## The player's land units (the army's roster, ArmySplit) of at least
+## The actual campaign's commandable land units of at least
 ## `min_heads` men, in code order.
 static func land_regiments(repo: DataRepository, min_heads: int = 1) -> Array:
 	var out: Array = []
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		if String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) >= min_heads:
+	var state := SuiteData.campaign(repo, 42)
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		if String(r.get("is_naval", "0")) != "1" and MilitaryRoster.living(state, String(r["regiment_code"])) >= min_heads \
+				and MilitaryCommanders.eligible_for_unit(repo, state, String(r["regiment_code"]), String(state.military_rosters.get(r["regiment_code"], {}).get("commander_id", ""))):
 			out.append(String(r["regiment_code"]))
 	out.sort()
 	return out
@@ -72,9 +74,10 @@ static func land_regiments(repo: DataRepository, min_heads: int = 1) -> Array:
 ## largest first; code order on ties.
 static func by_size(repo: DataRepository, codes: Array, smallest: bool) -> Array:
 	var out := codes.duplicate()
+	var state := SuiteData.campaign(repo, 42)
 	out.sort_custom(func(a: String, b: String) -> bool:
-		var ha := ArmySystem.headcount(repo, ArmySystem.regiment(repo, a))
-		var hb := ArmySystem.headcount(repo, ArmySystem.regiment(repo, b))
+		var ha := MilitaryRoster.living(state, a)
+		var hb := MilitaryRoster.living(state, b)
 		return (ha < hb if smallest else ha > hb) or (ha == hb and a < b))
 	return out
 
@@ -86,11 +89,12 @@ static func by_size(repo: DataRepository, codes: Array, smallest: bool) -> Array
 static func regiment_units(repo: DataRepository, smallest: bool, n: int) -> Array:
 	var men: Dictionary = {}
 	var units: Dictionary = {}
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	var state := SuiteData.campaign(repo, 42)
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		var parent := String(r.get("parent_code", ""))
 		if parent == "" or String(r.get("is_naval", "0")) == "1":
 			continue
-		men[parent] = int(men.get(parent, 0)) + ArmySystem.headcount(repo, r)
+		men[parent] = int(men.get(parent, 0)) + MilitaryRoster.living(state, String(r["regiment_code"]))
 		if not units.has(parent):
 			units[parent] = []
 		(units[parent] as Array).append(String(r["regiment_code"]))

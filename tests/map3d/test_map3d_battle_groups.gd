@@ -109,8 +109,8 @@ func test_counts_are_one_saved_row_per_live_model() -> void:
 	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 2.0})
 	ctx.state_fn = func() -> GameState: return state
 	var personnel := preload("res://tests/engine/personnel_helpers.gd")
-	var wants := [0, 1, 1, 1, 2, 16, 20, 200]
-	var ns := [0, 1, 49, 50, 51, 800, 1000, 10000]
+	var wants := [0, 1, 1, 1, 2, 16, 20]
+	var ns := [0, 1, 49, 50, 51, 800, 1000]
 	for i in ns.size():
 		personnel.replace(repo, state, code, ns[i])
 		var rows: Array = []
@@ -123,6 +123,18 @@ func test_counts_are_one_saved_row_per_live_model() -> void:
 		var piece: Dictionary = helper.build(repo, ArmySystem.regiment(repo, code, state), sample)
 		autofree(piece["node"])
 		assert_eq(piece["figures"], wants[i])
+	assert_eq(BattleGroups.counts(10000).size(), 200, "pure count stress remains independent of legal unit size")
+	var origin: Dictionary = state.military_cohorts[state.military_rosters[code].cohort_ids[0]]
+	var path := MilitaryPopulation.path(origin.source_province, origin.source_population_field)
+	state.world[path] = maxi(int(WorldLedger.value_of(repo, state, path)), MilitaryPopulation.occupied(state, origin.source_province, origin.source_population_field) + 20000)
+	var before := SaveLoad.state_hash(state)
+	var refused := MilitaryRoster.mobilize(repo, state, "oversized-model-input", [{"id": "oversized-model-input", "unit_code": code,
+		"source_province": origin.source_province, "source_population_field": origin.source_population_field,
+		"identity": "commoner", "stage": "active", "count": 10000}], "Rejected oversized model fixture")
+	assert_true(refused.has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
+	state.battles[0].groups[code] = [{"count": 10000, "role": "front", "x_m": 0, "y_m": 100}]
+	assert_eq(helper.sample(ctx, code)["mode"], "invalid", "oversized saved rows are not admitted")
 
 func test_paused_geometry_changes_invalidate_cache() -> void:
 	var repo := SuiteData.repo()

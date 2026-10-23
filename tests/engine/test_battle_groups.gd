@@ -185,10 +185,11 @@ func test_new_member_seeds_at_arrival_and_exact_people_are_conserved() -> void:
 	f.battle.att.append(ally)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	assert_eq(_points(f.battle.groups[ally]), [Vector2i(9000, 8000)])
-	for people: int in [0, 1, 49, 50, 51, 800, 1000, 10000]:
+	for people: int in [0, 1, 49, 50, 51, 800, 1000]:
 		Personnel.replace(f.repo, f.state, ally, people)
 		BattleGroups.refresh(f.repo, f.state, f.battle)
 		assert_eq(_counts(f.battle.groups[ally]), BattleGroups.counts(people))
+	assert_eq(BattleGroups.counts(10000).size(), 200, "pure count stress does not enlist an oversized unit")
 
 func test_legacy_rows_cannot_gain_contact_through_closed_ground() -> void:
 	var f := _fixture()

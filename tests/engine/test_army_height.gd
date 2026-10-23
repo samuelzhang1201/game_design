@@ -64,7 +64,7 @@ func test_battle_odds_swap_symmetrically_with_the_ground() -> void:
 	# factor 1000 both ways, power alone), and the formula matches a
 	# hand-checked value.
 	var s := SuiteData.campaign(repo, 7)
-	var mine := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
+	var mine := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), s)
 	var land: Array = mine.filter(func(r: Dictionary) -> bool: return String(r.get("is_naval", "0")) != "1")
 	assert_gte(land.size(), 2)
 	var a := ""
@@ -75,8 +75,8 @@ func test_battle_odds_swap_symmetrically_with_the_ground() -> void:
 				continue
 			var ca := String(land[i]["regiment_code"])
 			var cb := String(land[j]["regiment_code"])
-			if ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, ca)) \
-					!= ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, cb)):
+			if ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, ca, s), s) \
+					!= ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, cb, s), s):
 				a = ca
 				b = cb
 				break
@@ -85,8 +85,8 @@ func test_battle_odds_swap_symmetrically_with_the_ground() -> void:
 	if a == "":
 		pending("the pack has no two land regiments at different elevations")
 		return
-	var ea := ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, a))
-	var eb := ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, b))
+	var ea := ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, a, s), s)
+	var eb := ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, b, s), s)
 	assert_ne(ea, eb, "the two stand at different heights")
 	var pa := ArmySystem.power(repo, s, a, "attack")
 	var pd := ArmySystem.power(repo, s, b, "defend")

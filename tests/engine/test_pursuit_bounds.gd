@@ -116,7 +116,8 @@ func test_march_day_saved_stops_the_walk_at_the_bound() -> void:
 	repo.balance["army_clearance_on"] = 0.0
 	var code: String = f.a
 	var Personnel := load("res://tests/engine/personnel_helpers.gd")
-	Personnel.replace(repo, state, code, 30000)
+	repo.balance["army_supply_per_head_permille"] = 3000 # 1000 commoners still use 3000 a month.
+	Personnel.replace(repo, state, code, 1000)
 	var entry: Dictionary = state.regiments[code]
 	entry["morale"] = 100
 	entry["training"] = 100

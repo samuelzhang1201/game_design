@@ -18,6 +18,7 @@ func _battle(attack := true) -> GameState:
 		for arm: String in repo.world_table("military", "unit_types"):
 			state.army_roster[attacker][arm] = "0"
 		state.army_roster[attacker]["infantry"] = str(people)
+		state.army_roster[attacker]["organization_arm"] = "infantry"
 	state.battles[0]["actions"] = {"att": {"kind": "attack" if attack else "hold"}, "def": {"kind": "hold"}}
 	for entry: Dictionary in state.regiments.values() + state.foes.values():
 		entry["morale"] = 80
@@ -138,6 +139,7 @@ func _force(state: GameState, code: String, heads: int, morale: int, token: Stri
 	for arm: String in repo.world_table("military", "unit_types"):
 		state.army_roster[code][arm] = "0"
 	state.army_roster[code]["infantry"] = str(heads)
+	state.army_roster[code]["organization_arm"] = "infantry"
 	var entry := BattleSystem._stored(state, code)
 	entry["morale"] = morale
 	entry["training"] = 60
@@ -161,8 +163,23 @@ func _benchmark(label: String, size: int, morale: int, reinforce := false) -> Di
 	var id := int(battle["id"])
 	var attacker := String(battle["att"][0])
 	var defender := String(battle["def"][0])
-	_force(state, attacker, size, morale, label + ":att")
+	var cap := int(repo.bal("army_living_cap_men"))
+	_force(state, attacker, mini(size, cap), morale, label + ":att")
 	_force(state, defender, 1000, morale, label + ":def")
+	var remaining := maxi(0, size - cap)
+	var codes := state.army_roster.keys()
+	codes.sort()
+	for reserve: String in codes:
+		if remaining == 0: break
+		var row: Dictionary = state.army_roster[reserve]
+		if reserve in battle.att + battle.def or row.kingdom_code != state.army_roster[attacker].kingdom_code or row.get("is_naval", "0") == "1": continue
+		state.foes[reserve] = ArmySystem.starting_state(repo, row)
+		var heads := mini(remaining, cap)
+		_force(state, reserve, heads, morale, label + ":att:" + reserve)
+		Play.place(repo, state, reserve, BattleSystem._at_m(repo, state, attacker), ArmySystem.ORDER_STANDBY)
+		assert_true(BattleSystem.join(repo, state, id, reserve, "att"))
+		remaining -= heads
+	assert_eq(remaining, 0, "same total force distributed over existing capped units")
 	var start := state.absolute_day()
 	var raw: Array = []
 	for day: int in 15:

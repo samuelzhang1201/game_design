@@ -80,7 +80,7 @@ static var campaign_error := ""
 
 static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	campaign_error = ""
-	var split := ArmySplit.split(data)
+	var split := ArmySplit.opening_sources(data)
 	if split.has("error"):
 		campaign_error = String(split["error"])
 		return null

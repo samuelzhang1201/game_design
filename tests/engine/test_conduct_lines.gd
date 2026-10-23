@@ -229,8 +229,9 @@ func test_slip_with_a_unit_chosen() -> void:
 	for arm: String in repo.world_table("military", "unit_types"):
 		if row.has(arm):
 			row[arm] = "0"
-	row["infantry"] = "9000"
-	assert_false(Personnel.replace(repo, state, code, 9000).has("error"))
+	row["infantry"] = "900"
+	repo.balance["army_supply_per_head_permille"] = 1000 # 900 × 1000‰ retains the old 9000 × 100‰ demand.
+	assert_false(Personnel.replace(repo, state, code, 900).has("error"))
 	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code, state), state)
 	assert_gt(Forage.need_of(repo, state, code), 100)
 	assert_eq(Forage.cut_permille(repo, state, code), 1000)

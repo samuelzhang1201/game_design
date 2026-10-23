@@ -283,7 +283,7 @@ func test_paid_legacy_assembly_completes_once_after_json_and_split() -> void:
 	for cohort: Dictionary in state.military_cohorts.values(): cohort.source_province = origin
 	state.metrics.treasury = 1_000_000
 	state.world[MilitaryPopulation.path(origin, "rural_population")] = 100_000
-	repo.balance.army_split_cap_men = 1800
+	repo.balance.army_living_cap_men = 1800
 	repo.balance.recruitment_eligible_permille = 1000
 	repo.recruitment.cavalry = {"commoner_gold": "2", "noble_gold": "10", "commander_gold": "0", "equipment_gold_per_element": "3", "build_days": "2", "requires_port": "0"}
 	var request := {"request_id": "legacy-paid", "mode": "reinforce", "unit_code": original, "total": 2,
@@ -292,7 +292,7 @@ func test_paid_legacy_assembly_completes_once_after_json_and_split() -> void:
 	var receipt := RecruitmentSystem.recruit(repo, state, request)
 	assert_false(receipt.has("error"), str(receipt))
 	if receipt.has("error"): return
-	repo.balance.army_split_cap_men = 600
+	repo.balance.army_living_cap_men = 1000
 	state.military_migration.organization_pending = true
 	var chest: float = state.metrics.treasury
 	var residents := state.world.duplicate(true)
