@@ -195,7 +195,10 @@ static func migrate(repo: DataRepository, state: GameState) -> Dictionary:
 		return _import_main_v7(repo, state)
 	if int(state.military_migration.get("version", 0)) == VERSION:
 		var error := _migration_integrity_error(repo, state)
-		return {"status": "unchanged"} if error.is_empty() else {"error": error}
+		if not error.is_empty():
+			return {"error": error}
+		_mark_living_pending(repo, state)
+		return {"status": "unchanged"}
 	if not state.military_migration.is_empty() or not state.military_rosters.is_empty() \
 			or not state.military_cohorts.is_empty() or not state.military_events.is_empty():
 		return {"error": "Cannot migrate a partial or unsupported military ledger."}
@@ -327,6 +330,15 @@ static func migrate(repo: DataRepository, state: GameState) -> Dictionary:
 	state.military_events = candidate.military_events
 	state.military_migration = candidate.military_migration
 	return {"status": "personnel_migrated", "units": codes.size(), "organization_pending": true, "conflicts": conflicts}
+
+## Completed historical organization does not establish the assigned-living cap.
+static func _mark_living_pending(repo: DataRepository, state: GameState) -> void:
+	for roster: Dictionary in state.military_rosters.values():
+		var assigned := 0
+		for id: String in roster.get("cohort_ids", []):
+			assigned += int(state.military_cohorts[id].get("fit", 0)) + int(state.military_cohorts[id].get("wounded", 0))
+		if assigned > int(repo.bal("army_living_cap_men")):
+			state.military_migration.organization_pending = true
 
 static func _migration_cohort(state: GameState, code: String, origin: Dictionary, identity: String,
 		status: String, count: int, family: String, person: String) -> void:
@@ -484,6 +496,7 @@ static func _import_main_v7(repo: DataRepository, state: GameState) -> Dictionar
 	# Completed main organization IDs are authoritative even if today's cap differs.
 	if version == 1:
 		candidate.military_migration["organization_pending"] = false
+	_mark_living_pending(repo, candidate)
 	for field: String in ["army_roster", "military_rosters", "military_cohorts", "military_events", "military_migration"]:
 		candidate.set(field, GameState._whole(candidate.get(field)))
 	for field: String in ["characters", "army_roster", "military_rosters", "military_cohorts", "military_events", "military_migration", "battles"]:

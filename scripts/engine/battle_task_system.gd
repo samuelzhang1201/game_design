@@ -13,6 +13,9 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 	var side := BattleRules.side_of(battle, unit)
 	var fallback := BattleOrders.kind(battle, side)
 	var result := {"kind": fallback, "reason": "Existing delivered side action: " + fallback, "task_id": ""}
+	var hold_battle := int(BattleSystem._stored(state, unit).get("living_hold_battle", -1))
+	if hold_battle >= 0 and BattleSystem.canonical(state, hold_battle) == int(battle.get("id", -1)):
+		result = {"kind": "hold", "reason": "New living-cap detachment holds pending a received unit task", "task_id": "", "living_hold": true}
 	if side == "":
 		return result
 	if fallback == "retreat" or String(battle.get("routed_side", "")) == side \

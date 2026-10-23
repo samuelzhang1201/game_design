@@ -61,13 +61,26 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 			if task.get("status", "") == "received" and task.get("request", {}).get("task", "") == "flank" \
 					and BattleSystem.canonical(state, int(task["request"]["battle_id"])) == int(battle.get("id", -1)) and not known.is_empty():
 				face = WarFront.facing_deg(Vector2(Vector2i(int(known["x_m"]), int(known["y_m"])) - anchor))
-			var sizes := counts(ArmySystem.fit_count(repo, state, code), int(repo.bal("battle_group_size")))
+			var old: Array = battle.get("groups", {}).get(code, [])
+			var size := int(repo.bal("battle_group_size"))
+			var left := ArmySystem.fit_count(repo, state, code)
+			var sizes: Array[int] = []
+			# Partial migration rows keep their people; only losses trim the tail.
+			for row: Dictionary in old:
+				if left <= 0: break
+				var kept := mini(left, int(row["count"]))
+				sizes.append(kept)
+				left -= kept
+			if left > 0 and not sizes.is_empty():
+				var added := mini(left, maxi(0, size - sizes[-1]))
+				sizes[-1] += added
+				left -= added
+			sizes.append_array(counts(left, size))
 			var at := layout(repo, BattleFormation.of_unit(state, code), sizes.size(), anchor, face)
 			var slots := BattleFormation.slots(BattleFormation.of_unit(state, code), sizes.size())
 			var front := 0.0
 			for slot: Vector2 in slots:
 				front = minf(front, slot.y)
-			var old: Array = battle.get("groups", {}).get(code, [])
 			var entry := BattleSystem._stored(state, code)
 			var next := int(entry.get("group_next_slot", 0))
 			for row: Dictionary in old:

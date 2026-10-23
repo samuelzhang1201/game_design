@@ -102,6 +102,11 @@ func _plain_power(code: String, men: int) -> void:
 	for arm: String in repo.world_table("military", "unit_types"):
 		row[arm] = "0"
 	row["infantry"] = str(men)
+	var source: Dictionary = row.source_parts[0].duplicate(true)
+	source.arm = "infantry"
+	source.equipment_count = men
+	source.crew_per_element = int(repo.world_row("military", "unit_types", "infantry").crew)
+	row.source_parts = [source]
 	assert_false(People.move(repo, s, code, "fit", "released", MilitaryRoster.fit(s, code), "resize:" + code).has("error"))
 	assert_false(People.enlist(repo, s, code, men, "raise:" + code).has("error"))
 

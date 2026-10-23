@@ -407,3 +407,11 @@ func test_split_preserves_equipment_origins_before_pooling_the_royal_train() -> 
 	saved.army_roster = units
 	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(saved.to_dict())))
 	assert_eq(restored.army_roster, units, "origins are save facts, not reconstructed from the capital")
+
+func test_recursive_living_halves() -> void:
+	var script: GDScript = load("res://scripts/engine/army_split.gd")
+	assert_true(script.has_method("halves"))
+	if not script.has_method("halves"):
+		return
+	for example: Array in [[0, []], [1000, [1000]], [1001, [501, 500]], [2001, [501, 500, 1000]], [2500, [625, 625, 625, 625]]]:
+		assert_eq(script.call("halves", example[0], 1000), example[1])

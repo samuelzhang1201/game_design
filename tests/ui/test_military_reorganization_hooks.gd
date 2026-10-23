@@ -20,6 +20,9 @@ func before_each() -> void:
 	var row: Dictionary = campaign.army_roster[code]
 	row["cavalry"] = str(int(row["cavalry"]) + 600)
 	row["source_parts"][0]["equipment_count"] = int(row["source_parts"][0]["equipment_count"]) + 600
+	var id: String = campaign.military_rosters[code].cohort_ids[0]
+	campaign.military_cohorts[id].fit += 1001
+	campaign.military_cohorts[id].initial += 1001
 	campaign.military_migration["organization_pending"] = true
 	campaign.foes.clear()
 	campaign.ai_hosts.clear()
@@ -37,8 +40,8 @@ func test_load_reorganizes_before_publishing_and_second_load_is_stable() -> void
 	assert_true(Game.load_campaign("user://organization_hooks.json"))
 	assert_false(bool(Game.state.military_migration.get("organization_pending", true)))
 	var total := 0
-	for unit: String in Game.state.military_migration.get("unit_mapping", {}).get(code, []):
-		assert_lte(MilitaryRoster.personnel_capacity(repo, Game.state.army_roster[unit]), 600)
+	for unit: String in Game.state.military_migration.get("living_unit_mapping", {}).get(code, []):
+		assert_lte(MilitaryRoster.living(Game.state, unit), 1000)
 		total += MilitaryRoster.living(Game.state, unit)
 	assert_eq(total, initial_people)
 	assert_true(Game.save_campaign("user://organization_hooks.json"))
@@ -50,7 +53,7 @@ func test_day_boundary_reconciles_pending_organization_before_day_work() -> void
 	var engine := TickEngine.new(repo)
 	assert_eq(engine.resolve_day(campaign).get("status"), "complete")
 	assert_false(bool(campaign.military_migration.get("organization_pending", true)))
-	assert_true(campaign.military_migration.get("unit_mapping", {}).has(code))
+	assert_true(campaign.military_migration.get("living_unit_mapping", {}).has(code))
 
 func test_invalid_organization_load_keeps_existing_reign() -> void:
 	Game.state = SuiteData.campaign(repo, 7)

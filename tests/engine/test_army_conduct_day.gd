@@ -61,6 +61,11 @@ func _men(c: String, n: int) -> void:
 		if row.has(arm):
 			row[arm] = "0"
 	row["infantry"] = str(n)
+	var source: Dictionary = row.source_parts[0].duplicate(true)
+	source.arm = "infantry"
+	source.equipment_count = n
+	source.crew_per_element = int(repo.world_row("military", "unit_types", "infantry").crew)
+	row.source_parts = [source]
 	assert_false(Personnel.replace(repo, state, c, n).has("error"))
 
 
