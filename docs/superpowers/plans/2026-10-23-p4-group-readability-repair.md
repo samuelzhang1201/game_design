@@ -1,0 +1,121 @@
+# P4 Group Readability Repair Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans task by task. Each PR has one implementation session and its unique Review, who is also the independent visual critic. No subagents or third reviewer. Steps use checkbox syntax; only root dispatches successors.
+
+**Goal:** Repair the observable near-scale defects of saved physical groups and establish whether the existing far-scale readability gate is physically satisfiable, without changing saved deployment or concealing occlusion.
+
+**Architecture:** Retain the merged G1 reader and real models. First add reproducible camera azimuth control to the existing frozen capture path, then make only the model-material changes demonstrated useful by those controls through the editor. Camera magnification can expose detail for inspection; it cannot make a one-pixel figure identifiable at the unchanged far playing scale. That conflict remains an explicit release blocker.
+
+**Tech Stack:** Godot 4.7 Forward+, existing Terrain3D/player map, StandardMaterial3D inherited unit scenes, GUT, real-window visual-review.
+
+**Spec:** `docs/superpowers/specs/2026-10-17-unit-behavior-and-battlefield-design.md` §§6–8,14; `docs/superpowers/plans/2026-10-23-p4-group-geometry-visual-acceptance.md`; N0 `2026-10-23-p4-narrow-deployment-reserves.md`.
+
+## Global Constraints
+
+- “3D兵人按真实可战人数显示，每50人一个，不满50人向上取整；伤兵、俘虏不显示、不参战。” Preserve 800/1000/10000 → 16/20/200, and two 51-person units → four, independently rounded.
+- “战略单位位置、部署组的整数世界位置及其占地同属一份模拟事实”. Keep saved XZ, yaw, roles, counts, slots, spacing and the existing footprint cap. No renderer deployment writer, terrain flattening, lifted floating bodies or enlarged simulation footprint.
+- “所有调校数值进入data，静态外观通过编辑器资源制作”. No text editing `.tscn`/`.tres`, new API/MCP/trust permissions, new art, badges, sprites, billboard substitutes or draw-through materials.
+- Sight admission and ghosts remain G1's existing paths. A hidden live battle cannot affect visible output. WAR ROOM remains one piece per actual unit.
+- Preserve depth tests and real house/terrain occlusion. A successful unobscured control does not turn an obscured original into a passing image.
+- This planning PR owns only this document. Product paths below are proposed future ownership, not permission to edit them here.
+
+## Review Focus
+
+1. A projected bounding box measures potential coverage, not surviving fragments: R0 must compare original, rotated camera and unobscured controls.
+2. A close-up or thinner FOV may look excellent while unchanged far views fail: R1 retains both original playing zooms and full windows in every comparison.
+3. Brighter grey may become chalk or a sticker: R1 critiques material/value and family distinction against taste at native scale, not enlarged crops alone.
+4. Shared material changes can alter legacy pieces and WAR ROOM tin/folio rendering: R1 checks those existing callers without changing their logic.
+5. Hidden/ghost mutations and camera changes must not alter source state, group transforms or admission: both steps retain hashes and per-node measurements.
+
+## Inspected evidence and hard limits
+
+Baseline: `f044f9e93ca8ecc01713241db20cbbd8d8a4f089` (PR164 merge). Remote merge is not visual acceptance. Historical evidence is under `/Users/samuelzhang/.codex/worktrees/p4-group-map-consumer/game_design/.superpowers/p4-group-map-consumer/`; retain `REVIEW.md`, `visual/800-windows-zooms.png`, `800-near-density-3x.png`, `800-far-density-3x.png`, matching original PNG/JSON files and `sheet-index.json`. The plan author inspected these sheets/crops and `docs/references/map_look/current_6km.png`. Taste principles: real miniatures on their own ground; silhouette/value carry meaning at playing scale; sharp close and clean far; no floating labels.
+
+The first infantry group in `800-near-2560x1600.json` has `screen_bounds` size `[2.46127319335938,3.695068359375]` design px, approximately **4.92×7.39 window px**. In `800-far-2560x1600.json` it is `[0.49658,0.77942]`, approximately **0.99×1.56 window px**. The factor of two is the original window/design mapping; future captures must derive it from their actual viewport/window transforms, never assume two at other resolutions. Both use the same save SHA256 `cd66b9f6b5125489849b4a236a30159ed977d59bbb9dcc168c3fc28d802474a6`, target `[4372.125,10502.25]`, yaw 0, frame 40; distances are 400 and 2000 built metres. Original loaded/final state hashes match. Do not mistake large legacy/ghost figures elsewhere for the measured physical groups.
+
+`Map3DBattleGroups.place` converts saved metres through `ArmySystem.metres_to_pack` and `ctx.to_world`. Its `scale_cap(old_scale, extent, pitches, gap)` is `min(old_scale, pitch_x/(2*extent_x*gap), pitch_y/(2*extent_y*gap))`. Existing data `battle_group_spacing_m=50`, `battle_group_depth_m=40`, measured pack conversion ratio 0.05 give 2.5×2.0 built-metre pitches. Thus the small models are a physical-spacing consequence, not a missing reference-size multiplier. The first infantry's measured footprint is approximately 1.1201×0.7480 built metres at scale 1.01001. Bounds include source transforms, stature and weapons via `model_bounds`.
+
+Hand calculation: at fixed lens and target, projected size varies approximately as `1/depth`; 400→2000 predicts one fifth, consistent with 7.39→1.56 px (pitch/perspective explain the remainder). A tenfold larger **same far** silhouette would need roughly tenfold world size or tenfold optical magnification. The former violates the spacing cap; the latter magnifies ground/buildings equally and changes playing coverage. More samples/MSAA can smooth the existing silhouette, not give one display pixel enough independent shape samples. Increasing render scale does not multiply display pixels. Changing `map3d_unit_ref_px` cannot bypass a binding cap.
+
+The original gap variants 1.2/1.6/2.0 ranked 1.6 > 1.2 > 2.0 and all failed. Even if the cap binds throughout, 1.6→1.2 gives only 4/3 linear growth: far about 1.32×2.08 px, still insufficient to promise identification. Do not repeat that experiment as the proposed fix.
+
+**Occlusion is separate:** the original far 3× crop contains building facades at the target. Nodes/bounds alone do not prove any soldier pixels survived. Existing camera target centres the saved battle but yaw 0 looks through the town; changing target/panning does not remove physical overlap. Rotating around the same ground target can expose a different line of sight. Where houses or terrain still block the ray, the soldier must remain blocked. Do not hide towns, change depth order or move units to manufacture a pass.
+
+**Contract conflict to resolve in this plan's unique Review:** current geometry permits presence/formation at far scale but cannot promise identifiable individual troop silhouettes at ~1×1.6 px, especially for two 51-person units or complete occlusion. No material-only, light-only or current-scene-only solution is established for that demand. Keep the existing far gate FAILED until its actual requirements pass or an explicitly authorized design amendment is recorded by root; neither this plan nor its Review silently replaces it with “nodes exist”, a closer crop, or a new weaker pixel threshold. The existing spec permits individuals to be uncountable far out, but still requires a readable battlefield. These are different claims; Review must state which original image defects remain. Plan merge permits bounded repair work, not N0 release.
+
+## Minimal file boundaries and editor dependency
+
+R0 owns `tools/snapshot_screen.gd`, `tests/ui/test_snapshot_startup.gd`, `tools/CLAUDE.md`. This is developer capture control only. It does not change the map renderer or introduce a second view. Existing `Map3DView.component("rig")` and `Map3DCameraRig.place(target_xz: Vector2, distance_m: float, yaw_deg: float) -> void` already supply the required camera seam.
+
+R1 owns only `scenes/models/units/infantry.tscn` and `scenes/models/units/archers.tscn`. These inherited scenes already contain editable material overrides; no additional `.tres` is necessary. Infantry body material `infantry_atlas_mat.003` uses albedo, metallic/roughness and normal maps; archer body `archers_body_materials` uses the same kinds, plus separate bow/quiver/arrow materials. Retain these textures/skins and animation clips. Archer body/bow have `lod_bias=0.1`; accessories have range limits. Do not change LOD/ranges without separate evidence that their loss causes the silhouette defect.
+
+`scenes/map3d/map3d_world.tscn` is **not** required for material edits; no world light change is justified yet. `Map3DCameraRig.bind` sets FOV/near/far from `data/screens/map3d/balance.csv`, so editing RigCamera's static FOV would be overwritten and is not a camera fix. `scripts/map3d/map3d_battle_groups.gd`, `map3d_layer_units.gd`, engine/data/spacing, meshes/atlases, WAR ROOM and shared fixtures stay out of R0/R1 ownership. Any proven additional path requires root's explicit scope registration before editing.
+
+**R1 start dependency:** an already authorized, working local Godot editor channel that can inspect scene resources and save them. Current session has no gdai tool. Do not install/change MCP/trust or replace editor saves with text/resource-generation scripts. Before any save compare all open script buffers with disk, reload stale buffers without overwriting another owner's work, confirm the selected checkout/scene, edit the existing material in the inspector, save only owned resources, inspect disk diff, reload scene and verify saved values. No external editor availability means R1 remains blocked with these exact actions pending. No user reauthorization is needed for this already requested repair.
+
+### Task R0: Reproduce camera occlusion without changing the battlefield
+
+**step_id:** `p4-group-capture-azimuth`; depends on accepted repair plan and merged G1, not N0 merge. Independently deliverable result: a frozen save can be photographed at a declared yaw, preserving state and physical geometry.
+
+**Interfaces:**
+- Extend existing `SnapshotScreen.battle_save_options(args: PackedStringArray) -> Dictionary` to admit optional `--yaw3d DEGREES` only with `--zoom3d`; parse finite numeric values and require `0 <= yaw < 360`. Default omitted yaw is 0, matching the existing frozen baseline.
+- New runner field `_yaw3d: float = 0.0`; parse with existing CLI handling. At the existing frame-8 camera setup, after `look_at_pack`/`look_at_home`, use `v3.component("rig") as Map3DCameraRig` and `rig.place(v3._ctx.target, v3._ctx.distance, _yaw3d)`. No new product API, state assignment or input simulation. The runner already reads `_ctx` for evidence; reuse that seam.
+- Existing evidence `camera.yaw` records actual final yaw. Existing `group_geometry() -> Dictionary`/`Map3DBattleGroups.evidence(piece: Dictionary) -> Array` remain unchanged. No new visibility claim from bounds.
+
+- [ ] Add `test_frozen_yaw_options` to owned UI tests: absent yaw remains valid; 0/90/180/270 accepted; `-1`, `360`, `nan`, `inf`, empty/missing/non-numeric yaw and yaw without zoom rejected. Retain overwrite/alias and all frozen forbidden-writer tests. Run the single owned test first and observe new assertions fail.
+- [ ] Implement that CLI/control path, document the flag in `tools/CLAUDE.md`, run the owned test to PASS under the shared lock. Add a test asserting default frame setup retains yaw 0 and requested 90 reaches `place` without writing campaign state, using the existing runner test seam rather than loading Terrain3D headless.
+- [ ] Capture the original save at 0/90/180/270, same target/distance/frame, using the command below. Read full windows and 3× crops; identify roof/terrain blockage versus view edge clipping. Retain yaw-0 failures. A rotated success proves camera occlusion, not a repaired yaw-0 image.
+- [ ] Add unobscured **control saves** using only N0's own output/export fixture path when ready; otherwise G1's existing synthetic fixture source, in scratch only. Generate a distinct valid deployment on verified open dry ground through the fixture's existing engine setup, do not translate rows after saving or edit G1/N0 fixture files. Bind separate input hashes and label these controls, never replacements for the original saves. If no existing fixture path produces valid open ground, record that blocker to root for a separately scoped fixture step; do not smuggle a writer into this runner.
+- [ ] Run full evidence matrix below, record checks/input hashes, commit/push a new PR. Unique Review independently critiques camera controls and checks current-HEAD CI before merging. It does not certify R1 or N0.
+
+Capture template (expand OUT, EVIDENCE and SAVE to distinct absolute scratch paths; invoke without `--headless`):
+
+```sh
+/Users/samuelzhang/game_design-wt/godot_lock.sh /Applications/Godot.app/Contents/MacOS/Godot --path . res://scenes/tools/snapshot_screen.tscn -- --screen root --resolution 2560x1600 --battle-save SAVE --group-evidence EVIDENCE --out OUT --zoom3d 400 --yaw3d 90 --still
+```
+
+Use existing `--at3d x,y` only for camera framing, never placement; original group-centre framing stays in the matrix. Use the same capture-frame convention (40) and record actual final camera. Every capture must exit 0; a timeout/error is no screenshot acceptance.
+
+### Task R1: Improve material separation at existing playing scales
+
+**step_id:** `p4-group-near-materials`; depends on R0 accepted merge, editor availability, and root ownership registration. Scope is the two unit scenes above. It may improve near readability independently; it is not a complete far repair.
+
+**Interfaces:** existing StandardMaterial3D inspector properties only; no new script interface. Existing model assembly, scale cap, world transforms and scene consumers remain unchanged.
+
+- [ ] Freeze R0 original/rotated/open-ground captures as before evidence. Inspect material overrides in the editor. Compare body value distribution and metallic/roughness response under the existing sun on open ground and town-shadow controls; do not assume the texture's metallic channel is wrong merely because its multiplier is 1.
+- [ ] Make two material variants in the editor in addition to baseline: first reduce the existing body metallic multiplier to 0.5; second to 0.0, keeping albedo/textures, normal, roughness and lighting unchanged. These are experimental brackets, not prescribed final design values. Save/capture sequentially in the same owned checkout and retain each saved resource hash. Choose only if one visibly improves body/equipment separation without chalk, emissive colour, flattened material or a changed medium. If neither helps, stop this proposed material fix as falsified; no invented success or unbounded retexture work.
+- [ ] For the winning bracket, independently inspect full-window and cropped near/far results at both resolutions; archer/infantry silhouettes must separate on unobscured near ground, front and back, with the clock paused. Unique Review ranks all eight taste axes before reading author preference. It also checks legacy nonbattle infantry/archers, ghost transparency and WAR ROOM tin/folio material consumers. Revert an adverse material bracket rather than compensate with world lighting or unrelated resources.
+- [ ] After final editor save run targeted `tests/map3d/test_map3d_unit_scenes.gd`, `tests/map3d/test_map3d_battle_groups.gd`, `tests/map3d/test_map3d_editor_owned_look.gd`, `tests/ui/test_editor_owned_look.gd` under the shared lock; run diff-selected functional categories once on frozen final resources as required by selector. Recompute capture/resource bindings and repeat invalidated matrix cells. No routine full local suite.
+- [ ] Commit only two scenes; preserve exact transforms and compare their serialization/override diff. Unique Review may merge this bounded near improvement after its own acceptance and all current-HEAD required CI pass, while recording the far gate still FAILED if unresolved. Do not label the PR “fix all readability”.
+
+## Evidence matrix and acceptance shared by R0/R1
+
+Capture **1920×1080 and 2560×1600**, original near 400/far 2000 built metres, 800/1000/10000 fit-person fixtures and two 51-person units, original terrain/town-obscured and open-ground controls. Compare baseline + two variants and 3× crops. R0 variants are camera yaws; R1 variants are saved material brackets at identical yaw. Keep the original yaw-0 cells in addition to unobscured camera controls. Preserve full unannotated PNGs and publish sheets/crop rectangles derived from each actual `screen_bounds` through the measured viewport-to-window transform; no hand-picked crop of unrelated legacy pieces.
+
+Numeric acceptance uses existing G1 tolerances/conversion: exact per-unit counts/roles/slots, saved XZ converted with native Godot float32 arithmetic, wrapped facing, identical world scale/footprint across zoom/window/yaw, unchanged source rows and loaded/final state hash, input/PNG/relevant-script/resource SHA256 and actual frame/camera/quality. Independently recompute expected boxes from each instantiated model AABB's eight transformed corners and camera projection, in the same design/window coordinate convention as evidence. Compare to exported expanded bounds; do not equate a rectangular bound with visible area. Geometry hash changes attributable only to screen projection are expected; world-node/source digests must not change with camera/material. Check before/after reload as well.
+
+Visibility acceptance includes one admitted enemy, unseen enemy and stale ghost. Mutating hidden live group counts/positions in a separate valid frozen input may change whole-save provenance but cannot change admitted/ghost node transforms, screenshot content attributable to them, or permitted group exports. Keep the existing separation from dynamic weather/animation by using the same paused frame and clips. Retain ghost last-known appearance and no new private counts.
+
+Visual acceptance is binary per original gate, plus an explicit limitation log: a reviewer can find the unobscured near formation in the full window, distinguish infantry from archers and front/reserve spatial structure, and recognise 800 versus 10000 as different formation extents/density without consulting the JSON. A crop alone, count labels or knowing the coordinate does not pass. Squint/value, colour family, common medium, ground contact/depth edges, miniature scale, sharpness and informational noise all require a written Review verdict. No arbitrary new “8 px means readable” or luminance-ratio threshold substitutes for that verdict. Pixel boxes quantify the available signal, not human identification.
+
+Far images must retain the existing battlefield-readability verdict. Complete genuine occlusion is expected to hide troops and is recorded as such; it cannot be counted as an unobscured readability pass. Camera rotation controls must preserve actual occluders. A framing error is rejected if the intended group is outside/clipped by the viewport despite a claimed centred capture; actual ray blockage is not fixed by redrawing over it. No promise that every individual is countable at every strategic zoom. If the original far formation remains visually absent in unobscured controls, the gate remains FAILED.
+
+## Camera/geometry alternatives and stopping boundary
+
+A closer optional inspection view is physically feasible using the existing camera rig: from the near measured 7.39 px, distance 200 predicts roughly 14.8 px and 100 roughly 29.6 px before pitch effects. Current `map3d_zoom_min_m=400` clamps those requests. A future camera-only step would own `data/screens/map3d/balance.csv` (that key only) and existing `tests/map3d/test_map3d_geometry.gd`, bracketing 200/100/50 and checking ground-clearance, picking, zoom-about-pointer, scale-bar truth and houses/terrain clipping. It requires root's separate design/scope registration after Review identifies a legitimate inspection need; no chosen value is asserted here. This improves near inspection only and **cannot** satisfy original 400/2000 playing-scale gates by renaming zooms. Narrower FOV has the same coverage tradeoff. Do not dispatch this as a far-pixel solution.
+
+A narrow/taller replacement mesh could gain height while retaining width but risks false proportions and metre-scale monuments; it needs new-art authorization and proper asset/rig/animation validation, outside this plan. Raising light or changing global environment affects the whole map and cannot solve the sampling or depth limits; no world-scene edit is presently justified. If R0/R1 leave the far gate failed, root receives an explicit contract conflict with the measured maximum permitted footprint and original full windows; execution stops at that boundary. Plan Review can reject feasibility claims or revise this document, not grant an unrequested new art/geometry contract or weaken N0 acceptance.
+
+## Delivery graph, ownership and completion
+
+`accepted repair plan + merged G1 → R0 accepted → editor-ready R1 accepted → original N0 pair repeats final integration gate → N0 merge → existing N1/N2`.
+
+R0/R1 do not require N0 merge. N0's original Review `01a167ac-e242-7893-840e-065a7615a7f7` continues its existing fixture fixes; this plan neither edits nor reviews them. G1's historical pair stays historical; this future work has separate PR owner pairs. The diagram's N0 gate arrow is conditional on actual far/near acceptance, not mere R1 merge. A far-contract blocker prevents release even when R0 and the limited R1 improvement merge.
+
+Sole dispatcher `01a15959-7582-7233-9637-1f0f9d090d70` checks active tasks, PRs, checkpoint/registry and owned paths before registering each future step once, with exact branch/worktree, acceptance and its two owners. R0 and R1 are serial; no conflicting ownership hidden by separate branches. No author/Review of this planning PR dispatches execution or becomes a third N0/G1 owner. User already authorized independent Review then execution; ask no renewed execution-method/permission question.
+
+This planning PR runs documentation/diff/selector and harness checks only, not Godot or a new visual run. Its unique Sol/medium Review checks the code/evidence feasibility and explicit unresolved far contract, revises this document if needed, and merges only after current-HEAD required `harness-checks` and `gut-tests` succeed (empty matrix is valid only when selector explicitly requests no GUT). Check actual branch protection/check conclusions; pending/skipped-required/failure/timeout is not success.
+
+Every handoff records authorization, single scope, step/PR, both owner IDs, checkout/branch/HEAD, owned/dirty files, commands/results bound to commit/input hashes, running processes, risks and next acceptance/stop conditions. Original historical image evidence is reused only for unchanged inputs and is not called fresh acceptance. Implementer hands off once and ends; Review owns fixes/merge then ends. Only root manages later dispatch. No background supervision or owner replacement.
+
+**Self-review:** current G1 interfaces and cap arithmetic checked; pixel budget separated from material and depth; editor-only static resource path explicit; camera-control step independently testable without N0 cycle; world scene/reader rewrite unnecessary; full original windows retained; failure boundaries cannot waive N0; P7 motion/performance redesign and new art intentionally excluded.
