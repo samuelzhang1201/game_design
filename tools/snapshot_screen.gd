@@ -122,6 +122,7 @@ var _war_execs: Array[String] = []
 var _held: Array[Resource] = []
 ## --zoom3d M (with --screen root) frames the capital M metres away.
 var _zoom3d := -1.0
+var _yaw3d: float = 0.0
 ## --at3d x,y (with --zoom3d) frames that pack pixel instead of the capital.
 var _at3d := Vector2(-1, -1)
 ## --day-share F holds the clock at F of the day (0..1), so a shot shows the
@@ -455,6 +456,8 @@ func _ready() -> void:
 				_look3d.append(float(part))
 		elif args[i] == "--click-courier":
 			_click_courier = int(args[i + 1])
+		elif args[i] == "--yaw3d":
+			_yaw3d = float(args[i + 1])
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
 		elif args[i] == "--supply-front":
@@ -1094,10 +1097,7 @@ func _process(_delta: float) -> void:
 			v3.set_dev_mode(true)
 		if _weather != "":
 			v3.set_weather_override(_weather)
-		if _at3d.x >= 0.0:
-			v3.look_at_pack(_at3d, _zoom3d)
-		else:
-			v3.look_at_home(_zoom3d)
+		frame_camera(v3)
 	if _root != null and _frames == 10 and _click3d.x >= 0.0 \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
@@ -2015,12 +2015,36 @@ func _stage_battle_encounter() -> void:
 	Game.advance_day()
 
 
+## Frame first, then orbit the same ground target without touching campaign state.
+func frame_camera(view: Map3DView) -> void:
+	if view._ctx == null:
+		return
+	if _at3d.x >= 0.0:
+		view.look_at_pack(_at3d, _zoom3d)
+	else:
+		view.look_at_home(_zoom3d)
+	var rig := view.component("rig") as Map3DCameraRig
+	rig.place(view._ctx.target, view._ctx.distance, _yaw3d)
+
+
 ## Frozen captures accept presentation flags only; validation is callable without a world.
 func battle_save_options(args: PackedStringArray) -> Dictionary:
+	for index in args.size():
+		var flag := args[index]
+		if flag not in ["--zoom3d", "--yaw3d"]:
+			continue
+		if index + 1 >= args.size() or not args[index + 1].is_valid_float():
+			return {"error": "invalid/missing numeric capture option: " + flag}
+		var value := float(args[index + 1])
+		if not is_finite(value) or (flag == "--zoom3d" and value <= 0.0) \
+				or (flag == "--yaw3d" and (value < 0.0 or value >= 360.0)):
+			return {"error": "capture option out of range: " + flag}
+	if args.has("--yaw3d") and not args.has("--zoom3d"):
+		return {"error": "--yaw3d requires --zoom3d"}
 	if not args.has("--battle-save"):
 		return {"error": "--group-evidence requires --battle-save"} if args.has("--group-evidence") else {}
 	var options: Dictionary = {}
-	var allowed := ["--screen", "--resolution", "--battle-save", "--group-evidence", "--out", "--zoom3d", "--at3d", "--set"]
+	var allowed := ["--screen", "--resolution", "--battle-save", "--group-evidence", "--out", "--zoom3d", "--yaw3d", "--at3d", "--set"]
 	var i := 0
 	while i < args.size():
 		var flag := args[i]

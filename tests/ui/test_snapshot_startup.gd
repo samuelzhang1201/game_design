@@ -111,3 +111,72 @@ func test_frozen_assets_are_loaded_or_fail_before_root_threads() -> void:
 	assert_ne(shot.battle_capture_warm(["res://missing_frozen_capture_fixture.tres"]), "")
 	assert_eq(shot.battle_capture_warm(["res://scenes/map3d/materials/unit_select_glow.tres"]), "")
 	assert_gt(shot._held.size(), 0, "retain the loaded dependency until capture teardown")
+
+
+func test_frozen_yaw_options() -> void:
+	var shot := load("res://tools/snapshot_screen.gd").new() as Node
+	autofree(shot)
+	var frozen := PackedStringArray(["--screen", "root", "--resolution", "1920x1080", "--still", "--battle-save", "/tmp/input.json"])
+	for prefix: PackedStringArray in [PackedStringArray(), frozen]:
+		assert_eq(shot.battle_save_options(prefix).get("error", ""), "")
+		for yaw: String in ["0", "90", "180", "270"]:
+			assert_eq(shot.battle_save_options(prefix + PackedStringArray(["--zoom3d", "400", "--yaw3d", yaw])).get("error", ""), "", yaw)
+		for yaw: String in ["-1", "360", "nan", "inf", "", "north"]:
+			assert_ne(shot.battle_save_options(prefix + PackedStringArray(["--zoom3d", "400", "--yaw3d", yaw])).get("error", ""), "", yaw)
+		assert_ne(shot.battle_save_options(prefix + PackedStringArray(["--zoom3d", "400", "--yaw3d"])).get("error", ""), "")
+		assert_ne(shot.battle_save_options(prefix + PackedStringArray(["--yaw3d", "90"])).get("error", ""), "")
+		for zoom: String in ["0", "-1", "nan", "inf", "", "close"]:
+			assert_ne(shot.battle_save_options(prefix + PackedStringArray(["--zoom3d", zoom])).get("error", ""), "", zoom)
+		assert_ne(shot.battle_save_options(prefix + PackedStringArray(["--zoom3d"])).get("error", ""), "")
+
+
+class CaptureRig extends Map3DCameraRig:
+	var placed: Array = []
+	func place(target_xz: Vector2, distance_m: float, yaw_deg: float) -> void:
+		placed = [target_xz, distance_m, yaw_deg]
+
+
+class CaptureView extends Map3DView:
+	var capture_rig := CaptureRig.new()
+	func component(key: String) -> Object:
+		return capture_rig if key == "rig" else null
+	func look_at_pack(pack_px: Vector2, at_distance: float = -1.0) -> void:
+		_ctx.target = pack_px
+		_ctx.distance = at_distance
+	func look_at_home(at_distance: float) -> void:
+		_ctx.target = Vector2(10, 20)
+		_ctx.distance = at_distance
+
+
+func test_frame_camera_applies_default_and_requested_yaw_without_state_writes() -> void:
+	var shot := load("res://tools/snapshot_screen.gd").new() as Node
+	var view := CaptureView.new()
+	autofree(shot)
+	autofree(view)
+	autofree(view.capture_rig)
+	assert_true(shot.has_method("frame_camera"))
+	if not shot.has_method("frame_camera"):
+		return
+	var repo := preload("res://tests/suite_data.gd").repo()
+	var state := preload("res://tests/suite_data.gd").campaign(repo, 7)
+	view._ctx = Map3DContext.new(repo, {})
+	view._ctx.state_fn = func() -> GameState: return state
+	var before := SaveLoad.state_hash(state)
+	shot._zoom3d = 400.0
+	shot.frame_camera(view)
+	assert_eq(view.capture_rig.placed, [Vector2(10, 20), 400.0, 0.0])
+	shot._yaw3d = 90.0
+	shot._at3d = Vector2(30, 40)
+	shot.frame_camera(view)
+	assert_eq(view.capture_rig.placed, [Vector2(30, 40), 400.0, 90.0])
+	assert_eq(SaveLoad.state_hash(state), before)
+
+
+func test_frame_camera_preserves_missing_world_notice_path() -> void:
+	var shot := load("res://tools/snapshot_screen.gd").new() as Node
+	var view := Map3DView.new()
+	autofree(shot)
+	autofree(view)
+	shot._zoom3d = 400.0
+	shot.frame_camera(view)
+	assert_null(view._ctx, "a missing world has no bound camera context")
