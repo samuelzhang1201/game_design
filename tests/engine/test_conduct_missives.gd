@@ -85,8 +85,9 @@ func test_stripped_bare_event_names_the_last_taker() -> void:
 	for arm: String in repo.world_table("military", "unit_types"):
 		if row.has(arm):
 			row[arm] = "0"
-	row["infantry"] = "100000"
-	assert_false(Personnel.replace(repo, state, first, 100000).has("error"))
+	row["infantry"] = "1000"
+	repo.balance["army_supply_per_head_permille"] = 10000 # Same 10000 monthly commoner demand within the cap.
+	assert_false(Personnel.replace(repo, state, first, 1000).has("error"))
 	state.regiments[first]["supplies"] = 0
 	state.regiments[first]["carry_days"] = 30
 	state.regiments[first]["forage"] = "desperate"

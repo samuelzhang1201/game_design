@@ -3,7 +3,7 @@ extends GutTest
 ## and-battlefield-design §5). Hand-computed on flat open ground at 1 000 m a
 ## day: a 2 300 m march is three days, today's budget ceil(2300 / 3) = 767 over
 ## ten substeps, 77 × 7 + 76 × 3. Running: 92 × 7 + 91 × 3 = 917 (1200‰,
-## whole metres). 30 000 commoners on the plains use 30 000 × 1000‰ × 100‰ ×
+## whole metres). 1000 commoners on the plains use 1000 × 1000‰ × 3000‰ ×
 ## 1000‰ = 3 000 a month; day 10's bite is 1 000 − 900 = 100, and a running
 ## substep of all of them pays 100 × 300 / 10 000 = 3.
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
@@ -24,7 +24,8 @@ func _fixture(supplies: int) -> Dictionary:
 	var codes: Array = state.regiments.keys()
 	codes.sort()
 	var code := String(codes[0])
-	assert_false(Personnel.replace(repo, state, code, 30000).has("error"))
+	repo.balance["army_supply_per_head_permille"] = 3000 # 1000 commoners still use 3000 a month.
+	assert_false(Personnel.replace(repo, state, code, 1000).has("error"))
 	var entry: Dictionary = state.regiments[code]
 	entry["morale"] = 100
 	entry["training"] = 100
@@ -76,6 +77,7 @@ func _join_fixture(martial: int, boldness: int) -> Dictionary:
 	assert_false(raised.has("error"), str(raised))
 	var assigned := MilitaryCommanders.assign(f.repo, f.state, f.code, person, "Gait fixture appointment")
 	assert_false(assigned.has("error"), str(assigned))
+	f.repo.balance["army_supply_per_head_permille"] = 2995 # floor((999 + 3) × 2995 / 1000) = 3000, including the officer.
 	f.state.characters[person].skills["sk_martial"] = martial
 	f.state.characters[person].attributes["boldness"] = boldness
 	f["person"] = person
@@ -114,11 +116,11 @@ func test_a_withdrawal_march_runs_and_pays_the_increment() -> void:
 
 func test_wounded_keep_only_their_base() -> void:
 	var f := _context_fixture("withdrawal")
-	assert_false(Personnel.move(f.repo, f.state, f.code, "fit", "wounded", 15000).has("error"))
+	assert_false(Personnel.move(f.repo, f.state, f.code, "fit", "wounded", 500).has("error"))
 	f.state.regiments[f.code]["disengaging"] = 1
 	_begin(f)
 	_substeps(f.repo, f.state, 0, 10)
-	# runners' bite 100 × 15 000 / 30 000 = 50: 15 000 / 10 000 a substep,
+	# runners' bite 100 × 500 / 1000 = 50: 15 000 / 10 000 a substep,
 	# 1, 2, 1, 2 … = 15 over the day, remainder 0.
 	assert_eq(_walked(f), 917)
 	assert_eq(int(f.state.regiments[f.code]["supplies"]), 985)
@@ -126,7 +128,7 @@ func test_wounded_keep_only_their_base() -> void:
 
 func test_json_mid_day_equals_straight_through() -> void:
 	var straight := _context_fixture("withdrawal")
-	assert_false(Personnel.move(straight.repo, straight.state, straight.code, "fit", "wounded", 15000).has("error"))
+	assert_false(Personnel.move(straight.repo, straight.state, straight.code, "fit", "wounded", 500).has("error"))
 	straight.state.regiments[straight.code]["disengaging"] = 1
 	_begin(straight)
 	_substeps(straight.repo, straight.state, 0, 3)
@@ -398,7 +400,7 @@ func test_key_point_never_uses_hidden_enemy_truth() -> void:
 
 func test_key_point_running_fraction_and_food_survive_json() -> void:
 	var f := _key_point_fixture()
-	assert_false(Personnel.move(f.repo, f.state, f.code, "fit", "wounded", 15000).has("error"))
+	assert_false(Personnel.move(f.repo, f.state, f.code, "fit", "wounded", 500).has("error"))
 	_begin(f)
 	_substeps(f.repo, f.state, 0, 3)
 	assert_eq(int(f.state.regiments[f.code].get("run_supply_rem", 0)), 5000)

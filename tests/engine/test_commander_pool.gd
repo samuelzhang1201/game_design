@@ -25,6 +25,9 @@ func _needs(repo: DataRepository) -> Dictionary:
 		if result[realm]["guns"]:
 			result[realm]["new"] += 1
 			result[realm]["legacy"] += 1
+	for realm: String in result: result[realm]["new"] = 0
+	for unit: Dictionary in ArmySplit.opening_sources(repo)["roster"].values():
+		result[String(unit["kingdom_code"])]["new"] += ArmySplit.halves(MilitaryRoster.personnel_capacity(repo, unit), int(repo.bal("army_living_cap_men"))).size()
 	return result
 
 func test_every_realm_has_unique_eligible_active_and_reserve_commanders() -> void:

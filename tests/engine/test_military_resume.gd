@@ -5,6 +5,8 @@ const Scenario := preload("res://tests/fixtures/battle_scenario.gd")
 func test_saved_second_encounter_resumes_then_upgrades_once() -> void:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
 	var state := Scenario.two_battles(repo, 10)
+	# Freeze this fixture as a pre-v2 save, rather than the capped new opening.
+	state.military_migration.erase("living_cap_version")
 	# Only the two encounter pairs belong to this frozen-day import fixture.
 	var participants: Array = load("res://tests/invasion_play.gd").land_regiments(repo, 400).slice(0, 2)
 	participants.append_array(state.foes.keys())

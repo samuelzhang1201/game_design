@@ -21,7 +21,7 @@ func test_rejected_campaign_preserves_the_existing_reign() -> void:
 	Game.state = SuiteData.campaign(Game.data, 42)
 	var previous: GameState = Game.state
 	Game.campaign_maker = GameState.new_campaign
-	Game.data.balance["army_split_cap_men"] = 0
+	Game.data.balance["army_living_cap_men"] = 0
 	ArmySplit.forget()
 	assert_eq(Game.call("start_campaign", 44), false)
 	assert_same(Game.state, previous, "an invalid army configuration must not replace the current campaign")

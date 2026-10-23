@@ -84,3 +84,47 @@ func test_repeated_destinations_cannot_spend_the_same_person_twice() -> void:
 	var before := SaveLoad.state_hash(state)
 	assert_true(_apply("round", [_move("u", "fit", "dead", 60), _move("u", "fit", "wounded", 41)]).has("error"))
 	assert_eq(SaveLoad.state_hash(state), before)
+
+func test_mobilize_caps_live_and_reserved_people_before_any_write() -> void:
+	state.world[_path("rural_population")] = 10000
+	var rows := [_cohort("large", "new", 2500, "rural_population")]
+	var before := SaveLoad.state_hash(state)
+	assert_true(Roster.mobilize(repo, state, "oversize", rows, "new enlistment").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
+	rows = [_cohort("reserved", "u", 900, "rural_population")]
+	rows[0]["stage"] = "assembling"
+	assert_false(Roster.mobilize(repo, state, "reserve", rows, "paid reservation").has("error"))
+	before = SaveLoad.state_hash(state)
+	assert_true(Roster.mobilize(repo, state, "overflow", [_cohort("one", "u", 1, "rural_population")], "extra enlistment").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
+
+func test_captive_return_is_illegal_even_with_room() -> void:
+	assert_false(_apply("capture", [_move("u", "fit", "captured_current", 10)]).has("error"))
+	for to: String in ["fit", "wounded"]:
+		var before := SaveLoad.state_hash(state)
+		assert_true(_apply("return:" + to, [_move("u", "captured_current", to, 1)]).has("error"))
+		assert_eq(SaveLoad.state_hash(state), before)
+
+func test_wounded_people_fill_cap_but_recovery_and_captives_do_not_add_living() -> void:
+	state.world[_path("rural_population")] = 10000
+	assert_false(Roster.mobilize(repo, state, "fill", [_cohort("fill", "u", 900, "rural_population")], "fill to limit").has("error"))
+	assert_false(_apply("wound100", [_move("u", "fit", "wounded", 100)]).has("error"))
+	var before := SaveLoad.state_hash(state)
+	assert_true(Roster.mobilize(repo, state, "extra", [_cohort("extra", "u", 1, "rural_population")], "over limit").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
+	assert_false(_apply("recover100", [_move("u", "wounded", "fit", 100)]).has("error"))
+	assert_eq(Roster.living(state, "u"), 1000)
+	assert_false(_apply("capture77", [_move("u", "fit", "captured_current", 77)]).has("error"))
+	assert_false(Roster.mobilize(repo, state, "replace77", [_cohort("replace", "u", 77, "rural_population")], "paid replacements").has("error"))
+	assert_eq(Roster.living(state, "u"), 1000)
+
+func test_activation_refuses_overcap_reservations_atomically() -> void:
+	state.world[_path("rural_population")] = 10000
+	var row := _cohort("pending", "u", 900, "rural_population")
+	row.stage = "assembling"
+	assert_false(Roster.mobilize(repo, state, "pending", [row], "paid assembly").has("error"))
+	state.military_cohorts.pending.fit += 1
+	state.military_cohorts.pending.initial += 1
+	var before := SaveLoad.state_hash(state)
+	assert_true(Roster.activate(state, "activate", ["pending"], "finish assembly", repo).has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)

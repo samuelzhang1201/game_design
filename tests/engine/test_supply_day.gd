@@ -170,12 +170,12 @@ func test_the_draw_stops_at_thirty_days() -> void:
 func test_crown_then_lord_then_the_house_is_bought() -> void:
 	s.day = 5
 	s.regiments[code]["supplies"] = 0
-	# a unit's day is a unit or two: this one four times its size, so the
-	# day's draw outruns the crown's and the lord's single unit
-	var row: Dictionary = s.army_roster[code]
-	for arm: String in repo.world_table("military", "unit_types"):
-		row[arm] = str(int(float(row.get(arm, 0))) * 4)
-	assert_false(People.enlist(repo, s, code, MilitaryRoster.fit(s, code) * 3, "fourfold-supply").has("error"))
+	# Fourfold ration demand makes this day's draw outrun both single-unit stores.
+	repo.balance["army_supply_per_head_permille"] = int(repo.bal("army_supply_per_head_permille")) * 4
+	for other: String in s.regiments:
+		if other == code: continue
+		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, other, s), s)
+		s.regiments[other].supplies = ArmySystem.max_units(repo, use) + use
 	var send := ArmySystem.day_bite(_use(), 5)
 	assert_gt(send, 2)
 	_stock(town, 1, 1, 100)
@@ -338,7 +338,7 @@ func test_an_ordered_line_whose_courier_is_lost_says_the_orders_never_came() -> 
 	var m := MissiveWriter.supply_dispatch(repo, s, ev.filter(func(e: Dictionary) -> bool:
 		return String(e["type"]) == "order_lost"))
 	assert_eq(String((m["facts"] as Array)[0]["text"]), "The supply orders for %s never reached %s." % [
-		String(ArmySystem.regiment(repo, code)["label"]), String(repo.burgs[town]["label"])])
+		String(ArmySystem.regiment(repo, code, s)["label"]), String(repo.burgs[town]["label"])])
 
 ## The ORDERED line's own courier lost while a newer point still rides: that
 ## point is the order now waited on.

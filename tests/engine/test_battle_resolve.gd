@@ -23,7 +23,7 @@ func _land_codes() -> Array:
 
 
 func _heads(code: String) -> int:
-	return ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
+	return MilitaryRoster.living(SuiteData.campaign(repo, 7), code)
 
 
 func test_odds_permille() -> void:

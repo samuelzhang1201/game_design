@@ -457,8 +457,7 @@ func test_the_cap_key_exists() -> void:
 func test_under_arms_does_not_count_the_dead() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code: String = _mine()[0]
-	var reg := ArmySystem.regiment(repo, code)
-	var heads := ArmySystem.headcount(repo, reg)
+	var heads := MilitaryRoster.living(s, code)
 	assert_false(People.move(repo, s, code, "fit", "dead", 123, "reported_dead").has("error"))
 	assert_false(People.move(repo, s, code, "fit", "wounded", 45, "reported_wounded").has("error"))
 	var card := MapObjects.army_card(repo, code, s)

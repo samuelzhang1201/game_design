@@ -48,7 +48,7 @@ func _theirs() -> Array:
 
 
 func _heads(code: String) -> int:
-	return ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
+	return MilitaryRoster.living(SuiteData.campaign(repo, 7), code)
 
 
 ## The spot the tests fight on: the first unit's opening ground, in metres.

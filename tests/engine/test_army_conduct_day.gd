@@ -102,7 +102,7 @@ func _types(events: Array) -> Array:
 
 func test_day_order_and_events() -> void:
 	_place(a, home)
-	_men(a, 100000)
+	_men(a, 1000)
 	_starve(a)
 	_law(a, "desertion_penalty", "fine")
 	_place(b, foreign)
@@ -116,10 +116,10 @@ func test_day_order_and_events() -> void:
 			_put(c, 30, 90, 90)
 	var before_supplies := int(state.regiments[b]["supplies"])
 	var ev := ArmyConduct.day_step(repo, state)
-	# 100000 fit men, 3 lines x 3 per mille x 1000 / 1000 = 900 per 100000 per day... a lost > 0
+	# 1000 fit × 3 lines × 3 per mille = 9 lost, below the 5% cumulative-news line.
 	assert_eq(_types(ev), ["deserting", "forage_unlawful"])
 	assert_eq(String(ev[0]["regiment"]), a)
-	assert_gt(int(ev[0]["lost"]), 0)
+	assert_eq(int(ev[0]["lost"]), 9)
 	assert_eq(String(ev[1]["regiment"]), b)
 	assert_eq(String(state.regiments[b]["forage"]), "desperate")
 	assert_gt(int(state.regiments[b]["supplies"]), before_supplies)

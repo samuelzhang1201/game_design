@@ -11,7 +11,8 @@ func _fixture(path: Array, extra: Dictionary) -> Dictionary:
 	codes.sort()
 	var code := String(codes[0])
 	var enemy := String(state.foes.keys()[0])
-	Personnel.replace(repo, state, code, 30000)
+	repo.balance["army_supply_per_head_permille"] = 3000 # 1000 commoners still use 3000 a month.
+	Personnel.replace(repo, state, code, 1000)
 	var e: Dictionary = state.regiments[code]
 	e.merge({"x_m": 100, "y_m": 100, "dest_x_m": path[-1].x, "dest_y_m": path[-1].y,
 		"order": ArmySystem.ORDER_MARCH, "route_m": MarchRoute.to_pairs(path),

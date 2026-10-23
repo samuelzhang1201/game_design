@@ -228,13 +228,14 @@ func test_pace_follows_truce_days() -> void:
 func test_a_realm_channel_is_scaled_by_the_share_of_men() -> void:
 	var units := _land_units()
 	assert_gt(units.size(), 9, "enough land units")
-	# eight units of 450 allow plunder (3,600 men); one of 6,400 does not; the
+	# eight units of 450 allow plunder (3,600 men); seven share 6,400 who do not; the
 	# rest have none: 3,600 of 10,000 men is 360 per mille, 36%
 	var sizes := {}
 	for i in 8:
 		sizes[units[i]] = 450
 		_put(s, LawSystem.UNIT_PREFIX + String(units[i]), "plunder", "allow", 1)
-	sizes[units[8]] = 6400
+	for i: int in 7:
+		sizes[units[8 + i]] = 1000 if i < 6 else 400
 	_set_men(sizes)
 	assert_eq(LawEffects.army_share_permille(repo, s, "plunder", "allow"), 360)
 	assert_eq(LawEffects.army_share_permille(repo, s, "plunder", "forbid"), 640)
@@ -268,7 +269,8 @@ func test_the_treasury_rows_are_whole_gold() -> void:
 	var sizes := {}
 	for i in 8:
 		sizes[units[i]] = 450
-	sizes[units[8]] = 6650
+	for i: int in 7:
+		sizes[units[8 + i]] = 1000 if i < 6 else 650
 	_set_men(sizes)
 	LawSystem.impose(repo, s, "register_prisoners", "on")
 	LawSystem.impose(repo, s, "wear_badges", "on")

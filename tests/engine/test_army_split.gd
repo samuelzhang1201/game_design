@@ -36,11 +36,9 @@ func test_shares_are_even_and_larger_first() -> void:
 
 
 func test_every_unit_is_one_arm_and_within_the_cap() -> void:
-	var cap := int(repo.bal("army_split_cap_men"))
+	var cap := int(repo.bal("army_living_cap_men"))
 	for code: String in roster:
 		var r: Dictionary = roster[code]
-		if String(r["is_naval"]) == "1" or String(r["parent_code"]) == "":
-			continue
 		var armed := 0
 		for arm: String in repo.world_table("military", "unit_types"):
 			if int(float(r.get(arm, 0))) > 0:
@@ -50,18 +48,20 @@ func test_every_unit_is_one_arm_and_within_the_cap() -> void:
 
 
 func test_the_count_is_the_packs_own() -> void:
-	var cap := int(repo.bal("army_split_cap_men"))
+	var cap := int(repo.bal("army_living_cap_men"))
 	var want := 0
-	var gunned: Dictionary = {}
+	var guns: Dictionary = {}
 	for r: Dictionary in _pack_rows():
 		if String(r["is_naval"]) == "1":
-			want += 1
+			want += ArmySplit.halves(int(r["fleet"]), cap / int(repo.world_row("military", "unit_types", "fleet")["crew"])).size()
 			continue
 		for arm: String in _arms():
-			want += ArmySplit.element_shares(int(float(r.get(arm, 0))), int(repo.world_table("military", "unit_types")[arm]["crew"]), cap).size()
-		if int(float(r.get("artillery", 0))) > 0:
-			gunned[String(r["kingdom_code"])] = true
-	assert_eq(roster.size(), want + gunned.size())
+			want += ArmySplit.halves(int(r.get(arm, 0)), cap / int(repo.world_row("military", "unit_types", arm)["crew"])).size()
+		var realm := String(r["kingdom_code"])
+		guns[realm] = int(guns.get(realm, 0)) + int(r.get("artillery", 0))
+	for count: int in guns.values():
+		want += ArmySplit.halves(count, cap / int(repo.world_row("military", "unit_types", "artillery")["crew"])).size()
+	assert_eq(roster.size(), want)
 
 
 func test_equipment_is_conserved_per_arm_and_kingdom() -> void:
@@ -89,9 +89,9 @@ func test_codes_and_labels() -> void:
 		for row: Dictionary in repo.army_split:
 			if bool(row["pooled"]) or not armed.has(String(row["arm"])):
 				continue
-			var n := ArmySplit.element_shares(int(float(r[String(row["arm"])])), int(repo.world_table("military", "unit_types")[String(row["arm"])]["crew"]), int(repo.bal("army_split_cap_men"))).size()
+			var n := ArmySplit.halves(int(r[String(row["arm"])]), int(repo.bal("army_living_cap_men")) / int(repo.world_table("military", "unit_types")[String(row["arm"])]["crew"])).size()
 			var base := "%s_%s" % [r["regiment_code"], row["code_word"]]
-			var code := base if n == 1 else base + "_1"
+			var code := base
 			assert_true(roster.has(code), code)
 			if not roster.has(code):
 				continue
@@ -102,7 +102,8 @@ func test_codes_and_labels() -> void:
 				assert_true(label.contains(String(row["label_word"])), label)
 			if n > 1:
 				assert_true(label.ends_with(" I"), label)
-				assert_true(String(roster[base + "_2"]["label"]).ends_with(" II"))
+				var labels: Array = roster.values().filter(func(unit: Dictionary) -> bool: return String(unit.regiment_code).begins_with(base + ":living:v2:"))
+				assert_true(labels.any(func(unit: Dictionary) -> bool: return String(unit.label).ends_with(" II")))
 
 
 func test_one_royal_train_a_gunned_kingdom_at_its_capital() -> void:
@@ -119,7 +120,11 @@ func test_one_royal_train_a_gunned_kingdom_at_its_capital() -> void:
 			assert_false(roster.has(code))
 			continue
 		var t: Dictionary = roster[code]
-		assert_eq(int(t["artillery"]), int(guns[k]))
+		var total := 0
+		for unit: Dictionary in roster.values():
+			if unit["kingdom_code"] == k: total += int(unit.get("artillery", 0))
+		assert_eq(total, int(guns[k]))
+		assert_lte(Personnel.personnel_capacity(repo, t), int(repo.bal("army_living_cap_men")))
 		assert_eq(String(t["parent_code"]), "")
 		assert_eq(String(t["camp_town"]), String(repo.kingdoms[k]["capital_burg"]))
 
@@ -212,10 +217,10 @@ func test_deterministic_and_copied() -> void:
 
 func test_a_new_campaign_carries_the_roster_and_seats() -> void:
 	var s := SuiteData.campaign(repo, 7)
-	assert_eq(s.army_roster.size(), roster.size())
+	assert_gte(s.army_roster.size(), ArmySplit.opening_sources(repo)["roster"].size())
 	# the split's seats, but for those a raid host's unit held: a raised unit
 	# leaves its seat, refilled from its old camp (EnemyAi.spawn), never a foe
-	var seats: Dictionary = split["seats"]
+	var seats: Dictionary = ArmySplit.opening_sources(repo)["seats"]
 	for town: String in seats:
 		var was := String(seats[town])
 		if not ArmySystem.is_foe(s, was):
@@ -303,7 +308,7 @@ func test_a_kingdom_with_no_capital_keeps_its_guns() -> void:
 ## Exercise the complete splitter, including placement, with pack-independent counts.
 func _crew_fixture(equipment: int, crew: int, cap: int) -> DataRepository:
 	var fixture := SuiteData.repo()
-	fixture.balance["army_split_cap_men"] = cap
+	fixture.balance["army_living_cap_men"] = cap
 	fixture.world_row("military", "unit_types", "cavalry")["crew"] = str(crew)
 	var rows := fixture.world_table("military", "regiments")
 	var source: Dictionary = {}
@@ -320,8 +325,8 @@ func _crew_fixture(equipment: int, crew: int, cap: int) -> DataRepository:
 
 
 func test_split_counts_personnel_without_splitting_equipment() -> void:
-	for example: Array in [[1268, 2, 600, [254, 254, 254, 253, 253]],
-			[301, 2, 600, [151, 150]], [7, 8, 25, [3, 2, 2]]]:
+	for example: Array in [[1268, 2, 600, [159, 158, 159, 158, 159, 158, 159, 158]],
+			[301, 2, 600, [151, 150]], [7, 8, 25, [2, 2, 3]]]:
 		var fixture := _crew_fixture(example[0], example[1], example[2])
 		var original := fixture.world_table("military", "regiments").duplicate(true)
 		var result := ArmySplit._make(fixture)
@@ -392,9 +397,9 @@ func test_split_preserves_equipment_origins_before_pooling_the_royal_train() -> 
 	rows["source_b"] = second
 	rows["source_c"] = fleet
 	var units: Dictionary = ArmySplit._make(fixture)["roster"]
-	assert_eq(units["source_a_horse_1"].get("source_parts", []), [
+	assert_eq(units["source_a_horse"].get("source_parts", []), [
 		{"regiment_code": "source_a", "province_code": provinces[0], "arm": "cavalry", "equipment_count": 151, "crew_per_element": 2}])
-	assert_eq(units["source_a_horse_2"].get("source_parts", []), [
+	assert_eq(units["source_a_horse:living:v2:1"].get("source_parts", []), [
 		{"regiment_code": "source_a", "province_code": provinces[0], "arm": "cavalry", "equipment_count": 150, "crew_per_element": 2}])
 	var train_code := String(first["kingdom_code"]) + "_royal_train"
 	assert_eq(units[train_code].get("source_parts", []), [
@@ -415,3 +420,18 @@ func test_recursive_living_halves() -> void:
 		return
 	for example: Array in [[0, []], [1000, [1000]], [1001, [501, 500]], [2001, [501, 500, 1000]], [2500, [625, 625, 625, 625]]]:
 		assert_eq(script.call("halves", example[0], 1000), example[1])
+
+func test_preview_fleet_children_keep_the_pack_parent_for_legacy_reconstruction() -> void:
+	for row: Dictionary in roster.values():
+		if row.get("is_naval", "0") != "1": continue
+		var saved := row.duplicate(true)
+		saved.erase("source_parts")
+		assert_false(ArmySplit.saved_sources(repo, saved).has("error"), str(saved.get("regiment_code")))
+
+func test_preview_and_campaign_share_source_and_binary_leaf_ids() -> void:
+	var actual := SuiteData.campaign(repo, 42)
+	var expected := actual.army_roster.keys()
+	var preview := roster.keys()
+	expected.sort()
+	preview.sort()
+	assert_eq(preview, expected, "default whole crews divide the cap exactly; preview IDs must identify the same units")

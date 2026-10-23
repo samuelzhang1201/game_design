@@ -79,7 +79,8 @@ func _walk_to_bound(f: Dictionary) -> void:
 	for arm: String in repo.army_speed:
 		repo.army_speed[arm] = 1
 	repo.balance["army_clearance_on"] = 0.0
-	Personnel.replace(repo, state, f.p2, 30000)
+	repo.balance["army_supply_per_head_permille"] = 3000 # 1000 commoners still use 3000 a month.
+	Personnel.replace(repo, state, f.p2, 1000)
 	var entry: Dictionary = state.regiments[f.p2]
 	entry.merge({"morale": 100, "training": 100, "carry_days": 10, "supplies": 1000,
 		"x_m": 1000000, "y_m": 1000000, "dest_x_m": 1000000, "dest_y_m": 1000000}, true)

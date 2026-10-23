@@ -50,8 +50,12 @@ func test_paid_assembling_reservations_partition_without_receipt_or_gear_replay(
 	state.military_cohorts.common.initial -= 101
 	_add("paid", 101, 0)
 	state.military_cohorts.paid.stage = "assembling"
+	var request := {"request_id": "paid", "mode": "reinforce", "unit_code": original, "arm": "cavalry",
+		"total": 101, "noble_permille": 0, "source_province": state.military_cohorts.paid.source_province,
+		"source_population_field": "rural_population", "assembly_town": state.army_roster[original].camp_town,
+		"commander_id": state.military_rosters[original].commander_id}
 	state.recruitment_projects = {"paid": {"unit_code": original, "status": "assembling", "cohort_ids": ["paid"],
-		"equipment": {"cavalry": 5}, "quote": {"needs_commander": false}, "request": {"request_id": "paid"}, "result": {"gold": 99}}}
+		"equipment": {"cavalry": 5}, "quote": {"needs_commander": false}, "request": request.duplicate(true), "result": {"gold": 99}}}
 	assert_eq(_reconcile().status, "complete")
 	var children := _children()
 	if children.size() != 2: return
@@ -63,7 +67,7 @@ func test_paid_assembling_reservations_partition_without_receipt_or_gear_replay(
 	assert_eq(totals, [501, 500])
 	var project: Dictionary = state.recruitment_projects.paid
 	assert_eq(project.unit_codes, children)
-	assert_eq(project.request, {"request_id": "paid"})
+	assert_eq(project.request, request)
 	assert_eq(project.result, {"gold": 99})
 	var gear := 0
 	for allocation: Dictionary in project.equipment_by_unit.values(): gear += int(allocation.cavalry)

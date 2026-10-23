@@ -35,6 +35,89 @@ static func replay(state: GameState, request: Dictionary) -> Dictionary:
 		return {"error": "Recruitment request ID already belongs to another order."}
 	return (project["result"] as Dictionary).duplicate(true)
 
+## Pending new units own assembling personnel before any equipment unit exists.
+static func pending_new_units(repo: DataRepository, state: GameState) -> Dictionary:
+	var units: Dictionary = {}
+	for id: String in state.recruitment_projects:
+		var project: Variant = state.recruitment_projects[id]
+		if not project is Dictionary: return {"error": "Saved recruitment project must be a record."}
+		if project.get("status", "") == "complete": continue
+		if not project.get("request", null) is Dictionary: return {"error": "Saved recruitment needs its request."}
+		var request := normalize(project.request)
+		if request.has("error"): return request
+		if request.mode != "new": continue
+		var root := String(project.get("unit_code", ""))
+		var codes: Variant = project.get("unit_codes", [root])
+		var ids: Variant = project.get("cohort_ids")
+		if request.request_id != id or root == "" or not codes is Array or not root in codes \
+				or not ids is Array or ids.is_empty() or not project.get("quote", null) is Dictionary \
+				or not project.get("result", null) is Dictionary or not project.get("equipment", null) is Dictionary:
+			return {"error": "Saved new assembly needs its original unit, cohorts and paid receipt."}
+		var quote: Dictionary = project.quote
+		var result: Dictionary = project.result
+		var last_day: Variant = project.get("last_processed_day")
+		var types := repo.world_table("military", "unit_types")
+		var arm := String(request.arm)
+		if not project.get("status", "") in ["assembling", "paused"] or not types.has(arm) \
+				or not ArmySplit.is_whole_count(types[arm].get("crew", 0)) or int(types[arm].get("crew", 0)) <= 0 \
+				or quote.get("arm", "") != arm or quote.get("unit_code", "") != root \
+				or quote.get("needs_commander", false) != true or project.get("commander_id", "") != request.commander_id \
+				or String(request.commander_id) == "" or not quote.get("equipment", null) is Dictionary \
+				or project.equipment != quote.equipment or project.equipment.size() != 1 \
+				or not ArmySplit.is_whole_count(project.equipment.get(arm, -1)) or int(project.equipment.get(arm, 0)) <= 0 \
+				or not ArmySplit.is_whole_count(quote.get("gold", -1)) or int(quote.get("gold", 0)) <= 0 \
+				or result.get("gold", -1) != quote.gold or result.get("unit_code", "") != root \
+				or result.get("request_id", "") != id or result.get("status", "") != "assembling" \
+				or not ArmySplit.is_whole_count(project.get("build_days", -1)) or int(project.get("build_days", 0)) <= 0 \
+				or project.get("build_days", -1) != quote.get("build_days", -2) \
+				or not ArmySplit.is_whole_count(project.get("worked_days", -1)) \
+				or not (last_day is int or last_day is float) or not is_finite(float(last_day)) or float(last_day) != floor(float(last_day)):
+			return {"error": "Saved new assembly needs its complete original paid contract."}
+		if codes.size() > 1 and not project.has("equipment_by_unit"):
+			return {"error": "Saved split assembly needs its paid equipment allocation."}
+		if project.has("equipment_by_unit"):
+			var allocation: Variant = project.equipment_by_unit
+			if not allocation is Dictionary or allocation.size() != codes.size():
+				return {"error": "Saved new assembly needs every paid equipment allocation."}
+			var equipment := 0
+			for code: Variant in codes:
+				var gear: Variant = allocation.get(code)
+				if not gear is Dictionary: return {"error": "Saved new assembly has an invalid equipment allocation."}
+				for kind: Variant in gear:
+					if kind != arm or not ArmySplit.is_whole_count(gear[kind]):
+						return {"error": "Saved new assembly has an invalid equipment allocation."}
+					equipment += int(gear[kind])
+			if equipment != int(project.equipment[arm]):
+				return {"error": "Saved new assembly must conserve its paid equipment."}
+		var referenced: Dictionary = {}
+		var total := 0
+		var officers := 0
+		for code: Variant in codes:
+			if not code is String or code == "" or units.has(code) or not state.military_rosters.has(code):
+				return {"error": "Saved new assembly has an invalid or multiply owned unit."}
+			var roster: Variant = state.military_rosters[code]
+			if not roster is Dictionary or not roster.get("cohort_ids", null) is Array or roster.cohort_ids.is_empty():
+				return {"error": "Saved new assembly has no reserved people."}
+			for cohort_id: Variant in roster.cohort_ids:
+				if not cohort_id is String: return {"error": "Saved new assembly cohort IDs must be text."}
+				var cohort: Dictionary = state.military_cohorts.get(cohort_id, {})
+				if referenced.has(cohort_id) or not cohort_id in ids or cohort.get("id", "") != cohort_id \
+						or cohort.get("unit_code", "") != code or cohort.get("stage", "") != "assembling" \
+						or not ArmySplit.is_whole_count(cohort.get("initial", -1)):
+					return {"error": "Saved new assembly has inconsistent reserved personnel."}
+				if cohort.get("source_province", "") != request.source_province or cohort.get("source_population_field", "") != request.source_population_field:
+					return {"error": "Saved new assembly changed its paid population origin."}
+				if String(cohort.get("person_id", "")) != "":
+					if cohort.person_id != request.commander_id or int(cohort.initial) != 1:
+						return {"error": "Saved new assembly changed its named officer."}
+					officers += 1
+				referenced[cohort_id] = true
+				total += int(cohort.initial)
+			units[code] = id
+		if referenced.size() != ids.size() or total != int(request.total) or officers != 1:
+			return {"error": "Saved new assembly must conserve its paid personnel."}
+	return {"units": units}
+
 static func quote(repo: DataRepository, state: GameState, request: Dictionary) -> Dictionary:
 	var req := normalize(request)
 	if req.has("error"):
@@ -77,6 +160,8 @@ static func quote(repo: DataRepository, state: GameState, request: Dictionary) -
 		needs_officer = current == ""
 		if not needs_officer and req["commander_id"] != current:
 			return {"error": "Reinforcement cannot replace the serving commander."}
+	var cap_refusal := MilitaryRoster.capacity_error(repo, state, code, int(req["total"]))
+	if cap_refusal != "": return {"error": cap_refusal}
 	for project: Dictionary in state.recruitment_projects.values():
 		if project.get("status", "") != "complete" and code in project.get("unit_codes", [project.get("unit_code", "")]):
 			return {"error": "This unit already has a paid assembly in progress."}
@@ -103,8 +188,6 @@ static func quote(repo: DataRepository, state: GameState, request: Dictionary) -
 	var capacity := MilitaryRoster.personnel_capacity(repo, unit)
 	@warning_ignore("integer_division")
 	var equipment := maxi(0, (living + total - capacity + crew - 1) / crew)
-	if not pooled and arm != "fleet" and capacity + equipment * crew > int(repo.bal("army_split_cap_men")):
-		return {"error": "The unit would exceed its ordinary personnel limit."}
 	var composition := MilitaryRoster.composition(living + total, int(req["noble_permille"]), int(repo.bal("army_noble_cap_permille")))
 	if composition.has("error"):
 		return composition
@@ -288,28 +371,31 @@ static func _complete(repo: DataRepository, state: GameState, id: String) -> Str
 	var town := String(req["assembly_town"])
 	var arm := String(project["quote"]["arm"])
 	var realm := repo.resolve_realm("player_realm")
-	if req["mode"] == "new":
-		if state.army_roster.has(code):
-			return "The reserved unit identity is already in use."
-		var row := {"regiment_code": code, "label": String(repo.burgs[town]["label"]) + " " + String(repo.world_table("military", "unit_types")[arm]["label"]),
-			"kingdom_code": realm, "province_code": req["source_province"], "parent_code": code,
-			"is_royal": "0", "is_naval": "1" if arm == "fleet" else "0", "camp_town": town,
-			"x": String(repo.burgs[town]["x"]), "y": String(repo.burgs[town]["y"]), "source_parts": []}
-		for kind: String in repo.world_table("military", "unit_types"):
-			row[kind] = "0"
-		if arm == "fleet":
-			var berth := _port_berth(repo, town)
-			if berth == ArmyGround.NONE:
-				return "The port no longer has a legal water berth."
-			var at := ArmySystem.metres_to_pack(repo, berth)
-			row["x"] = str(at.x)
-			row["y"] = str(at.y)
-		state.army_roster[code] = row
-		var entry := ArmySystem.starting_state(repo, row)
-		entry["supplies"] = 0
-		state.regiments[code] = entry
 	var codes: Array = project.get("unit_codes", [code])
+	if req["mode"] == "new":
+		for target: String in codes:
+			if state.army_roster.has(target):
+				return "The reserved unit identity is already in use."
+			var row := {"regiment_code": target, "label": String(repo.burgs[town]["label"]) + " " + String(repo.world_table("military", "unit_types")[arm]["label"]),
+				"kingdom_code": realm, "province_code": req["source_province"], "parent_code": code,
+				"organization_arm": arm, "is_royal": "0", "is_naval": "1" if arm == "fleet" else "0", "camp_town": town,
+				"x": String(repo.burgs[town]["x"]), "y": String(repo.burgs[town]["y"]), "source_parts": []}
+			for kind: String in repo.world_table("military", "unit_types"):
+				row[kind] = "0"
+			if arm == "fleet":
+				var berth := _port_berth(repo, town)
+				if berth == ArmyGround.NONE:
+					return "The port no longer has a legal water berth."
+				var at := ArmySystem.metres_to_pack(repo, berth)
+				row["x"] = str(at.x)
+				row["y"] = str(at.y)
+			state.army_roster[target] = row
+			var entry := ArmySystem.starting_state(repo, row)
+			entry["supplies"] = 0
+			state.regiments[target] = entry
 	for target: String in codes:
+		var refusal := MilitaryRoster.capacity_error(repo, state, target)
+		if refusal != "": return refusal
 		var row: Dictionary = state.army_roster[target]
 		var gear: Dictionary = project.get("equipment_by_unit", {}).get(target, project["equipment"] if codes.size() == 1 else {})
 		for kind: String in gear:
@@ -317,7 +403,7 @@ static func _complete(repo: DataRepository, state: GameState, id: String) -> Str
 			if int(gear[kind]) > 0:
 				row.get_or_add("source_parts", []).append({"regiment_code": "recruit:" + id, "province_code": req["source_province"],
 					"arm": kind, "equipment_count": int(gear[kind]), "crew_per_element": int(repo.world_table("military", "unit_types")[kind]["crew"])})
-	var activated := MilitaryRoster.activate(state, "recruit:complete:" + id, project["cohort_ids"], "completed paid assembly at " + town)
+	var activated := MilitaryRoster.activate(state, "recruit:complete:" + id, project["cohort_ids"], "completed paid assembly at " + town, repo)
 	if activated.has("error"):
 		return String(activated["error"])
 	if bool(project["quote"]["needs_commander"]):
@@ -325,14 +411,15 @@ static func _complete(repo: DataRepository, state: GameState, id: String) -> Str
 		if appointed.has("error"):
 			return String(appointed["error"])
 	if req["mode"] == "new" and arm != "fleet":
-		var centre := ArmyGround.town_point_m(repo, town)
-		var taken := ArmyGround.held_taken(repo, state, code)
-		var point := ArmyGround.free_slot(repo, centre, arm, taken, town)
-		if point == ArmyGround.NONE:
-			return "There is no legal camp space at the assembly town."
-		ArmyGround._put(state.regiments[code], point)
-		state.regiments[code]["camp_town"] = town
-		LawSystem.on_settle(repo, state, code)
+		for target: String in codes:
+			var centre := ArmyGround.town_point_m(repo, town)
+			var taken := ArmyGround.held_taken(repo, state, target)
+			var point := ArmyGround.free_slot(repo, centre, arm, taken, town)
+			if point == ArmyGround.NONE:
+				return "There is no legal camp space at the assembly town."
+			ArmyGround._put(state.regiments[target], point)
+			state.regiments[target]["camp_town"] = town
+			LawSystem.on_settle(repo, state, target)
 	project["status"] = "complete"
 	project["pause_reason"] = ""
 	project["completed_day"] = state.absolute_day()
