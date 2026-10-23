@@ -21,9 +21,17 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 		result["reason"] = "Actual withdrawal or rout takes precedence over a unit task"
 		return result
 	var record := current(state, unit)
-	if record.is_empty() or not record.get("status") in ["received", "bounded"]:
+	if record.is_empty():
 		return result
 	var request: Dictionary = record["request"]
+	if request["task"] == "flank" and request["target_unit"] != "" and record["status"] in ["received", "search_failed", "completed"]:
+		var paused: bool = record["status"] != "received" or not _interceptors(repo, state, battle, unit, record).is_empty() \
+			or BattleSystem.canonical(state, int(request["battle_id"])) != int(battle["id"])
+		if paused:
+			return {"kind": "hold", "task_id": String(request["id"]),
+				"reason": "Flank holds in temporary self-defence; original target retained" if record["status"] == "received" else String(record["reason"])}
+	if not record.get("status") in ["received", "bounded"]:
+		return result
 	if BattleSystem.canonical(state, int(request["battle_id"])) != int(battle["id"]):
 		return result
 	if record["status"] == "bounded":
@@ -66,6 +74,48 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 		result["kind"] = "hold"
 		result["reason"] = "Unit task holds: attack is barred by current law or agreement"
 	return result
+
+
+## Only live opposing contacts obstruct a flank. Battle membership from a new
+## encounter pauses field travel; within its original battle use actual fronts.
+static func _interceptors(repo: DataRepository, state: GameState, battle: Dictionary, unit: String, record: Dictionary) -> Array:
+	var side := BattleRules.side_of(battle, unit)
+	if side == "":
+		return []
+	var elsewhere := BattleSystem.canonical(state, int(record["request"]["battle_id"])) != int(battle["id"])
+	var out: Array = []
+	for enemy: String in battle["def" if side == "att" else "att"]:
+		var entry := BattleSystem._stored(state, enemy)
+		if enemy == record["request"]["target_unit"] or not BattleSystem._can_fight(repo, state, enemy) \
+				or bool(entry.get("captured", false)) or bool(entry.get("battle_retreat", false)) \
+				or BattleOrders.kind(battle, "def" if side == "att" else "att") == "retreat":
+			continue
+		if (elsewhere and BattleSystem._within(BattleSystem._at_m(repo, state, unit), BattleSystem._at_m(repo, state, enemy),
+				int(repo.bal("battle_contact_km") * 1000))) \
+				or BattleCharge._approach(repo, battle, unit, enemy, Vector2.ZERO) == 0.0:
+			out.append(enemy)
+	out.sort()
+	return out
+
+
+## Save obstruction transitions once, outside read-only action/strength queries.
+## A pending round keeps both its action and this receipt frozen through retries.
+static func note_interception(repo: DataRepository, state: GameState, battle: Dictionary, unit: String) -> void:
+	var ledger: Dictionary = state.unit_tasks.get(unit, {})
+	var record: Dictionary = ledger.get("orders", {}).get(String(ledger.get("current_id", "")), {})
+	if record.is_empty() or record["status"] != "received" or record["request"]["task"] != "flank" \
+			or String(record["request"]["target_unit"]) == "":
+		return
+	var enemies := _interceptors(repo, state, battle, unit, record) if not battle.is_empty() else []
+	var old: Dictionary = record.get("obstruction", {})
+	if enemies.is_empty() and not bool(old.get("active", false)):
+		return
+	if old.get("units", []) == enemies and bool(old.get("active", false)) == not enemies.is_empty():
+		return
+	var reason := "Flank obstructed; temporary self-defence against " + ", ".join(enemies) if not enemies.is_empty() else "Interception cleared; original flank remains subject to its received task"
+	record["obstruction"] = {"active": not enemies.is_empty(), "units": enemies,
+		"battle_id": int(battle.get("id", -1)), "day": state.absolute_day(), "reason": reason}
+	_transition(state, record, "received", reason)
 
 
 static func _find(state: GameState, id: String) -> Dictionary:
@@ -397,6 +447,7 @@ static func track_day(repo: DataRepository, state: GameState) -> void:
 				or ArmySystem.realm_of(repo, unit, state) != repo.resolve_realm("player_realm") \
 				or not BattleSystem.battle_of(state, unit).is_empty():
 			continue
+		note_interception(repo, state, {}, unit)
 		var entry := BattleSystem._stored(state, unit)
 		if bool(entry.get("captured", false)) or not BattleSystem._can_fight(repo, state, unit):
 			continue
@@ -574,6 +625,7 @@ static func _aim_flank(repo: DataRepository, state: GameState, unit: String, rec
 ## Called instead of generic deployment. Once contact commits this approach,
 ## the task never automatically circles again, including synonymous receipts.
 static func deploy_flank(repo: DataRepository, state: GameState, battle: Dictionary, unit: String) -> bool:
+	note_interception(repo, state, battle, unit)
 	var action := BattleSystem.unit_action(repo, state, battle, unit)
 	var record := _find(state, String(action.get("task_id", "")))
 	if record.is_empty() or record["request"]["task"] != "flank" or record["request"]["target_unit"] == "":

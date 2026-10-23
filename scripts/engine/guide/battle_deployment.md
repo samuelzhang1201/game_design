@@ -205,6 +205,23 @@ enemy front group really contacts a defending group outside the defender’s
 Turning the defender so contact becomes frontal removes that factor immediately
 for the next unfrozen round; no benefit accumulates per day or per circle.
 
+**Temporary interception defence.** A received targeted flank holds its anchor
+when a different live enemy touches its front groups (inclusive existing contact
+reach). A separate actual encounter pauses the field task on that battlefield,
+including its ordinary deployment; it cannot inherit the new side's attack.
+Withdrawing, captured and fitless opponents do not authorize pursuit. The original
+warrant, target, known geometry and route remain intact. `record.obstruction`
+saves the current interceptors, active flag, battlefield, day and reason, with
+receipt history on each change; action/strength queries remain read-only.
+Daily deployment and round preparation record transitions; pending rounds freeze
+the defence and obstruction through personnel errors and JSON retries. Clearing
+contact only removes the obstruction: current law, control, capacity, original
+battle identity and task status still gate execution. Field tracking resumes
+through its existing known-target/search rules after actual separation. Completed
+and search-failed flanks hold instead of inheriting side attack/deployment;
+new receipt or cancellation retains priority. Self-defence grants no pursuit,
+new filing charge, flank multiplier or renewed charge momentum.
+
 ## Delivered unit retreat
 
 A received retreat resolves through `combat_action` and the existing `_exits`

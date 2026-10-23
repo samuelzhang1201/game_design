@@ -746,6 +746,10 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 	var today := state.absolute_day()
 	if int(b.get("last_resolved_day", -1)) == today:
 		return {"ended": false}
+	if not b.has("pending_round"):
+		for side: String in SIDES:
+			for code: String in b[side]:
+				BattleTaskSystem.note_interception(repo, state, b, code)
 	for side: String in SIDES:
 		b[side] = (b[side] as Array).filter(func(c: String) -> bool: return not _stored(state, c).is_empty())
 	var custody := _settle_defeated_holders(repo, state, b)
