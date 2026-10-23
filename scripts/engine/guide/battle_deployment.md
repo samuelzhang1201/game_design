@@ -172,7 +172,38 @@ sighting within `battle_search_range_m` of the saved point resumes `follow`; a f
 one changes nothing; past `search_until_day` the record becomes `search_failed` and the
 unit halts (`BattleSystem._halt`). `search_failed`, `bounded`, `replaced` and
 `cancelled` are never tracked again, and a later sighting revives nothing. Contact
-puts the unit in a battle, which pauses tracking; the task stays received.
+puts the unit in a battle, which pauses field tracking; the task stays received.
+
+**Reachable flank approach.** A targeted received flank records only the recipient’s
+own visible target position, facing and representative group positions in
+`record.flank.known`; its saved `path_m` contains whole-metre corners. The
+current explicit unit facing takes precedence over the mean-opponent facing.
+Without one, a visible field column’s displacement between known snapshots
+updates its facing; its private destination/route is never a heading input.
+A visible captured or wounded-only target completes the flank task and holds.
+A flanking unit faces its known target only on the warrant’s canonical battlefield. `flank_route` compares the two outboard
+approaches, selects the shorter reachable route (stable first-side tie), and
+ends one contact distance beyond an actual known side group. Each terrain-routed
+leg must connect and remain passable; the router’s unreachable straight fallback
+and paths cutting through known enemy contact circles are rejected. No feasible
+approach holds in place without invalidating a lawful risky order. Field travel
+uses ordinary packing and march substeps through successive corners. Lost sight
+freezes the entire geometry and route; reaching the last side point starts the
+same finite search around the saved target point.
+
+In battle, `deploy_flank` replaces that recipient’s generic line deployment,
+using the existing daily deployment budget, one routed leg at a time. Movement
+stops at first front-group contact; swept group corridors use the charge
+clearance predicate, without granting charge momentum. Pending rounds freeze
+deployment. Actual contact commits the approach (`flank.phase = contact`),
+preserved by synonymous receipts on that canonical battlefield: this task never starts an automatic second
+circle, including after leaving the battlefield. Subsequent repositioning requires leaving the committed approach through
+a different received task; there is no automatic disengagement/regroup cycle.
+`BattleFormation.context` grants its existing single flank factor only when an
+enemy front group really contacts a defending group outside the defender’s
+`battle_flank_front_half_deg` cone. Remote columns and a task label grant nothing.
+Turning the defender so contact becomes frontal removes that factor immediately
+for the next unfrozen round; no benefit accumulates per day or per circle.
 
 ## Delivered unit retreat
 
@@ -216,4 +247,4 @@ and random draw without repeating departure costs, daily meals or attack costs.
 
 ## Battle groups
 
-`BattleGroups` splits each battle unit's fit personnel into representative groups of at most `battle_group_size` (the last group the remainder, units never pooled) and saves them as `battle.groups[unit] = [{count, role, x_m, y_m}]` with `battle.group_facing[unit]` (whole degrees, `WarFront.facing_deg` convention: 0 = +x, y down, toward the mean anchor of the other side's units, 0 when none). Positions are the unit's own `x_m/y_m` anchor plus `BattleFormation.slots` of its current formation scaled by `battle_group_spacing_m` across the front and `battle_group_depth_m` back (away from the enemy), rotated to the facing and rounded to whole metres once. Role is `front` for slots on the foremost rank, else `reserve`. `refresh` rebuilds everything from the fit counts (sums conserved, a group index is no identity, a unit that left loses its entry, an old save gains the fields) at `_start`, `join` and the top of each daily `prepare_day`. Deployment lines (`BattleGroups.deployment`, pure): the axis runs from the defenders' mean anchor toward the attackers' (+x when they coincide); each side's line centre is the battle place ± axis × `battle_line_gap_m` / 2 (att on the + side); a side's units stand abreast in sorted code order, each as wide as its front groups (front count × `battle_group_spacing_m`, at least one spacing), the side centred; a unit's target anchor is the centre of its width, rounded to whole metres once. `deploy_day` (top of `prepare_day`, before the refresh, once per absolute day via the saved `battle.deployed_day`) steps every unit's anchor `x_m/y_m` toward its target by at most `battle_deploy_step_m` whole metres, stopping exactly on it. It moves both sides, but not a captured unit, one with no fit man, or one seated in a town (its walls are its line), and the whole battle stops deploying once any side is ordered to retreat or any unit is withdrawing (`battle_retreat` or `disengaging`), so the winner never closes on a falling-back side; `_start` stamps `deployed_day` so the day of contact moves nothing. The march never moves a unit in a battle, and the groups refresh around the moved anchors. Contact (P4.4d4): `BattleGroups.engaged_permille` is (engaged x 1000 + (fit - engaged) x `battle_reserve_permille`) / fit, integer division, where engaged is the summed count of the unit's `front` groups within `battle_group_contact_m` (inclusive, squared whole metres) of any group of the other side; a reserve rank or a front still approaching counts only the reserve share; 1000 with no saved groups. `BattleSystem.unit_strength` lists it as `contact:engaged` (category `contact`, between `formation_terrain` and `action`, clamped like every category by `battle_strength_factor_min/max_permille`) with the reason "N of M in contact with the enemy line", so siege assaults, town battles and events inherit it.
+`BattleGroups` splits each battle unit's fit personnel into representative groups of at most `battle_group_size` (the last group the remainder, units never pooled) and saves them as `battle.groups[unit] = [{count, role, x_m, y_m}]` with `battle.group_facing[unit]` (whole degrees, `WarFront.facing_deg` convention: 0 = +x, y down, toward the mean anchor of the other side's units, 0 when none; an explicit unit facing takes precedence, and a received flanker faces its saved known target). Positions are the unit's own `x_m/y_m` anchor plus `BattleFormation.slots` of its current formation scaled by `battle_group_spacing_m` across the front and `battle_group_depth_m` back (away from the enemy), rotated to the facing and rounded to whole metres once. Role is `front` for slots on the foremost rank, else `reserve`. `refresh` rebuilds everything from the fit counts (sums conserved, a group index is no identity, a unit that left loses its entry, an old save gains the fields) at `_start`, `join` and the top of each daily `prepare_day`. Deployment lines (`BattleGroups.deployment`, pure): the axis runs from the defenders' mean anchor toward the attackers' (+x when they coincide); each side's line centre is the battle place ± axis × `battle_line_gap_m` / 2 (att on the + side); a side's units stand abreast in sorted code order, each as wide as its front groups (front count × `battle_group_spacing_m`, at least one spacing), the side centred; a unit's target anchor is the centre of its width, rounded to whole metres once. `deploy_day` (top of `prepare_day`, before the refresh, once per absolute day via the saved `battle.deployed_day`) steps every unit's anchor `x_m/y_m` toward its target by at most `battle_deploy_step_m` whole metres, stopping exactly on it. It moves both sides, but not a captured unit, one with no fit man, or one seated in a town (its walls are its line), and the whole battle stops deploying once any side is ordered to retreat or any unit is withdrawing (`battle_retreat` or `disengaging`), so the winner never closes on a falling-back side; `_start` stamps `deployed_day` so the day of contact moves nothing. The march never moves a unit in a battle, and the groups refresh around the moved anchors. Contact (P4.4d4): `BattleGroups.engaged_permille` is (engaged x 1000 + (fit - engaged) x `battle_reserve_permille`) / fit, integer division, where engaged is the summed count of the unit's `front` groups within `battle_group_contact_m` (inclusive, squared whole metres) of any group of the other side; a reserve rank or a front still approaching counts only the reserve share; 1000 with no saved groups. `BattleSystem.unit_strength` lists it as `contact:engaged` (category `contact`, between `formation_terrain` and `action`, clamped like every category by `battle_strength_factor_min/max_permille`) with the reason "N of M in contact with the enemy line", so siege assaults, town battles and events inherit it.

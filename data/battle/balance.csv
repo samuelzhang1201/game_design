@@ -56,3 +56,4 @@ battle_charge_runup_m,300,"Minimum actual continuous mounted approach before imp
 battle_ranged_reach_m,400,Inclusive direct-fire reach between saved group centres in whole metres
 battle_ranged_cone_permille,1000,Maximum lateral to forward ratio in permille for direct fire (45 degree half-cone)
 battle_ranged_block_radius_m,20,Friendly group disc radius obstructing an open direct-fire segment in whole metres
+battle_flank_front_half_deg,60,"Flank geometry: contact outside this half-angle from the defender facing is side/rear contact"
