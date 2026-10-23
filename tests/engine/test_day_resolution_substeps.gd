@@ -534,6 +534,7 @@ func test_legacy_advance_blocked_transaction_keeps_month_intent_across_json() ->
 
 func test_ordinary_day_transaction_keeps_its_boundary_when_advance_resumes_it() -> void:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
+	repo.battle_events.clear() # Isolate month settlement from commander-paid battlefield choices.
 	var state := BattleScenario.moving_contact(repo, 10)
 	state.metrics["treasury"] = 100.0
 	var engine := TickEngine.new(repo)

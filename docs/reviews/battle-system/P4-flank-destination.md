@@ -21,3 +21,9 @@ Frozen runtime/test input SHA-256: `f04fae6e0739f16be9b8230a2608ac27c14a227d507b
 Owned changes are BattleTaskSystem, BattleGroups, BattleFormation, the battle balance/guide, scoped formation test, new flank tests and this report. ArmySystem/BattleSystem need no edits. BattleMerge/BattleRanged remain untouched for the parallel step.
 
 The planner compares two explicit outboard routes; a terrain router shortcut through known enemy contact circles is rejected and blocked group corridors wait. Exhaustive battlefield deployment-capacity routing and temporary interceptor self-defence remain separate dispatcher-owned steps. A committed task has no automatic second disengage/regroup/circle cycle; repositioning requires a different received task. No extra attack multiplier, RNG stream, clock, movement budget or model call is introduced.
+
+## Independent Review
+
+Sole Review `01a15a49-6fcb-73b3-a66d-08f31a3476f7` reviewed receipt, known-target geometry, real deployment/contact, turning, charge continuity and saved retry paths. Fresh flank/formation verification passed 23 tests and 264 assertions.
+
+Final CI exposed a fixture conflict: the ordinary-day resume test expected treasury 100 while a commander battlefield choice could spend 7 gold. The failure reproduced locally (21/22 passing). The dispatcher appended that test file to this step. The test now clears its copied event definitions to isolate monthly settlement; it retains the original treasury assertion and production event costs. The affected day-resolution, flank and battle-event scripts pass 57/57 tests, 549 assertions, exit 0 through the shared Godot lock. Final current-HEAD CI remains required before merge.
