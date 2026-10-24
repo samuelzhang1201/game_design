@@ -798,3 +798,81 @@ func test_saved_size_cannot_override_the_current_people_per_figure() -> void:
 	ctx.state_fn = func() -> GameState: return state
 	assert_eq(Map3DBattleGroups.sample(ctx, code).mode, "invalid")
 	ctx.state_fn = Callable()
+
+func _seat_cache_fixture() -> Dictionary:
+	var repo := SuiteData.repo()
+	var reg: Dictionary = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))[0]
+	var rows := [{"slot": 3, "count": 100, "role": "front", "x_m": 200, "y_m": 300},
+		{"slot": 7, "count": 1, "role": "reserve", "x_m": 800, "y_m": 300}]
+	var piece := Map3DBattleGroups.build(repo, reg, {"rows": rows, "facing_deg": 37})
+	add_child_autofree(piece["node"])
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 2.0})
+	ctx.view_size = Vector2(1920, 1080)
+	ctx.camera = Camera3D.new()
+	add_child_autofree(ctx.camera)
+	ctx.camera.position = Vector3(0, 500, 500)
+	ctx.camera.look_at(Vector3.ZERO)
+	var calls := [0]
+	ctx.height_fn = func(at: Vector2) -> float:
+		calls[0] += 1
+		return 4.0 + at.x * 0.1 + at.y * 0.05
+	return {"repo": repo, "reg": reg, "rows": rows, "piece": piece, "ctx": ctx, "calls": calls}
+
+func test_camera_pan_reuses_physical_seats_but_updates_pick_boxes() -> void:
+	var f := _seat_cache_fixture()
+	Map3DBattleGroups.place(f.ctx, f.piece, Vector2.ZERO, 1.6, false)
+	assert_gt(int(f.calls[0]), 0)
+	var child: Node3D = f.piece.groups[0].piece.node
+	var pose := child.global_transform
+	var bounds: Array = f.piece.groups[0].bounds_world.duplicate()
+	var screen: Array = f.piece.groups[0].screen_bounds.duplicate()
+	f.calls[0] = 0
+	f.ctx.camera.position.x += 50
+	f.ctx.camera.look_at(Vector3.ZERO)
+	Map3DBattleGroups.place(f.ctx, f.piece, Vector2.ZERO, 1.6, false)
+	assert_eq(int(f.calls[0]), 0, "a camera pan must not repeat stationary terrain seating")
+	assert_eq(child.global_transform, pose)
+	assert_eq(f.piece.groups[0].bounds_world, bounds)
+	assert_ne(f.piece.groups[0].screen_bounds, screen, "picking still follows the actual camera")
+
+func test_physical_seat_cache_invalidates_for_points_facing_size_and_ground() -> void:
+	var f := _seat_cache_fixture()
+	Map3DBattleGroups.place(f.ctx, f.piece, Vector2.ZERO, 1.6, false)
+	for change: String in ["point", "facing", "size", "ground", "context"]:
+		f.calls[0] = 0
+		var child: Dictionary = f.piece.groups[0].piece
+		var before: Transform3D = child.node.global_transform
+		match change:
+			"point": f.piece.groups[0].x_m += 1000
+			"facing": f.piece.facing_deg += 90
+			"size": child["size"] *= 1.1
+			"ground":
+				var calls: Array = f.calls
+				f.ctx.height_fn = func(_at: Vector2) -> float:
+					calls[0] += 1
+					return 200.0
+			"context":
+				var ctx := Map3DContext.new(f.repo, f.ctx.meta.duplicate())
+				ctx.camera = f.ctx.camera
+				ctx.view_size = f.ctx.view_size
+				ctx.height_fn = f.ctx.height_fn
+				f.ctx = ctx
+		Map3DBattleGroups.place(f.ctx, f.piece, Vector2.ZERO, 1.6, false)
+		assert_gt(int(f.calls[0]), 0, change + " must resample the actual ground")
+		if change != "context": assert_ne(child.node.global_transform, before, change)
+
+func test_row_reconciliation_reuses_seat_and_retains_measured_bounds() -> void:
+	var f := _seat_cache_fixture()
+	Map3DBattleGroups.place(f.ctx, f.piece, Vector2.ZERO, 1.6, false)
+	var before := Map3DBattleGroups.evidence(f.piece)
+	var survivor: Node3D = f.piece.groups[0].piece.node
+	f.rows[0].count = 99
+	Map3DBattleGroups.sync(f.repo, f.reg, f.piece, {"rows": f.rows, "facing_deg": 37})
+	f.calls[0] = 0
+	Map3DBattleGroups.place(f.ctx, f.piece, Vector2.ZERO, 1.6, false)
+	assert_eq(int(f.calls[0]), 0, "count reconciliation cannot invalidate unchanged physical seats")
+	assert_eq(f.piece.groups[0].piece.node, survivor)
+	var after := Map3DBattleGroups.evidence(f.piece)
+	assert_eq(after[0].count, 99)
+	assert_eq(after[0].bounds_world, before[0].bounds_world)
+	assert_eq(after[0].screen_bounds, before[0].screen_bounds)
