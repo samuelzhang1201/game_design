@@ -22,6 +22,9 @@ that private candidate, so a group crossing a child boundary is consumed into
 canonical child groups before publication. The transient flag is removed by the
 same boundary migration; it never turns ordinary refresh into regrouping.
 
+Flank target snapshots use the target battle’s saved group size while its legacy
+transaction remains frozen; nonbattle targets use the configured current size.
+
 Group-size migration waits while any live round remains pending. New encounters
 inside a resumed legacy day seed the same legacy size as its live battles, so
 merges never mix group contracts before the common safe boundary. Living-cap

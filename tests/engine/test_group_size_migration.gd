@@ -212,3 +212,30 @@ func test_monthly_battle_recovery_updates_physical_rows_on_the_same_day() -> voi
 	for i: int in survivors.size():
 		for key: String in ["slot", "x_m", "y_m"]:
 			assert_eq(battle.groups[f.code][i][key], survivors[i][key])
+
+func test_frozen_legacy_flank_snapshot_keeps_saved_group_geometry() -> void:
+	var f := _fixture()
+	var codes: Array = f.state.regiments.keys()
+	codes.sort()
+	var observer := String(codes[1])
+	f.state.regiments[observer].x_m = 0
+	f.state.regiments[observer].y_m = 0
+	f.state.regiments[f.code].x_m = 100
+	f.state.regiments[f.code].y_m = 0
+	var battle: Dictionary = f.state.battles[0]
+	battle.unit_formations = {f.code: {"current": "line"}}
+	f.state.day_resolution = DayResolution.begin(f.state.day, false, f.state.absolute_day())
+	var record := {"request": {"target_unit": f.code}}
+	var before := SaveLoad.state_hash(f.state)
+	BattleTaskSystem._snapshot_flank(f.repo, f.state, observer, record)
+	assert_eq(record.flank.known.points_m.size(), 3, "101 fit still occupy three frozen50 groups")
+	assert_eq(int(record.flank.known.radius_m), 50, "three line slots span50 metres either side")
+	assert_eq(SaveLoad.state_hash(f.state), before, "observing cannot migrate the frozen state")
+
+	f.state.day_resolution.clear()
+	assert_eq(MilitaryReorganization.reconcile(f.repo, f.state).status, "complete")
+	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())), false)
+	var migrated := {"request": {"target_unit": f.code}}
+	BattleTaskSystem._snapshot_flank(f.repo, restored, observer, migrated)
+	assert_eq(migrated.flank.known.points_m.size(), 2, "after the boundary and JSON load the target uses100 groups")
+	assert_eq(int(migrated.flank.known.radius_m), 25)
