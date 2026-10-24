@@ -13,7 +13,7 @@ func test_the_players_own_card_carries_the_realms_temper() -> void:
 	for key in CountryPanel.REALM_METRICS:
 		assert_eq(panel.realm_metric_text(key), str(int(Game.state.metrics[key])), key)
 	Game.state.metrics["unrest"] = 37.0
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	assert_eq(panel.realm_metric_text("unrest"), "37", "it follows the live metric")
 	var foreign := ""
 	for code: String in Game.data.kingdoms:

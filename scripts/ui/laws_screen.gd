@@ -48,7 +48,7 @@ func _ready() -> void:
 	visibility_changed.connect(func() -> void:
 		if visible:
 			_refresh())
-	Game.state_changed.connect(func() -> void: _dirty = true)
+	SignalHub.state_changed.connect(func() -> void: _dirty = true)
 	show_page(_page)
 
 

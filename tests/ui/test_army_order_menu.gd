@@ -195,13 +195,13 @@ func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(there)
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	_menu.shown_confirm().select_supply("")   # no supply point: the march's courier alone
 	_commit()
 	assert_eq(Game.state.couriers.size(), 1, "the order is given: a courier waits to ride")
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY, "the column waits for him")
 	assert_eq(Game.clock_speed, 0, "but time stays stopped")
-	assert_signal_emitted_with_parameters(Game, "news_published",
+	assert_signal_emitted_with_parameters(SignalHub, "news_published",
 		["A courier will ride for %s when time runs." % String(ArmySystem.regiment(Game.data, code, Game.state)["label"])])
 
 

@@ -1,7 +1,7 @@
 extends GutTest
 ## The persistent bottom news strip (user request 2026-08-31): transparent,
 ## pinned above the bottom tab bar on every gameplay screen, fed by the
-## Royal Chronicle via Game.news_published, crawling at the balance-driven
+## Royal Chronicle via SignalHub.news_published, crawling at the balance-driven
 ## speed.
 
 func _root() -> GameRoot:
@@ -111,7 +111,7 @@ func test_works_are_announced_at_their_milestones() -> void:
 	(Game.state.manor_works[str(cell)] as Array)[0]["days"] = 10
 	var got: Array = []
 	var handler := func(text: String) -> void: got.append(text)
-	Game.news_published.connect(handler)
+	SignalHub.news_published.connect(handler)
 	Game.data.balance["time_day_seconds"] = 0.001
 	Game.set_clock_speed(1)
 	for i in 30:
@@ -121,7 +121,7 @@ func test_works_are_announced_at_their_milestones() -> void:
 			break
 	Game.set_clock_speed(0)
 	Game.data.balance["time_day_seconds"] = 1.0
-	Game.news_published.disconnect(handler)
+	SignalHub.news_published.disconnect(handler)
 	var joined := "\n".join(got)
 	assert_string_contains(joined, "is 30% done")
 	assert_string_contains(joined, "is 70% done")
@@ -157,7 +157,7 @@ func test_a_newly_idle_building_is_announced() -> void:
 	var tick := Game.state.tick
 	var got: Array = []
 	var handler := func(text: String) -> void: got.append(text)
-	Game.news_published.connect(handler)
+	SignalHub.news_published.connect(handler)
 	Game.data.balance["time_day_seconds"] = 0.001
 	Game.set_clock_speed(1)
 	for i in 30:
@@ -167,7 +167,7 @@ func test_a_newly_idle_building_is_announced() -> void:
 			break
 	Game.set_clock_speed(0)
 	Game.data.balance["time_day_seconds"] = 1.0
-	Game.news_published.disconnect(handler)
+	SignalHub.news_published.disconnect(handler)
 	for i in need.size():
 		(Game.data.building_inputs["smithy"][i] as Dictionary)["units"] = int(need[i])
 	RealmEconomy.forget()

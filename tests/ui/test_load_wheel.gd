@@ -97,7 +97,7 @@ func test_premenu_black_holds_the_wheel() -> void:
 
 ## The launch black's start/load guard, counted on the real work: a start is a
 ## call of Game.campaign_maker, a load is a new GameState instance carrying the
-## saved reign's marker tick (seen through Game.state_changed).
+## saved reign's marker tick (seen through SignalHub.state_changed).
 const SAVED_TICK := 7
 var _starts := 0
 var _loads := 0
@@ -118,7 +118,7 @@ func _launch_with_a_save() -> GameRoot:
 	Game.campaign_maker = func(d: DataRepository, seed_value: int) -> GameState:
 		_starts += 1
 		return inner.call(d, seed_value)
-	Game.state_changed.connect(_on_state_changed)
+	SignalHub.state_changed.connect(_on_state_changed)
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
 	return r
@@ -134,8 +134,8 @@ func _settle(r: GameRoot) -> void:
 	await wait_process_frames(6)
 
 func _restore_launch() -> void:
-	if Game.state_changed.is_connected(_on_state_changed):
-		Game.state_changed.disconnect(_on_state_changed)
+	if SignalHub.state_changed.is_connected(_on_state_changed):
+		SignalHub.state_changed.disconnect(_on_state_changed)
 	if _maker_before.is_valid():
 		Game.campaign_maker = _maker_before
 

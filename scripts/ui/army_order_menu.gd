@@ -374,7 +374,7 @@ func _refusal(action_code: String, code: String, params: Dictionary = {}) -> Str
 
 func _on_chosen(id: int) -> void:
 	if id == BATTLE:
-		Game.battle_view_requested.emit(_code)
+		SignalHub.battle_view_requested.emit(_code)
 		return
 	if id >= RATE_BASE and id < RATE_BASE + SupplyLines.RATES.size():
 		_send_supply(int(SupplyLines.RATES[id - RATE_BASE]))

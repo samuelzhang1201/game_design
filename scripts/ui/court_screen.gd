@@ -57,7 +57,7 @@ var _map3d_military := false
 ## the council column's leather. _ready fetches the nodes and wires signals;
 ## log lines and suggestion buttons are spawned at runtime below. Under
 ## balance ui_war_table 0 it puts the 2026-09-28 leather on instead
-## (_dress_leather). The TopBar instance wires itself to Game's signals.
+## (_dress_leather). The TopBar instance wires itself to SignalHub's notifications.
 func _ready() -> void:
 	if UiPalette.war_table():
 		_handle = %CouncilHandle

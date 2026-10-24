@@ -84,7 +84,7 @@ func _ready() -> void:
 	_temper.named = named
 	_host.named = named
 	(_people as PieChart).named = named
-	Game.state_changed.connect(func() -> void:
+	SignalHub.state_changed.connect(func() -> void:
 		if is_inside_tree():
 			refresh())
 	refresh()

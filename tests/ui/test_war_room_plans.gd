@@ -76,9 +76,9 @@ func test_a_right_click_on_open_ground_places_a_supposed_piece_through_the_form(
 	var form := screen.get_node("%PlanForm") as WarPlanForm
 	assert_true(form.visible, "the Place form")
 	assert_gt((form.get_node("%Figures") as Node).get_child_count(), 0, "its figures read live")
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	(form.get_node("%Place") as Button).pressed.emit()
-	assert_signal_emitted(Game, "plans_changed")
+	assert_signal_emitted(SignalHub, "plans_changed")
 	var pieces: Dictionary = Game.state.war_plans["pieces"]
 	assert_eq(pieces.size(), 1)
 	var p: Dictionary = pieces.values()[0]

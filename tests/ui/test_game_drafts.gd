@@ -62,9 +62,9 @@ func test_a_deployed_draft_does_not_say_it_was_set_aside() -> void:
 	Game.plant_draft(codes[0], "march", _near(codes[0]))
 	var heard: Array = []
 	var listen := func(t: String) -> void: heard.append(t)
-	Game.news_published.connect(listen)
+	SignalHub.news_published.connect(listen)
 	Game.deploy_drafts()
-	Game.news_published.disconnect(listen)
+	SignalHub.news_published.disconnect(listen)
 	var effects: Array = Game.state.recent_outcomes.back()["effects"]
 	assert_true(effects.all(func(e: Dictionary) -> bool: return String(e.get("metric", "")) != "war_draft"))
 
@@ -95,12 +95,12 @@ func test_discard_and_strike() -> void:
 
 
 func test_every_writer_tells_the_screens() -> void:
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	Game.plant_draft(codes[0], "march", _near(codes[0]))
 	Game.strike_draft(codes[0])
 	Game.plant_draft(codes[0], "march", _near(codes[0]))
 	Game.discard_drafts()
-	assert_signal_emit_count(Game, "state_changed", 4)
+	assert_signal_emit_count(SignalHub, "state_changed", 4)
 
 
 ## Spec 2026-10-07-march-waypoints ruling 8: a march draft's new load rides as

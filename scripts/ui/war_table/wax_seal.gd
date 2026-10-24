@@ -111,8 +111,8 @@ func _ready() -> void:
 			if _bubble_for != "":
 				councillor_chosen.emit(_bubble_for))
 	if not Engine.is_editor_hint() and Game != null:
-		Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
-		Game.state_changed.connect(refresh)
+		SignalHub.report_ready.connect(func(_r: TickReport) -> void: refresh())
+		SignalHub.state_changed.connect(refresh)
 	refresh()
 
 func _refit_if_ready() -> void:

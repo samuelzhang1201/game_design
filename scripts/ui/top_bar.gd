@@ -4,7 +4,7 @@ extends Control
 ## KingdomCard): the date and the clock left, the purses in the middle, MENU
 ## right, and a pending-event badge floating just below the bar's right end
 ## (outside the strip, so a visible badge never widens the bar past its
-## frame inset). Self-wiring: subscribes to Game.state_changed /
+## frame inset). Self-wiring: subscribes to SignalHub.state_changed /
 ## report_ready, so screens just instance it.
 ##
 ## TWO PURSES (owner 2026-09-14), told apart at a glance: the crown's —
@@ -59,15 +59,15 @@ func _ready() -> void:
 		var speed := int(String(b.name).trim_prefix("Clock_"))
 		_clock_buttons[speed] = b
 		b.pressed.connect(func() -> void: Game.set_clock_speed(speed))
-	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
+	%MenuButton.pressed.connect(func() -> void: SignalHub.menu_requested.emit())
 	(_clock_buttons[1] as Button).tooltip_text = "Play: a day every %.1f s" % Game.data.bal("time_day_seconds")
 	if not UiPalette.war_table():
 		_dress_leather()
-	Game.clock_changed.connect(func(_s: int) -> void: _refresh_clock())
-	Game.clock_held_changed.connect(func(_h: bool) -> void: _refresh_clock())
+	SignalHub.clock_changed.connect(func(_s: int) -> void: _refresh_clock())
+	SignalHub.clock_held_changed.connect(func(_h: bool) -> void: _refresh_clock())
 	_refresh_clock()
-	Game.state_changed.connect(refresh)
-	Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
+	SignalHub.state_changed.connect(refresh)
+	SignalHub.report_ready.connect(func(_r: TickReport) -> void: refresh())
 	refresh()
 
 ## The leather chrome (balance ui_war_table 0): the 2026-09-28 bar — a leather

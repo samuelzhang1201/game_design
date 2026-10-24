@@ -3,7 +3,7 @@ extends Control
 ## Flow state machine (spec §2). Owns exactly one screen scene at a time;
 ## screens signal upward, GameRoot decides what comes next. R restarts (R12).
 ## Also owns the pause menu (user ruling 2026-08-31): the TopBar's MENU
-## button (via Game.menu_requested) or Esc opens Resume / Save / Load /
+## button (via SignalHub.menu_requested) or Esc opens Resume / Save / Load /
 ## Restart / Quit to Desktop.
 
 ## DAY_RUN (the end-turn calendar screen) was removed 2026-09-18 (owner):
@@ -140,9 +140,9 @@ func _ready() -> void:
 	get_window().min_size = MIN_WINDOW_SIZE
 	# One game-wide Theme, inherited by every screen (see UiPalette).
 	theme = UiPalette.build_theme()
-	Game.menu_requested.connect(toggle_pause_menu)
-	Game.clock_changed.connect(_on_clock_changed)
-	Game.battle_decision_changed.connect(_on_battle_decision_changed)
+	SignalHub.menu_requested.connect(toggle_pause_menu)
+	SignalHub.clock_changed.connect(_on_clock_changed)
+	SignalHub.battle_decision_changed.connect(_on_battle_decision_changed)
 	_load_settings()
 	Intel.dev_all = _dev_mode
 	# the title first, a frame after the black has been drawn (the launch
@@ -199,7 +199,7 @@ func _make_missive() -> void:
 	_missive_screen.show_requested.connect(_on_missive_show)
 	# the board shown marks every letter seen (owner 2026-10-10)
 	_missive_screen.visibility_changed.connect(_mark_seen_if_shown)
-	Game.missives_seen.connect(refresh_missive_badge.bind(false))
+	SignalHub.missives_seen.connect(refresh_missive_badge.bind(false))
 	add_child(_missive_screen)
 	_settle_overlay(_missive_screen, state)
 
@@ -255,8 +255,8 @@ func _finish_overlays() -> void:
 	add_child(_battle_panel)
 	_battle_panel.decision_selected.connect(_on_battle_decision_selected)
 	_battle_panel.order_requested.connect(_on_battle_order)
-	Game.battle_view_requested.connect(_open_battle_for)
-	Game.state_changed.connect(_refresh_battle_panel)
+	SignalHub.battle_view_requested.connect(_open_battle_for)
+	SignalHub.state_changed.connect(_refresh_battle_panel)
 	_laws_screen.above = [_report_popup, _pause_menu]
 	_start_bgm()
 	_raise_overlays()

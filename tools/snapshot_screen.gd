@@ -650,7 +650,7 @@ func _ready() -> void:
 	else:
 		Game.start_campaign(_seed)
 	# the news bar's lines, so a run shows what the player was told
-	Game.news_published.connect(func(t: String) -> void:
+	SignalHub.news_published.connect(func(t: String) -> void:
 		print("news [%s]: %s" % [Calendar.date_of_day(Game.news_day()) if Game.state != null else "", t]))
 	for key: String in _bal:
 		Game.data.balance[key] = _bal[key]
@@ -1672,7 +1672,7 @@ func _seed_war_spread() -> void:
 				_war_spread_codes.append(c)
 				placed += 1
 				break
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	if _war_sheet < 0 and not _war_spread_codes.is_empty():
 		_war_sheet = WarSheets.sheet_of(Game.data, ArmySystem.position_of(Game.data, Game.state,
 			ArmySystem.regiment(Game.data, String(_war_spread_codes[0]), Game.state)))
@@ -1700,7 +1700,7 @@ func _seed_hold_line() -> void:
 		mid /= float(_war_spread_codes.size())
 		if _at3d.x < 0.0:
 			_at3d = mid
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	print("hold line: ", _war_spread_codes, " at ", mid)
 
 

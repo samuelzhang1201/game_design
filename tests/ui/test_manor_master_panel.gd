@@ -72,7 +72,7 @@ func test_a_quiet_day_leaves_the_table_alone() -> void:
 	assert_eq(panel.rebuilds, built, "a day that moved nothing it shows")
 	var cell := int(panel.rows()[0]["cell"])
 	Game.state.manor_focus[str(cell)] = {"code": "x", "tick": Game.state.tick}
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	await wait_process_frames(1)
 	assert_eq(panel.rebuilds, built + 1, "a manor's work changed: rebuilt")
 

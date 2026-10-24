@@ -17,26 +17,26 @@ func before_each() -> void:
 
 
 func test_a_piece_placed_moved_edited_and_removed_says_plans_changed_only() -> void:
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	var id := Game.place_plan_piece("infantry", 1000, side, at, 0)
 	assert_ne(id, "")
 	assert_true(Game.move_plan_piece(id, at + Vector2(2, 0), 90))
 	assert_true(Game.edit_plan_piece(id, "cavalry", 800, WarPlans.UNKNOWN))
 	assert_true(Game.remove_plan(id))
-	assert_signal_emit_count(Game, "plans_changed", 4)
-	assert_signal_not_emitted(Game, "state_changed")
+	assert_signal_emit_count(SignalHub, "plans_changed", 4)
+	assert_signal_not_emitted(SignalHub, "state_changed")
 
 
 func test_a_refused_write_says_nothing() -> void:
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	assert_eq(Game.place_plan_piece("fleet", 1000, side, at, 0), "")
 	assert_false(Game.remove_plan("p999"))
-	assert_signal_not_emitted(Game, "plans_changed")
+	assert_signal_not_emitted(SignalHub, "plans_changed")
 
 
 func test_strokes_and_undo() -> void:
 	var before: Dictionary = Game.state.war_plans.duplicate(true)
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	var id := Game.draw_plan("arrow", "blue", PackedVector2Array([at, at + Vector2(20, 0)]), 0.0, "", false)
 	assert_ne(id, "")
 	assert_true(Game.shift_plan(id, Vector2(1, 0)))
@@ -44,7 +44,7 @@ func test_strokes_and_undo() -> void:
 	assert_true(Game.restyle_plan(id, {"dashed": 1}))
 	Game.restore_plans(before)
 	assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), 0)
-	assert_signal_emit_count(Game, "plans_changed", 5)
+	assert_signal_emit_count(SignalHub, "plans_changed", 5)
 
 
 func test_clear_by_rect() -> void:

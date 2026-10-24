@@ -136,7 +136,7 @@ func test_a_restart_mid_report_clears_the_queue_without_crashing() -> void:
 	r.on_new_missives([a, b])
 	assert_true(r.report_popup().visible)
 	assert_eq(r.pending_reports(), [b])
-	Game.menu_requested.emit()
+	SignalHub.menu_requested.emit()
 	_menu_btn(r, "Restart").pressed.emit()
 	await wait_process_frames(2)
 	assert_null(Game.state, "the realm is gone")
@@ -175,7 +175,7 @@ func test_a_load_mid_report_discards_a_stale_id_without_crashing() -> void:
 	r.on_new_missives([a, b])
 	assert_true(r.report_popup().visible)
 	assert_eq(r.pending_reports(), [b])
-	Game.menu_requested.emit()
+	SignalHub.menu_requested.emit()
 	_menu_btn(r, "LoadGame").pressed.emit()
 	await wait_process_frames(2)
 	assert_true(MissiveLog.find(Game.state, b).is_empty(), "the loaded realm never had this letter")
@@ -241,8 +241,8 @@ func test_no_days_bank_behind_a_waiting_report() -> void:
 func test_the_news_bar_says_the_stewards_report_is_in() -> void:
 	var r: GameRoot = await _root()
 	var id := MissiveLog.add(Game.data, Game.state, MissiveWriter.monthly(Game.data, Game.state, 3))
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	r.on_new_missives([id])
 	var title := String(MissiveLog.find(Game.state, id)["title"])
-	assert_signal_emitted_with_parameters(Game, "news_published",
+	assert_signal_emitted_with_parameters(SignalHub, "news_published",
 		["The steward's report for %s is in." % title.get_slice(" — ", 1)])

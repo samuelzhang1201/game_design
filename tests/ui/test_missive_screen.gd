@@ -278,9 +278,9 @@ func test_reading_a_letter_goes_through_game() -> void:
 	var r := _root()
 	await _enter(r)
 	r.toggle_missives()
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	r.missive_screen().select(id)
-	assert_signal_emitted_with_parameters(Game, "missive_read", [id])
+	assert_signal_emitted_with_parameters(SignalHub, "missive_read", [id])
 	assert_true(bool(MissiveLog.find(Game.state, id)["read"]))
 
 

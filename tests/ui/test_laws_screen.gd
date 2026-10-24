@@ -164,7 +164,7 @@ func test_choosing_a_value_shows_the_cost_from_the_preview() -> void:
 	assert_eq(row.effects_text(), "", "the tax law's rows in law_effects.csv: none")
 	# a chest that cannot pay: Decree greys and the row says why
 	Game.state.metrics["treasury"] = 0.0
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	await wait_process_frames(2)
 	var refused := LawSystem.preview(Game.data, Game.state, "tax_rate", v)
 	assert_ne(String(refused["refusal"]), "")
@@ -219,7 +219,7 @@ func test_a_decree_is_one_news_line_at_send() -> void:
 	var screen := await _open(r)
 	var said: Array = []
 	var hear := func(t: String) -> void: said.append(t)
-	Game.news_published.connect(hear)
+	SignalHub.news_published.connect(hear)
 	var row := screen.row("tax_rate")
 	var v := _other_tax()
 	await _choose(r, row, v)
@@ -230,7 +230,7 @@ func test_a_decree_is_one_news_line_at_send() -> void:
 	Game.set_clock_speed(1)
 	await wait_process_frames(2)
 	Game.set_clock_speed(0)
-	Game.news_published.disconnect(hear)
+	SignalHub.news_published.disconnect(hear)
 	var label := String(LawSystem.def(Game.data, "tax_rate")["label"])
 	var about := said.filter(func(t: String) -> bool: return t.to_lower().contains(label.to_lower()))
 	assert_eq(about, ["The decree on %s is sent: %d couriers." % [label, n]], "one line: %s" % [said])
@@ -279,7 +279,7 @@ func test_the_missing_places_list_names_each_with_days_left() -> void:
 			gone_key = String(o["scope_key"])
 			Game.state.couriers.remove_at(i)
 			break
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	await wait_process_frames(2)
 	await _click_on(r, row.places_button())
 	assert_true(screen.detail().visible, "the list of places not yet told opens")
@@ -386,7 +386,7 @@ func test_a_same_day_change_of_owner_redraws_the_row() -> void:
 			lose = code
 			break
 	assert_true(MapOwnership.set_owner(Game.data, Game.state, lose, other, "test: the province falls"))
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	await wait_process_frames(2)
 	assert_string_contains(row.delivery_text(), "0 / %d %s" % [n - 1, _word("provinces")],
 		"the lost province is no longer counted")
@@ -409,7 +409,7 @@ func test_the_chosen_value_is_forgotten_on_close_and_on_a_new_reign() -> void:
 	assert_eq(row.decree_button().tooltip_text, _word("refusal_unchanged"))
 	await _choose(r, row, _other_tax())
 	Game.start_campaign(45)
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	await wait_process_frames(2)
 	assert_eq(String(row.choice().get_item_metadata(row.choice().selected)),
 		LawSystem.decreed(Game.data, Game.state, "tax_rate"), "a new reign: the new decree")
@@ -434,7 +434,7 @@ func test_a_place_gained_since_is_listed_as_not_sent() -> void:
 			gained = code
 			break
 	assert_true(MapOwnership.set_owner(Game.data, Game.state, gained, realm, "test: the province comes over"))
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	await wait_process_frames(2)
 	assert_string_contains(row.delivery_text(), "1 %s" % _word("not_sent"))
 	await _click_on(r, row.places_button())

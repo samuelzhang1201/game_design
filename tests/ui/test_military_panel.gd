@@ -96,7 +96,7 @@ func test_the_column_follows_the_state_while_it_is_up() -> void:
 	assert_eq(int(before), infantry, "the host includes its wounded people")
 	assert_false(MilitaryRoster.transition(Game.data, Game.state, "host:dead", [
 		{"cohort_id": cohort_id, "from": "fit", "to": "dead", "count": 5}], "a hard march").has("error"))
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	await wait_process_frames(2)
 	for row in panel.arms_chart().rows:
 		if String(row.get("dimension", "")) == "infantry":

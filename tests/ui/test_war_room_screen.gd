@@ -459,11 +459,11 @@ func test_an_order_on_the_map_sets_the_rooms_draft_aside_and_says_so() -> void:
 	await wait_process_frames(1)
 	var heard: Array = []
 	var listen := func(t: String) -> void: heard.append(t)
-	Game.news_published.connect(listen)
+	SignalHub.news_published.connect(listen)
 	var map_menu := r.current_screen.find_child("ArmyOrders", true, false) as ArmyOrderMenu
 	assert_false(map_menu.drafting, "the 3D map's orders are sent at once")
 	map_menu._run(ActionRequest.make("ARMY_GARRISON", {"regiment": code}))
-	Game.news_published.disconnect(listen)
+	SignalHub.news_published.disconnect(listen)
 	assert_false(WarDrafts.any(Game.state))
 	assert_true(heard.any(func(t: String) -> bool: return t.contains("draft")), "the news says the draft is set aside")
 
@@ -766,12 +766,12 @@ func test_no_drafts_no_question() -> void:
 
 func test_a_forced_switch_keeps_the_drafts_and_says_so() -> void:
 	var r: GameRoot = await _room_with_a_draft()
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	r._switch_to(GameRoot.State.COURT)
 	await wait_process_frames(1)
 	assert_false(r.war_room_screen().visible)
 	assert_true(WarDrafts.any(Game.state), "an event's switch keeps the drafts")
-	assert_signal_emitted(Game, "news_published")
+	assert_signal_emitted(SignalHub, "news_published")
 
 
 func test_deploy_from_the_leave_prompt_seals_then_leaves_for_the_chosen_tab() -> void:
@@ -955,7 +955,7 @@ func test_every_way_out_of_the_room_lets_the_clock_go() -> void:
 		r.bottom_bar().button("WAR ROOM").pressed.emit()
 		await wait_process_frames(2)
 		assert_true(Game.holds_clock("war_room"), door + ": held on entering")
-		watch_signals(Game)
+		watch_signals(SignalHub)
 		(doors[door] as Callable).call(r)
 		await wait_process_frames(2)
 		assert_false(r.war_room_screen().visible, door + " leaves the room")

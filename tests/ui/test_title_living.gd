@@ -47,7 +47,7 @@ func test_continue_the_chronicle_lays_the_map_on_the_table() -> void:
 	if not Game.state.pending_event.is_empty():
 		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
 	assert_true(Game.save_campaign())
-	Game.menu_requested.emit()
+	SignalHub.menu_requested.emit()
 	r.pause_menu().find_child("Restart", true, false).pressed.emit()
 	await wait_process_frames(2)
 	var img := Image.create(32, 18, false, Image.FORMAT_RGBA8)

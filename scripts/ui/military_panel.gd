@@ -50,7 +50,7 @@ func _ready() -> void:
 	_officers = $Officers
 	# The MILITARY table it replaced refreshed live while it was up; so does
 	# this, so a battle or a muster shows in the column as it happens.
-	Game.state_changed.connect(func() -> void:
+	SignalHub.state_changed.connect(func() -> void:
 		if visible:
 			refresh())
 
