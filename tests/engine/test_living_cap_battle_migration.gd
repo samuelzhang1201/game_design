@@ -1,5 +1,12 @@
 extends "res://tests/engine/test_military_reorganization.gd"
 
+func _legacy_rows(fit: int, at: Vector2i, first_slot := 0) -> Array:
+	var rows: Array = []
+	for count: int in BattleGroups.counts(fit, 50):
+		rows.append({"count": count, "role": "front", "x_m": at.x + rows.size(),
+			"y_m": at.y, "slot": first_slot + rows.size()})
+	return rows
+
 func test_active_battle_keeps_saved_points_and_singular_intent() -> void:
 	state.military_cohorts.common.fit = 1000
 	state.military_cohorts.common.wounded = 0
@@ -7,7 +14,7 @@ func test_active_battle_keeps_saved_points_and_singular_intent() -> void:
 	for i: int in 20:
 		rows.append({"count": 50, "role": "front", "x_m": 100 + i, "y_m": 200, "slot": i})
 	rows.append({"count": 1, "role": "reserve", "x_m": 999, "y_m": 333, "slot": 20})
-	state.battles = [{"id": 7, "att": [original], "def": ["foe"], "groups": {original: rows},
+	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: rows},
 		"group_facing": {original: 37}, "pending_round": {}, "rounds": 3,
 		"unit_formations": {original: {"current": "line"}}, "reports": [{"unit": original, "loss": 9}]}]
 	state.battle_aliases = {"6": 7}
@@ -86,7 +93,7 @@ func test_new_child_without_a_task_holds_under_an_attacking_side() -> void:
 	state.military_cohorts.common.fit = 1000
 	state.military_cohorts.common.wounded = 0
 	state.battles = [{"id": 7, "att": [original], "def": [], "actions": {"att": {"kind": "attack"}},
-		"groups": {original: [{"count": 1001, "x_m": 9, "y_m": 8}]}}]
+		"groups": {original: _legacy_rows(1001, Vector2i(9, 8))}, "group_facing": {original: 37}}]
 	assert_eq(_reconcile().status, "complete")
 	var children := _children()
 	if children.size() != 2: return
@@ -120,7 +127,7 @@ func test_unrelated_idle_units_migrate_while_a_frozen_round_waits() -> void:
 	state.military_cohorts.frozen = source
 	var round_input := {"att": ["frozen"], "roll": 99, "costs": {"frozen": 17}}
 	state.battles = [{"id": 7, "att": ["frozen"], "def": [], "pending_round": round_input.duplicate(true),
-		"groups": {"frozen": [{"count": 1001, "x_m": 123, "y_m": 456}]}}]
+		"groups": {"frozen": _legacy_rows(1001, Vector2i(123, 456))}, "group_facing": {"frozen": 0}}]
 	assert_eq(_reconcile().status, "deferred")
 	assert_eq(_children().size(), 2)
 	assert_eq(state.battles[0].pending_round, round_input)
@@ -139,9 +146,7 @@ func test_migration_seeds_child_anchor_and_preserves_retired_slot_counter() -> v
 	state.military_cohorts.common.wounded = 0
 	var at := BattleSystem._at_m(repo, state, original)
 	state.regiments[original].group_next_slot = 90
-	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: [
-		{"count": 501, "x_m": at.x, "y_m": at.y, "slot": 11, "role": "front"},
-		{"count": 500, "x_m": at.x + 1, "y_m": at.y, "slot": 29, "role": "reserve"}]},
+	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: _legacy_rows(1001, at, 11)},
 		"group_anchor_m": {original: [at.x, at.y]}, "group_facing": {original: 37}}]
 	assert_eq(_reconcile().status, "complete")
 	var children := _children()
@@ -157,7 +162,7 @@ func test_migration_hold_follows_saved_battle_alias_without_a_task() -> void:
 	state.military_cohorts.common.fit = 1000
 	state.military_cohorts.common.wounded = 0
 	state.battles = [{"id": 7, "att": [original], "def": [], "actions": {"att": {"kind": "attack"}},
-		"groups": {original: [{"count": 1001, "x_m": 9, "y_m": 8}]}}]
+		"groups": {original: _legacy_rows(1001, Vector2i(9, 8))}, "group_facing": {original: 37}}]
 	assert_eq(_reconcile().status, "complete")
 	var children := _children()
 	if children.size() != 2: return
@@ -171,7 +176,7 @@ func test_no_task_child_uses_defensive_strength_under_attacking_side() -> void:
 	state.military_cohorts.common.fit = 1000
 	state.military_cohorts.common.wounded = 0
 	state.battles = [{"id": 7, "att": [original], "def": [], "actions": {"att": {"kind": "attack"}},
-		"groups": {original: [{"count": 1001, "x_m": 9, "y_m": 8, "role": "front"}]}}]
+		"groups": {original: _legacy_rows(1001, Vector2i(9, 8))}, "group_facing": {original: 37}}]
 	assert_eq(_reconcile().status, "complete")
 	var children := _children()
 	if children.size() != 2: return
@@ -192,7 +197,7 @@ func test_partitioned_rows_survive_refresh_and_json_without_movement() -> void:
 	for i: int in 20:
 		rows.append({"count": 50, "role": "front", "x_m": 100 + i, "y_m": 200, "slot": i})
 	rows.append({"count": 1, "role": "reserve", "x_m": 999, "y_m": 333, "slot": 20})
-	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: rows}}]
+	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: rows}, "group_facing": {original: 37}}]
 	assert_eq(_reconcile().status, "complete")
 	var before: Dictionary = state.battles[0].groups.duplicate(true)
 	state = GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())), false)
@@ -200,15 +205,15 @@ func test_partitioned_rows_survive_refresh_and_json_without_movement() -> void:
 	assert_eq(state.battles[0].groups, before, "A refresh cannot relocate the boundary group's people")
 	BattleGroups.refresh(repo, state, state.battles[0])
 	assert_eq(state.battles[0].groups, before, "Repeated refresh preserves partial rows and retired slots")
-	var child: String = _children()[1]
+	var child: String = _children()[0]
 	assert_false(MilitaryRoster.transfer_units(repo, state, "boundary-wound",
 		[{"unit_code": child, "from": "fit", "to": "wounded", "count": 1}], "Boundary continuity wound").has("error"))
 	BattleGroups.refresh(repo, state, state.battles[0])
-	var survivors: Array = before[child].slice(0, 10)
+	var survivors: Array = before[child].slice(0, 5)
 	assert_eq(state.battles[0].groups[child], survivors, "Only the one-person tail retires")
 	assert_false(MilitaryRoster.transfer_units(repo, state, "boundary-recover",
 		[{"unit_code": child, "from": "wounded", "to": "fit", "count": 1}], "Boundary continuity recovery").has("error"))
 	BattleGroups.refresh(repo, state, state.battles[0])
-	assert_eq(state.battles[0].groups[child].slice(0, 10), survivors)
+	assert_eq(state.battles[0].groups[child].slice(0, 5), survivors)
 	assert_eq(state.battles[0].groups[child][-1].count, 1)
-	assert_eq(state.battles[0].groups[child][-1].slot, 21, "Recovery cannot reuse retired slot20")
+	assert_eq(state.battles[0].groups[child][-1].slot, 21, "Recovery cannot reuse retired slot10")

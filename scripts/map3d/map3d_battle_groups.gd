@@ -34,9 +34,10 @@ static func sample(ctx: Map3DContext, code: String) -> Dictionary:
 	var rows: Array = []
 	var slots: Dictionary = {}
 	var total := 0
-	var size := int(ctx.repo.bal("battle_group_size"))
+	var size := BattleGroups.saved_size(ctx.repo, battle)
 	if size <= 0:
-		return _result("invalid", [], 0, "invalid group size")
+		return _result("invalid", [], 0, "invalid group size/version")
+	var version := int(battle.get("group_size_version", 1))
 	for i in raw.size():
 		var row: Variant = raw[i]
 		if not row is Dictionary:
@@ -57,9 +58,11 @@ static func sample(ctx: Map3DContext, code: String) -> Dictionary:
 		rows.append({"slot": slot, "count": int(row["count"]), "role": String(row["role"]),
 			"x_m": int(row["x_m"]), "y_m": int(row["y_m"])})
 	var fit := ArmySystem.fit_count(ctx.repo, ctx.state(), code)
-	if total != fit or rows.size() != ceili(float(fit) / size):
+	if total != fit or (version >= 2 and rows.size() != ceili(float(fit) / size)):
 		return _result("invalid", [], 0, "groups do not match fit personnel")
-	return _result("groups", rows, facing)
+	var result := _result("groups", rows, facing)
+	result["key"].append_array([version, size])
+	return result
 
 static func build(repo: DataRepository, reg: Dictionary, sampled: Dictionary) -> Dictionary:
 	var piece := {"node": Node3D.new(), "layout": "physical_groups", "groups": [], "anims": [],

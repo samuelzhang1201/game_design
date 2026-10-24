@@ -81,15 +81,15 @@ func test_friendly_disc_tangent_blocks_but_outside_or_behind_does_not() -> void:
 	assert_false(BattleRanged.clear_shot(f.repo, Vector2i.ZERO, Vector2i(180, 240), Vector2i(3, 4), friends), "Diagonal segment uses the same integer cross-product rule")
 
 func test_own_front_rank_obstructs_rear_without_reserve_output() -> void:
-	var f := _fixture(300, 100, "double_rank")
-	assert_eq(_shots(f), {"firing": 50, "melee": 0, "fit": 100})
+	var f := _fixture(300, 200, "double_rank")
+	assert_eq(_shots(f), {"firing": 100, "melee": 0, "fit": 200})
 	assert_eq(BattleRanged.active_permille(_shots(f)), 500)
 	var strength := BattleSystem.unit_strength(f.repo, f.state, f.a, Callable(), true, [f.enemy])
 	var factor := {}
 	for row: Dictionary in strength.factors:
 		if row.source == "contact:ranged": factor = row
 	assert_eq(factor.get("permille"), 500)
-	assert_string_contains(factor.get("reason", ""), "50 firing")
+	assert_string_contains(factor.get("reason", ""), "100 firing")
 
 func _block(f: Dictionary) -> void:
 	f.battle.att.append(f.friend)
@@ -116,11 +116,11 @@ func test_friendly_unit_blocks_actual_power_and_casualties() -> void:
 	assert_eq(Personnel.count(blocked.state, blocked.enemy, "dead"), 0)
 
 func test_partial_fire_reduces_actual_losses_once() -> void:
-	var f := _fixture(300, 100, "double_rank")
+	var f := _fixture(300, 200, "double_rank")
 	_fixed_losses(f)
 	assert_eq(BattleSystem.step_battle(f.repo, f.state, 9463).status, "complete")
-	# 100 tier * 800 ranged * 500 firing / 1000^2 = 40; 100 people -> 4 dead.
-	assert_eq(Personnel.count(f.state, f.enemy, "dead"), 4)
+	# 100 tier * 800 ranged * 500 firing / 1000^2 = 40; 200 people -> 8 dead.
+	assert_eq(Personnel.count(f.state, f.enemy, "dead"), 8)
 	var hash_after := SaveLoad.state_hash(f.state)
 	BattleSystem.step_battle(f.repo, f.state, 9463)
 	assert_eq(SaveLoad.state_hash(f.state), hash_after)
@@ -282,9 +282,9 @@ func test_diagonal_opposing_firing_lines_remain_in_reach_after_rounding() -> voi
 	assert_eq(Personnel.count(f.state, f.enemy, "dead"), 4)
 
 func test_mixed_equipment_scales_only_its_ranged_personnel_share() -> void:
-	var f := _fixture(300, 100, "double_rank")
-	f.state.army_roster[f.a].archers = "50"
-	f.state.army_roster[f.a].infantry = "50"
+	var f := _fixture(300, 200, "double_rank")
+	f.state.army_roster[f.a].archers = "100"
+	f.state.army_roster[f.a].infantry = "100"
 	assert_eq(BattleRanged.share(f.repo, f.state, f.a), 500)
 	# Half of the ranged half fires; the melee half retains its existing threat.
 	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 750)

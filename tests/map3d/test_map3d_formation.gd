@@ -179,3 +179,11 @@ func test_unit_line_width_uses_its_own_ground_and_legacy_keeps_side_ground() -> 
 	battle.unit_formations = {codes[0]: battle.formations.att.duplicate(true), codes[1]: battle.formations.att.duplicate(true)}
 	assert_eq(Map3DFormation.layout_of(data, state, codes[0]), "line", "open-ground recipient must not fold for its ally")
 	assert_eq(Map3DFormation.layout_of(data, state, codes[1]), "line:500", "narrow-ground recipient still folds")
+
+func test_fit_tier_counts_people_and_reuses_tactical_slots() -> void:
+	for layout: String in ["block", "line", "wedge", "diamond", "double_rank", "line:500"]:
+		for pair: Array in [[0, 0], [1, 1], [100, 1], [101, 2], [900, 9], [1000, 10]]:
+			var tier := Map3DFormation.fit_tier(repo, int(pair[0]), layout)
+			assert_eq(tier.figures, int(pair[1]))
+			var parts := layout.split(":")
+			assert_eq(Map3DFormation.slots_of(tier, layout), BattleFormation.slots(parts[0], int(pair[1]), int(parts[1]) if parts.size() == 2 else 1000))

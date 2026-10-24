@@ -6,17 +6,26 @@ const REASON := "Saved military units partitioned by assigned living personnel"
 const COUNTS := ["fit", "wounded", "captured_current", "dead", "released"]
 
 static func reconcile(repo: DataRepository, state: GameState) -> Dictionary:
-	if int(state.military_migration.get("living_cap_version", 0)) == 2 \
-			and not bool(state.military_migration.get("organization_pending", false)):
+	var living_complete := int(state.military_migration.get("living_cap_version", 0)) == 2 \
+		and not bool(state.military_migration.get("organization_pending", false))
+	var group_pending := false
+	for battle: Dictionary in state.battles:
+		if not bool(battle.get("ended", false)) and not bool(battle.get("finished", false)) \
+				and (BattleGroups.saved_size(repo, battle) <= 0 or int(battle.get("group_size_version", 0)) != 2):
+			group_pending = true
+	if living_complete and not group_pending:
 		return {"status": "complete"}
 	if not state.day_resolution.is_empty():
 		return {"status": "deferred", "reason": "A day transaction is still running"}
 	var candidate := GameState.from_dict(state.to_dict(), false)
-	var result := _reconcile(repo, candidate)
+	var result := {"status": "complete"} if living_complete else _reconcile(repo, candidate)
 	if result.status == "error":
 		return result
-	if result.status == "deferred" and candidate.military_migration == state.military_migration:
-		return result
+	for battle: Dictionary in candidate.battles:
+		if bool(battle.get("ended", false)) or bool(battle.get("finished", false)): continue
+		var groups := BattleGroups.migrate_size(repo, candidate, battle)
+		if groups.status == "error": return groups
+		if groups.status == "deferred": result.status = "deferred"
 	for field: String in ["army_roster", "military_rosters", "military_cohorts", "military_migration",
 			"regiments", "foes", "supply_lines", "recruitment_projects", "battles", "ai_hosts", "war_plans", "unit_prize_gold"]:
 		state.set(field, candidate.get(field))
@@ -417,6 +426,8 @@ static func _battle(repo: DataRepository, state: GameState, battle: Dictionary, 
 		if battle.get("group_facing", {}).has(code): battle.group_facing[child] = battle.group_facing[code]
 		if child != code and battle.get("unit_formations", {}).has(code):
 			battle.unit_formations[child] = battle.unit_formations[code].duplicate(true)
+	if int(battle.get("group_size_version", 0)) == 2:
+		battle.group_size_regroup_pending = true
 	for side: String in ["att", "def"]:
 		if battle.has(side): battle[side] = _expanded_codes(battle[side], code, children)
 	return ""

@@ -18,6 +18,8 @@ const MARCH := "MARCH"
 
 ## Figure spacing, × a figure's footprint (owner 2026-09-30: 可以适当分开一些).
 @export var formation_gap := 1.6
+## Per-figure visual ceiling, independent of the formation’s layout spacing.
+@export var figure_footprint_gap := 1.6
 ## Seconds a clip blends into the next (owner 2026-09-27: 行进的动作非常突兀).
 @export var blend_s := 0.3
 ## Degrees a second a piece turns (instant turning read as a glitch).
@@ -137,7 +139,8 @@ func _roster_key() -> Array:
 	var geometry: Array = []
 	if st != null:
 		for reg: Dictionary in ctx.regiments():
-			geometry.append([reg["regiment_code"], BattleGroupsView.sample(ctx, String(reg["regiment_code"]))["key"]])
+			var code := String(reg["regiment_code"])
+			geometry.append([code, BattleGroupsView.sample(ctx, code)["key"], ArmySystem.fit_count(ctx.repo, st, code)])
 	return [geometry, st, st.absolute_day(), st.regiments.hash(), st.foes.size(), st.sightings.size(), ctx.dev] \
 		if st != null else [null, ctx.dev]
 
@@ -178,7 +181,9 @@ func _target_xz(reg: Dictionary) -> Vector2:
 ## SEATED on its footprint (Map3DUnits.seat; owner 2026-09-24: 斜面上兵人的一部分会被地图盖住).
 func _place(code: String, piece: Dictionary) -> void:
 	if piece.get("layout", "") == "physical_groups":
-		_rects[code] = BattleGroupsView.place(ctx, piece, _shown_xz[code], formation_gap, _selected.has(code))
+		var box := BattleGroupsView.place(ctx, piece, _shown_xz[code], figure_footprint_gap, _selected.has(code))
+		_rects.erase(code)
+		if box.has_area(): _rects[code] = box
 		_yaw[code] = Map3DUnits.facing_yaw(WarFront.facing_vector(piece["facing_deg"]))
 		return
 	var repo := ctx.repo
@@ -191,6 +196,10 @@ func _place(code: String, piece: Dictionary) -> void:
 	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), piece["size"])
+	piece["camp_scale"] = k
+	var ratio := float(ctx.meta["m_per_px"]) / ArmySystem.metres_per_pack_px(repo)
+	var pitch := Vector2(repo.bal("battle_group_spacing_m"), repo.bal("battle_group_depth_m")) * ratio
+	k = BattleGroupsView.scale_cap(k, piece["figure_extent"], pitch, figure_footprint_gap)
 	var heading := Map3DUnitRig.heading_for(repo, ctx.state(), code, _track.get(code, {}))
 	_want_yaw[code] = Map3DUnits.facing_yaw(heading, piece.get("stand_deg", 0.0))
 	_yaw[code] = _yaw.get(code, _want_yaw[code])
@@ -300,7 +309,7 @@ func play(code: String, action: String) -> void:
 ## The piece for a regiment, built on first sight; {} for an arm with no model (a fleet).
 func _piece_of(code: String) -> Dictionary:
 	var reg := ArmySystem.regiment(ctx.repo, code, ctx.state())
-	if reg.is_empty():
+	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 		return {}
 	var sampled := BattleGroupsView.sample(ctx, code)
 	if sampled["mode"] == "invalid":
@@ -319,8 +328,11 @@ func _piece_of(code: String) -> Dictionary:
 		return _pieces[code]
 	if _pieces.get(code, {}).get("layout", "") == "physical_groups":
 		_drop(code)
-	var tier := Map3DFormation.tier_of(ctx.repo, ArmySystem.fit_permille(ctx.repo, ctx.state(), code))
 	var layout := Map3DFormation.layout_of(ctx.repo, ctx.state(), code)
+	var tier := Map3DFormation.fit_tier(ctx.repo, ArmySystem.fit_count(ctx.repo, ctx.state(), code), layout)
+	if int(tier.figures) == 0:
+		if _pieces.has(code): _drop(code)
+		return {}
 	if int(_pieces.get(code, {}).get("figures", -1)) == (tier["slots"] as Array).size() \
 			and String(_pieces.get(code, {}).get("layout", "")) == layout:
 		_sync_action(code)

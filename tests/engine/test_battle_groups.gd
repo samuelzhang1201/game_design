@@ -1,5 +1,5 @@
 extends GutTest
-## P4.4d1: representative 50-person groups and their saved whole-metre positions.
+## P4.4d1: representative 100-person groups and their saved whole-metre positions.
 ## Hand-computed: spacing 50 m, depth 40 m (data/battle/balance.csv).
 const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
@@ -24,15 +24,21 @@ func _fixture() -> Dictionary:
 func _counts(groups: Array) -> Array:
 	return groups.map(func(x: Dictionary) -> int: return int(x.count))
 
+func test_configured_hundred_fit_counts() -> void:
+	var repo := SuiteData.repo()
+	assert_eq(int(repo.bal("battle_group_size")), 100)
+	assert_eq(BattleGroups.counts(101, int(repo.bal("battle_group_size"))), [100, 1] as Array[int])
+	assert_eq(BattleGroups.counts(1000, int(repo.bal("battle_group_size"))).size(), 10)
+
 func test_counts_table() -> void:
-	assert_eq(BattleGroups.counts(0), [] as Array[int])
-	assert_eq(BattleGroups.counts(1), [1] as Array[int])
-	assert_eq(BattleGroups.counts(49), [49] as Array[int])
-	assert_eq(BattleGroups.counts(50), [50] as Array[int])
-	assert_eq(BattleGroups.counts(51), [50, 1] as Array[int])
-	assert_eq(BattleGroups.counts(800).size(), 16)
-	assert_eq(BattleGroups.counts(1000).size(), 20)
-	assert_eq(BattleGroups.counts(10000).size(), 200)
+	assert_eq(BattleGroups.counts(0, 100), [] as Array[int])
+	assert_eq(BattleGroups.counts(1, 100), [1] as Array[int])
+	assert_eq(BattleGroups.counts(49, 100), [49] as Array[int])
+	assert_eq(BattleGroups.counts(50, 100), [50] as Array[int])
+	assert_eq(BattleGroups.counts(51, 100), [51] as Array[int])
+	assert_eq(BattleGroups.counts(800, 100).size(), 8)
+	assert_eq(BattleGroups.counts(1000, 100).size(), 10)
+	assert_eq(BattleGroups.counts(10000, 100).size(), 100)
 
 func test_layout_line_rotated() -> void:
 	var repo := SuiteData.repo()
@@ -52,16 +58,16 @@ func test_double_rank_depth_is_behind_the_front() -> void:
 
 func test_refresh_groups_follow_fit_count() -> void:
 	var f := _fixture()
-	Personnel.replace(f.repo, f.state, f.a, 120)
+	Personnel.replace(f.repo, f.state, f.a, 240)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	var g: Array = f.battle.groups[f.a]
-	assert_eq(_counts(g), [50, 50, 20])
+	assert_eq(_counts(g), [100, 100, 40])
 	assert_eq(g.map(func(x: Dictionary) -> String: return String(x.role)), ["front", "reserve", "front"])
 	assert_eq(int(f.battle.group_facing[f.a]), 90)
 	assert_eq(int(f.battle.group_facing[f.enemy]), 270)
-	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 30)
+	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 60)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
-	assert_eq(_counts(f.battle.groups[f.a]), [50, 40])
+	assert_eq(_counts(f.battle.groups[f.a]), [100, 80])
 
 func test_save_roundtrip_and_old_battle_migrates() -> void:
 	var f := _fixture()
@@ -105,18 +111,18 @@ func test_refresh_keeps_physical_rows() -> void:
 
 func test_count_boundary_keeps_surviving_positions() -> void:
 	var f := _fixture()
-	Personnel.replace(f.repo, f.state, f.a, 120)
+	Personnel.replace(f.repo, f.state, f.a, 240)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	var before := _points(f.battle.groups[f.a])
-	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 19)
+	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 39)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
-	assert_eq(_counts(f.battle.groups[f.a]), [50, 50, 1])
+	assert_eq(_counts(f.battle.groups[f.a]), [100, 100, 1])
 	assert_eq(_points(f.battle.groups[f.a]), before)
 	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 1)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
-	assert_eq(_counts(f.battle.groups[f.a]), [50, 50])
+	assert_eq(_counts(f.battle.groups[f.a]), [100, 100])
 	assert_eq(_points(f.battle.groups[f.a]), before.slice(0, 2))
-	Personnel.replace(f.repo, f.state, f.a, 151)
+	Personnel.replace(f.repo, f.state, f.a, 301)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	assert_eq(_points(f.battle.groups[f.a]).slice(0, 2), before.slice(0, 2))
 	assert_eq(f.battle.groups[f.a].map(func(row: Dictionary) -> int: return int(row.get("slot", -1))), [0, 1, 3, 4])
@@ -154,9 +160,9 @@ func test_translate_and_follow_anchor_apply_exactly_once() -> void:
 
 func test_retired_slots_stay_retired_across_json_and_battles() -> void:
 	var f := _fixture()
-	Personnel.replace(f.repo, f.state, f.a, 120)
+	Personnel.replace(f.repo, f.state, f.a, 240)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
-	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 20)
+	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 40)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	var loaded := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
 	var battle: Dictionary = loaded.battles[0]
@@ -188,8 +194,8 @@ func test_new_member_seeds_at_arrival_and_exact_people_are_conserved() -> void:
 	for people: int in [0, 1, 49, 50, 51, 800, 1000]:
 		Personnel.replace(f.repo, f.state, ally, people)
 		BattleGroups.refresh(f.repo, f.state, f.battle)
-		assert_eq(_counts(f.battle.groups[ally]), BattleGroups.counts(people))
-	assert_eq(BattleGroups.counts(10000).size(), 200, "pure count stress does not enlist an oversized unit")
+		assert_eq(_counts(f.battle.groups[ally]), BattleGroups.counts(people, 100))
+	assert_eq(BattleGroups.counts(10000, 100).size(), 100, "pure count stress does not enlist an oversized unit")
 
 func test_legacy_rows_cannot_gain_contact_through_closed_ground() -> void:
 	var f := _fixture()

@@ -6,13 +6,23 @@ extends RefCounted
 
 
 ## Group sizes for `n` people: full groups, the last one the remainder.
-static func counts(n: int, size := 50) -> Array[int]:
+static func counts(n: int, size: int) -> Array[int]:
 	var out: Array[int] = []
 	var left := maxi(0, n)
 	while left > 0:
 		out.append(mini(size, left))
 		left -= size
 	return out
+
+
+## A saved version fixes its people-per-group contract; metadata cannot override it.
+static func saved_size(repo: DataRepository, battle: Dictionary) -> int:
+	var version: Variant = battle.get("group_size_version", 1)
+	if not _whole(version) or int(version) not in [1, 2]: return -1
+	var expected := 50 if int(version) == 1 else int(repo.bal("battle_group_size"))
+	var size: Variant = battle.get("group_size_men", expected)
+	if expected <= 0 or not _whole(size) or int(size) != expected: return -1
+	return expected
 
 
 ## Whole-metre positions of `count` groups around `anchor`. Slot x runs across
@@ -35,6 +45,13 @@ static func layout(repo: DataRepository, formation: String, count: int, anchor: 
 static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) -> void:
 	if battle.has("pending_round"):
 		return
+	var size := saved_size(repo, battle) if battle.has("groups") else int(repo.bal("battle_group_size"))
+	if not battle.has("groups") and not state.day_resolution.is_empty():
+		for current: Dictionary in state.battles:
+			if current.has("groups") and not bool(current.get("ended", false)) and not bool(current.get("finished", false)) \
+					and saved_size(repo, current) == 50:
+				size = 50
+	if size <= 0: return
 	var groups := {}
 	var facing := {}
 	var snapshots := {}
@@ -62,7 +79,6 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 					and BattleSystem.canonical(state, int(task["request"]["battle_id"])) == int(battle.get("id", -1)) and not known.is_empty():
 				face = WarFront.facing_deg(Vector2(Vector2i(int(known["x_m"]), int(known["y_m"])) - anchor))
 			var old: Array = battle.get("groups", {}).get(code, [])
-			var size := int(repo.bal("battle_group_size"))
 			var left := ArmySystem.fit_count(repo, state, code)
 			var sizes: Array[int] = []
 			# Partial migration rows keep their people; only losses trim the tail.
@@ -111,9 +127,97 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 			groups[code] = rows
 			facing[code] = face
 			snapshots[code] = battle.get("group_anchor_m", {}).get(code, [anchor.x, anchor.y])
+	if not battle.has("groups"):
+		battle["group_size_version"] = 2 if size == int(repo.bal("battle_group_size")) else 1
+		battle["group_size_men"] = size
 	battle["groups"] = groups
 	battle["group_facing"] = facing
 	battle["group_anchor_m"] = snapshots
+
+
+## Explicit boundary migration; the caller publishes this private candidate atomically.
+static func migrate_size(repo: DataRepository, state: GameState, battle: Dictionary) -> Dictionary:
+	if not state.day_resolution.is_empty() or not (battle.get("pending_round", {}) as Dictionary).is_empty():
+		return {"status": "deferred"}
+	for current: Dictionary in state.battles:
+		if not bool(current.get("ended", false)) and not bool(current.get("finished", false)) \
+				and not (current.get("pending_round", {}) as Dictionary).is_empty():
+			return {"status": "deferred"}
+	if saved_size(repo, battle) <= 0:
+		return {"status": "error", "error": "Invalid saved group size/version"}
+	if int(battle.get("group_size_version", 0)) == 2 and not bool(battle.get("group_size_regroup_pending", false)):
+		return {"status": "complete"}
+	var size := int(repo.bal("battle_group_size"))
+	if size <= 0:
+		return {"status": "error", "error": "Battle group size must be positive"}
+	if not battle.has("groups"):
+		refresh(repo, state, battle)
+		return {"status": "complete"}
+	if not battle.groups is Dictionary or not battle.get("group_facing", {}) is Dictionary:
+		return {"status": "error", "error": "Invalid saved battle groups or facing"}
+	for side: String in BattleSystem.SIDES:
+		for code: String in battle.get(side, []):
+			if not battle.groups.get(code) is Array or not _whole(battle.get("group_facing", {}).get(code)):
+				return {"status": "error", "error": "Missing saved groups or facing: " + code}
+			var face := int(battle.group_facing[code])
+			if face < 0 or face >= 360:
+				return {"status": "error", "error": "Invalid saved group facing: " + code}
+			var rows: Array = battle.groups[code].duplicate(true)
+			var total := 0
+			var slots := {}
+			var entry := BattleSystem._stored(state, code)
+			var next := int(entry.get("group_next_slot", 0))
+			for i: int in rows.size():
+				if not rows[i] is Dictionary:
+					return {"status": "error", "error": "Invalid saved group row: " + code}
+				var row: Dictionary = rows[i]
+				for field: String in ["count", "x_m", "y_m"]:
+					if not _whole(row.get(field)):
+						return {"status": "error", "error": "Invalid saved group " + field + ": " + code}
+				if int(row.count) <= 0 or int(row.count) > int(battle.get("group_size_men", 50)) \
+						or row.get("role", "") not in ["front", "reserve"] \
+						or not _whole(row.get("slot", i)) or int(row.get("slot", i)) < 0:
+					return {"status": "error", "error": "Invalid saved group count/role/slot: " + code}
+				row.slot = int(row.get("slot", i))
+				if slots.has(row.slot):
+					return {"status": "error", "error": "Duplicate saved group slot: " + code}
+				slots[row.slot] = true
+				next = maxi(next, int(row.slot) + 1)
+				if row.has("path_m"):
+					if not row.path_m is Array:
+						return {"status": "error", "error": "Invalid saved group path: " + code}
+					for point: Variant in row.path_m:
+						if not point is Array or point.size() != 2 or not _whole(point[0]) or not _whole(point[1]):
+							return {"status": "error", "error": "Invalid saved group path point: " + code}
+				total += int(row.count)
+			if total != ArmySystem.fit_count(repo, state, code):
+				return {"status": "error", "error": "Saved groups disagree with fit personnel: " + code}
+			rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.slot) < int(b.slot))
+			var groups: Array = []
+			var cursor := 0
+			var consumed := 0
+			for amount: int in counts(total, size):
+				var kept: Dictionary = rows[cursor].duplicate(true)
+				kept.count = amount
+				groups.append(kept)
+				var left := amount
+				while left > 0:
+					var take := mini(left, int(rows[cursor].count) - consumed)
+					left -= take
+					consumed += take
+					if consumed == int(rows[cursor].count):
+						cursor += 1
+						consumed = 0
+			battle.groups[code] = groups
+			entry.group_next_slot = next
+	battle.erase("group_size_regroup_pending")
+	battle.group_size_version = 2
+	battle.group_size_men = size
+	battle.group_size_reason = "Saved fit groups regrouped at a safe transaction boundary"
+	return {"status": "complete"}
+
+static func _whole(value: Variant) -> bool:
+	return (value is int or value is float) and is_finite(float(value)) and float(value) == float(int(value))
 
 
 ## Commit an already validated rigid step; movement has one anchor writer.
@@ -156,6 +260,8 @@ static func follow_anchor(repo: DataRepository, state: GameState, battle: Dictio
 ## + side); a side's units stand abreast in sorted code order, each as wide as
 ## its front groups, the side centred. Pure; each target rounded to metres once.
 static func deployment(repo: DataRepository, state: GameState, battle: Dictionary) -> Dictionary:
+	var size := saved_size(repo, battle) if battle.has("groups") else int(repo.bal("battle_group_size"))
+	if size <= 0: return {}
 	var means := {}
 	for side: String in BattleSystem.SIDES:
 		var sum := Vector2i.ZERO
@@ -179,7 +285,7 @@ static func deployment(repo: DataRepository, state: GameState, battle: Dictionar
 		var total := 0.0
 		for code: String in codes:
 			var slots := BattleFormation.slots(BattleFormation.of_unit(state, code),
-				counts(ArmySystem.fit_count(repo, state, code), int(repo.bal("battle_group_size"))).size())
+				counts(ArmySystem.fit_count(repo, state, code), size).size())
 			var front := 0.0
 			for slot: Vector2 in slots:
 				front = minf(front, slot.y)

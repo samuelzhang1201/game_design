@@ -11,7 +11,7 @@ func test_saved_rows_drive_actual_nodes() -> void:
 	var rows: Array = []
 	for n: int in BattleGroups.counts(fit, int(repo.bal("battle_group_size"))):
 		rows.append({"count": n, "role": "front", "x_m": 200, "y_m": 300})
-	state.battles = [{"place_x_m": 200, "place_y_m": 300, "att": [code], "def": [], "groups": {code: rows}, "group_facing": {code: 90}}]
+	state.battles = [{"place_x_m": 200, "place_y_m": 300, "att": [code], "def": [], "group_size_version": 2, "group_size_men": 100, "groups": {code: rows}, "group_facing": {code: 90}}]
 	var ctx := Map3DContext.new(repo, {"pack_origin": [-100, 50], "m_per_px": 2.0})
 	ctx.state_fn = func() -> GameState: return state
 	var helper: GDScript = load("res://scripts/map3d/map3d_battle_groups.gd") if ResourceLoader.exists("res://scripts/map3d/map3d_battle_groups.gd") else null
@@ -109,21 +109,21 @@ func test_counts_are_one_saved_row_per_live_model() -> void:
 	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 2.0})
 	ctx.state_fn = func() -> GameState: return state
 	var personnel := preload("res://tests/engine/personnel_helpers.gd")
-	var wants := [0, 1, 1, 1, 2, 16, 20]
-	var ns := [0, 1, 49, 50, 51, 800, 1000]
+	var wants := [0, 1, 1, 2, 9, 10]
+	var ns := [0, 1, 100, 101, 900, 1000]
 	for i in ns.size():
 		personnel.replace(repo, state, code, ns[i])
 		var rows: Array = []
 		for n: int in BattleGroups.counts(ns[i], int(repo.bal("battle_group_size"))):
 			rows.append({"count": n, "role": "front", "x_m": rows.size() * 50, "y_m": 100})
-		state.battles = [{"place_x_m": 200, "place_y_m": 300, "att": [code], "def": [], "groups": {code: rows}, "group_facing": {code: 0}}]
+		state.battles = [{"place_x_m": 200, "place_y_m": 300, "att": [code], "def": [], "group_size_version": 2, "group_size_men": 100, "groups": {code: rows}, "group_facing": {code: 0}}]
 		var sample: Dictionary = helper.sample(ctx, code)
 		assert_eq(sample["mode"], "groups")
 		assert_eq(sample["rows"].size(), wants[i])
 		var piece: Dictionary = helper.build(repo, ArmySystem.regiment(repo, code, state), sample)
 		autofree(piece["node"])
 		assert_eq(piece["figures"], wants[i])
-	assert_eq(BattleGroups.counts(10000).size(), 200, "pure count stress remains independent of legal unit size")
+	assert_eq(BattleGroups.counts(10000, 100).size(), 100, "pure count stress remains independent of legal unit size")
 	var origin: Dictionary = state.military_cohorts[state.military_rosters[code].cohort_ids[0]]
 	var path := MilitaryPopulation.path(origin.source_province, origin.source_population_field)
 	state.world[path] = maxi(int(WorldLedger.value_of(repo, state, path)), MilitaryPopulation.occupied(state, origin.source_province, origin.source_population_field) + 20000)
@@ -143,7 +143,7 @@ func test_paused_geometry_changes_invalidate_cache() -> void:
 	var rows: Array = []
 	for n: int in BattleGroups.counts(ArmySystem.fit_count(repo, state, code), int(repo.bal("battle_group_size"))):
 		rows.append({"count": n, "role": "front", "x_m": 200, "y_m": 300})
-	var battle := {"place_x_m": 200, "place_y_m": 300, "att": [code], "def": [], "groups": {code: rows}, "group_facing": {code: 90}}
+	var battle := {"place_x_m": 200, "place_y_m": 300, "att": [code], "def": [], "group_size_version": 2, "group_size_men": 100, "groups": {code: rows}, "group_facing": {code: 90}}
 	state.battles = [battle]
 	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 2.0})
 	ctx.state_fn = func() -> GameState: return state
@@ -261,6 +261,17 @@ func test_group_mode_preserves_unit_seams() -> void:
 	if layer.has_method("group_geometry"):
 		assert_eq(layer.group_geometry()[code].size(), 2)
 	assert_eq(layer.screen_rects().keys(), [code])
+	var child: Node3D = piece["groups"][0]["piece"]["node"]
+	var source_xz := Vector2(child.global_position.x, child.global_position.z)
+	var source_scale := child.scale.x
+	var camp_before: float = piece.camp_scale
+	assert_not_null(layer.get("figure_footprint_gap"))
+	if layer.get("figure_footprint_gap") == null: return
+	layer.set("figure_footprint_gap", 0.8)
+	layer._place(code, piece)
+	assert_almost_eq(child.scale.x, source_scale * 2.0, 0.0001)
+	assert_eq(Vector2(child.global_position.x, child.global_position.z), source_xz)
+	assert_eq(float(piece.camp_scale), camp_before)
 	var state_hash := SaveLoad.state_hash(state)
 	layer._live = [code]
 	layer._roster_was = layer._roster_key()
@@ -524,6 +535,29 @@ func test_ghost_nodes_keep_last_known_geometry_after_hidden_mutation() -> void:
 	layer._place(key, piece)
 	var node: Node3D = piece["node"]
 	var before := node.global_transform
+	var ratio := float(ctx.meta["m_per_px"]) / ArmySystem.metres_per_pack_px(repo)
+	var bounds := Map3DBattleGroups.model_bounds(piece["figs"][0])
+	var ext := Vector2(maxf(absf(bounds.position.x), absf(bounds.end.x)), maxf(absf(bounds.position.z), absf(bounds.end.z)))
+	var actual_scale: Vector3 = (piece["figs"][0] as Node3D).global_basis.get_scale()
+	assert_lte(2.0 * ext.x * actual_scale.x * layer.formation_gap, repo.bal("battle_group_spacing_m") * ratio + 0.001,
+		"a ghost figure stays within the same physical file footprint as a saved representative")
+	assert_lte(2.0 * ext.y * actual_scale.z * layer.formation_gap, repo.bal("battle_group_depth_m") * ratio + 0.001)
+	var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
+	var old_scale := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference, piece["height_m"], piece["size"])
+	assert_almost_eq(float(piece.get("camp_scale", -1)), old_scale, 0.001, "camp reference is independent of figure capping")
+	var own := String(state.regiments.keys()[0])
+	var ordinary := layer._piece_of(own)
+	layer._shown_xz[own] = Vector2.ZERO
+	layer._place(own, ordinary)
+	var own_bounds := Map3DBattleGroups.model_bounds(ordinary["figs"][0])
+	var own_ext := Vector2(maxf(absf(own_bounds.position.x), absf(own_bounds.end.x)), maxf(absf(own_bounds.position.z), absf(own_bounds.end.z)))
+	var own_scale: Vector3 = (ordinary["figs"][0] as Node3D).global_basis.get_scale()
+	assert_lte(2.0 * own_ext.x * own_scale.x * layer.formation_gap, repo.bal("battle_group_spacing_m") * ratio + 0.001)
+	assert_lte(2.0 * own_ext.y * own_scale.z * layer.formation_gap, repo.bal("battle_group_depth_m") * ratio + 0.001)
+	ctx.distance *= 2.0
+	ctx.target += Vector2(20, 30)
+	layer._place(key, piece)
+	assert_eq(node.global_transform, before, "view-only camera changes do not resize or move a ghost")
 	var figures: int = piece["figures"]
 	state.battles = [{"att": [foe], "def": [], "groups": {foe: [
 		{"slot": 99, "count": 1, "role": "front", "x_m": 9999, "y_m": 9999, "path_m": [[1, 2]]}]}, "group_facing": {foe: 180}}]
@@ -539,6 +573,8 @@ func test_ghost_nodes_keep_last_known_geometry_after_hidden_mutation() -> void:
 
 func test_physical_groups_keep_informed_attack_chains_and_slot_keys() -> void:
 	var repo := SuiteData.repo()
+	repo.balance["map3d_unit_chain_rest_min_s"] = 0.0
+	repo.balance["map3d_unit_chain_rest_max_s"] = 0.0
 	var reg: Dictionary = {}
 	for row: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
 		if MapObjects.army_piece(repo, row) == "infantry":
@@ -562,3 +598,152 @@ func test_physical_groups_keep_informed_attack_chains_and_slot_keys() -> void:
 		if anim.has_meta("chain"):
 			assert_eq(anim.get_meta("chain")["code"], "unit:" + str(group["slot"]))
 	layer.play("unit", "GARRISON")
+	# Drain cancelled fixture guards before freeing their animation players.
+	await wait_process_frames(2)
+
+func test_nonbattle_fit_count_and_same_day_recovery_rebuild() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 7)
+	var reg: Dictionary = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state)[0]
+	var code := String(reg.regiment_code)
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 2.0})
+	ctx.state_fn = func() -> GameState: return state
+	var layer := Map3DLayerUnits.new()
+	add_child_autofree(layer)
+	layer.ctx = ctx
+	var personnel := preload("res://tests/engine/personnel_helpers.gd")
+	var want := [0, 1, 1, 2, 9, 10]
+	var ns := [0, 1, 100, 101, 900, 1000]
+	for i: int in ns.size():
+		personnel.replace(repo, state, code, ns[i])
+		var piece: Dictionary = layer._piece_of(code)
+		assert_eq(int(piece.get("figures", 0)), int(want[i]), "fit=%d" % ns[i])
+	personnel.replace(repo, state, code, 1000)
+	personnel.move(repo, state, code, "fit", "wounded", 100)
+	var key: Array = layer._roster_key().duplicate(true)
+	personnel.move(repo, state, code, "wounded", "fit", 100)
+	assert_ne(layer._roster_key(), key, "same-day fit changes invalidate ordinary formations")
+	assert_eq(int(layer._piece_of(code).figures), 10)
+
+func test_zero_fit_has_no_model_hit_box_and_fleet_keeps_counter_path() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 7)
+	var code := String(state.regiments.keys()[0])
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 2.0})
+	ctx.state_fn = func() -> GameState: return state
+	var layer := Map3DLayerUnits.new()
+	add_child_autofree(layer)
+	layer.bind(ctx)
+	preload("res://tests/engine/personnel_helpers.gd").replace(repo, state, code, 0)
+	state.battles = [{"att": [code], "def": [], "groups": {code: []}, "group_facing": {code: 0}}]
+	var piece := layer._piece_of(code)
+	layer._shown_xz[code] = Vector2.ZERO
+	layer._place(code, piece)
+	assert_false(layer.screen_rects().has(code), "empty physical roots contribute no phantom pick box")
+	for reg: Dictionary in ctx.regiments():
+		if String(reg.get("is_naval", "0")) != "1": continue
+		var fleet := String(reg.regiment_code)
+		state.battles = [{"att": [fleet], "def": []}]
+		BattleGroups.refresh(repo, state, state.battles[0])
+		assert_eq(layer._piece_of(fleet), {}, "naval groups never create an empty soldier piece that suppresses its counter")
+		return
+	fail_test("fixture needs a fleet")
+
+func test_pending_legacy_rows_and_version_are_read_without_truncation() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 7)
+	var code := String(state.regiments.keys()[0])
+	preload("res://tests/engine/personnel_helpers.gd").replace(repo, state, code, 1000)
+	var rows: Array = []
+	for i: int in 20:
+		rows.append({"slot": i, "count": 50, "role": "front", "x_m": i * 50, "y_m": 0})
+	var battle := {"att": [code], "def": [], "groups": {code: rows}, "group_facing": {code: 0}, "pending_round": {"roll": 7}}
+	state.battles = [battle]
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 2.0})
+	ctx.state_fn = func() -> GameState: return state
+	var before := SaveLoad.state_hash(state)
+	var sample := Map3DBattleGroups.sample(ctx, code)
+	assert_eq(sample.mode, "groups")
+	assert_eq(sample.rows.size(), 20, "legitimate frozen legacy rows are not cut to ten")
+	assert_eq(SaveLoad.state_hash(state), before)
+	battle.erase("pending_round")
+	assert_eq(MilitaryReorganization.reconcile(repo, state).status, "complete")
+	var migrated := Map3DBattleGroups.sample(ctx, code)
+	assert_eq(migrated.mode, "groups")
+	assert_eq(migrated.rows.size(), 10)
+	assert_ne(migrated.key, sample.key)
+
+func test_completed_version_rejects_uncollapsed_partial_rows() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 7)
+	var code := String(state.regiments.keys()[0])
+	preload("res://tests/engine/personnel_helpers.gd").replace(repo, state, code, 100)
+	state.battles = [{"att": [code], "def": [], "groups": {code: [
+		{"slot": 0, "count": 50, "role": "front", "x_m": 0, "y_m": 0},
+		{"slot": 1, "count": 50, "role": "front", "x_m": 50, "y_m": 0}]},
+		"group_facing": {code: 0}, "group_size_version": 2, "group_size_men": 100}]
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 2.0})
+	ctx.state_fn = func() -> GameState: return state
+	assert_eq(Map3DBattleGroups.sample(ctx, code).mode, "invalid")
+
+func test_every_ordinary_arm_fits_one_representatives_world_footprint() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 7)
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 50.0})
+	ctx.state_fn = func() -> GameState: return state
+	ctx.view_size = Vector2(1280, 720)
+	ctx.camera = Camera3D.new()
+	add_child_autofree(ctx.camera)
+	ctx.camera.position = Vector3(0, 100, 100)
+	ctx.camera.look_at(Vector3.ZERO)
+	var layer := Map3DLayerUnits.new()
+	add_child_autofree(layer)
+	layer.bind(ctx)
+	var ratio := float(ctx.meta["m_per_px"]) / ArmySystem.metres_per_pack_px(repo)
+	var checked := {}
+	for reg: Dictionary in ctx.regiments():
+		var arm := MapObjects.army_piece(repo, reg)
+		if checked.has(arm) or String(reg.get("is_naval", "0")) == "1": continue
+		var code := String(reg.regiment_code)
+		var piece := layer._piece_of(code)
+		if piece.is_empty(): continue
+		layer._shown_xz[code] = Vector2.ZERO
+		layer._place(code, piece)
+		for fig: Node3D in piece["figs"]:
+			var bounds := Map3DBattleGroups.model_bounds(fig)
+			var extent := Vector2(maxf(absf(bounds.position.x), absf(bounds.end.x)), maxf(absf(bounds.position.z), absf(bounds.end.z)))
+			var scale := fig.global_basis.get_scale()
+			assert_lte(2.0 * extent.x * scale.x * layer.formation_gap, repo.bal("battle_group_spacing_m") * ratio + 0.001, arm + " width")
+			assert_lte(2.0 * extent.y * scale.z * layer.formation_gap, repo.bal("battle_group_depth_m") * ratio + 0.001, arm + " depth")
+		checked[arm] = true
+	assert_true(checked.has("infantry"))
+	assert_true(checked.has("archers"))
+	assert_true(checked.has("cavalry"))
+	var ordinary: Dictionary = layer._pieces.values()[0]
+	var ordinary_code := String(layer._pieces.keys()[0])
+	var node: Node3D = ordinary.node
+	var scale_before := node.scale.x
+	var camp_before: float = ordinary.camp_scale
+	assert_not_null(layer.get("figure_footprint_gap"), "figure cap is an editor-owned control independent of layout spacing")
+	if layer.get("figure_footprint_gap") == null: return
+	layer.set("figure_footprint_gap", 0.8)
+	layer._place(ordinary_code, ordinary)
+	assert_almost_eq(node.scale.x, scale_before * 2.0, 0.0001)
+	assert_eq(float(ordinary.camp_scale), camp_before)
+	var capped_scale := node.scale.x
+	layer.formation_gap = 3.2
+	layer._place(ordinary_code, ordinary)
+	assert_eq(node.scale.x, capped_scale, "layout spacing cannot shrink the per-figure ceiling")
+
+func test_saved_size_cannot_override_the_current_people_per_figure() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 7)
+	var code := String(state.regiments.keys()[0])
+	preload("res://tests/engine/personnel_helpers.gd").replace(repo, state, code, 1000)
+	state.battles = [{"att": [code], "def": [], "groups": {code: [{"count": 1000, "slot": 0,
+		"role": "front", "x_m": 0, "y_m": 0}]}, "group_facing": {code: 0},
+		"group_size_version": 2, "group_size_men": 1000}]
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 50.0})
+	ctx.state_fn = func() -> GameState: return state
+	assert_eq(Map3DBattleGroups.sample(ctx, code).mode, "invalid")
+	ctx.state_fn = Callable()
