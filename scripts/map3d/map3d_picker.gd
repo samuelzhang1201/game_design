@@ -53,7 +53,8 @@ func pick_at(pos: Vector2) -> Dictionary:
 	if view.unit_symbol_mode:
 		armies = view.army_markers()
 		# A displaced ink mark is clicked where it is drawn, even over sky or a town centre.
-		for marker: Dictionary in armies:
+		for i: int in range(armies.size() - 1, -1, -1):
+			var marker: Dictionary = armies[i]  # later ink is painted on top
 			if (marker["rect"] as Rect2).has_point(pos): return _army_pick(marker)
 	var hit: Variant = ctx.ground_at(pos)
 	if hit == null:

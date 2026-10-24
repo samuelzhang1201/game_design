@@ -11,13 +11,21 @@ const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 
 class CountedSymbolView extends Map3DView:
 	var marker_calls := 0
+	var marks: Array = [{"code": "sample", "pos": Vector2(25, 25), "rect": Rect2(20, 20, 10, 10)}]
 	func army_markers() -> Array:
 		marker_calls += 1
-		return [{"code": "sample", "pos": Vector2(25, 25), "rect": Rect2(20, 20, 10, 10)}]
+		return marks
 	func unit_rects() -> Dictionary:
 		var out: Dictionary = {}
 		for marker: Dictionary in army_markers(): out[marker["code"]] = marker["rect"]
 		return out
+
+
+class NoGroundContext extends Map3DContext:
+	var ground_calls := 0
+	func ground_at(_pos: Vector2) -> Variant:
+		ground_calls += 1
+		return null
 
 
 func before_all() -> void:
@@ -156,3 +164,31 @@ func test_one_symbol_pick_reads_marker_geometry_once() -> void:
 	var result := picker.pick_at(real_view.size * 0.5)
 	assert_eq(counted.marker_calls, 1, "one hover reuses the same admitted marker geometry")
 	assert_eq(String(result.get("kind", "")), "burg")
+
+
+func test_overlapping_symbols_pick_the_top_painted_unit_on_land_and_off_terrain() -> void:
+	var real_view := _view()
+	var at := real_view.size * 0.5
+	assert_not_null(real_view.context().ground_at(at), "first probe is over terrain")
+	var counted := CountedSymbolView.new()
+	autofree(counted)
+	counted.unit_symbol_mode = true
+	counted.marks = [
+		{"code": "covered", "pos": at, "rect": Rect2(at - Vector2(10, 10), Vector2(20, 20))},
+		{"code": "top", "pos": at, "rect": Rect2(at - Vector2(5, 5), Vector2(20, 20))},
+	]
+	var picker := real_view.component("picker") as Map3DPicker
+	picker.view = counted
+	assert_eq(picker.pick_at(at), {"kind": "army", "code": "top"}, "later ink covers earlier ink")
+	assert_eq(counted.marker_calls, 1, "overlap resolution reads geometry only once")
+	var sky := NoGroundContext.new(Game.data, WORLD)
+	assert_null(sky.ground_at(at))
+	sky.ground_calls = 0
+	picker.ctx = sky
+	counted.marker_calls = 0
+	assert_eq(picker.pick_at(at), {"kind": "army", "code": "top"}, "visible ink remains pickable off terrain")
+	assert_eq(counted.marker_calls, 1)
+	assert_eq(sky.ground_calls, 0, "symbol hit precedes terrain lookup")
+	assert_eq(counted.marks[0]["code"], "covered", "picking must not reorder the paint list")
+	picker.ctx = real_view.context()
+	picker.view = real_view
