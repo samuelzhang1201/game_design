@@ -199,6 +199,7 @@ func test_new_member_seeds_at_arrival_and_exact_people_are_conserved() -> void:
 
 func test_legacy_rows_cannot_gain_contact_through_closed_ground() -> void:
 	var f := _fixture()
+	f.repo.balance["battle_group_spacing_m"] = 10 # diameter 10 fits the 10 m grid; caps tangent to bounds
 	f.repo.balance["army_march_grid_px"] = 1.0
 	f.repo.balance["battle_group_contact_m"] = 30
 	Personnel.replace(f.repo, f.state, f.a, 50)

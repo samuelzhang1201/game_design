@@ -74,23 +74,7 @@ static func _approach(repo: DataRepository, battle: Dictionary, code: String, fo
 
 
 static func _clear(repo: DataRepository, battle: Dictionary, code: String, movement: Vector2i) -> bool:
-	var grid := MarchPath.of_pack(repo)
-	var spacing := float(repo.bal("battle_group_spacing_m"))
-	for row: Dictionary in battle.get("groups", {}).get(code, []):
-		var from := Vector2i(_point(row))
-		var to := from + movement
-		if grid != null and not grid.clear(from, to, [grid.cell_of(from)]):
-			return false
-		for other_code: String in battle.get("groups", {}):
-			if other_code == code:
-				continue
-			for other: Dictionary in battle["groups"][other_code]:
-				var offset := _point(other) - Vector2(from)
-				var delta := Vector2(movement)
-				var along := clampf(offset.dot(delta) / delta.length_squared(), 0.0, 1.0) if delta != Vector2.ZERO else 0.0
-				if (offset - delta * along).length_squared() < spacing * spacing:
-					return false
-	return true
+	return BattleGroups.sweep_clear(repo, null, battle, code, -1, Vector2i.ZERO, [movement])
 
 
 static func move(repo: DataRepository, state: GameState, battle: Dictionary, code: String, foe: String) -> void:

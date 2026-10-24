@@ -119,8 +119,16 @@ static func sync(repo: DataRepository, reg: Dictionary, piece: Dictionary, sampl
 
 static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: float, selected: bool) -> Rect2:
 	var root: Node3D = piece["node"]
-	root.global_transform = Transform3D(Basis.IDENTITY, Vector3(anchor.x, ctx.height_at(anchor), anchor.y))
+	var terrain_id := ctx.terrain.get_instance_id() if is_instance_valid(ctx.terrain) else 0
+	var ground_key := [ctx.get_instance_id(), terrain_id, ctx.height_fn, float(ctx.meta.get("sea_y", 0.0))]
+	var anchor_key := [ground_key, anchor]
+	if piece.get("anchor_key", []) != anchor_key:
+		root.global_transform = Transform3D(Basis.IDENTITY, Vector3(anchor.x, ctx.height_at(anchor), anchor.y))
+		piece["anchor_key"] = anchor_key
 	var repo := ctx.repo
+	var ring := int(repo.bal("map3d_unit_seat_ring"))
+	var clearance := repo.bal("map3d_unit_seat_clear")
+	var sink := repo.bal("map3d_unit_sink_m")
 	var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	piece["camp_scale"] = Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
 		piece["reference_height_m"], piece["reference_size"])
@@ -135,19 +143,29 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 		var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
 			child["reference_height_m"], child["size"])
 		var yaw := Map3DUnits.facing_yaw(WarFront.facing_vector(piece["facing_deg"]), child["stand_deg"])
-		var y := ctx.height_at(xz)
-		for offset: Vector2 in Map3DUnits.footprint(child["extent"], yaw, k, int(repo.bal("map3d_unit_seat_ring"))):
-			y = maxf(y, ctx.height_at(xz + offset))
-		y += float(child["height_m"]) * k * repo.bal("map3d_unit_seat_clear") - repo.bal("map3d_unit_sink_m")
-		node.global_transform = Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * k), Vector3(xz.x, y, xz.y))
-		child["ground"] = node.position
-		child["lift"] = y - ctx.height_at(xz)
-		Map3DUnitGlow.place(repo, ctx.height_at, child, selected, k)
-		var bounds := Rect2(xz, Vector2.ZERO)
 		var model_box: AABB = child["bounds_model"]
-		for i in 8:
-			var point := node.global_transform * model_box.get_endpoint(i)
-			bounds = bounds.expand(Vector2(point.x, point.z))
+		var seat_key := [ground_key, xz, yaw, k, child["extent"], child["height_m"], model_box, ring, clearance, sink]
+		# A pan changes projection, never the saved seat or its world bounds.
+		if child.get("seat_key", []) != seat_key:
+			var ground := ctx.height_at(xz)
+			var y := ground
+			for offset: Vector2 in Map3DUnits.footprint(child["extent"], yaw, k, ring):
+				y = maxf(y, ctx.height_at(xz + offset))
+			y += float(child["height_m"]) * k * clearance - sink
+			node.global_transform = Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * k), Vector3(xz.x, y, xz.y))
+			child["ground"] = node.position
+			child["lift"] = y - ground
+			var bounds := Rect2(xz, Vector2.ZERO)
+			var corners := PackedVector3Array()
+			for i in 8:
+				var point := node.global_transform * model_box.get_endpoint(i)
+				corners.append(point)
+				bounds = bounds.expand(Vector2(point.x, point.z))
+			child["world_bounds"] = bounds
+			child["world_corners"] = corners
+			child["seat_key"] = seat_key
+		Map3DUnitGlow.place(repo, ctx.height_at, child, selected, k)
+		var bounds: Rect2 = child["world_bounds"]
 		group["bounds_world"] = [bounds.position.x, bounds.position.y, bounds.size.x, bounds.size.y]
 		extent.x = maxf(extent.x, maxf(absf(bounds.position.x - anchor.x), absf(bounds.end.x - anchor.x)))
 		extent.y = maxf(extent.y, maxf(absf(bounds.position.y - anchor.y), absf(bounds.end.y - anchor.y)))
@@ -155,8 +173,7 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 		if ctx.camera != null and not ctx.camera.is_position_behind(node.global_position):
 			var child_box := Map3DUnits.screen_box(ctx.camera, node.global_position,
 				float(child["height_m"]) * k, float(child["half_w_m"]) * k, ctx.viewport_px_scale())
-			for i in 8:
-				var point := node.global_transform * model_box.get_endpoint(i)
+			for point: Vector3 in child["world_corners"]:
 				if not ctx.camera.is_position_behind(point):
 					child_box = child_box.expand(ctx.camera.unproject_position(point) / ctx.viewport_px_scale())
 			group["screen_bounds"] = [child_box.position.x, child_box.position.y, child_box.size.x, child_box.size.y]

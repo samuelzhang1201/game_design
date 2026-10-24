@@ -229,7 +229,8 @@ func test_frozen_legacy_flank_snapshot_keeps_saved_group_geometry() -> void:
 	var before := SaveLoad.state_hash(f.state)
 	BattleTaskSystem._snapshot_flank(f.repo, f.state, observer, record)
 	assert_eq(record.flank.known.points_m.size(), 3, "101 fit still occupy three frozen50 groups")
-	assert_eq(int(record.flank.known.radius_m), 50, "three line slots span50 metres either side")
+	assert_eq(record.flank.known.points_m, [[10, 20], [30, 40], [50, 60]], "observe the actual frozen points, not a regenerated line")
+	assert_eq(int(record.flank.known.radius_m), 93, "ceil(sqrt(90² + 20²)) from the saved anchor (100,0)")
 	assert_eq(SaveLoad.state_hash(f.state), before, "observing cannot migrate the frozen state")
 
 	f.state.day_resolution.clear()
@@ -238,4 +239,5 @@ func test_frozen_legacy_flank_snapshot_keeps_saved_group_geometry() -> void:
 	var migrated := {"request": {"target_unit": f.code}}
 	BattleTaskSystem._snapshot_flank(f.repo, restored, observer, migrated)
 	assert_eq(migrated.flank.known.points_m.size(), 2, "after the boundary and JSON load the target uses100 groups")
-	assert_eq(int(migrated.flank.known.radius_m), 25)
+	assert_eq(migrated.flank.known.points_m, [[10, 20], [50, 60]], "migration preserves the surviving saved slots")
+	assert_eq(int(migrated.flank.known.radius_m), 93, "the farthest surviving saved point is unchanged")

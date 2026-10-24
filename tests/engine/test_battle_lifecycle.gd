@@ -574,6 +574,7 @@ func test_battle_with_one_side_emptied_ends() -> void:
 	BattleSystem.settle_day(repo, s)
 	ArmySystem.set_march(repo, s, p, ArmySystem.metres_to_pack(repo, _spot(s) - Vector2i(30_000, 0)))
 	s.regiments[p]["x_m"] = _spot(s).x - 30_000
+	BattleGroups.follow_anchor(repo, s, s.battles[0], p) # the fixture commits the actual route endpoint
 	_next_day(s)
 	var events := BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 0, "no battle is left with one side")
