@@ -50,7 +50,7 @@ def record_pr_handoff(graph, data):
     edges = graph['edges']
     source, target = data['source_session_id'], data.get('next_session_id')
     if not valid_session(target):
-        raise ValueError('next_session_id must name exactly one fresh session')
+        raise ValueError('next_session_id must name exactly one session')
     if 'tasks' in data:
         raise ValueError('dispatch and PR handoff records must be separate')
     for step in graph.get('steps', {}).values():
@@ -59,36 +59,18 @@ def record_pr_handoff(graph, data):
         owners = {step['implementation_session_id'], step['review_session_id']} - {None}
         if owners & {source, target} and not (
                 data.get('step_id') == step['step_id'] and data.get('pr_url') and
-                source == step['implementation_session_id'] and
-                target == data.get('review_session_id')):
+                {source, target} == {step['implementation_session_id'], data.get('review_session_id')}):
             raise ValueError('dispatched owners may only hand off their own PR')
-    if source in edges and edges[source] != target:
-        raise ValueError('一对多 handover 禁止：本 session 已有唯一后继')
-    if target in edges and edges.get(source) != target:
-        raise ValueError('目标 session 已交接过，不能作为全新后继')
-    if any(s != source and t == target for s, t in edges.items()):
-        raise ValueError('多对一 handover 禁止：目标 session 已有前驱')
-    cursor, visited = target, {source}
-    while True:
-        if cursor in visited:
-            raise ValueError('handover 必须是无环的一对一链，禁止返回旧 session')
-        visited.add(cursor)
-        if cursor not in edges:
-            break
-        cursor = edges[cursor]
     if data.get('pr_url'):
         pair = {k: data.get(k) for k in ['step_id', 'implementation_session_id', 'review_session_id']}
         owners = [pair['implementation_session_id'], pair['review_session_id']]
         if not all(isinstance(v, str) and v.strip() for v in pair.values()) or len(set(owners)) != 2:
             raise ValueError('每个 PR 必须指定一个 step、实施 session 和唯一 Review session')
-        if source not in owners or (source == owners[0] and target != owners[1]):
-            raise ValueError('禁止第三个 session 参与同一 PR；实施只能交给指定 Review')
-        if data.get('kind') == 'pr_handoff' and (source != owners[0] or target != owners[1]):
-            raise ValueError('PR handoff must go from implementation to its unique Review')
+        if not all(valid_session(owner) for owner in owners) or {source, target} != set(owners):
+            raise ValueError('PR handoff must stay between implementation and its unique Review')
         step = graph.get('steps', {}).get(pair['step_id'])
         if step is not None:
-            if (source != step['implementation_session_id'] or target != owners[1] or
-                    owners[0] != step['implementation_session_id'] or
+            if (owners[0] != step['implementation_session_id'] or
                     step['review_session_id'] not in (None, owners[1])):
                 raise ValueError('PR owners must match the dispatched step')
             step['review_session_id'] = owners[1]
@@ -105,7 +87,29 @@ def record_pr_handoff(graph, data):
             if url != data['pr_url'] and (existing['step_id'] == pair['step_id'] or
                     set(owners) & {existing['implementation_session_id'], existing['review_session_id']}):
                 raise ValueError('一个 step 只有一个 PR，一个 session 只负责一个 step／PR')
+        # Preserve legacy chains, but never use their cycle rule for a fixed PR pair.
+        for previous, following in edges.items():
+            if set(owners) & {previous, following} and {previous, following} != set(owners):
+                raise ValueError('cannot reuse a historical session chain for a PR pair')
         graph['prs'][data['pr_url']] = pair
+        return
+    if any({source, target} & {pair['implementation_session_id'], pair['review_session_id']}
+           for pair in graph['prs'].values()):
+        raise ValueError('PR owners must use their declared PR handoff')
+    if source in edges and edges[source] != target:
+        raise ValueError('一对多 handover 禁止：本 session 已有唯一后继')
+    if target in edges and edges.get(source) != target:
+        raise ValueError('目标 session 已交接过，不能作为全新后继')
+    if any(s != source and t == target for s, t in edges.items()):
+        raise ValueError('多对一 handover 禁止：目标 session 已有前驱')
+    cursor, visited = target, {source}
+    while True:
+        if cursor in visited:
+            raise ValueError('handover 必须是无环的一对一链，禁止返回旧 session')
+        visited.add(cursor)
+        if cursor not in edges:
+            break
+        cursor = edges[cursor]
     edges[source] = target
 
 
