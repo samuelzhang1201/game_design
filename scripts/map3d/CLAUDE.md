@@ -69,12 +69,11 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
   existing single counter and never instantiate soldier groups. Empty physical
   roots contribute no hit rectangle.
 
-- Ordinary near formations and generic ghosts use the same configured physical
-  file/depth footprint cap as saved groups, measured per figure including stature.
-  The cap changes no saved point or camera-dependent size; camps retain the
-  ordinary reference scale independently of the capped figure transform.
+- Ordinary near formations and generic ghosts retain the original reference
+  scale from `Map3DUnits.scale_for`; physical battle-group spacing must not
+  shrink them. Camps share that ordinary reference scale.
 
-- `Map3DLayerUnits.figure_footprint_gap` is the editor-owned per-figure scale
-  ceiling for ordinary, saved physical and generic ghost figures. It is separate
-  from `formation_gap`, which spaces ordinary formation centres. Changing the
-  ceiling never changes saved source slots, XZ/facing or the camp reference scale.
+- `Map3DLayerUnits.figure_footprint_gap` is the editor-owned scale ceiling for
+  saved physical battle-group figures only, separate from `formation_gap`,
+  which spaces ordinary formation centres. It never changes saved source
+  slots, XZ/facing or the camp reference scale.

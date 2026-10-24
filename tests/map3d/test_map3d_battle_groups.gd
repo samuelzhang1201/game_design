@@ -535,25 +535,10 @@ func test_ghost_nodes_keep_last_known_geometry_after_hidden_mutation() -> void:
 	layer._place(key, piece)
 	var node: Node3D = piece["node"]
 	var before := node.global_transform
-	var ratio := float(ctx.meta["m_per_px"]) / ArmySystem.metres_per_pack_px(repo)
-	var bounds := Map3DBattleGroups.model_bounds(piece["figs"][0])
-	var ext := Vector2(maxf(absf(bounds.position.x), absf(bounds.end.x)), maxf(absf(bounds.position.z), absf(bounds.end.z)))
-	var actual_scale: Vector3 = (piece["figs"][0] as Node3D).global_basis.get_scale()
-	assert_lte(2.0 * ext.x * actual_scale.x * layer.formation_gap, repo.bal("battle_group_spacing_m") * ratio + 0.001,
-		"a ghost figure stays within the same physical file footprint as a saved representative")
-	assert_lte(2.0 * ext.y * actual_scale.z * layer.formation_gap, repo.bal("battle_group_depth_m") * ratio + 0.001)
 	var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var old_scale := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference, piece["height_m"], piece["size"])
-	assert_almost_eq(float(piece.get("camp_scale", -1)), old_scale, 0.001, "camp reference is independent of figure capping")
-	var own := String(state.regiments.keys()[0])
-	var ordinary := layer._piece_of(own)
-	layer._shown_xz[own] = Vector2.ZERO
-	layer._place(own, ordinary)
-	var own_bounds := Map3DBattleGroups.model_bounds(ordinary["figs"][0])
-	var own_ext := Vector2(maxf(absf(own_bounds.position.x), absf(own_bounds.end.x)), maxf(absf(own_bounds.position.z), absf(own_bounds.end.z)))
-	var own_scale: Vector3 = (ordinary["figs"][0] as Node3D).global_basis.get_scale()
-	assert_lte(2.0 * own_ext.x * own_scale.x * layer.formation_gap, repo.bal("battle_group_spacing_m") * ratio + 0.001)
-	assert_lte(2.0 * own_ext.y * own_scale.z * layer.formation_gap, repo.bal("battle_group_depth_m") * ratio + 0.001)
+	assert_almost_eq(node.scale.x, old_scale, 0.001, "ghost retains the original readable miniature size")
+	assert_almost_eq(float(piece.get("camp_scale", -1)), old_scale, 0.001)
 	ctx.distance *= 2.0
 	ctx.target += Vector2(20, 30)
 	layer._place(key, piece)
@@ -686,7 +671,7 @@ func test_completed_version_rejects_uncollapsed_partial_rows() -> void:
 	ctx.state_fn = func() -> GameState: return state
 	assert_eq(Map3DBattleGroups.sample(ctx, code).mode, "invalid")
 
-func test_every_ordinary_arm_fits_one_representatives_world_footprint() -> void:
+func test_every_ordinary_arm_retains_original_readable_scale() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 7)
 	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 50.0})
@@ -699,7 +684,6 @@ func test_every_ordinary_arm_fits_one_representatives_world_footprint() -> void:
 	var layer := Map3DLayerUnits.new()
 	add_child_autofree(layer)
 	layer.bind(ctx)
-	var ratio := float(ctx.meta["m_per_px"]) / ArmySystem.metres_per_pack_px(repo)
 	var checked := {}
 	for reg: Dictionary in ctx.regiments():
 		var arm := MapObjects.army_piece(repo, reg)
@@ -709,12 +693,9 @@ func test_every_ordinary_arm_fits_one_representatives_world_footprint() -> void:
 		if piece.is_empty(): continue
 		layer._shown_xz[code] = Vector2.ZERO
 		layer._place(code, piece)
-		for fig: Node3D in piece["figs"]:
-			var bounds := Map3DBattleGroups.model_bounds(fig)
-			var extent := Vector2(maxf(absf(bounds.position.x), absf(bounds.end.x)), maxf(absf(bounds.position.z), absf(bounds.end.z)))
-			var scale := fig.global_basis.get_scale()
-			assert_lte(2.0 * extent.x * scale.x * layer.formation_gap, repo.bal("battle_group_spacing_m") * ratio + 0.001, arm + " width")
-			assert_lte(2.0 * extent.y * scale.z * layer.formation_gap, repo.bal("battle_group_depth_m") * ratio + 0.001, arm + " depth")
+		var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
+		var expected := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference, piece["height_m"], piece["size"])
+		assert_almost_eq((piece["node"] as Node3D).scale.x, expected, 0.0001, arm + " original scale")
 		checked[arm] = true
 	assert_true(checked.has("infantry"))
 	assert_true(checked.has("archers"))
@@ -728,7 +709,7 @@ func test_every_ordinary_arm_fits_one_representatives_world_footprint() -> void:
 	if layer.get("figure_footprint_gap") == null: return
 	layer.set("figure_footprint_gap", 0.8)
 	layer._place(ordinary_code, ordinary)
-	assert_almost_eq(node.scale.x, scale_before * 2.0, 0.0001)
+	assert_almost_eq(node.scale.x, scale_before, 0.0001, "physical battle spacing cannot resize ordinary figures")
 	assert_eq(float(ordinary.camp_scale), camp_before)
 	var capped_scale := node.scale.x
 	layer.formation_gap = 3.2
