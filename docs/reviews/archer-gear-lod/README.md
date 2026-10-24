@@ -45,7 +45,10 @@ Verification on final candidate:
   normal discontinuities. It preserves delivered winding on intentionally open
   feather surfaces instead of asking a normal recalculation to choose an inside.
 - All six original clips are sampled at 11 times each. Bidirectional posed-surface
-  distances remain within approximately 5 mm; `pose-check.json` retains samples.
+  p95 distances remain at or below 1.46 mm. The largest sampled distance is
+  12.18 mm (GARRISON bow; DRAW bow reaches 11.68 mm); other gear stays below
+  4.98 mm. These remain within the existing 6 mm p95 / 20 mm maximum gates;
+  `pose-check.json` retains all samples.
   The check applies each body bone's deformation delta, accounting for Blender's
   rest-axis reconstruction of separately imported rigs. Vertex-to-vertex distance
   is unsuitable for stretched triangles; this check measures actual surfaces.
