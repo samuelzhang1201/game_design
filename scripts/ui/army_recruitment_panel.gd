@@ -20,7 +20,7 @@ func _ready() -> void:
 	%Commander.item_selected.connect(func(_i: int) -> void: refresh_quote())
 	%People.value_changed.connect(func(_v: float) -> void: refresh_quote())
 	%Nobles.value_changed.connect(func(_v: float) -> void: refresh_quote())
-	Game.state_changed.connect(func() -> void:
+	SignalHub.state_changed.connect(func() -> void:
 		if visible and not _filling:
 			refresh_quote())
 

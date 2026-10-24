@@ -89,7 +89,7 @@ func open(detail: MapDetailPanel) -> void:
 		_view.bind(Game.data)
 		_build_lenses()
 		_search.custom_minimum_size.x = Game.data.bal("ledger_search_width_px")
-		Game.state_changed.connect(refresh)
+		SignalHub.state_changed.connect(refresh)
 	if not _has_detail() or detail != _detail:
 		_card_mine = false  # a new screen's column holds nothing of the LEDGER's
 	_detail = detail

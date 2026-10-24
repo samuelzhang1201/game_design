@@ -121,7 +121,7 @@ func test_refreshes_and_an_order_are_drawn_once_on_the_next_frame() -> void:
 	var before := screen._rebuilds
 	screen.refresh()
 	screen.refresh()
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	assert_eq(screen._rebuilds, before, "nothing is drawn inside the calls")
 	# drained in _process: wait for a process frame, not a count of physics
 	# frames (several can run inside one slow process frame)

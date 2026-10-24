@@ -103,11 +103,11 @@ func test_a_greyed_town_says_why_and_keeps_picking() -> void:
 	for t: String in _map.supply_pick:
 		if String(_map.supply_pick[t]) != "":
 			var b: Dictionary = Game.data.burgs[t]
-			watch_signals(Game)
+			watch_signals(SignalHub)
 			_map.ground_clicked.emit(Vector2(float(b["x"]), float(b["y"])), Vector2(20, 20))
 			assert_eq(_menu.supply_town(), "")
 			assert_eq(_menu.supply_picking(), code)
-			assert_signal_emitted_with_parameters(Game, "news_published", [String(_map.supply_pick[t])])
+			assert_signal_emitted_with_parameters(SignalHub, "news_published", [String(_map.supply_pick[t])])
 			return
 	pending("every town is in reach on this pack")
 

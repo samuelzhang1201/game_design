@@ -254,7 +254,7 @@ func test_long_event_content_scrolls_inside_fixed_box() -> void:
 ## spans the top of every gameplay screen, the conversation stage included,
 ## the dossier card shows the speaker's identity, and both reflect an order
 ## taken here (dossier via the trait/opinion fields, TopBar via
-## Game.state_changed).
+## SignalHub.state_changed).
 ## The name plate wears the speaker's house arms (owner 2026-09-15); a
 ## person whose family holds no seat shows none.
 func test_the_name_plate_wears_the_speakers_house_arms() -> void:

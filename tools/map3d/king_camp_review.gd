@@ -40,7 +40,7 @@ func _seed_hold_line() -> void:
 	view._units.refresh()
 	_root._refresh_king_map()
 	_at3d = at + Vector2(0, 5)
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	print("p33 fixture case=%s phase=%s share=%.2f site=%s king=%s" % [case, phase, share, at, king_at])
 
 func _site(ctx: Map3DContext, origin: Vector2, case: String, view: Map3DView, code: String) -> Vector2:

@@ -5,7 +5,7 @@ extends Control
 ## where the realm's news crawls right to left. It moves only while TIME
 ## RUNS — pausing the clock stops the crawl where it is — and every headline
 ## is kept, dated, in a history the LOG button opens. Purely presentational:
-## it listens to Game.news_published and never touches sim state or the
+## it listens to SignalHub.news_published and never touches sim state or the
 ## campaign RNG. Crawl speed is balance data (news_ticker_speed).
 
 const STRIP_HEIGHT := 32.0
@@ -44,7 +44,7 @@ func _ready() -> void:
 		_speed = Game.data.bal("news_ticker_speed")
 	_log_button.toggled.connect(func(on: bool) -> void: show_history(on))
 	_clip.resized.connect(_centre_label)
-	Game.news_published.connect(add_item)
+	SignalHub.news_published.connect(add_item)
 	if not UiPalette.war_table():
 		_dress_leather()
 

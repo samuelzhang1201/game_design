@@ -171,7 +171,7 @@ func _ready() -> void:
 	%AudienceLayer.resized.connect(_fit_audience)
 	%AudienceLayer.visible = false
 	%AudienceLayer.visibility_changed.connect(_render_history)
-	Game.state_changed.connect(func() -> void:
+	SignalHub.state_changed.connect(func() -> void:
 		if is_inside_tree():
 			_refresh_location())
 	_refresh_location()

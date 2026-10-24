@@ -331,7 +331,7 @@ func test_mixed_selection_sends_what_it_can() -> void:
 	await wait_process_frames(2)
 	_click(v, _screen_of(v, town_xy))
 	assert_eq(menu.supply_town(), town, "the town's rate is asked")
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	_choose(menu, ArmyOrderMenu.RATE_BASE + 1)
 	var sets: Array = []
 	for c: Dictionary in Game.state.couriers:
@@ -339,8 +339,8 @@ func test_mixed_selection_sends_what_it_can() -> void:
 			sets.append(String(c["target"]))
 	assert_eq(sets, [land], "only the land unit's courier rides")
 	var label := String(ArmySystem.regiment(Game.data, fleet, Game.state)["label"])
-	assert_true(_news(Game).has("%s is a fleet: it carries no supply train" % label),
-		"the fleet is refused aloud: %s" % str(_news(Game)))
+	assert_true(_news(SignalHub).has("%s is a fleet: it carries no supply train" % label),
+		"the fleet is refused aloud: %s" % str(_news(SignalHub)))
 
 
 ## A screen point on land a box of `half` px round touches no unit, with what a

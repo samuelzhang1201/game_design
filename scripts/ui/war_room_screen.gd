@@ -129,7 +129,7 @@ func open() -> void:
 		var confirm := _orders.confirm_panel()
 		confirm.placed.connect(_make_way)
 		confirm.visibility_changed.connect(_make_way)
-		Game.state_changed.connect(refresh)
+		SignalHub.state_changed.connect(refresh)
 		(%Key as WarMarginKey).setup(Game.data, _view)
 		_folio.set_tier(Game.data, Map3DQuality.resolve_here(GameRoot.settings_path))
 		_view.camera_moved.connect((%Key as WarMarginKey).queue_redraw)
@@ -143,7 +143,7 @@ func open() -> void:
 		_view.plan_input().order_drawn.connect(_on_order_drawn)
 		_view.plan_input().refused.connect(Game.publish_news)
 		_view.set_caps_font(UiPalette.role_font("header"))
-		Game.plans_changed.connect(_view.refresh_plans)
+		SignalHub.plans_changed.connect(_view.refresh_plans)
 		_plans.bind(self, _view, %GroundMenu, %PlanForm, %PlanName, %ToolRoll, slip, _orders)
 	# the clock stops and nothing starts it while the room is open (owner
 	# 2026-10-02: 进入war room时间也一直是暂停的，无法继续，直到下达命令并退出)

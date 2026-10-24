@@ -38,7 +38,7 @@ func _ready() -> void:
 	for key: String in REALM_METRICS:
 		_realm_values[key] = _realm_grid.get_node("Value_" + key)
 	_rows = $Rows
-	Game.state_changed.connect(func() -> void:
+	SignalHub.state_changed.connect(func() -> void:
 		if is_inside_tree() and visible:
 			_refresh_realm())
 

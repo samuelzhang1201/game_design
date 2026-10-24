@@ -1,37 +1,5 @@
 extends Node
-## Autoload "Game": owns the sim; UI talks only to this.
-
-signal report_ready(report: TickReport)
-signal battle_decision_requested(decision: Dictionary)
-@warning_ignore("unused_signal")
-signal battle_view_requested(regiment: String)
-## A letter was read on the Missive board (final review M7): the read flag
-## is saved state, so it changes only here.
-signal missive_read(id: int)
-## Letters were marked seen (the board shown, a spy's report opened): the
-## MISSIVE tab's count is redrawn from MissiveLog.unseen.
-signal missives_seen
-## Emitted after any mutation of Game.state (orders, event choices, court
-## reactions, tick advance, load). UI that mirrors live state (e.g. the
-## TopBar) subscribes to this instead of refreshing at call sites.
-signal state_changed
-## The WAR ROOM's plans changed (WarPlans): only the room's plan layer
-## listens, so a crayon stroke refreshes nothing else (spec
-## 2026-10-07-war-room-annotations-and-planning-pieces §1.1).
-signal plans_changed
-## Cross-cutting UI signal: the TopBar's MENU button asks for the pause
-## menu; GameRoot (the flow owner) listens and shows it.
-@warning_ignore("unused_signal")
-signal menu_requested
-## A chronicle headline for the persistent bottom news strip (user request
-## 2026-08-31). Emitted via publish_news — GameRoot feeds it as works
-## progress and the month closes; the NewsTicker (GameRoot-owned) displays it.
-signal news_published(text: String)
-## The clock's speed changed (owner 2026-09-13): 0 paused, 1, 2 or 4.
-signal clock_changed(speed: int)
-## The clock was held still, or let go (the LEDGER: owner 2026-10-01).
-signal clock_held_changed(held: bool)
-signal battle_decision_changed(decision: Dictionary)
+## Autoload "Game": owns state and commands; notifications go through SignalHub.
 
 var data: DataRepository
 var state: GameState
@@ -88,7 +56,7 @@ func set_clock_speed(speed: int) -> void:
 	if clock_speed == speed:
 		return
 	clock_speed = speed
-	clock_changed.emit(speed)
+	SignalHub.clock_changed.emit(speed)
 
 ## The speed the Space bar resumes at: the last one that ran (1 before any).
 var _resume_speed := 1
@@ -137,7 +105,7 @@ func _set_held(held: bool) -> void:
 	if clock_held == held:
 		return
 	clock_held = held
-	clock_held_changed.emit(held)
+	SignalHub.clock_held_changed.emit(held)
 
 
 ## Tools only (tools/map3d/bench.gd, through GameRoot): roll the day back
@@ -175,13 +143,13 @@ func advance_day() -> Dictionary:
 			hold_clock(true, "simulation_error")
 			publish_news("The day's resolution stopped: " + String(result["error"]))
 		_sync_battle_decision()
-		state_changed.emit()
+		SignalHub.state_changed.emit()
 		return {"status": result["status"], "error": result.get("error", ""),
 			"decision": pending_battle_decision(), "ticked": false, "ended": ended,
 			"finished": [], "arrived": [], "couriers": [], "supply": [], "raids": []}
 	if bool(result["ticked"]):
 		_publish_tick(result["report"])
-	state_changed.emit()
+	SignalHub.state_changed.emit()
 	var journal: Dictionary = result["journal"]
 	return {"status": "complete", "ticked": result["ticked"], "finished": journal["works"],
 		"arrived": journal["arrivals"], "couriers": journal["couriers"], "ended": result["ended"],
@@ -194,16 +162,16 @@ func next_tick() -> TickReport:
 	var report := engine.advance(state)
 	if report == null:
 		_sync_battle_decision()
-		state_changed.emit()
+		SignalHub.state_changed.emit()
 		return null
 	_publish_tick(report)
-	state_changed.emit()
+	SignalHub.state_changed.emit()
 	return report
 
 func _publish_tick(report: TickReport) -> void:
 	_prompts_this_tick = 0
 	current_report = report
-	report_ready.emit(current_report)
+	SignalHub.report_ready.emit(current_report)
 
 func pending_battle_decision() -> Dictionary:
 	if state == null:
@@ -221,15 +189,15 @@ func resolve_battle_decision(token: String, choice: String) -> Dictionary:
 		set_clock_speed(0)
 		day_progress = 0.0
 		_sync_battle_decision()
-		state_changed.emit()
+		SignalHub.state_changed.emit()
 	return result
 
 func _sync_battle_decision() -> void:
 	var pending := pending_battle_decision()
 	hold_clock(not pending.is_empty(), "battle_decision")
-	battle_decision_changed.emit(pending)
+	SignalHub.battle_decision_changed.emit(pending)
 	if not pending.is_empty():
-		battle_decision_requested.emit(pending)
+		SignalHub.battle_decision_requested.emit(pending)
 
 func battle_view() -> Dictionary:
 	return BattlePresentation.snapshot(data, state, data.resolve_realm("player_realm"))
@@ -237,7 +205,7 @@ func battle_view() -> Dictionary:
 func apply_event_choice(choice_id: String) -> Dictionary:
 	var out := engine.events.apply_choice(choice_id, state)
 	if not out.is_empty():
-		state_changed.emit()
+		SignalHub.state_changed.emit()
 	return out
 
 func try_execute(req: ActionRequest) -> Dictionary:
@@ -245,7 +213,7 @@ func try_execute(req: ActionRequest) -> Dictionary:
 	if err != "":
 		return {"ok": false, "error": err, "outcome": null}
 	var outcome := engine.actions.execute(req, state)
-	state_changed.emit()
+	SignalHub.state_changed.emit()
 	return {"ok": true, "error": "", "outcome": outcome}
 
 
@@ -254,7 +222,7 @@ func try_execute(req: ActionRequest) -> Dictionary:
 func plant_draft(code: String, order: String, dest_px: Vector2, waypoints: Array = [], carry := -1,
 		supply_town := "", supply_rate := 0, hold: Dictionary = {}, front := "") -> void:
 	WarDrafts.plant(data, state, code, order, dest_px, waypoints, carry, supply_town, supply_rate, hold, front)
-	state_changed.emit()
+	SignalHub.state_changed.emit()
 
 
 ## A blue front drawn for `codes` (spec 2026-10-11-war-room-front-line-design
@@ -289,24 +257,24 @@ func plant_front(stroke_id: String, codes: Array) -> Dictionary:
 		WarDrafts.plant(data, state, code, WarDrafts.MARCH, px, [], -1, "", 0, hold, stroke_id)
 		out["planted"].append(code)
 	if not out["planted"].is_empty():
-		state_changed.emit()
+		SignalHub.state_changed.emit()
 	return out
 
 
 func restore_drafts(drafts: Dictionary) -> void:
 	WarDrafts.restore(state, drafts)
-	state_changed.emit()
+	SignalHub.state_changed.emit()
 
 
 func strike_draft(code: String) -> void:
 	if WarDrafts.strike(state, code):
-		state_changed.emit()
+		SignalHub.state_changed.emit()
 
 
 func discard_drafts() -> void:
 	if WarDrafts.any(state):
 		state.war_drafts.clear()
-		state_changed.emit()
+		SignalHub.state_changed.emit()
 
 
 ## The WAR ROOM's plans (spec 2026-10-07-war-room-annotations-and-planning-
@@ -314,7 +282,7 @@ func discard_drafts() -> void:
 ## lands says plans_changed.
 func _plans(done: Variant) -> Variant:
 	if landed(done):
-		plans_changed.emit()
+		SignalHub.plans_changed.emit()
 	return done
 
 
@@ -363,7 +331,7 @@ func restyle_plan(id: String, changes: Dictionary) -> bool:
 ## The room's undo: a snapshot of war_plans put back.
 func restore_plans(snapshot: Dictionary) -> void:
 	WarPlans.restore(state, snapshot)
-	plans_changed.emit()
+	SignalHub.plans_changed.emit()
 
 
 ## The resolutions as they would be sealed now (spec §3.3): each draft's
@@ -445,7 +413,7 @@ func deploy_drafts() -> Dictionary:
 		d["refused"] = why
 		state.war_drafts[code] = d
 		refused[code] = why
-	state_changed.emit()
+	SignalHub.state_changed.emit()
 	return {"sent": sent, "refused": refused}
 
 ## Free movement within the current region (user ruling 2026-08-30: no time
@@ -455,7 +423,7 @@ func move_to(location_code: String) -> bool:
 	if state == null or not LocationSystem.can_move(data, state, location_code):
 		return false
 	state.current_location = location_code
-	state_changed.emit()
+	SignalHub.state_changed.emit()
 	return true
 
 ## Routes one headline to whatever is showing news (currently the bottom
@@ -476,7 +444,7 @@ func news_day() -> int:
 func publish_news(text: String) -> void:
 	if text.strip_edges() == "":
 		return
-	news_published.emit(text)
+	SignalHub.news_published.emit(text)
 
 ## Mark a letter read (the Missive board's select): state changes go
 ## through Game, never a screen writing Game.state itself.
@@ -484,7 +452,7 @@ func mark_missive_read(id: int) -> void:
 	if state == null:
 		return
 	MissiveLog.mark_read(state, id)
-	missive_read.emit(id)
+	SignalHub.missive_read.emit(id)
 
 ## Mark letters SEEN (owner 2026-10-10): all of them when a Missive board is
 ## shown (or open as more land), one when a spy's report opens in its dialog.
@@ -492,7 +460,7 @@ func mark_missives_seen(id := -1) -> void:
 	if state == null:
 		return
 	if MissiveLog.mark_seen(state, id):
-		missives_seen.emit()
+		SignalHub.missives_seen.emit()
 
 func save_campaign(path: String = "") -> bool:
 	path = save_path if path == "" else path
@@ -549,7 +517,7 @@ func load_campaign(path: String = "") -> bool:
 	LawSystem.ensure(data, state)  # a save from before the laws
 	DevelopmentSystem.ensure(data, state)  # a save from before the development axes
 	_sync_battle_decision()
-	state_changed.emit()
+	SignalHub.state_changed.emit()
 	return true
 
 ## Restart flow (R12): return to MENU with a clean sim + LLM seam. Called by
@@ -559,7 +527,7 @@ func restart() -> void:
 	state = null
 	release_clock_holds()
 	_reset_llm()
-	battle_decision_changed.emit({})
+	SignalHub.battle_decision_changed.emit({})
 	engine = null
 	current_report = null
 	_prompts_this_tick = 0
@@ -644,7 +612,7 @@ func submit_free_text(text: String, cb: Callable, speaker_hint: String = "",
 		AgentMemory.remember(data, state, String(id), "you", text,
 			heard_by, state.current_location, state.tick)
 	if not heard_by.is_empty():
-		state_changed.emit()
+		SignalHub.state_changed.emit()
 	_ensure_llm()
 	# One call, two parts (spec 2026-09-09 §4): the engine picks who answers
 	# BEFORE the call so the model speaks in one persona; the reply's
@@ -658,7 +626,7 @@ func submit_free_text(text: String, cb: Callable, speaker_hint: String = "",
 				return
 			var out := OrderPipeline.apply_order(data, state, engine, res["actions"],
 				res["world"], res["court_reaction"], "order")
-			state_changed.emit()
+			SignalHub.state_changed.emit()
 			var result := {"ok": true, "executed": out["executed"], "rejected": out["rejected"],
 				"error": "", "ledger": out["ledger"], "world_effects": out["world_effects"],
 				"world_rejected": out["world_rejected"]}
@@ -699,7 +667,7 @@ func _remember_reply(reply: Dictionary, heard_by: Array) -> void:
 		AgentMemory.remember(data, state, String(id), sid,
 			String(reply.get("text", "")), heard_by, state.current_location,
 			state.tick)
-	state_changed.emit()
+	SignalHub.state_changed.emit()
 
 func _speaker_name(id: String) -> String:
 	return (state.characters[id] as Character).display_name if state.characters.has(id) else "Herald"

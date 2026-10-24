@@ -153,12 +153,12 @@ func test_multiple_first_encounters_each_require_confirmation() -> void:
 
 func test_encounter_month_end_only_publishes_after_completion() -> void:
 	var root := _battle_root(false, 30)
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	Game.set_clock_speed(1)
 	root._process(40.0)
 	assert_eq(Game.state.tick, 1)
 	assert_eq(Game.state.day, 30)
-	assert_signal_not_emitted(Game, "report_ready")
+	assert_signal_not_emitted(SignalHub, "report_ready")
 	var blocked := Game.advance_day()
 	assert_eq(blocked.get("status"), "blocked")
 	assert_false(bool(blocked.get("ticked", false)), "no completed-day output while blocked")
@@ -167,7 +167,7 @@ func test_encounter_month_end_only_publishes_after_completion() -> void:
 	root._process(0.0)
 	assert_eq(Game.state.tick, 2)
 	assert_eq(Game.state.day, 1)
-	assert_signal_emit_count(Game, "report_ready", 1)
+	assert_signal_emit_count(SignalHub, "report_ready", 1)
 
 func test_encounter_refuses_stale_invalid_and_repeated_choices() -> void:
 	var root := _battle_root()
@@ -222,11 +222,11 @@ func test_compatibility_tick_resumes_day_without_publishing_empty_month() -> voi
 	Game.set_clock_speed(1)
 	root._process(8.0)
 	_confirm_encounter()
-	watch_signals(Game)
+	watch_signals(SignalHub)
 	Game.next_tick()
 	assert_eq(Game.state.day, 11)
 	assert_eq(Game.current_report, previous)
-	assert_signal_not_emitted(Game, "report_ready")
+	assert_signal_not_emitted(SignalHub, "report_ready")
 
 func test_blocked_day_keeps_notifications_across_json_load() -> void:
 	var root := _battle_root()
@@ -250,7 +250,7 @@ func test_blocked_day_keeps_notifications_across_json_load() -> void:
 	root._on_menu_load()
 	var got: Array[String] = []
 	var handler := func(line: String) -> void: got.append(line)
-	Game.news_published.connect(handler)
+	SignalHub.news_published.connect(handler)
 	_confirm_encounter()
 	Game.toggle_clock()
 	root._process(0.0)
@@ -259,7 +259,7 @@ func test_blocked_day_keeps_notifications_across_json_load() -> void:
 	assert_eq(got.filter(func(line: String) -> bool: return "is 30% done" in line).size(), 1)
 	root._process(40.0)
 	assert_eq(got.filter(func(line: String) -> bool: return "is 30% done" in line).size(), 1)
-	Game.news_published.disconnect(handler)
+	SignalHub.news_published.disconnect(handler)
 
 func test_encounter_controller_routes_requests_and_restores_confirmation() -> void:
 	var root := _battle_root()
@@ -404,20 +404,20 @@ func _menu_btn(r: GameRoot, node_name: String) -> Button:
 	return r.pause_menu().find_child(node_name, true, false)
 
 ## Pause menu (user ruling 2026-08-31): the TopBar's MENU button (via
-## Game.menu_requested) opens Resume / Save / Load / Restart / Quit; it
+## SignalHub.menu_requested) opens Resume / Save / Load / Restart / Quit; it
 ## stays hidden on the main menu, and Restart lands back there.
 func test_pause_menu_opens_via_signal_and_restart_returns_to_menu() -> void:
 	var r := _root()
 	await wait_process_frames(2)
-	Game.menu_requested.emit()
+	SignalHub.menu_requested.emit()
 	assert_false(r.pause_menu().visible, "no pause menu on the main menu screen")
 	r.current_screen.start_requested.emit()
 	await wait_process_frames(2)
-	Game.menu_requested.emit()
+	SignalHub.menu_requested.emit()
 	assert_true(r.pause_menu().visible, "MENU button opens the pause menu in play")
 	_menu_btn(r, "Resume").pressed.emit()
 	assert_false(r.pause_menu().visible, "Resume closes it")
-	Game.menu_requested.emit()
+	SignalHub.menu_requested.emit()
 	_menu_btn(r, "Restart").pressed.emit()
 	await wait_process_frames(2)
 	assert_eq(r.state, GameRoot.State.MENU)
@@ -433,14 +433,14 @@ func test_pause_menu_save_then_load_resumes_at_court() -> void:
 	if not Game.state.pending_event.is_empty():
 		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
 	var saved_tick: int = Game.state.tick
-	Game.menu_requested.emit()
+	SignalHub.menu_requested.emit()
 	_menu_btn(r, "SaveGame").pressed.emit()
 	_menu_btn(r, "Restart").pressed.emit()
 	await wait_process_frames(2)
 	assert_null(Game.state)
 	r.current_screen.start_requested.emit()
 	await wait_process_frames(2)
-	Game.menu_requested.emit()
+	SignalHub.menu_requested.emit()
 	_menu_btn(r, "LoadGame").pressed.emit()
 	await wait_process_frames(2)
 	assert_eq(r.state, GameRoot.State.COURT, "a clean save resumes at court")
@@ -458,7 +458,7 @@ func test_load_with_pending_event_waits_with_its_presenter() -> void:
 	if not Game.state.pending_event.is_empty():
 		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
 	Game.engine.events._fire("ev_01", Game.state)
-	Game.menu_requested.emit()
+	SignalHub.menu_requested.emit()
 	_menu_btn(r, "SaveGame").pressed.emit()
 	_menu_btn(r, "LoadGame").pressed.emit()
 	await wait_process_frames(2)

@@ -49,7 +49,7 @@ func test_refreshes_on_state_change() -> void:
 	var d := _dashboard()
 	await wait_process_frames(1)
 	Game.state.metrics["treasury"] = 999.0
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	assert_eq(d.resource_text("treasury"), "999")
 
 func test_every_shown_resource_and_unit_has_an_icon_with_a_tooltip() -> void:
@@ -137,7 +137,7 @@ func test_host_counts_live_people_and_chart_preserves_equipment_weight() -> void
 		{"unit_code": fleet_code, "from": "fit", "to": "wounded", "count": 3}, {"unit_code": fleet_code, "from": "fit", "to": "dead", "count": 2},
 		{"unit_code": fleet_code, "from": "fit", "to": "captured_current", "count": 4}, {"unit_code": fleet_code, "from": "fit", "to": "released", "count": 5}]
 	assert_false(MilitaryRoster.transfer_units(Game.data, Game.state, "dashboard:casualties", changes, "dashboard casualty fixture").has("error"))
-	Game.state_changed.emit()
+	SignalHub.state_changed.emit()
 	var expected := fleet_people - 11
 	assert_eq(int(dashboard._host_of().fleet), expected, "wounded remain under arms; captives and terminal states do not")
 	var panel := MilitaryPanel.create()

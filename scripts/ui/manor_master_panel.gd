@@ -65,8 +65,8 @@ func _ready() -> void:
 		if item != null:
 			manor_activated.emit(int(item.get_metadata(0))))
 	_scope_text()
-	Game.report_ready.connect(func(_r: TickReport) -> void: _settled_frame = Engine.get_process_frames())
-	Game.state_changed.connect(func() -> void:
+	SignalHub.report_ready.connect(func(_r: TickReport) -> void: _settled_frame = Engine.get_process_frames())
+	SignalHub.state_changed.connect(func() -> void:
 		if visible:
 			refresh())
 
@@ -130,7 +130,7 @@ var _sig: Array = []
 var rebuilds := 0
 var _waiting := false
 var _read_now := false
-## The frame a month was settled on (Game.report_ready): only then is a cold
+## The frame a month was settled on (SignalHub.report_ready): only then is a cold
 ## read left for the next frame.
 var _settled_frame := -1
 

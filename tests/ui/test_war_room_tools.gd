@@ -489,9 +489,9 @@ func test_a_refused_write_leaves_no_undo_step() -> void:
 func _news_since(f: Callable) -> Array:
 	var said: Array = []
 	var listen := func(t: String) -> void: said.append(t)
-	Game.news_published.connect(listen)
+	SignalHub.news_published.connect(listen)
 	f.call()
-	Game.news_published.disconnect(listen)
+	SignalHub.news_published.disconnect(listen)
 	return said
 
 

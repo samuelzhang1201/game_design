@@ -18,7 +18,7 @@ func _ready() -> void:
 	_title = $Panel/Col/Title
 	_grid = $Panel/Col/Table
 	($Panel/Col/CloseButton as Button).pressed.connect(func() -> void: hide())
-	Game.state_changed.connect(func() -> void:
+	SignalHub.state_changed.connect(func() -> void:
 		if visible and _current_tab != "":
 			_render())
 	hide()
