@@ -23,19 +23,20 @@ func _fixture(gap_m: int) -> Dictionary:
 	# This fixture isolates melee contact; mixed/ranged output has its own geometry tests.
 	for arm: String in repo.world_table("military", "unit_types"):
 		state.army_roster[a][arm] = "0"
-	state.army_roster[a]["infantry"] = "120"
-	Personnel.replace(repo, state, a, 120)
+	state.army_roster[a]["infantry"] = "201"
+	Personnel.replace(repo, state, a, 201)
 	BattleGroups.refresh(repo, state, battle)
+	battle.groups[a][2].x_m = -500  # The other front group is still approaching.
 	return {"repo": repo, "state": state, "a": a, "enemy": enemy, "battle": battle}
 
 func test_front_groups_in_reach_fight_in_full() -> void:
 	var f := _fixture(60)
-	# groups 50 front, 50 reserve, 20 front: engaged 70 -> (70 * 1000 + 50 * 500) / 120 = 791
-	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 791)
+	# One front group touches: (100 * 1000 + 101 * 500) / 201 = 748
+	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 748)
 
 func test_no_enemy_in_reach_is_all_reserve() -> void:
 	var f := _fixture(5000)
-	# (0 + 120 * 500) / 120 = 500
+	# (0 + 201 * 500) / 201 = 500
 	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 500)
 
 func test_no_groups_is_full_strength_and_no_factor() -> void:
@@ -53,5 +54,5 @@ func test_unit_strength_lists_the_factor() -> void:
 	for factor: Dictionary in s["factors"]:
 		if factor["source"] == "contact:engaged":
 			found = factor
-	assert_eq(found["permille"], 791)
-	assert_eq(found["reason"], "70 of 120 in contact with the enemy line")
+	assert_eq(found["permille"], 748)
+	assert_eq(found["reason"], "100 of 201 in contact with the enemy line")

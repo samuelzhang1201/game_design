@@ -18,6 +18,14 @@ static func tier_of(repo: DataRepository, fit_permille: int) -> Dictionary:
 	return best if not best.is_empty() else {"figures": 1, "slots": [Vector2.ZERO]}
 
 
+## Near representatives count active fit people, including a positive remainder.
+static func fit_tier(repo: DataRepository, fit: int, layout: String) -> Dictionary:
+	var n := BattleGroups.counts(fit, int(repo.bal("battle_group_size"))).size()
+	var parts := layout.split(":")
+	var slots := BattleFormation.slots(parts[0], n, int(parts[1]) if parts.size() == 2 else 1000)
+	return {"figures": n, "slots": slots, "line_slots": slots}
+
+
 ## A tier's slots for `layout`: "line" its line_slots (one rank abreast,
 ## spec 2026-10-11-war-room-front-line-design §2), else its block.
 static func slots_of(row: Dictionary, layout: String) -> Array:
@@ -135,7 +143,7 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 	return {"node": node, "anims": anims, "height_m": span.y,
 		"figs": node.get_children(), "slots": Array(Array(offs).map(func(o: Vector2) -> Vector3: return Vector3(o.x, 0.0, o.y))),
 		"head_m": Map3DUnitRig.head_m(repo, one, span.y),
-		"half_w_m": maxf(half.x, half.y), "extent": half, "figures": offs.size(), "layout": layout,
+		"half_w_m": maxf(half.x, half.y), "extent": half, "figure_extent": ext, "figures": offs.size(), "layout": layout,
 		"lag_cap": repo.bal("map3d_march_lag_cap_share") * minf(ext.x, ext.y),
 		"stand_deg": float(art.get("stand_deg", "0")),
 		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
@@ -149,7 +157,7 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 ## empty row or an arm with no model (a fleet).
 static func of_regiment(repo: DataRepository, reg: Dictionary, tier: Dictionary, gap: float,
 		layout := BLOCK) -> Dictionary:
-	if reg.is_empty():
+	if reg.is_empty() or slots_of(tier, layout).is_empty():
 		return {}
 	var model := MapObjects.army_piece(repo, reg)
 	var path := GameArt.path(GameArt.ARMY_MODELS, model)
@@ -166,4 +174,5 @@ static func of_regiment(repo: DataRepository, reg: Dictionary, tier: Dictionary,
 			return Map3DMarchLag.stature(String(reg.get("regiment_code", "")), i, spread))
 		for i in built["figs"].size():
 			(built["figs"][i] as Node3D).scale = Vector3.ONE * float(built["statures"][i])
+		built["figure_extent"] *= float((built["statures"] as Array).max())
 	return built

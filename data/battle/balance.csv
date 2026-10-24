@@ -41,7 +41,7 @@ battle_substeps,10,"fixed integer movement and contact substeps in one calendar 
 battle_disengage_days,2,"battles §4.1: a battle that ends on battle_max_rounds is a draw; its survivors make no contact for exactly this many days after it (1 = the next day only; a column falling back with no town to go to too, and a battle its foes' host left), then, still in contact, a new battle starts (first draft)"
 battle_search_days,2,"unit tasks (P4.4c4): days a flank or pursuit unit that lost its target searches at the last point it saw before the task ends in search_failed (first draft)"
 battle_search_range_m,8000,"unit tasks (P4.4c4): whole metres from the last known point within which a fresh sighting of the lost target resumes the follow; farther sightings leave the search running (first draft)"
-battle_group_size,50,"battle groups (P4.4d1): people per representative group; a unit's fit count splits into groups of this size, the last the remainder (spec 6.1; first draft)"
+battle_group_size,100,"battle groups (P4.4d1): people per representative group; a unit's fit count splits into groups of this size, the last the remainder (spec 6.1; first draft)"
 battle_group_spacing_m,50,"battle groups (P4.4d1): whole metres between neighbouring groups across the front; 10 groups of a line span 500 m, the line's frontage_m (first draft)"
 battle_group_depth_m,40,"battle groups (P4.4d1): whole metres between ranks, measured back from the front away from the enemy (first draft)"
 battle_line_gap_m,100,"battle deployment lines (P4.4d2): whole metres between the two sides' line centres at the battle place (first draft)"

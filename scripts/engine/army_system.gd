@@ -250,6 +250,9 @@ static func _recover_month(repo: DataRepository, state: GameState) -> void:
 				[{"unit_code": code, "from": "wounded", "to": "fit", "count": restored}], "Monthly wound recovery: " + code)
 			if result.has("error"):
 				continue
+			var battle := BattleSystem.battle_of(state, code)
+			if not battle.is_empty():
+				BattleGroups.refresh(repo, state, battle)
 		state.conduct_marks[marker] = state.tick
 
 ## The supplies a regiment eats on day `day` (1..DAYS_PER_TICK) of a month

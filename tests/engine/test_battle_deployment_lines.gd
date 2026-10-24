@@ -45,8 +45,8 @@ func test_two_units_abreast_across_the_axis() -> void:
 	f.state.regiments[b]["x_m"] = 4000
 	f.state.regiments[b]["y_m"] = 0
 	f.battle.att.append(b)
-	Personnel.replace(f.repo, f.state, f.a, 120)
-	Personnel.replace(f.repo, f.state, b, 120)
+	Personnel.replace(f.repo, f.state, f.a, 240)
+	Personnel.replace(f.repo, f.state, b, 240)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	var t: Dictionary = BattleGroups.deployment(f.repo, f.state, f.battle)
 	# axis +x, att line centre (50, 0), across = y; each width 100 m

@@ -8,7 +8,8 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 
 - `scripts/engine/guide/area_tasks.md` — received search travel (`ArmyTasks`, `TaskCoverage`, `MarchPath`)
 - `scripts/engine/guide/regiments.md` — regiments and their march (`ArmySystem`)
-- `scripts/engine/guide/battle_deployment.md` — formations, agreements, unit tasks, walking/running, costly orders and daily strength (`BattleFormation`, `BattleRules`, `BattleTaskSystem`, `UnitGait`, `BattleOrders`, `BattleStrength`, `BattleGroups`)
+- `scripts/engine/guide/battle_deployment.md` — tactics (`BattleFormation`, `BattleRules`, `BattleTaskSystem`, `UnitGait`, `BattleOrders`, `BattleStrength`)
+- `scripts/engine/guide/battle_groups.md` — groups (`BattleGroups`, `MilitaryReorganization`).
 - `guide/battle_ranged.md` — direct fire (`BattleRanged`).
 - `scripts/engine/guide/battle_charge.md` — actual mounted run-up, impact, disengagement and saved regrouping (`BattleCharge`, `BattleGroups`, `BattleSystem`)
 - `scripts/engine/guide/prisoners_and_reports.md` — negotiated release, consent, immutable reports and informed custody (`PrisonerDisposition`, `PrisonerCommunications`, `FamilyLosses`, `BattleReport`, `BattlePresentation`, `MissiveWriter`)
