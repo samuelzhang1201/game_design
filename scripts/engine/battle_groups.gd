@@ -528,6 +528,7 @@ static func targets(repo: DataRepository, state: GameState, battle: Dictionary, 
 	var spacing := float(repo.bal("battle_group_spacing_m"))
 	var depth := float(repo.bal("battle_group_depth_m"))
 	var fits := true
+	var front_fits := true
 	for member: String in codes:
 		var rows := _ordered_rows(battle, member)
 		var shape := BattleFormation.of_unit(state, member)
@@ -545,8 +546,11 @@ static func targets(repo: DataRepository, state: GameState, battle: Dictionary, 
 		var points := layout(repo, shape, rows.size(), goals[member], int(battle.get("group_facing", {}).get(member, 0)))
 		native[member] = points
 		native_roles[member] = roles
-		for point: Vector2i in points:
-			fits = fits and _ground_clear(grid, point, point, spacing / 2.0)
+		for i: int in points.size():
+			var point: Vector2i = points[i]
+			var clear := _ground_clear(grid, point, point, spacing / 2.0)
+			fits = fits and clear
+			if roles[i] == "front": front_fits = front_fits and clear
 	if requested == 0: return out
 	var total := 0
 	for member: String in codes: total += (native[member] as Array).size()
@@ -608,28 +612,42 @@ static func targets(repo: DataRepository, state: GameState, battle: Dictionary, 
 			if high - low + 1 > lanes.size(): lanes.assign(candidate.slice(low, high + 1))
 		lanes.sort_custom(func(a: float, b: float) -> bool: return a < b if is_equal_approx(absf(a), absf(b)) else absf(a) < absf(b))
 		if lanes.is_empty(): return out
-	var available: Array[Dictionary] = []
+	var chosen := {}
 	var claimed: Array[Vector2i] = []
-	for rank: int in max_ranks:
-		for lane: float in lanes:
-			var point := Vector2i((centre + across * lane - face * rank * depth).round())
-			if not _ground_clear(grid, point, point, spacing / 2.0) \
-					or claimed.any(func(other: Vector2i) -> bool: return point.distance_squared_to(other) < spacing * spacing): continue
-			available.append({"x_m": point.x, "y_m": point.y, "role": "front" if rank == 0 else "reserve"})
-			claimed.append(point)
-			if available.size() == total: break
-		if available.size() == total: break
-	var index := 0
+	# Reserve reachable native slots before filling holes; a rear rock cannot
+	# flatten legal shapes or displace another unit's native targets.
+	for phase: String in ["front", "reserve"]:
+		for member: String in codes:
+			var rows := _ordered_rows(battle, member)
+			for i: int in rows.size():
+				if native_roles[member][i] != phase: continue
+				var point: Vector2i = native[member][i]
+				if phase == "front" and not front_fits and not lanes.any(func(lane: float) -> bool:
+					return absf((Vector2(point) - centre).dot(across) - lane) <= sqrt(2.0)): continue
+				if not _ground_clear(grid, point, point, spacing / 2.0) \
+						or claimed.any(func(other: Vector2i) -> bool: return point.distance_squared_to(other) < spacing * spacing): continue
+				var here := Vector2i(int(rows[i].x_m), int(rows[i].y_m))
+				if _route(repo, state, battle, member, int(rows[i].slot), here, point, false).is_empty(): continue
+				chosen[[member, int(rows[i].slot)]] = {"slot": int(rows[i].slot), "x_m": point.x, "y_m": point.y, "role": phase}
+				claimed.append(point)
 	for member: String in codes:
 		for row: Dictionary in _ordered_rows(battle, member):
-			if index >= available.size(): return out
-			var goal: Dictionary = available[index].duplicate()
-			index += 1
+			var key := [member, int(row.slot)]
+			if chosen.has(key): continue
 			var here := Vector2i(int(row.x_m), int(row.y_m))
-			if _route(repo, state, battle, member, int(row.slot), here, Vector2i(int(goal.x_m), int(goal.y_m)), false).is_empty(): continue
-			if member == code:
-				goal.slot = int(row.slot)
-				out.append(goal)
+			for rank: int in max_ranks:
+				for lane: float in lanes:
+					var point := Vector2i((centre + across * lane - face * rank * depth).round())
+					if not _ground_clear(grid, point, point, spacing / 2.0) \
+							or claimed.any(func(other: Vector2i) -> bool: return point.distance_squared_to(other) < spacing * spacing): continue
+					if _route(repo, state, battle, member, int(row.slot), here, point, false).is_empty(): continue
+					chosen[key] = {"slot": int(row.slot), "x_m": point.x, "y_m": point.y, "role": "front" if rank == 0 else "reserve"}
+					claimed.append(point)
+					break
+				if chosen.has(key): break
+	for row: Dictionary in _ordered_rows(battle, code):
+		if chosen.has([code, int(row.slot)]): out.append(chosen[[code, int(row.slot)]])
+
 	return out
 
 

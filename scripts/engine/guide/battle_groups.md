@@ -36,8 +36,10 @@ retain their frozen rows through the existing refresh guard.
 
 ## Terrain capacity and physical travel
 
-`targets` is pure and consumes existing saved slots. Native formation points remain
-where their full footprints fit. When terrain constrains the side, the requested
+`targets` is pure and consumes existing saved slots. Reachable native formation points remain
+where their full footprints fit; a blocked slot folds without displacing legal
+slots or another unit’s native targets. Native front points stay inside the
+contiguous legal frontage. When terrain constrains the side, the requested
 frontage bounds a contiguous set of lanes, chosen centre-out with the negative
 side first on ties. Both centred and half-pitch placements are tested; closed
 lateral gaps are never jumped. Overflow targets deepen by `battle_group_depth_m`,

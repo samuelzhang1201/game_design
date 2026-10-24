@@ -69,7 +69,7 @@ func test_frozen_fifty_has_three_slots() -> void:
 	assert_eq(BattleGroups.saved_size(f.repo, f.battle), 50)
 	assert_eq(f.battle.groups[f.a].map(func(row: Dictionary) -> int: return row.count), [50, 50, 1])
 	assert_eq(_points(BattleGroups.targets(f.repo, f.state, f.battle, f.a)),
-		[Vector2i(200, 100), Vector2i(180, 100), Vector2i(160, 100)])
+		[Vector2i(180, 100), Vector2i(200, 100), Vector2i(160, 100)]) # native middle slot retains the only legal front
 
 func test_no_legal_front_waits() -> void:
 	var f := _fixture()
@@ -373,3 +373,54 @@ func test_coarse_pack_grid_still_routes_around_group_sized_occupancy() -> void:
 	assert_false(path.is_empty(), "a 4km terrain cell cannot erase a legal 50m occupancy detour")
 	assert_true(BattleGroups.sweep_clear(f.repo, f.state, f.battle, f.a, 0, Vector2i(5000, 5000), path))
 	assert_lt(MarchRoute.length_from(Vector2i(5000, 5000), path), 250.0, "do not send a 120m tactical move kilometres via a pack cell centre")
+
+func test_partial_rear_rock_retains_seven_legal_native_wedge_slots() -> void:
+	var f := _fixture(800)
+	f.battle.place_y_m = 250
+	f.battle.formations.att.current = "wedge"
+	var bytes := PackedByteArray()
+	bytes.resize(500 * 500)
+	f.repo.balance["army_march_grid_px"] = 1.0
+	var grid := MarchPath.build(f.repo, 500, 500, 1, bytes)
+	MarchPath.use(f.repo, grid)
+	for i: int in f.battle.groups[f.a].size():
+		f.battle.groups[f.a][i].x_m = 40
+		f.battle.groups[f.a][i].y_m = 250 + i * 20
+	var expected := [Vector2i(200, 250), Vector2i(180, 230), Vector2i(180, 270),
+		Vector2i(160, 210), Vector2i(160, 290), Vector2i(140, 190), Vector2i(140, 310), Vector2i(120, 170)]
+	assert_eq(_points(BattleGroups.targets(f.repo, f.state, f.battle, f.a)), expected)
+	grid.closed[170 * 500 + 120] = 1
+	var before := JSON.stringify(f.state.to_dict())
+	var goals := BattleGroups.targets(f.repo, f.state, f.battle, f.a)
+	assert_eq(goals.size(), 8)
+	assert_eq(_points(goals).slice(0, 7), expected.slice(0, 7), "one rear rock cannot replace seven legal native targets")
+	assert_ne(_points(goals)[7], expected[7])
+	assert_eq(JSON.stringify(f.state.to_dict()), before)
+
+func test_partial_rock_preserves_other_units_native_targets_in_four_shapes() -> void:
+	for shape: String in ["line", "double_rank", "wedge", "diamond"]:
+		var f := _fixture(800)
+		var codes: Array = f.state.regiments.keys()
+		codes.sort()
+		var ally := String(codes[1])
+		Personnel.replace(f.repo, f.state, ally, 100)
+		f.state.regiments[ally].merge({"x_m": 40, "y_m": 100, "facing_deg": 0}, true)
+		f.battle.att.append(ally)
+		f.battle.place_y_m = 250
+		f.battle.formations.att.current = shape
+		BattleGroups.refresh(f.repo, f.state, f.battle)
+		for i: int in f.battle.groups[f.a].size():
+			f.battle.groups[f.a][i].x_m = 40
+			f.battle.groups[f.a][i].y_m = 250 + i * 20
+		var bytes := PackedByteArray()
+		bytes.resize(500 * 500)
+		f.repo.balance["army_march_grid_px"] = 1.0
+		var grid := MarchPath.build(f.repo, 500, 500, 1, bytes)
+		MarchPath.use(f.repo, grid)
+		var native := BattleGroups.targets(f.repo, f.state, f.battle, f.a)
+		var ally_native := BattleGroups.targets(f.repo, f.state, f.battle, ally)
+		var blocked: Dictionary = native.back()
+		grid.closed[int(blocked.y_m) * 500 + int(blocked.x_m)] = 1
+		var goals := BattleGroups.targets(f.repo, f.state, f.battle, f.a)
+		assert_eq(_points(goals).slice(0, 7), _points(native).slice(0, 7), shape)
+		assert_eq(BattleGroups.targets(f.repo, f.state, f.battle, ally), ally_native, shape + " unrelated ally remains native")
