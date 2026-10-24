@@ -2,7 +2,7 @@
 class_name Map3DLayerHouses
 extends Node3D
 ## The settlements' house clusters (spec 2026-09-20 §3, node Viewport/Houses):
-## one MultiMesh per house type, every instance standing on the terrain under
+## one MultiMesh per settlement and house type, every instance standing on the terrain under
 ## it, rebuilt only when the camera has moved map3d_house_rebuild_move_m — cut
 ## once per camera pose, never per frame.
 ##
@@ -56,8 +56,11 @@ var weather: Dictionary = {}
 var ctx: Map3DContext
 var _built := false
 var _built_at := Vector2.INF
-var _instances: Dictionary = {}       # type -> MultiMeshInstance3D, the near settlements' (shadows)
-var _far: Dictionary = {}             # type -> MultiMeshInstance3D, the rest (no shadows)
+var _instances: Dictionary = {}       # type|burg -> shadowed MultiMeshInstance3D
+var _far: Dictionary = {}             # type|burg -> unshadowed MultiMeshInstance3D
+var _selected_batches: Array[MultiMeshInstance3D] = []
+var _meshes: Dictionary = {}          # type -> shared tinted mesh
+var _cull_aabbs: Dictionary = {}      # type -> mesh bounds including shader motion
 var _aabbs: Dictionary = {}           # type -> its mesh's AABB, for the footprint
 ## Test seam (fix round 1): the Transform3D actually handed to
 ## set_instance_transform for each type's MultiMesh in the last refresh(),
@@ -88,9 +91,11 @@ func bind(p_ctx: Map3DContext) -> void:
 ## Cut once per camera pose, never per frame — the rig's own ground target,
 ## not the camera's eye, which swings with the pitch (spec §3).
 func _on_camera_moved() -> void:
-	_lod_shown = Map3DGeometry.lod_shown(_lod_shown, ctx.distance, ctx.repo.bal("map3d_lod_houses_m"), ctx.repo.bal("map3d_lod_margin_m"))
-	for mmi: MultiMeshInstance3D in _instances.values() + _far.values():
-		mmi.visible = _lod_shown   # owner 2026-10-10 (LOD): past map3d_lod_houses_m no house is drawn
+	var shown := Map3DGeometry.lod_shown(_lod_shown, ctx.distance, ctx.repo.bal("map3d_lod_houses_m"), ctx.repo.bal("map3d_lod_margin_m"))
+	if shown != _lod_shown:
+		_lod_shown = shown
+		for mmi: MultiMeshInstance3D in _selected_batches:
+			mmi.visible = _lod_shown
 	if not _lod_shown:
 		return
 	var shadows := ctx.distance <= ctx.repo.bal("map3d_house_shadow_view_m")
@@ -113,7 +118,10 @@ func set_preview(on: bool) -> void:
 		preview_build(Map3DPreview.context_for(self))
 	else:
 		_instances.clear()
+		_selected_batches.clear()
 		_far.clear()
+		_meshes.clear()
+		_cull_aabbs.clear()
 		_transforms.clear()
 		_built = false
 		_built_at = Vector2.INF
@@ -140,6 +148,9 @@ func preview_build(p_ctx: Map3DContext) -> void:
 func build() -> void:
 	Map3DPreview.clear_generated(self)
 	_instances.clear()
+	_selected_batches.clear()
+	_meshes.clear()
+	_cull_aabbs.clear()
 	_aabbs.clear()
 	_transforms.clear()
 	_variants.clear()
@@ -159,13 +170,10 @@ func build() -> void:
 		var mesh: Mesh = model["mesh"]
 		var drawn := Map3DHouseMaterials.tinted(mesh, model["materials"], _wall_tints, _roof_tints,
 			weather, surface_mats, _trim_tints)
-		# Named by the type itself (never capitalize()d: Task 6 override 4).
-		# Each type twice: near settlements cast shadows, the rest do not (refresh).
-		_instances[type] = Map3DHouseMaterials.multimesh_instance(type, drawn, true)
-		_far[type] = Map3DHouseMaterials.multimesh_instance(type + "__far", drawn, false)
-		add_child(_instances[type])  # no owner: never saved
-		add_child(_far[type])
+		_meshes[type] = drawn
 		_aabbs[type] = mesh.get_aabb()
+		_cull_aabbs[type] = _animated_bounds(drawn)
+
 
 
 ## Rebuild the instances for this camera position; true when it did. A move
@@ -175,12 +183,13 @@ func refresh(camera_xz: Vector2) -> bool:
 		return false
 	if not _built:
 		build()  # a caller that never called build() itself still gets one, ONCE
+	var houses := houses_override if not houses_override.is_empty() else ctx.houses()
+	var source_changed := not is_same(_pos_of, houses)
 	var step := ctx.repo.bal("map3d_house_rebuild_move_m")
-	if _built_at.is_finite() and _built_at.distance_to(camera_xz) < step:
+	if not source_changed and _built_at.is_finite() and _built_at.distance_to(camera_xz) < step:
 		return false
 	_built_at = camera_xz
-	var houses := houses_override if not houses_override.is_empty() else ctx.houses()
-	if not is_same(_pos_of, houses):
+	if source_changed:
 		_burg_pos = {}
 		for code: String in houses:
 			if ctx.repo.burgs.has(code):
@@ -188,6 +197,9 @@ func refresh(camera_xz: Vector2) -> bool:
 				_burg_pos[code] = ctx.to_world(Vector2(float(b["x"]), float(b["y"])))
 		_pos_of = houses
 		_chunks.clear()
+		for node: MultiMeshInstance3D in _instances.values() + _far.values(): node.hide(); node.queue_free()
+		_instances.clear(); _far.clear()
+		_selected_batches.clear()
 	var shown := Map3DHouses.visible_burgs(houses, _burg_pos, camera_xz,
 		ctx.repo.bal("map3d_house_view_m"), _budget())
 	# Only the settlements within map3d_house_shadow_m cast their shadows
@@ -198,34 +210,81 @@ func refresh(camera_xz: Vector2) -> bool:
 	var far := shown.filter(func(c: String) -> bool: return (_burg_pos[c] as Vector2).distance_to(camera_xz) > reach)
 	_transforms.clear()
 	_variants.clear()
-	for type: String in _instances:
+	for node: MultiMeshInstance3D in _selected_batches:
+		node.hide()
+	_selected_batches.clear()
+	for type: String in _meshes:
 		var xforms: Array[Transform3D] = []
 		var picks: Array[Vector2i] = []
-		_fill(_instances[type], type, near, houses, xforms, picks)
-		_fill(_far[type], type, far, houses, xforms, picks)
+		_fill(_instances, type, near, houses, xforms, picks, true)
+		_fill(_far, type, far, houses, xforms, picks, false)
 		_transforms[type] = xforms
 		_variants[type] = picks
 	if aprons: aprons.show_burgs(shown, houses, _aabbs)
 	return true
 
 
-## One MultiMesh filled with `codes`' houses of `type`, in that order; their
-## transforms and variants appended to `xforms` and `picks`. Each settlement's
-## houses of a type are packed ONCE (perf 2026-10-02: ~2,500 single-instance
-## calls a rebuild, ~3.7 ms a pan step); a rebuild joins the chunks.
-func _fill(mmi: MultiMeshInstance3D, type: String, codes: Array, houses: Dictionary,
-		xforms: Array[Transform3D], picks: Array[Vector2i]) -> void:
-	var buf := PackedFloat32Array()
-	var n := 0
-	for code: String in codes:
-		var chunk := _chunk(code, type, houses[code])
-		buf.append_array(chunk["buf"])
-		xforms.append_array(chunk["xf"])
+## Immutable settlement chunks retain transforms/tints and independent native culling.
+func _fill(book: Dictionary, type: String, codes: Array, houses: Dictionary,
+		xforms: Array[Transform3D], picks: Array[Vector2i], shadows: bool) -> void:
+	var chunks: Dictionary = {}
+	if ctx.distance > ctx.repo.bal("map3d_house_shadow_view_m") and codes.size() > 1:
+		# At distant zooms most clusters are visible: retain the original per-type batch.
+		var buffer := PackedFloat32Array()
+		var joined_transforms: Array = []
+		var joined_picks: Array = []
+		for code: String in codes:
+			var chunk := _chunk(code, type, houses[code])
+			buffer.append_array(chunk["buf"])
+			joined_transforms.append_array(chunk["xf"])
+			joined_picks.append_array(chunk["picks"])
+		chunks[""] = {"buf": buffer, "xf": joined_transforms, "picks": joined_picks}
+	else:
+		for code: String in codes: chunks[code] = _chunk(code, type, houses[code])
+	for code: String in chunks:
+		var chunk: Dictionary = chunks[code]
+		var transforms: Array = chunk["xf"]
+		if transforms.is_empty(): continue
+		var key := type + "|" + code
+		var created := not book.has(key)
+		if created:
+			var node := Map3DHouseMaterials.multimesh_instance(type + "__" + code + ("__far" if not shadows else ""), _meshes[type], shadows)
+			node.set_meta("house_type", type)
+			node.set_meta("burg_code", code)
+			add_child(node)
+			book[key] = node
+		var node: MultiMeshInstance3D = book[key]
+		if created or code == "":
+			node.multimesh.instance_count = transforms.size()
+			node.multimesh.buffer = chunk["buf"]
+			if code != "" or _cull_aabbs[type] != _aabbs[type]:
+				var bounds: AABB = transforms[0] * (_cull_aabbs[type] as AABB)
+				for t: Transform3D in transforms.slice(1): bounds = bounds.merge(t * (_cull_aabbs[type] as AABB))
+				node.custom_aabb = bounds
+		_selected_batches.append(node)
+		node.visible = _lod_shown
+		xforms.append_array(transforms)
 		picks.append_array(chunk["picks"])
-		n += (chunk["xf"] as Array).size()
-	mmi.multimesh.instance_count = n
-	if n > 0:
-		mmi.multimesh.buffer = buf
+
+
+## Any rotation stays inside this sphere; the authored heave expands it vertically too.
+func _animated_bounds(mesh: Mesh) -> AABB:
+	var bounds := mesh.get_aabb()
+	var moving := false
+	var heave := 0.0
+	for i: int in mesh.get_surface_count():
+		var mat := mesh.surface_get_material(i) as ShaderMaterial
+		if mat == null or mat.shader != Map3DHouseMaterials.HOUSE_SHADER: continue
+		var raw_on: Variant = mat.get_shader_parameter("bob_on")
+		if raw_on == null or float(raw_on) <= 0.0: continue
+		moving = true
+		var raw_heave: Variant = mat.get_shader_parameter("bob_heave_m")
+		if raw_heave == null: raw_heave = RenderingServer.shader_get_parameter_default(mat.shader.get_rid(), "bob_heave_m")
+		heave = maxf(heave, absf((float(raw_heave) if raw_heave != null else 0.0) * float(raw_on)))
+	if moving:
+		var radius := bounds.position.abs().max(bounds.end.abs()).length() + heave
+		bounds = AABB(Vector3.ONE * -radius, Vector3.ONE * radius * 2.0)
+	return bounds
 
 
 ## Each settlement's world XZ, kept for the houses dictionary `_pos_of`.
@@ -263,9 +322,8 @@ func _seat(h: Dictionary, type: String) -> Vector2:
 ## Instances per type, for the tests and the bench.
 func counts() -> Dictionary:
 	var out: Dictionary = {}
-	for type: String in _instances:
-		out[type] = (_instances[type] as MultiMeshInstance3D).multimesh.instance_count \
-			+ (_far[type] as MultiMeshInstance3D).multimesh.instance_count
+	for type: String in _meshes:
+		out[type] = (_transforms.get(type, []) as Array).size()
 	return out
 
 

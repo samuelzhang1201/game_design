@@ -9,6 +9,25 @@ const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
 
 
+class CountedSymbolView extends Map3DView:
+	var marker_calls := 0
+	var marks: Array = [{"code": "sample", "pos": Vector2(25, 25), "rect": Rect2(20, 20, 10, 10)}]
+	func army_markers() -> Array:
+		marker_calls += 1
+		return marks
+	func unit_rects() -> Dictionary:
+		var out: Dictionary = {}
+		for marker: Dictionary in army_markers(): out[marker["code"]] = marker["rect"]
+		return out
+
+
+class NoGroundContext extends Map3DContext:
+	var ground_calls := 0
+	func ground_at(_pos: Vector2) -> Variant:
+		ground_calls += 1
+		return null
+
+
 func before_all() -> void:
 	Game.start_campaign(42)
 	var root := Node3D.new()
@@ -91,7 +110,11 @@ func test_a_town_is_still_clickable_with_no_dot_shown_in_the_no_dot_gap() -> voi
 	var ctx := v.context()
 	var min_m := Map3DGeometry.settlement_dot_min_view_m(Game.data, ctx.meta, ctx.view_size.y)
 	assert_gt(min_m, house_m, "the fixture's no-dot gap must be non-empty")
-	var probe := (house_m + min_m) * 0.5
+	var ring_m := float(Game.data.map3d_settlements[String(burg["group"])]["max_view_m"]) * Map3DLayerSettlements.fade_start()
+	var far_m := minf(min_m, ring_m)
+	assert_gt(far_m, house_m, "the invisible-dot probe remains inside the town's pickable range")
+	var probe := (house_m + far_m) * 0.5
+	assert_lt(probe, min_m)
 	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])), probe)
 	assert_eq(v.pick_at(v.size * 0.5), {"kind": "burg", "code": code})
 
@@ -101,6 +124,7 @@ func test_a_town_is_still_clickable_with_no_dot_shown_in_the_no_dot_gap() -> voi
 ## the settlements again. His real rect, laid over the capital's own point.
 func test_a_waiting_courier_yields_the_click_to_the_town_under_him() -> void:
 	var v := _view()
+	v.set_military(false)  # this comparison is courier versus town; symbol picking has its own test
 	var code := ""
 	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if CourierSystem.carries_orders(r):
@@ -128,3 +152,43 @@ func test_a_waiting_courier_yields_the_click_to_the_town_under_him() -> void:
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()
+
+
+func test_one_symbol_pick_reads_marker_geometry_once() -> void:
+	var real_view := _view()
+	var counted := CountedSymbolView.new()
+	autofree(counted)
+	counted.unit_symbol_mode = true
+	var picker := real_view.component("picker") as Map3DPicker
+	picker.view = counted
+	var result := picker.pick_at(real_view.size * 0.5)
+	assert_eq(counted.marker_calls, 1, "one hover reuses the same admitted marker geometry")
+	assert_eq(String(result.get("kind", "")), "burg")
+
+
+func test_overlapping_symbols_pick_the_top_painted_unit_on_land_and_off_terrain() -> void:
+	var real_view := _view()
+	var at := real_view.size * 0.5
+	assert_not_null(real_view.context().ground_at(at), "first probe is over terrain")
+	var counted := CountedSymbolView.new()
+	autofree(counted)
+	counted.unit_symbol_mode = true
+	counted.marks = [
+		{"code": "covered", "pos": at, "rect": Rect2(at - Vector2(10, 10), Vector2(20, 20))},
+		{"code": "top", "pos": at, "rect": Rect2(at - Vector2(5, 5), Vector2(20, 20))},
+	]
+	var picker := real_view.component("picker") as Map3DPicker
+	picker.view = counted
+	assert_eq(picker.pick_at(at), {"kind": "army", "code": "top"}, "later ink covers earlier ink")
+	assert_eq(counted.marker_calls, 1, "overlap resolution reads geometry only once")
+	var sky := NoGroundContext.new(Game.data, WORLD)
+	assert_null(sky.ground_at(at))
+	sky.ground_calls = 0
+	picker.ctx = sky
+	counted.marker_calls = 0
+	assert_eq(picker.pick_at(at), {"kind": "army", "code": "top"}, "visible ink remains pickable off terrain")
+	assert_eq(counted.marker_calls, 1)
+	assert_eq(sky.ground_calls, 0, "symbol hit precedes terrain lookup")
+	assert_eq(counted.marks[0]["code"], "covered", "picking must not reorder the paint list")
+	picker.ctx = real_view.context()
+	picker.view = real_view

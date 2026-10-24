@@ -50,6 +50,47 @@ func test_deterministic() -> void:
 		Map3DDeclutter.place(boxes, [false, false, false], [], 3.0, 60.0))
 
 
+func _naive_least_overlap(box: Rect2, obstacles: Array[Rect2], offsets: Array) -> Vector2:
+	var best := Vector2.ZERO
+	var score := INF
+	for offset: Vector2 in offsets:
+		var moved := Rect2(box.position + offset, box.size)
+		var area := 0.0
+		for obstacle: Rect2 in obstacles:
+			if moved.intersects(obstacle): area += moved.intersection(obstacle).get_area()
+		if area < score:
+			score = area
+			best = offset
+	return best
+
+
+func test_crowded_fallback_keeps_exact_naive_offset_and_tie_order() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 714
+	for step: float in [0.5, 2.0, 2.3, 4.0]:
+		var offsets := Map3DDeclutter.spiral(step, step * 7)
+		for sample: int in 20:
+			var box := Rect2(Vector2(rng.randf_range(-5, 5), rng.randf_range(-5, 5)), Vector2(8.25, 6.5))
+			var obstacles: Array[Rect2] = [Rect2(-100, -100, 200, 200)]
+			for i: int in 12:
+				obstacles.append(Rect2(Vector2(rng.randf_range(-30, 30), rng.randf_range(-30, 30)), Vector2(rng.randf_range(1, 20), rng.randf_range(1, 20))))
+			assert_eq(Map3DDeclutter._least_covered(box, obstacles, offsets), _naive_least_overlap(box, obstacles, offsets))
+	assert_eq(Map3DDeclutter._least_covered(Rect2(0,0,10,10), [Rect2(-100,-100,200,200)], [Vector2.ZERO]), Vector2.ZERO)
+	assert_eq(Map3DDeclutter._least_covered(Rect2(0,0,2,2), [Rect2(-10,-10,20,20), Rect2(0,0,2,2)], Map3DDeclutter.spiral(1,1)), Vector2(1,-1), "diagonal overlap is 4+1; cardinal is 4+2, home is 4+4")
+
+
+func test_first_clear_retains_subpixel_edges_across_the_lattice() -> void:
+	var box := Rect2(0.25, 0.125, 30, 24)
+	for edge: float in [92.0, 96.0, 100.0]:
+		var obstacles: Array[Rect2] = [Rect2(-1000, -1000, 1000 + edge, 2000)]
+		var offsets := Map3DDeclutter.spiral(4, 160)
+		assert_eq(Map3DDeclutter._first_clear(box, obstacles, offsets, Callable()), Vector2(edge, 0))
+		assert_eq(Map3DDeclutter._first_clear(box, obstacles, offsets, Callable()), _walk(box, obstacles, 4, 160))
+	for step: float in [0.5, 2.3, 4.0]:
+		var obstacles: Array[Rect2] = [box, Rect2(-5.375, -30.625, 20.125, 50.875)]
+		assert_eq(Map3DDeclutter._first_clear(box, obstacles, Map3DDeclutter.spiral(step, step * 40), Callable()), _walk(box, obstacles, step, step * 40))
+
+
 ## Every unit of the crown stacked on one screen point: each keeps its own
 ## counter, none covers another, and the selected one stays on its point.
 func test_counters_on_one_point_spread_and_the_selected_stays_home() -> void:

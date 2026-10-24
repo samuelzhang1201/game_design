@@ -162,6 +162,15 @@ func piece(piece_name: String) -> Map3DHudPiece:
 	return get_node_or_null(piece_name) as Map3DHudPiece
 
 
+func apply_military_mode(symbols: bool, military: bool, immediate: bool) -> void:
+	var legend := get_node_or_null("LegendScroll/MilitaryLegend") as Map3DMilitaryLegend
+	if legend != null:
+		var shown := symbols and military and legend.symbols != null
+		if immediate or legend.visible != shown: legend.apply_mode(symbols, military)
+	if not symbols or not military: (piece("Armies") as Map3DHudArmies).clear_symbols()
+	if immediate: _redraw()  # mode transitions bypass the tier's HUD throttle
+
+
 ## Whether the wheel's art is in (the needle draws a ring without it).
 func has_compass_art() -> bool:
 	return _compass != null and _compass.has_art()

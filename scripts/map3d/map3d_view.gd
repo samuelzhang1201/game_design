@@ -11,8 +11,7 @@ signal province_selected(province_code: String)
 ## The kingdom under the pointer, "" off the land — WorldMapView's signal:
 ## the screens put that country's card in the left column (owner 2026-09-18).
 signal country_hovered(kingdom_code: String)
-## A right CLICK (not a turn) on one of the player's regiments: ArmyOrderMenu
-## opens over it. `at` is design px in this view.
+## Right-click requests a regiment’s order menu; `at` is local design px.
 signal army_menu_requested(code: String, at: Vector2)
 signal king_menu_requested(at: Vector2)
 ## Where on the pack a left click landed — an order being AIMED needs the
@@ -45,9 +44,7 @@ const CLICK_SLOP := Map3DInput.CLICK_SLOP
 const TOOLTIP_OFFSET := Map3DPicker.TOOLTIP_OFFSET
 const FIELD_MAP_M_PER_TEXEL := Map3DLayerThemes.FIELD_MAP_M_PER_TEXEL
 
-## The 3D nodes are the WORLD's scene (Map3DWorld, owner 2026-10-02), opened
-## on its own in the editor's 3D view; its preview switches are the world's.
-
+## The 3D nodes and their preview switches belong to the authored Map3DWorld scene.
 var _repo: DataRepository
 var _scene_path := ""
 @onready var _viewport: SubViewport = $Viewport
@@ -91,9 +88,9 @@ var _tried := false
 var _step := 0  # the load's steps taken (load_step)
 var _hovered := false
 var _border_clock := 0.0
-## The regiments (owner 2026-09-19; always on since 2026-09-27, when the
-## MILITARY tab went): whether the pieces and counters show.
+## Whether military models, symbols and counters show.
 var _military := true
+var unit_symbol_mode := false  ## Sole presentation mode; never serialized.
 ## DEV MODE (owner 2026-09-27): every realm's regiments, set from the pause menu.
 var _dev := false
 ## The graphics tier worn ("" until the first load resolves one), overrides over it.
@@ -109,8 +106,7 @@ static func scene_path_for(map_id: String) -> String:
 ## Whether `map_id`'s 3D world has been built (tools/map3d; git-ignored).
 static func has_scene(map_id: String) -> bool: return ResourceLoader.exists(scene_path_for(map_id))
 
-## Test seam: the world every view made from here on opens in place of the
-## pack's build ("" the build) — GameRoot's tests open the empty fixture world.
+## Test seam: substitute an empty fixture world; "" uses the pack build.
 static var world_override := ""
 ## A view of `repo`'s map, instanced from VIEW_SCENE; `scene_path` is a test seam.
 static func create(repo: DataRepository, scene_path: String = "") -> Map3DView:
@@ -120,9 +116,7 @@ static func create(repo: DataRepository, scene_path: String = "") -> Map3DView:
 	v._scene_path = scene_path if scene_path != "" else (world_override if world_override != "" else scene_path_for(repo.map_id))
 	return v
 
-## THE map of a screen (the 2D map was deleted 2026-09-24): made once in the
-## screen's _ready, put in `panel` and wired to its `detail`, `country` and
-## `orders` and to `on_hover`; it loads the built world on its first activate().
+## Attach a reusable map and forward card, country, order and hover signals.
 static func attach(panel: Control, detail: MapDetailPanel = null, country: CountryPanel = null,
 		on_hover: Callable = Callable(), orders: ArmyOrderMenu = null, given: Map3DView = null) -> Map3DView:
 	var view := given if given != null else Map3DView.create(Game.data)  # given: the title's, already loaded
@@ -245,13 +239,14 @@ func _load_world() -> bool:
 	_markers.bind(_ctx)
 	_houses.bind(_ctx)
 	_ctx.dev = _dev
+	_ctx.camera_moved.connect(_sync_unit_mode)
 	_units.bind(_ctx)
 	_king.bind(_ctx)
 	apply_snapshot(_snapshot)
 	apply_battle_snapshot(_battle_snapshot)
 	_dust.bind(_ctx)  # the dust the columns raise (owner 2026-10-07)
 	_couriers.bind(_ctx)
-	_units.set_shown(_military)
+	_sync_unit_mode()
 	_ctx.settle_ground()
 	_markers.build()
 	return true
@@ -289,6 +284,7 @@ func release_world() -> void:
 	if _world != null:
 		deactivate()
 		_loaded = false
+		_sync_unit_mode(true)
 		Map3DWorldCache.give_back(_scene_path, _world)
 		_world = null
 
@@ -428,6 +424,13 @@ func request_hover(pos: Vector2) -> void: _picker.request(pos)
 
 func refresh_hud() -> void:  # the selection changed: the HUD and the pieces' glow follow it
 	if _loaded: _units.set_selected(_selection.armies); _hud.refresh()
+func _sync_unit_mode(force: bool = false) -> void:
+	if _ctx == null: return
+	var next := Map3DUnits.symbol_mode(unit_symbol_mode, _ctx.distance, _repo.bal("map3d_unit_symbol_enter_m"), _repo.bal("map3d_unit_symbol_leave_m"))
+	var changed := next != unit_symbol_mode
+	unit_symbol_mode = next
+	if _units.shown != (_military and not next): _units.set_shown(_military and not next)
+	_hud.apply_military_mode(next, _military and _loaded, changed or force)
 
 func compass_rect() -> Rect2: return _hud.compass_rect() if _loaded else Rect2()
 
@@ -454,22 +457,20 @@ func heat_legend_rect() -> Rect2:
 func heat_legend_ticks() -> Array:
 	return (_hud.piece("HeatLegend") as Map3DHudHeatLegend).ticks() if _loaded else []
 
-# --- MILITARY (owner 2026-09-19) ---------------------------------------------------
-## The player's regiments as counters — GameRoot hands it down with the tab.
+## Toggle the military presentation together.
 func set_military(on: bool) -> void:
 	_military = on
 	if not on and _selection.army != "":
 		_selection.clear()
 	if _loaded:
-		_units.set_shown(on)
-		_hud.refresh()
+		_sync_unit_mode(true)
 
 func unit_has_piece(code: String) -> bool: return _units.has_piece(code) if _loaded else false  # MILITARY's pieces
-func unit_positions() -> Dictionary: return _units.shown_positions() if _loaded else {}
+func unit_positions() -> Dictionary: return (_units.symbol_positions() if unit_symbol_mode else _units.shown_positions()) if _loaded else {}
 func unit_pack_positions() -> Dictionary:  # the WAR ROOM's pieces (Map3DGeometry.world_to_pack_all)
 	if _loaded: _units.step(0.0)
-	return Map3DGeometry.world_to_pack_all(_meta, _units.shown_positions()) if _loaded else {}
-func unit_rects() -> Dictionary: return _units.screen_rects() if _loaded else {}
+	return Map3DGeometry.world_to_pack_all(_meta, unit_positions())
+func unit_rects() -> Dictionary: return (_hud.piece("Armies") as Map3DHudArmies).hit_rects(_units.screen_rects()) if _loaded else {}
 func unit_count() -> int: return _units.drawn_count() if _loaded else 0
 func unit_moves() -> int: return _units.moves() if _loaded else 0
 func courier_rects() -> Dictionary: return _couriers.screen_rects() if _loaded else {}

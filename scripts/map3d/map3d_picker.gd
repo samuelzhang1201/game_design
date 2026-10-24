@@ -49,6 +49,13 @@ func bind(p_ctx: Map3DContext, p_view: Map3DView, p_tooltip: Label,
 func pick_at(pos: Vector2) -> Dictionary:
 	if view.king_rect().has_point(pos) and view.king_rect().has_area():
 		return {"kind": "king"}
+	var armies: Array = []
+	if view.unit_symbol_mode:
+		armies = view.army_markers()
+		# A displaced ink mark is clicked where it is drawn, even over sky or a town centre.
+		for i: int in range(armies.size() - 1, -1, -1):
+			var marker: Dictionary = armies[i]  # later ink is painted on top
+			if (marker["rect"] as Rect2).has_point(pos): return _army_pick(marker)
 	var hit: Variant = ctx.ground_at(pos)
 	if hit == null:
 		return {}
@@ -72,12 +79,17 @@ func pick_at(pos: Vector2) -> Dictionary:
 	# the piece whose box holds the click (the nearest centre among several);
 	# far out a piece is a few px, so then one within map_army_pick_px of it.
 	# A badge is drawn OVER the pieces, so a click on one is never a piece's.
-	var rects: Dictionary = {} if on_badge else view.unit_rects()
+	var rects: Dictionary = {}
+	if view.unit_symbol_mode:
+		if not on_badge:
+			for marker: Dictionary in armies: rects[String(marker["code"])] = marker["rect"]
+	else:
+		armies = view.army_markers()
+		if not on_badge: rects = view.unit_rects()
 	var piece := _nearest_piece(rects, pos, 0.0)
 	if piece != "" and (rects[piece] as Rect2).get_center().distance_to(pos) < town_d:
 		return {"kind": "army", "code": piece}
 	var reach := ctx.repo.bal("map_army_pick_px")
-	var armies := view.army_markers()
 	for i in range(armies.size() - 1, -1, -1):
 		var box := armies[i]["rect"] as Rect2
 		if box.has_point(pos) and box.get_center().distance_to(pos) < town_d:

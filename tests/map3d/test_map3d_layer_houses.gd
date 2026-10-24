@@ -1,5 +1,5 @@
 extends GutTest
-## Map3DLayerHouses: one MultiMesh per type, rebuilt only when the camera
+## Map3DLayerHouses: independent settlement/type batches, rebuilt only when the camera
 ## moves far enough (spec 2026-09-20 §3).
 
 const RunDir := preload("res://tests/run_dir.gd")
@@ -38,7 +38,7 @@ func before_each() -> void:
 	_layer.bind(_ctx)
 
 
-func test_one_multimesh_per_type_present() -> void:
+func test_each_type_keeps_its_total_count() -> void:
 	_layer.refresh(_home())
 	var counts := _layer.counts()
 	assert_eq(counts.get("chapel", 0), 1)
@@ -86,7 +86,7 @@ func test_instances_carry_their_yaw_and_scale() -> void:
 	# returns "Cottage A" (capitalize() turns an underscore into a space), not
 	# "Cottage_a" — verified against a headless Godot run. The layer names its
 	# nodes after the raw _csv type instead, so the lookup here follows suit.
-	var mmi := _layer.get_node_or_null("cottage_a") as MultiMeshInstance3D
+	var mmi := (_drawn_batches("cottage_a", true) + _drawn_batches("cottage_a", false))[0] as MultiMeshInstance3D
 	assert_not_null(mmi)
 	# Second deviation, same test: read the Transform3D refresh() itself
 	# computed and handed to set_instance_transform (transforms_of()) rather
@@ -204,15 +204,15 @@ func test_no_foundation_box_is_laid() -> void:
 func test_only_a_near_settlement_casts_shadows() -> void:
 	var at := _home()
 	_layer.refresh(at)
-	var near: MultiMeshInstance3D = _layer._instances["chapel"]
-	var far: MultiMeshInstance3D = _layer._far["chapel"]
+	var near: MultiMeshInstance3D = _drawn_batches("chapel", true)[0]
+	assert_true(_drawn_batches("chapel", false).is_empty())
 	assert_eq(near.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
-	assert_eq(far.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
 	assert_eq(near.multimesh.instance_count, 1, "at the camera: it casts")
-	assert_eq(far.multimesh.instance_count, 0)
 	var off := Game.data.bal("map3d_house_shadow_m") + 500.0
 	_layer.refresh(at + Vector2(off, 0.0))
-	assert_eq(near.multimesh.instance_count, 0)
+	assert_false(near.visible)
+	var far: MultiMeshInstance3D = _drawn_batches("chapel", false)[0]
+	assert_eq(far.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
 	assert_eq(far.multimesh.instance_count, 1, "beyond the shadow reach: drawn, no shadow")
 	assert_eq(_layer.counts().get("chapel", 0), 1, "counted as one type either way")
 	assert_eq(_layer.transforms_of("chapel").size(), 1)
@@ -222,8 +222,8 @@ func test_only_a_near_settlement_casts_shadows() -> void:
 func test_far_out_no_house_casts() -> void:
 	_ctx.distance = Game.data.bal("map3d_house_shadow_view_m") + 1000.0
 	_layer.refresh(_home())
-	assert_eq((_layer._instances["chapel"] as MultiMeshInstance3D).multimesh.instance_count, 0)
-	assert_eq((_layer._far["chapel"] as MultiMeshInstance3D).multimesh.instance_count, 1, "drawn, unshadowed")
+	assert_true(_drawn_batches("chapel", true).is_empty())
+	assert_eq((_drawn_batches("chapel", false)[0] as MultiMeshInstance3D).multimesh.instance_count, 1, "drawn, unshadowed")
 
 
 ## Owner 2026-09-25 (颜色可以多样化一点，主色调不变): every house wears one of
@@ -298,3 +298,138 @@ func test_a_pier_and_a_ship_are_seated_on_the_sea_not_the_ground() -> void:
 		sea + Game.data.bal("map3d_pier_deck_m"), 0.001, "the pier's deck stands over the sea")
 	assert_almost_eq((_layer.transforms_of("cog")[0] as Transform3D).origin.y, sea, 0.001,
 		"the ship's waterline is the sea's level")
+
+
+func test_separate_settlements_keep_independent_native_culling_bounds() -> void:
+	var first: String = _layer.houses_override.keys()[0]
+	var at := _home()
+	var second := ""
+	var farthest := 0.0
+	var limit := Game.data.bal("map3d_house_view_m") - Game.data.bal("map3d_house_rebuild_move_m") * 2.0
+	for code: String in Game.data.burgs:
+		var b: Dictionary = Game.data.burgs[code]
+		var point := _ctx.to_world(Vector2(float(b["x"]), float(b["y"])))
+		var distance := point.distance_to(at)
+		if code != first and distance < limit and distance > farthest:
+			second = code
+			farthest = distance
+	assert_ne(second, "", "the pack has another settlement inside the unchanged range")
+	if second == "": return
+	var other: Dictionary = _layer.houses_override[first][0].duplicate(true)
+	var burg: Dictionary = Game.data.burgs[second]
+	other["at"] = _ctx.to_world(Vector2(float(burg["x"]), float(burg["y"])))
+	_layer.houses_override[second] = [other]
+	_layer.refresh(at)
+	var batches: Array = _layer.get_children().filter(func(n: Node) -> bool: return n.get_meta("house_type", "") == "chapel")
+	assert_eq(batches.size(), 2, "distant clusters cannot share one giant culling box")
+	assert_eq(_layer.counts()["chapel"], 2, "no house is dropped")
+	for node: MultiMeshInstance3D in batches:
+		assert_eq(node.multimesh.instance_count, 1)
+		var enclosed := 0
+		for t: Transform3D in _layer.transforms_of("chapel"):
+			if node.custom_aabb.has_point(t * (_layer._aabbs["chapel"] as AABB).get_center()): enclosed += 1
+		assert_eq(enclosed, 1, "each native bound contains its own house, without spanning the other settlement")
+		assert_lt(node.custom_aabb.size.x, farthest)
+	var identities := batches.duplicate()
+	_layer.refresh(at + Vector2(Game.data.bal("map3d_house_rebuild_move_m") * 1.5, 0))
+	for node: MultiMeshInstance3D in identities: assert_true(_layer.get_children().has(node), "a camera rebuild reuses immutable chunks")
+	var transforms := _layer.transforms_of("chapel").duplicate()
+	var variants := _layer.variants_of("chapel").duplicate()
+	_ctx.target = at
+	_ctx.distance = Game.data.bal("map3d_house_shadow_view_m") + 1.0
+	_layer._on_camera_moved()
+	assert_eq(_drawn_batches("chapel", false).size(), 1, "far zoom retains batching when the clusters share the screen")
+	assert_eq((_drawn_batches("chapel", false)[0] as MultiMeshInstance3D).custom_aabb, AABB(), "ordinary far batches retain native buffer bounds")
+	assert_eq(_layer.transforms_of("chapel"), transforms)
+	assert_eq(_layer.variants_of("chapel"), variants)
+	assert_eq(_layer.counts()["chapel"], 2)
+	_ctx.distance = 0.0
+	_layer._on_camera_moved()
+	assert_eq((_drawn_batches("chapel", true) + _drawn_batches("chapel", false)).size(), 2, "near zoom restores independently culled chunks")
+
+
+func _drawn_batches(type: String, shadowed: bool) -> Array:
+	var book: Dictionary = _layer._instances if shadowed else _layer._far
+	return book.values().filter(func(n: MultiMeshInstance3D) -> bool: return n.visible and n.get_meta("house_type", "") == type)
+
+
+func test_ship_culling_bounds_include_authored_rotation_and_heave() -> void:
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(2, 4, 6)
+	var mat := ShaderMaterial.new()
+	mat.shader = Map3DHouseMaterials.HOUSE_SHADER
+	mesh.material = mat
+	assert_eq(_layer._animated_bounds(mesh), mesh.get_aabb(), "an ordinary house keeps its exact mesh bounds")
+	mat.set_shader_parameter("bob_on", 1.0)
+	mat.set_shader_parameter("bob_heave_m", 2.0)
+	var bounds := _layer._animated_bounds(mesh)
+	for x: float in [-1.0, 1.0]:
+		for y: float in [-2.0, 2.0]:
+			for z: float in [-3.0, 3.0]:
+				for angle: float in [0.0, PI * 0.5, PI, PI * 1.5]:
+					for heave: float in [-2.0, 2.0]:
+						var point := Basis.from_euler(Vector3(angle, 0, angle)) * Vector3(x, y, z) + Vector3.UP * heave
+						assert_true(bounds.has_point(point), "shader motion cannot leave a batch's native bound")
+
+
+func test_ship_rotation_bounds_include_asymmetric_mesh_corners() -> void:
+	var mesh := ArrayMesh.new()
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3(-200, -1, 200), Vector3(0, 1, 0), Vector3.ZERO])
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var mat := ShaderMaterial.new()
+	mat.shader = Map3DHouseMaterials.HOUSE_SHADER
+	mat.set_shader_parameter("bob_on", 1.0)
+	mat.set_shader_parameter("bob_heave_m", 0.0)
+	mesh.surface_set_material(0, mat)
+	var bounds := _layer._animated_bounds(mesh)
+	var corner := Vector3(-200, -1, 200)
+	var rotated := Basis(Vector3.UP, PI * 0.25) * corner
+	assert_true(bounds.has_point(rotated), "a mixed-sign far corner must fit after shader rotation")
+
+
+func test_hidden_chunks_do_not_reappear_on_a_camera_signal_and_source_change_releases_them() -> void:
+	_layer.refresh(_home())
+	var old := _layer.get_children().duplicate()
+	_ctx.target = Vector2(500000, 500000)
+	_layer.refresh(_ctx.target)
+	_layer._on_camera_moved()
+	for node: MultiMeshInstance3D in old: assert_false(node.visible)
+	_layer.houses_override = _layer.houses_override.duplicate(true)
+	_layer.refresh(_home())
+	for node: MultiMeshInstance3D in old: assert_true(node.is_queued_for_deletion(), "a new source cannot retain stale buffers")
+	var rebuilt := _layer.get_children().filter(func(n: Node) -> bool: return not n.is_queued_for_deletion())
+	var references: Array = rebuilt.map(func(n: Node) -> WeakRef: return weakref(n))
+	_layer.build()
+	for reference: WeakRef in references:
+		var node := reference.get_ref() as Node
+		assert_true(node == null or node.is_queued_for_deletion(), "preview rebuild clears generated batches")
+
+
+func test_lod_transitions_restore_only_the_selected_cached_batches() -> void:
+	_ctx.target = _home()
+	_layer.refresh(_ctx.target)
+	_ctx.distance = Game.data.bal("map3d_lod_houses_m") + 1.0
+	_layer._on_camera_moved()
+	for node: MultiMeshInstance3D in _layer.get_children(): assert_false(node.visible)
+	_ctx.distance = Game.data.bal("map3d_lod_houses_m") - Game.data.bal("map3d_lod_margin_m") - 1.0
+	_layer._on_camera_moved()
+	assert_eq(_layer.counts()["chapel"], 1)
+	for i: int in 3:
+		_layer._on_camera_moved()
+		assert_eq((_drawn_batches("chapel", true) + _drawn_batches("chapel", false)).size(), 1)
+
+
+func test_replacing_house_source_refreshes_even_without_camera_movement() -> void:
+	var at := _home()
+	_layer.refresh(at)
+	var old := _layer.get_children().duplicate()
+	var source := _layer.houses_override.duplicate(true)
+	for code: String in source:
+		source[code] = (source[code] as Array).filter(func(h: Dictionary) -> bool: return h["type"] != "cottage_a")
+	_layer.houses_override = source
+	assert_true(_layer.refresh(at), "source identity invalidates the movement-only guard")
+	assert_eq(_layer.counts()["cottage_a"], 0)
+	assert_eq(_layer.counts()["chapel"], 1)
+	for node: MultiMeshInstance3D in old: assert_true(node.is_queued_for_deletion())

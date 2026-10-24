@@ -1,12 +1,12 @@
 [gd_scene format=3 uid="uid://b8ikn50ruc80b"]
 
-[ext_resource type="Script" path="res://scripts/map3d/map3d_hud_manor_bars.gd" id="41_hbars"]
 [ext_resource type="Script" uid="uid://bbxuiv7nornlk" path="res://scripts/map3d/map3d_view.gd" id="1_ck3bs"]
 [ext_resource type="PackedScene" uid="uid://bq8iccp67dqf8" path="res://scenes/map3d/map3d_world.tscn" id="2_nceau"]
 [ext_resource type="Script" uid="uid://be5qi7kf6i0fy" path="res://scripts/map3d/map3d_hud.gd" id="7_3vvdf"]
 [ext_resource type="Script" uid="uid://b405afs5pa6ut" path="res://scripts/map3d/map3d_hud_labels.gd" id="8_7g25l"]
 [ext_resource type="Script" uid="uid://bgwpo33vkfjjo" path="res://scripts/map3d/map3d_hud_landmarks.gd" id="9_h26ti"]
 [ext_resource type="Script" uid="uid://di4wc0jkj6o4u" path="res://scripts/map3d/map3d_hud_heat_legend.gd" id="10_kdwdj"]
+[ext_resource type="Resource" uid="uid://bhatkc4k8ydku" path="res://assets/2D/ui/military/unit_symbols.tres" id="10_wti7n"]
 [ext_resource type="Script" uid="uid://d17t5xkpku5bw" path="res://scripts/map3d/map3d_hud_badges.gd" id="11_jhdww"]
 [ext_resource type="Script" uid="uid://bk62itfbf2i7t" path="res://scripts/map3d/map3d_hud_armies.gd" id="12_2v84w"]
 [ext_resource type="Script" uid="uid://deuj4qveun3qh" path="res://scripts/map3d/map3d_hud_backdrop.gd" id="13_hgoyr"]
@@ -14,11 +14,25 @@
 [ext_resource type="Script" uid="uid://cmmbyhsi3kxcj" path="res://scripts/map3d/map3d_hud_ruler.gd" id="15_ebs35"]
 [ext_resource type="Script" uid="uid://kumuxikla7vf" path="res://scripts/ui/compass_layer.gd" id="16_nceau"]
 [ext_resource type="Script" uid="uid://bula280a44q8l" path="res://scripts/map3d/map3d_hud_needle.gd" id="17_geqxk"]
+[ext_resource type="Script" uid="uid://1pwop5dvmt3r" path="res://scripts/map3d/map3d_military_legend.gd" id="17_rbqyb"]
 [ext_resource type="StyleBox" uid="uid://btdf8fw324b5o" path="res://scenes/map3d/tooltip_chip.tres" id="19_rbqyb"]
+[ext_resource type="Script" uid="uid://bbrtcdkjqxtph" path="res://scripts/map3d/map3d_hud_manor_bars.gd" id="41_hbars"]
 [ext_resource type="Script" uid="uid://cttpjgjyaek8" path="res://scripts/map3d/map3d_hud_couriers.gd" id="42_hcou"]
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_au2na"]
 viewport_path = NodePath("Viewport")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mtfpr"]
+bg_color = Color(0.9, 0.84, 0.71, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.56078434, 0.4745098, 0.32156864, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
 
 [node name="Map3DView" type="Control" unique_id=915010041]
 clip_contents = true
@@ -104,7 +118,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("10_kdwdj")
 
-[node name="ManorBars" type="Control" parent="Hud"]
+[node name="ManorBars" type="Control" parent="Hud" unique_id=1895261603]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -133,6 +147,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("12_2v84w")
+symbols = ExtResource("10_wti7n")
 
 [node name="Couriers" type="Control" parent="Hud" unique_id=271828182]
 layout_mode = 1
@@ -179,6 +194,31 @@ script = ExtResource("16_nceau")
 
 [node name="Needle" type="Node2D" parent="Hud" unique_id=1778557338]
 script = ExtResource("17_geqxk")
+
+[node name="LegendScroll" type="ScrollContainer" parent="Hud" unique_id=1293145898]
+visible = false
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -220.0
+offset_top = 84.0
+offset_right = -14.0
+offset_bottom = -32.0
+horizontal_scroll_mode = 0
+
+[node name="MilitaryLegend" type="Control" parent="Hud/LegendScroll" unique_id=378466767]
+visible = false
+custom_minimum_size = Vector2(206, 230)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("17_rbqyb")
+symbols = ExtResource("10_wti7n")
+row_size = Vector2(206, 23)
+icon_size = Vector2(25, 17)
+text_offset = Vector2(44, 16)
+panel = SubResource("StyleBoxFlat_mtfpr")
+text_ink = Color(0.28627452, 0.23137255, 0.16862746, 1)
 
 [node name="Tooltip" type="Label" parent="." unique_id=1013388888]
 visible = false
