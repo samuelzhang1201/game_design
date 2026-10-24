@@ -23,4 +23,4 @@ CI run / commit:
 
 Review outcome and remaining risks:
 
-The Review session handles in-scope fixes and merges after all required current-HEAD checks pass. It then hands off to at most one authorized next implementation session. Pending/failing/timed-out required checks do not permit merge.
+Implementation makes all changes and fixes. Review only reviews, returns findings to the original implementation session, re-reviews the resulting HEAD and merges after all required current-HEAD checks pass. Repeat within the same pair as needed; Review never edits the PR. Pending/failing/timed-out required checks do not permit merge.

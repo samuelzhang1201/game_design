@@ -98,7 +98,7 @@ class HandoverHookTests(unittest.TestCase):
         self.assertEqual(self.handoff(**pair), {})
         pair.update(step_id='P5.3',pr_url='https://github.com/example/repo/pull/2')
         self.assertEqual(self.handoff(**pair)['decision'], 'block')
-        self.assertEqual(self.handoff(), {})
+        self.assertEqual(self.handoff()['decision'], 'block')
     def test_feature_pair_cannot_gain_a_third_owner(self):
         pair = dict(step_id='P5.2',pr_url='https://github.com/example/repo/pull/1',
                     implementation_session_id='old',review_session_id='new')
@@ -109,11 +109,32 @@ class HandoverHookTests(unittest.TestCase):
         pair = dict(step_id='P5.2',pr_url='https://github.com/example/repo/pull/1',
                     implementation_session_id='old',review_session_id='review')
         self.assertEqual(self.handoff(target='third',**pair)['decision'], 'block')
-    def test_review_can_handoff_to_the_next_independent_step(self):
+    def test_review_cannot_add_a_third_recipient(self):
         pair = dict(step_id='P5.2',pr_url='https://github.com/example/repo/pull/1',
                     implementation_session_id='old',review_session_id='new')
         self.assertEqual(self.handoff(**pair), {})
-        self.assertEqual(self.handoff(source='new',target='next-step',**pair), {})
+        self.assertEqual(self.handoff(source='new',target='next-step',**pair)['decision'], 'block')
+    def test_fixed_pair_can_repeat_review_fix_rounds(self):
+        pair = dict(kind='pr_handoff', step_id='a', pr_url='https://example.com/pull/1',
+                    implementation_session_id='old', review_session_id='new')
+        for _ in range(3):
+            self.assertEqual(self.handoff(**pair), {})
+            self.assertEqual(self.handoff('new', 'old', **pair), {})
+        graph = json.loads(hook.registry_path(self.root).read_text())
+        self.assertEqual(graph['edges'], {})
+        self.assertEqual(len(graph['prs']), 1)
+        self.assertEqual(self.handoff('old', 'old', **pair)['decision'], 'block')
+        self.assertEqual(self.handoff('third', 'old', **pair)['decision'], 'block')
+
+    def test_legacy_pair_can_upgrade_to_roundtrips_without_rewriting_edges(self):
+        self.assertEqual(self.handoff(), {})
+        pair = dict(kind='pr_handoff', step_id='a', pr_url='https://example.com/pull/1',
+                    implementation_session_id='old', review_session_id='new')
+        self.assertEqual(self.handoff(**pair), {})
+        self.assertEqual(self.handoff('new', 'old', **pair), {})
+        graph = json.loads(hook.registry_path(self.root).read_text())
+        self.assertEqual(graph['edges'], {'old': 'new'})
+
     def test_shared_registry_prevents_conflicts_between_worktrees(self):
         with patch.object(hook, 'registry_path', return_value=self.root/'shared.json'):
             self.assertEqual(self.handoff(), {})
@@ -254,7 +275,10 @@ class HandoverHookTests(unittest.TestCase):
         self.assertEqual(self.dispatch([self.task()]), {})
         pair = dict(kind='pr_handoff', step_id='a', pr_url='https://example.com/pull/1',
                     implementation_session_id='worker-a', review_session_id='review-a')
-        self.assertEqual(self.handoff('worker-a','review-a',**pair), {})
+        for _ in range(3):
+            self.assertEqual(self.handoff('worker-a','review-a',**pair), {})
+            self.assertEqual(self.handoff('review-a','worker-a',**pair), {})
+        self.assertEqual(self.dispatch([dict(self.task(), review_session_id='review-a')]), {})
         self.assertEqual(self.handoff('review-a','third',**pair)['decision'], 'block')
         changed = dict(self.task(), review_session_id='other-review')
         self.assertEqual(self.dispatch([changed])['decision'], 'block')
