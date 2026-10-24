@@ -72,3 +72,8 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
   file/depth footprint cap as saved groups, measured per figure including stature.
   The cap changes no saved point or camera-dependent size; camps retain the
   ordinary reference scale independently of the capped figure transform.
+
+- `Map3DLayerUnits.figure_footprint_gap` is the editor-owned per-figure scale
+  ceiling for ordinary, saved physical and generic ghost figures. It is separate
+  from `formation_gap`, which spaces ordinary formation centres. Changing the
+  ceiling never changes saved source slots, XZ/facing or the camp reference scale.

@@ -31,8 +31,8 @@
 [ext_resource type="Material" uid="uid://bhsqih8uox5ar" path="res://scenes/map3d/materials/precip_drop_rain.tres" id="24_kme1k"]
 [ext_resource type="Script" uid="uid://d0j1615g26j72" path="res://scripts/map3d/map3d_precip_kind.gd" id="25_3tcq2"]
 [ext_resource type="Material" uid="uid://hbcsw3occqy0" path="res://scenes/map3d/materials/precip_drop_snow.tres" id="26_tkhf4"]
-[ext_resource type="Script" path="res://scripts/map3d/map3d_king.gd" id="30_qhspj"]
-[ext_resource type="PackedScene" path="res://scenes/models/characters/king.tscn" id="31_jxnve"]
+[ext_resource type="Script" uid="uid://dhabdrg0que1d" path="res://scripts/map3d/map3d_king.gd" id="30_qhspj"]
+[ext_resource type="PackedScene" uid="uid://pa5wk7nmifln" path="res://scenes/models/characters/king.tscn" id="31_jxnve"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_qhspj"]
 material = ExtResource("24_kme1k")
@@ -138,6 +138,7 @@ sky_mode = 1
 
 [node name="Units" type="Node3D" parent="." unique_id=157155689]
 script = ExtResource("19_5bcyi")
+figure_footprint_gap = 0.8
 camp_size_ratio = 0.3
 scout_rings = 32
 scout_spokes = 96

@@ -261,6 +261,17 @@ func test_group_mode_preserves_unit_seams() -> void:
 	if layer.has_method("group_geometry"):
 		assert_eq(layer.group_geometry()[code].size(), 2)
 	assert_eq(layer.screen_rects().keys(), [code])
+	var child: Node3D = piece["groups"][0]["piece"]["node"]
+	var source_xz := Vector2(child.global_position.x, child.global_position.z)
+	var source_scale := child.scale.x
+	var camp_before: float = piece.camp_scale
+	assert_not_null(layer.get("figure_footprint_gap"))
+	if layer.get("figure_footprint_gap") == null: return
+	layer.set("figure_footprint_gap", 0.8)
+	layer._place(code, piece)
+	assert_almost_eq(child.scale.x, source_scale * 2.0, 0.0001)
+	assert_eq(Vector2(child.global_position.x, child.global_position.z), source_xz)
+	assert_eq(float(piece.camp_scale), camp_before)
 	var state_hash := SaveLoad.state_hash(state)
 	layer._live = [code]
 	layer._roster_was = layer._roster_key()
@@ -708,6 +719,21 @@ func test_every_ordinary_arm_fits_one_representatives_world_footprint() -> void:
 	assert_true(checked.has("infantry"))
 	assert_true(checked.has("archers"))
 	assert_true(checked.has("cavalry"))
+	var ordinary: Dictionary = layer._pieces.values()[0]
+	var ordinary_code := String(layer._pieces.keys()[0])
+	var node: Node3D = ordinary.node
+	var scale_before := node.scale.x
+	var camp_before: float = ordinary.camp_scale
+	assert_not_null(layer.get("figure_footprint_gap"), "figure cap is an editor-owned control independent of layout spacing")
+	if layer.get("figure_footprint_gap") == null: return
+	layer.set("figure_footprint_gap", 0.8)
+	layer._place(ordinary_code, ordinary)
+	assert_almost_eq(node.scale.x, scale_before * 2.0, 0.0001)
+	assert_eq(float(ordinary.camp_scale), camp_before)
+	var capped_scale := node.scale.x
+	layer.formation_gap = 3.2
+	layer._place(ordinary_code, ordinary)
+	assert_eq(node.scale.x, capped_scale, "layout spacing cannot shrink the per-figure ceiling")
 
 func test_saved_size_cannot_override_the_current_people_per_figure() -> void:
 	var repo := SuiteData.repo()

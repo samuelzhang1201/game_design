@@ -18,6 +18,8 @@ const MARCH := "MARCH"
 
 ## Figure spacing, × a figure's footprint (owner 2026-09-30: 可以适当分开一些).
 @export var formation_gap := 1.6
+## Per-figure visual ceiling, independent of the formation’s layout spacing.
+@export var figure_footprint_gap := 1.6
 ## Seconds a clip blends into the next (owner 2026-09-27: 行进的动作非常突兀).
 @export var blend_s := 0.3
 ## Degrees a second a piece turns (instant turning read as a glitch).
@@ -179,7 +181,7 @@ func _target_xz(reg: Dictionary) -> Vector2:
 ## SEATED on its footprint (Map3DUnits.seat; owner 2026-09-24: 斜面上兵人的一部分会被地图盖住).
 func _place(code: String, piece: Dictionary) -> void:
 	if piece.get("layout", "") == "physical_groups":
-		var box := BattleGroupsView.place(ctx, piece, _shown_xz[code], formation_gap, _selected.has(code))
+		var box := BattleGroupsView.place(ctx, piece, _shown_xz[code], figure_footprint_gap, _selected.has(code))
 		_rects.erase(code)
 		if box.has_area(): _rects[code] = box
 		_yaw[code] = Map3DUnits.facing_yaw(WarFront.facing_vector(piece["facing_deg"]))
@@ -197,7 +199,7 @@ func _place(code: String, piece: Dictionary) -> void:
 	piece["camp_scale"] = k
 	var ratio := float(ctx.meta["m_per_px"]) / ArmySystem.metres_per_pack_px(repo)
 	var pitch := Vector2(repo.bal("battle_group_spacing_m"), repo.bal("battle_group_depth_m")) * ratio
-	k = BattleGroupsView.scale_cap(k, piece["figure_extent"], pitch, formation_gap)
+	k = BattleGroupsView.scale_cap(k, piece["figure_extent"], pitch, figure_footprint_gap)
 	var heading := Map3DUnitRig.heading_for(repo, ctx.state(), code, _track.get(code, {}))
 	_want_yaw[code] = Map3DUnits.facing_yaw(heading, piece.get("stand_deg", 0.0))
 	_yaw[code] = _yaw.get(code, _want_yaw[code])
