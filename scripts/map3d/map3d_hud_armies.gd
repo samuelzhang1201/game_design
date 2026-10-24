@@ -1,10 +1,11 @@
 class_name Map3DHudArmies
 extends Map3DHudPiece
-## MILITARY on the 3D map's HUD: a land unit is its 3D piece (Map3DLayerUnits)
+## MILITARY on the 3D map's HUD: near, a land unit is its 3D piece (Map3DLayerUnits)
 ## with NOTHING drawn over it — no counter, chip, number, bar or leader line
 ## (owner 2026-10-10: 请移除大地图上军事单位的所有标记和数字的mark); a selected
 ## one glows on the ground under it (Map3DUnitGlow, in 3D). A unit with
-## no piece (a fleet) keeps its flat counter (ArmyCounters). Each march's road
+## no piece (a fleet) keeps its flat counter (ArmyCounters). Strategic mode
+## instead draws one shared-resource symbol per admitted unit. Each march's road
 ## ahead and its end ring are drawn here too. Its sizes are edited on the node.
 
 ## A fleet counter's height, design px, held between these (owner 2026-09-19:
@@ -18,6 +19,7 @@ extends Map3DHudPiece
 ## §5.6), design px; edited on the node.
 @export var box_color := Color(1.0, 0.92, 0.6, 0.9)
 @export var box_width_px := 1.5
+@export var symbols: Map3DUnitSymbols
 var _drawn := 0
 ## markers()' cut and the pose it was cut for (see there).
 var _cache: Array = []
@@ -41,6 +43,15 @@ func badge_height() -> float:
 func markers() -> Array:
 	if not bound() or not view.military():
 		return []
+	if view.unit_symbol_mode:
+		var state := ctx.state()
+		var symbol_key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(), true,
+			state, state.absolute_day() if state != null else 0, ctx.dev, view.selected_armies().duplicate(), symbols.marker_size if symbols != null else Vector2.ZERO]
+		if state != null: symbol_key.append_array([state.regiments.hash(), state.foes.hash(), state.sightings.hash(), state.army_roster.hash(), state.military_events.size()])
+		if symbol_key != _key:
+			_cache = _symbol_markers()
+			_key = symbol_key
+		return _cache
 	# Asked up to three times a frame — the HUD's draw, Map3DPicker.pick_at and
 	# Map3DHudLandmarks' clearance — so it is cut once per camera pose: the pose,
 	# the view's size, the render scale, the layer's switch, the date, the
@@ -54,6 +65,27 @@ func markers() -> Array:
 	_cache = _cut()
 	_key = key
 	return _cache
+
+
+func _symbol_markers() -> Array:
+	if symbols == null: return []
+	var points: Array = []
+	var frame := Rect2(Vector2.ZERO, ctx.view_size).grow(symbols.marker_size.length())
+	for reg: Dictionary in ctx.regiments():
+		var ground := ctx.pack_ground(ArmySystem.position_of(ctx.repo, ctx.state(), reg))
+		if ctx.camera.is_position_behind(ground): continue
+		var point := ctx.camera.unproject_position(ground) / ctx.viewport_px_scale()
+		if frame.has_point(point): points.append({"reg": reg, "pos": point})
+	for ghost: Dictionary in ctx.ghosts():
+		var point: Variant = on_ground(ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(ghost["x_m"], ghost["y_m"]))))
+		if point != null and frame.has_point(point):
+			points.append({"code": Sighting.GHOST_CODE + String(ghost["key"]), "pos": point, "ghost": true})
+	var obstacles := ctx.settlement_rects()
+	var labels := sibling("Labels") as Map3DHudLabels
+	if labels != null: obstacles.append_array(labels.rects())
+	var scroll := view.get_node_or_null("Hud/LegendScroll") as Control
+	if scroll != null and scroll.visible: obstacles.append(Rect2(scroll.position, scroll.size))
+	return symbols.layout(ctx.repo, points, obstacles, view.selected_armies())
 
 
 func _cut() -> Array:
@@ -99,7 +131,11 @@ func _draw() -> void:
 	var list := markers()
 	_drawn = list.size()
 	_draw_routes()
-	ArmyCounters.draw(self, ctx.repo, list, view.selected_armies())
+	if view.unit_symbol_mode and symbols != null:
+		for marker: Dictionary in list:
+			symbols.draw_symbol(self, marker["symbol_rect"], marker["arm"], marker["frame"], marker["royal"], view.selected_armies().has(marker["code"]))
+	else:
+		ArmyCounters.draw(self, ctx.repo, list, view.selected_armies())
 	if view.box_rect.has_area():
 		draw_rect(view.box_rect, box_color, false, box_width_px)
 

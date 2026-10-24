@@ -9,12 +9,26 @@ extends RefCounted
 ## checked without a 3D view. Never reaches for the Game autoload.
 
 
+## One view-only decision, shared by models, symbols, picking and the legend.
+static func symbol_mode(previous: bool, distance_m: float, enter_m: float, leave_m: float) -> bool:
+	if not is_finite(enter_m) or not is_finite(leave_m) or leave_m <= 0.0 or leave_m >= enter_m:
+		push_warning("invalid military symbol thresholds: require 0 < leave < enter")
+		return false
+	if not is_finite(distance_m) or distance_m <= 0.0:
+		push_warning("invalid military symbol distance")
+		return false
+	if distance_m >= enter_m:
+		return true
+	if distance_m <= leave_m:
+		return false
+	return previous
+
+
 ## The world height one piece is drawn at: `map3d_unit_ref_px` of SCREEN as
 ## seen from `ref_m` — the opening view's distance — and from there ONE world
 ## height at every zoom, so a piece grows and shrinks with the camera exactly
-## as the ground and the houses do (owner 2026-09-30: 兵人模型的比例缩放需要和游戏
-## 视角缩放一致). It is drawn at every zoom, with no mark over it (owner
-## 2026-10-10). px x metres-per-px: the window's height cancels, since ref_m
+## as the ground and the houses do while near models are shown.
+## px x metres-per-px: the window's height cancels, since ref_m
 ## grows with it.
 static func height_m(repo: DataRepository, fov_deg: float, view_h_px: float, ref_m: float) -> float:
 	return repo.bal("map3d_unit_ref_px") * Map3DGeometry.metres_per_pixel(maxf(ref_m, 1.0), fov_deg, view_h_px)

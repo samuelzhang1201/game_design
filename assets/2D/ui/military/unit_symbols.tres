@@ -1,0 +1,71 @@
+[gd_resource type="Resource" script_class="Map3DUnitSymbols" format=3 uid="uid://bhatkc4k8ydku"]
+
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/body.tres" id="1_gsduv"]
+[ext_resource type="Script" uid="uid://c2jjkasrar1ec" path="res://scripts/map3d/map3d_unit_symbols.gd" id="2_xyabr"]
+
+[resource]
+script = ExtResource("2_xyabr")
+glyphs = {
+"archers": {
+"fills": [],
+"lines": [PackedVector2Array(-0.28, -0.58, 0.16, -0.4, 0.36, 0, 0.16, 0.4, -0.28, 0.58), PackedVector2Array(-0.28, -0.58, -0.28, 0.58), PackedVector2Array(-0.5, 0, 0.5, 0)],
+"text": ""
+},
+"artillery": {
+"fills": [PackedVector2Array(0.19, 0, 0.18070073, 0.080344416, 0.15371323, 0.15282416, 0.1116792, 0.21034442, 0.058713228, 0.2472747, 1.1634145e-17, 0.26, -0.058713228, 0.2472747, -0.1116792, 0.21034442, -0.15371323, 0.15282416, -0.18070073, 0.080344416, -0.19, 3.1840816e-17, -0.18070073, -0.080344416, -0.15371323, -0.15282416, -0.1116792, -0.21034442, -0.058713228, -0.2472747, -3.4902433e-17, -0.26, 0.058713228, -0.2472747, 0.1116792, -0.21034442, 0.15371323, -0.15282416, 0.18070073, -0.080344416)],
+"lines": [],
+"text": ""
+},
+"cavalry": {
+"fills": [],
+"lines": [PackedVector2Array(-0.5, 0.52, 0.5, -0.52)],
+"text": ""
+},
+"fleet": {
+"fills": [],
+"lines": [PackedVector2Array(0, -0.54, 0, 0.58), PackedVector2Array(-0.28, -0.25, 0.28, -0.25), PackedVector2Array(-0.55, 0.15, -0.4, 0.46, 0, 0.62, 0.4, 0.46, 0.55, 0.15), PackedVector2Array(-0.55, 0.15, -0.5, 0.42), PackedVector2Array(-0.55, 0.15, -0.26, 0.2), PackedVector2Array(0.55, 0.15, 0.5, 0.42), PackedVector2Array(0.55, 0.15, 0.26, 0.2)],
+"text": ""
+},
+"infantry": {
+"fills": [],
+"lines": [PackedVector2Array(-0.48, -0.48, 0.48, 0.48), PackedVector2Array(-0.48, 0.48, 0.48, -0.48)],
+"text": ""
+},
+"royal": {
+"fills": [],
+"lines": [PackedVector2Array(-0.34, -1.02, -0.45, -1.5, -0.15, -1.3, 0, -1.62, 0.15, -1.3, 0.45, -1.5, 0.34, -1.02, -0.34, -1.02)],
+"paper": [PackedVector2Array(-0.34, -1.02, -0.45, -1.5, -0.15, -1.3, 0, -1.62, 0.15, -1.3, 0.45, -1.5, 0.34, -1.02, -0.34, -1.02)],
+"text": ""
+},
+"unknown": {
+"fills": [],
+"lines": [],
+"text": "?"
+}
+}
+frames = {
+"ghost": PackedVector2Array(-1, -1, 1, -1, 1, 1, -1, 1, -1, -1),
+"hostile": PackedVector2Array(0, -1, 1, 0, 0, 1, -1, 0, 0, -1),
+"own": PackedVector2Array(-1, -1, 1, -1, 1, 1, -1, 1, -1, -1)
+}
+labels = {
+"archers": "Archers",
+"artillery": "Artillery",
+"cavalry": "Cavalry",
+"fleet": "Fleet",
+"ghost": "Last known (stale)",
+"hostile": "Observed hostile",
+"infantry": "Infantry",
+"own": "Own unit",
+"royal": "Royal household",
+"unknown": "Unknown arm"
+}
+legend_keys = PackedStringArray("infantry", "archers", "cavalry", "artillery", "fleet", "royal", "unknown", "own", "hostile", "ghost")
+marker_size = Vector2(30, 24)
+line_px = 1.6
+dash_px = 4.0
+ink = Color(0.28627452, 0.23137255, 0.16862746, 1)
+paper = Color(0.90588236, 0.84313726, 0.7058824, 1)
+selected_ink = Color(0.63529414, 0.3882353, 0.10980392, 1)
+font = ExtResource("1_gsduv")
+font_px = 14

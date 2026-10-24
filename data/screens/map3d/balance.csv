@@ -168,3 +168,5 @@ map3d_unit_settle_hit_s,0.25,"MILITARY's 3D piece (owner 2026-10-14: 步兵行�
 map3d_unit_chain_rest_min_s,0.4,"MILITARY's 3D piece (owner 2026-10-19: 士兵的动作能够根据实际情况做出自动的选择): the shortest guard pause, seconds, between two strikes of a chained action (army_art.csv chains, Map3DClipChain): each figure hashes its own pause per strike, so a rank never strikes in step; view-only"
 map3d_unit_chain_rest_max_s,1.4,"MILITARY's 3D piece: the longest guard pause between two chained strikes (see map3d_unit_chain_rest_min_s); also the most a figure waits before its first strike, so a battle's first round starts staggered; view-only"
 map3d_unit_settle_db,0,"MILITARY's 3D piece: the settle sound's loudness over a marching loop's at the same camera distance (Map3DUnitSound.gain_db), dB"
+map3d_unit_symbol_enter_m,600,"Camera distance that enters strategic unit-symbol mode"
+map3d_unit_symbol_leave_m,480,"Camera distance that restores near unit models; below the entry threshold for hysteresis"

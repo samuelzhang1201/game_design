@@ -101,6 +101,7 @@ func test_a_town_is_still_clickable_with_no_dot_shown_in_the_no_dot_gap() -> voi
 ## the settlements again. His real rect, laid over the capital's own point.
 func test_a_waiting_courier_yields_the_click_to_the_town_under_him() -> void:
 	var v := _view()
+	v.set_military(false)  # this comparison is courier versus town; symbol picking has its own test
 	var code := ""
 	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if CourierSystem.carries_orders(r):

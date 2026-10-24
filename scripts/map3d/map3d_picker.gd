@@ -49,6 +49,10 @@ func bind(p_ctx: Map3DContext, p_view: Map3DView, p_tooltip: Label,
 func pick_at(pos: Vector2) -> Dictionary:
 	if view.king_rect().has_point(pos) and view.king_rect().has_area():
 		return {"kind": "king"}
+	if view.unit_symbol_mode:
+		# A displaced ink mark is clicked where it is drawn, even over sky or a town centre.
+		for marker: Dictionary in view.army_markers():
+			if (marker["rect"] as Rect2).has_point(pos): return _army_pick(marker)
 	var hit: Variant = ctx.ground_at(pos)
 	if hit == null:
 		return {}

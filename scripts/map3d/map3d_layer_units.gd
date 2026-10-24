@@ -3,10 +3,10 @@ class_name Map3DLayerUnits
 extends Node3D
 ## MILITARY's PIECES: the player's regiments as animated wargame models
 ## standing on the ground (owner 2026-09-22, "把这两个兵棋人应用到游戏中去").
-## Nine, six or three .glb figures per regiment by its strength (Map3DFormation),
+## One .glb figure per configured fit group (at most ten per regiment),
 ## each posed by its own AnimationPlayer — the one layer that cannot be a MultiMesh.
 ## THE SIZE IS NOT THE MODEL'S SIZE: a miniature's, one world size at every
-## zoom, drawn at every zoom with no mark over it (owner 2026-10-10). That rule,
+## near zoom, with no mark over it. The view hides this layer in symbol mode. That rule,
 ## the facing, seating, measuring and screen box are Map3DUnits, the pure half.
 ## Takes everything from Map3DContext, never the Game autoload (a test scans).
 
@@ -95,6 +95,7 @@ func set_shown(on: bool) -> void:
 	if on: refresh()
 	else:  # hidden: nothing to click, nothing heard
 		_rects.clear(); _sound.silence(); _scouts.clear()
+		for piece: Dictionary in _pieces.values(): Map3DUnits.show_piece(piece, false)
 
 
 func set_preview(on: bool) -> void:

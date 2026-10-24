@@ -1,19 +1,23 @@
 extends GutTest
 ## MILITARY on the 3D map (owner 2026-09-19: "点击兵棋可以看到该部队信息";
 ## 2026-10-10: 请移除大地图上军事单位的所有标记和数字的mark): a land regiment is
-## its 3D piece at every zoom with nothing drawn over it; a unit with no piece
-## (a fleet) keeps its flat counter (ArmyCounters), sized by the view but held
+## its 3D piece nearby with nothing drawn over it; far out it is one symbol.
+## A fleet nearby keeps its flat counter (ArmyCounters), sized by the view but held
 ## between the Armies piece's badge_min_px and badge_max_px; a click on either
 ## opens the regiment's card.
 
 const SuiteData := preload("res://tests/suite_data.gd")
 const RunDir := preload("res://tests/run_dir.gd")
 var _fixture := RunDir.dir("map3d_military").path_join("test_map3d_military_world.tscn")
+var _symbol_enter := 0.0
+var _symbol_leave := 0.0
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
 
 
 func before_all() -> void:
+	_symbol_enter = Game.data.bal("map3d_unit_symbol_enter_m")
+	_symbol_leave = Game.data.bal("map3d_unit_symbol_leave_m")
 	var root := Node3D.new()
 	root.name = "Fixture"
 	root.set_meta("map3d_world", WORLD)
@@ -26,6 +30,9 @@ func before_all() -> void:
 
 func before_each() -> void:
 	Game.start_campaign(42)
+	# Keep the historical model/animation fixtures near; explicit strategic cases still cross.
+	Game.data.balance["map3d_unit_symbol_enter_m"] = 10000.0
+	Game.data.balance["map3d_unit_symbol_leave_m"] = 8000.0
 
 
 func _view() -> Map3DView:
@@ -33,6 +40,7 @@ func _view() -> Map3DView:
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
 	v.activate()
+	v.look_at_home(2500.0)  # model regressions start near; symbol tests move out explicitly
 	return v
 
 
@@ -71,7 +79,7 @@ func test_no_counters_while_the_layer_is_off() -> void:
 	assert_eq(v.army_markers().size(), 0)
 
 
-func test_a_land_regiment_is_its_piece_at_every_zoom_with_no_counter() -> void:
+func test_a_land_regiment_swaps_its_piece_for_one_symbol() -> void:
 	var v := _view()
 	v.set_military(true)
 	var r := _first_regiment()
@@ -79,10 +87,12 @@ func test_a_land_regiment_is_its_piece_at_every_zoom_with_no_counter() -> void:
 	assert_ne(String(r.get("is_naval", "0")), "1", "premise: a land regiment")
 	for at_m: float in [Game.data.bal("map3d_zoom_min_m"), 20000.0, 30000.0]:
 		_look_at_regiment(v, r, at_m)
-		assert_true(v.unit_rects().has(code), "its piece stands at %d m" % int(at_m))
-		for m: Dictionary in v.army_markers():
-			assert_true(v.unit_has_piece(String(m["code"])) == false, "a counter only for a unit with no piece")
-			assert_ne(String(m["code"]), code, "no counter over the piece at %d m" % int(at_m))
+		assert_true(v.unit_rects().has(code), "one unit remains pickable at %d m" % int(at_m))
+		if v.unit_symbol_mode:
+			assert_eq(v.unit_count(), 0)
+			assert_eq(v.army_markers().filter(func(m: Dictionary) -> bool: return m["code"] == code).size(), 1)
+		else:
+			assert_true(_marker(v, code).is_empty(), "no counter over a near piece")
 
 
 func test_a_fleet_keeps_its_counter() -> void:
@@ -90,7 +100,7 @@ func test_a_fleet_keeps_its_counter() -> void:
 	v.set_military(true)
 	var f := _fleet()
 	assert_false(f.is_empty(), "premise: the crown has a fleet")
-	_look_at_regiment(v, f, 20000.0)
+	_look_at_regiment(v, f, Game.data.bal("map3d_zoom_min_m"))
 	assert_false(v.unit_has_piece(String(f["regiment_code"])), "a fleet has no 3D piece")
 	var mine: Dictionary = _marker(v, String(f["regiment_code"]))
 	assert_false(mine.is_empty(), "the fleet under the camera has its counter")
@@ -155,7 +165,7 @@ func test_hovering_a_counter_names_the_regiment() -> void:
 func test_the_hud_draws_only_the_fleets_counters() -> void:
 	var v := _view()
 	v.set_military(true)
-	_look_at_regiment(v, _fleet(), 20000.0)
+	_look_at_regiment(v, _fleet(), Game.data.bal("map3d_zoom_min_m"))
 	await wait_process_frames(2)
 	assert_gt(v.drawn_army_count(), 0)
 	assert_eq(v.drawn_army_count(), v.army_markers().size())
@@ -271,7 +281,7 @@ func test_a_piece_no_longer_drawn_is_freed() -> void:
 	var e: Dictionary = Game.state.foes[foe]
 	Sighting.record(Game.state, "unit:" + foe, Sighting._unit_entry(Game.state, foe, "spy", 100))
 	var key := Sighting.GHOST_CODE + "unit:" + foe
-	v.look_at_pack(ArmySystem.metres_to_pack(Game.data, Vector2i(int(e["x_m"]), int(e["y_m"]))), 6000.0)
+	v.look_at_pack(ArmySystem.metres_to_pack(Game.data, Vector2i(int(e["x_m"]), int(e["y_m"]))), 2500.0)
 	var units := v._units as Map3DLayerUnits
 	units.refresh()
 	assert_true(units.has_piece(key), "the ghost stands as a piece")
@@ -344,7 +354,7 @@ func test_military_stays_on_the_3d_map() -> void:
 ## HUD's draw, Map3DPicker.pick_at and the landmarks' clearance all ask for them
 ## every frame the pointer moves, so a second call at the same pose is the SAME
 ## array, and a moved camera a new one — Map3DHudLandmarks.marks()' rule.
-func test_counters_are_cut_once_per_pose() -> void:
+func test_markers_are_cut_once_per_pose() -> void:
 	var v := _view()
 	v.set_military(true)
 	var r := _fleet()
@@ -358,6 +368,8 @@ func test_counters_are_cut_once_per_pose() -> void:
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
+	Game.data.balance["map3d_unit_symbol_enter_m"] = _symbol_enter
+	Game.data.balance["map3d_unit_symbol_leave_m"] = _symbol_leave
 	Map3DView.world_override = ""
 	Map3DWorldCache.clear()
 
@@ -389,15 +401,15 @@ func _marker(v: Map3DView, code: String) -> Dictionary:
 	return {}
 
 
-func test_every_unit_round_a_town_stands_as_its_own_piece() -> void:
+func test_every_unit_round_a_town_has_its_own_symbol() -> void:
 	var v := _view()
 	v.set_military(true)
 	var codes := _capital_units()
 	assert_gt(codes.size(), 1, "more than one unit stands round the capital")
 	v.look_at_pack(_capital_xy(), 20000.0)
 	for c: String in codes:
-		assert_true(v.unit_rects().has(c), "%s stands as its own piece" % c)
-		assert_true(_marker(v, c).is_empty(), "%s has no counter" % c)
+		assert_true(v.unit_rects().has(c), "%s has one unit rectangle" % c)
+		assert_false(_marker(v, c).is_empty(), "%s has its own symbol" % c)
 
 
 func test_only_the_household_wears_the_crown() -> void:

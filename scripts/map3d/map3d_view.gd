@@ -94,6 +94,8 @@ var _border_clock := 0.0
 ## The regiments (owner 2026-09-19; always on since 2026-09-27, when the
 ## MILITARY tab went): whether the pieces and counters show.
 var _military := true
+## Sole presentation mode; never serialized into the campaign.
+var unit_symbol_mode := false
 ## DEV MODE (owner 2026-09-27): every realm's regiments, set from the pause menu.
 var _dev := false
 ## The graphics tier worn ("" until the first load resolves one), overrides over it.
@@ -245,13 +247,14 @@ func _load_world() -> bool:
 	_markers.bind(_ctx)
 	_houses.bind(_ctx)
 	_ctx.dev = _dev
+	_ctx.camera_moved.connect(_sync_unit_mode)
 	_units.bind(_ctx)
 	_king.bind(_ctx)
 	apply_snapshot(_snapshot)
 	apply_battle_snapshot(_battle_snapshot)
 	_dust.bind(_ctx)  # the dust the columns raise (owner 2026-10-07)
 	_couriers.bind(_ctx)
-	_units.set_shown(_military)
+	_sync_unit_mode()
 	_ctx.settle_ground()
 	_markers.build()
 	return true
@@ -289,6 +292,7 @@ func release_world() -> void:
 	if _world != null:
 		deactivate()
 		_loaded = false
+		_sync_unit_mode(true)
 		Map3DWorldCache.give_back(_scene_path, _world)
 		_world = null
 
@@ -429,6 +433,19 @@ func request_hover(pos: Vector2) -> void: _picker.request(pos)
 func refresh_hud() -> void:  # the selection changed: the HUD and the pieces' glow follow it
 	if _loaded: _units.set_selected(_selection.armies); _hud.refresh()
 
+
+func _sync_unit_mode(force: bool = false) -> void:
+	if _ctx == null: return
+	var next := Map3DUnits.symbol_mode(unit_symbol_mode, _ctx.distance,
+		_repo.bal("map3d_unit_symbol_enter_m"), _repo.bal("map3d_unit_symbol_leave_m"))
+	var changed := next != unit_symbol_mode
+	unit_symbol_mode = next
+	var shown := _military and not unit_symbol_mode
+	if _units.shown != shown: _units.set_shown(shown)
+	var legend := _hud.get_node_or_null("LegendScroll/MilitaryLegend") as Map3DMilitaryLegend
+	if legend != null: legend.apply_mode(unit_symbol_mode, _military and _loaded)
+	if changed or force: _hud._redraw()  # mode transitions bypass the tier's HUD throttle
+
 func compass_rect() -> Rect2: return _hud.compass_rect() if _loaded else Rect2()
 
 ## The 3D map MEASURES LIKE THE 2D MAP (owner 2026-09-18; Map3DGeometry).
@@ -461,15 +478,25 @@ func set_military(on: bool) -> void:
 	if not on and _selection.army != "":
 		_selection.clear()
 	if _loaded:
-		_units.set_shown(on)
-		_hud.refresh()
+		_sync_unit_mode(true)
 
 func unit_has_piece(code: String) -> bool: return _units.has_piece(code) if _loaded else false  # MILITARY's pieces
-func unit_positions() -> Dictionary: return _units.shown_positions() if _loaded else {}
+func unit_positions() -> Dictionary:
+	if not _loaded: return {}
+	if not unit_symbol_mode: return _units.shown_positions()
+	var positions: Dictionary = {}
+	for reg: Dictionary in _ctx.regiments():
+		positions[String(reg["regiment_code"])] = _ctx.to_world(ArmySystem.position_of(_repo, _ctx.state(), reg))
+	return positions
 func unit_pack_positions() -> Dictionary:  # the WAR ROOM's pieces (Map3DGeometry.world_to_pack_all)
 	if _loaded: _units.step(0.0)
-	return Map3DGeometry.world_to_pack_all(_meta, _units.shown_positions()) if _loaded else {}
-func unit_rects() -> Dictionary: return _units.screen_rects() if _loaded else {}
+	return Map3DGeometry.world_to_pack_all(_meta, unit_positions())
+func unit_rects() -> Dictionary:
+	if not _loaded or not _military: return {}
+	if not unit_symbol_mode: return _units.screen_rects()
+	var rects: Dictionary = {}
+	for marker: Dictionary in army_markers(): rects[String(marker["code"])] = marker["rect"]
+	return rects
 func unit_count() -> int: return _units.drawn_count() if _loaded else 0
 func unit_moves() -> int: return _units.moves() if _loaded else 0
 func courier_rects() -> Dictionary: return _couriers.screen_rects() if _loaded else {}
