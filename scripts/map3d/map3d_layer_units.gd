@@ -137,12 +137,10 @@ func refresh() -> void:
 ## What the drawn set reads: the state, its day, its regiments (orders, stances, fronts), foes, sightings, DEV MODE.
 func _roster_key() -> Array:
 	var st := ctx.state()
-	var geometry: Array = []
-	if st != null:
-		for reg: Dictionary in ctx.regiments():
-			var code := String(reg["regiment_code"])
-			geometry.append([code, BattleGroupsView.sample(ctx, code)["key"], ArmySystem.fit_count(ctx.repo, st, code)])
-	return [geometry, st, st.absolute_day(), st.regiments.hash(), st.foes.size(), st.sightings.size(), ctx.dev] \
+	# Native hashes detect same-day edits without repeating public admission once per unit per frame.
+	return [st, st.absolute_day(), st.regiments.hash(), st.foes.hash(), st.sightings.hash(),
+		st.army_roster.hash(), st.military_rosters.hash(), st.military_cohorts.hash(), st.battles.hash(),
+		st.province_owner.hash(), st.manor_owner.hash(), st.ai_hosts.hash(), ctx.repo.bal("battle_group_size"), ctx.dev] \
 		if st != null else [null, ctx.dev]
 
 
@@ -193,7 +191,6 @@ func _place(code: String, piece: Dictionary) -> void:
 	if ctx.camera.is_position_behind(Vector3(xz.x, ctx.height_at(xz), xz.y)):
 		show_piece(piece, false)
 		return
-	show_piece(piece, true)
 	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), piece["size"])
@@ -209,9 +206,13 @@ func _place(code: String, piece: Dictionary) -> void:
 		piece["seat_key"] = [xz, yaw, k]
 		Map3DUnitRig.seat(repo, ctx.height_at, piece, xz, yaw, k)
 	var ground: Vector3 = piece["ground"]
-	Map3DUnitGlow.place(repo, ctx.height_at, piece, _selected.has(code), k)
-	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, float(piece["height_m"]) * k,
+	var box := Map3DUnits.screen_box(ctx.camera, ground, float(piece["height_m"]) * k,
 		float(piece["half_w_m"]) * k, ctx.viewport_px_scale())
+	var on_screen := Rect2(Vector2.ZERO, ctx.view_size).grow(repo.bal("map_army_pick_px")).intersects(box)
+	# Freeze offscreen clips without suppressing a scouting fan or a nearby sound.
+	Map3DUnits.show_piece(piece, true, on_screen)
+	Map3DUnitGlow.place(repo, ctx.height_at, piece, _selected.has(code), k)
+	_rects[code] = box
 
 
 ## Per FRAME: draw every piece where the day's share has it on its march
@@ -270,6 +271,15 @@ func show_piece(piece: Dictionary, on: bool) -> void: Map3DUnits.show_piece(piec
 
 ## Where each piece is DRAWN, {code: world XZ} — where its road ahead starts.
 func shown_positions() -> Dictionary: return _shown_xz
+
+
+## Strategic routes use the live admitted anchor while models are hidden.
+func symbol_positions() -> Dictionary:
+	if ctx == null: return {}
+	var positions: Dictionary = {}
+	for reg: Dictionary in ctx.regiments():
+		positions[String(reg["regiment_code"])] = ctx.to_world(ArmySystem.position_of(ctx.repo, ctx.state(), reg))
+	return positions
 
 
 ## The selected units: each one's piece glows on the ground under it.

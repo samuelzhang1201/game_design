@@ -9,6 +9,17 @@ const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 	"pack_px": [2560, 929], "sea_y": 5.0}
 
 
+class CountedSymbolView extends Map3DView:
+	var marker_calls := 0
+	func army_markers() -> Array:
+		marker_calls += 1
+		return [{"code": "sample", "pos": Vector2(25, 25), "rect": Rect2(20, 20, 10, 10)}]
+	func unit_rects() -> Dictionary:
+		var out: Dictionary = {}
+		for marker: Dictionary in army_markers(): out[marker["code"]] = marker["rect"]
+		return out
+
+
 func before_all() -> void:
 	Game.start_campaign(42)
 	var root := Node3D.new()
@@ -91,7 +102,11 @@ func test_a_town_is_still_clickable_with_no_dot_shown_in_the_no_dot_gap() -> voi
 	var ctx := v.context()
 	var min_m := Map3DGeometry.settlement_dot_min_view_m(Game.data, ctx.meta, ctx.view_size.y)
 	assert_gt(min_m, house_m, "the fixture's no-dot gap must be non-empty")
-	var probe := (house_m + min_m) * 0.5
+	var ring_m := float(Game.data.map3d_settlements[String(burg["group"])]["max_view_m"]) * Map3DLayerSettlements.fade_start()
+	var far_m := minf(min_m, ring_m)
+	assert_gt(far_m, house_m, "the invisible-dot probe remains inside the town's pickable range")
+	var probe := (house_m + far_m) * 0.5
+	assert_lt(probe, min_m)
 	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])), probe)
 	assert_eq(v.pick_at(v.size * 0.5), {"kind": "burg", "code": code})
 
@@ -129,3 +144,15 @@ func test_a_waiting_courier_yields_the_click_to_the_town_under_him() -> void:
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()
+
+
+func test_one_symbol_pick_reads_marker_geometry_once() -> void:
+	var real_view := _view()
+	var counted := CountedSymbolView.new()
+	autofree(counted)
+	counted.unit_symbol_mode = true
+	var picker := real_view.component("picker") as Map3DPicker
+	picker.view = counted
+	var result := picker.pick_at(real_view.size * 0.5)
+	assert_eq(counted.marker_calls, 1, "one hover reuses the same admitted marker geometry")
+	assert_eq(String(result.get("kind", "")), "burg")

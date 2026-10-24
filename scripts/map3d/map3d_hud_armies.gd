@@ -24,6 +24,11 @@ var _drawn := 0
 ## markers()' cut and the pose it was cut for (see there).
 var _cache: Array = []
 var _key: Array = []
+var _observations_key: Array = []
+var _observations: Dictionary = {}
+var _symbol_nodes: Dictionary = {}
+var _ink_look: Array = []
+var _box_ink: Node2D
 
 
 ## A fleet counter's height in design px: map_army_badge_native_px of the map
@@ -44,12 +49,13 @@ func markers() -> Array:
 	if not bound() or not view.military():
 		return []
 	if view.unit_symbol_mode:
-		var state := ctx.state()
+		_symbol_observations()
+		var layout_key := [ctx.repo.bal("map_army_stack_gap_px"), ctx.repo.bal("map3d_declutter_step_px"), ctx.repo.bal("map3d_declutter_max_px")]
+		if symbols != null: layout_key.append_array([symbols.marker_size, symbols.line_px, symbols.glyphs.hash()])
 		var symbol_key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(), true,
-			state, state.absolute_day() if state != null else 0, ctx.dev, view.selected_armies().duplicate(), symbols.marker_size if symbols != null else Vector2.ZERO]
-		if state != null: symbol_key.append_array([state.regiments.hash(), state.foes.hash(), state.sightings.hash(), state.army_roster.hash(), state.military_events.size()])
+			_observations_key, view.selected_armies().duplicate(), layout_key]
 		if symbol_key != _key:
-			_cache = _symbol_markers()
+			_cache = _symbol_markers(_observations)
 			_key = symbol_key
 		return _cache
 	# Asked up to three times a frame — the HUD's draw, Map3DPicker.pick_at and
@@ -67,16 +73,31 @@ func markers() -> Array:
 	return _cache
 
 
-func _symbol_markers() -> Array:
+## Admission changes with world state, never with the camera's projection.
+func _symbol_observations() -> Dictionary:
+	var st := ctx.state()
+	var key := [ctx.repo, ctx.dev, ctx.repo.bal("player_sight_km"), ctx.repo.bal("ghost_keep_days"), ctx.repo.army_scouting.hash(), st]
+	if st != null:
+		key.append_array([st.absolute_day(), st.regiments.hash(), st.foes.hash(), st.sightings.hash(),
+			st.army_roster.hash(), st.military_rosters.hash(), st.military_cohorts.hash(),
+			st.province_owner.hash(), st.manor_owner.hash(), st.ai_hosts.hash()])
+	if key != _observations_key:
+		_observations = {"regiments": ctx.regiments(), "ghosts": ctx.ghosts()}
+		_observations_key = key
+	return _observations
+
+
+func _symbol_markers(observations: Dictionary = {}) -> Array:
 	if symbols == null: return []
 	var points: Array = []
+	if observations.is_empty(): observations = _symbol_observations()
 	var frame := Rect2(Vector2.ZERO, ctx.view_size).grow(symbols.marker_size.length())
-	for reg: Dictionary in ctx.regiments():
+	for reg: Dictionary in observations["regiments"]:
 		var ground := ctx.pack_ground(ArmySystem.position_of(ctx.repo, ctx.state(), reg))
 		if ctx.camera.is_position_behind(ground): continue
 		var point := ctx.camera.unproject_position(ground) / ctx.viewport_px_scale()
 		if frame.has_point(point): points.append({"reg": reg, "pos": point})
-	for ghost: Dictionary in ctx.ghosts():
+	for ghost: Dictionary in observations["ghosts"]:
 		var point: Variant = on_ground(ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(ghost["x_m"], ghost["y_m"]))))
 		if point != null and frame.has_point(point):
 			points.append({"code": Sighting.GHOST_CODE + String(ghost["key"]), "pos": point, "ghost": true})
@@ -125,19 +146,75 @@ func drawn_count() -> int:
 	return _drawn
 
 
+func hit_rects(near_rects: Dictionary) -> Dictionary:
+	if not bound() or not view.military(): return {}
+	if not view.unit_symbol_mode: return near_rects
+	var rects: Dictionary = {}
+	for marker: Dictionary in markers(): rects[String(marker["code"])] = marker["rect"]
+	return rects
+
+
 func _draw() -> void:
 	if not bound():
+		clear_symbols()
 		return
 	var list := markers()
 	_drawn = list.size()
-	_draw_routes()
+	if view.military(): _draw_routes(_observations["regiments"] if view.unit_symbol_mode else ctx.regiments())
 	if view.unit_symbol_mode and symbols != null:
-		for marker: Dictionary in list:
-			symbols.draw_symbol(self, marker["symbol_rect"], marker["arm"], marker["frame"], marker["royal"], view.selected_armies().has(marker["code"]))
+		_sync_symbol_nodes(list)
+		if view.box_rect.has_area() and _box_ink == null:
+			_box_ink = Node2D.new()
+			_box_ink.z_index = 1
+			add_child(_box_ink)
+			_box_ink.draw.connect(func() -> void: _box_ink.draw_rect(view.box_rect, box_color, false, box_width_px))
+		if _box_ink != null:
+			_box_ink.visible = view.box_rect.has_area()
+			_box_ink.queue_redraw()
 	else:
+		clear_symbols()
 		ArmyCounters.draw(self, ctx.repo, list, view.selected_armies())
-	if view.box_rect.has_area():
-		draw_rect(view.box_rect, box_color, false, box_width_px)
+		if view.box_rect.has_area(): draw_rect(view.box_rect, box_color, false, box_width_px)
+
+
+func clear_symbols() -> void:
+	_sync_symbol_nodes([])
+	if _box_ink != null: _box_ink.hide()
+
+
+## Keep ink commands until their appearance changes; a pan only moves each item.
+func _sync_symbol_nodes(list: Array) -> void:
+	if list.is_empty() and _symbol_nodes.is_empty(): return
+	var look := [symbols, symbols.glyphs.hash(), symbols.frames.hash(), symbols.marker_size,
+		symbols.line_px, symbols.dash_px, symbols.ink, symbols.paper, symbols.selected_ink,
+		symbols.font, symbols.font_px] if symbols != null else []
+	var changed := look != _ink_look
+	_ink_look = look
+	var keep: Dictionary = {}
+	var order := 0
+	for marker: Dictionary in list:
+		var code := String(marker["code"])
+		keep[code] = true
+		if not _symbol_nodes.has(code):
+			var ink := Node2D.new()
+			add_child(ink)
+			ink.draw.connect(func() -> void:
+				var key: Array = ink.get_meta("look")
+				symbols.draw_symbol(ink, Rect2(-symbols.marker_size * 0.5, symbols.marker_size), key[0], key[1], key[2], key[3]))
+			_symbol_nodes[code] = ink
+		var ink: Node2D = _symbol_nodes[code]
+		ink.position = (marker["symbol_rect"] as Rect2).get_center()
+		if ink.get_index() != order: move_child(ink, order)
+		order += 1
+		var key := [marker["arm"], marker["frame"], marker["royal"], view.selected_armies().has(code)]
+		if changed or ink.get_meta("look", []) != key:
+			ink.set_meta("look", key)
+			ink.queue_redraw()
+	for code: String in _symbol_nodes.keys():
+		if not keep.has(code):
+			(_symbol_nodes[code] as Node2D).hide()
+			(_symbol_nodes[code] as Node2D).queue_free()
+			_symbol_nodes.erase(code)
 
 
 ## Each marching regiment's road still ahead: a dashed line DRAPED on the
@@ -147,7 +224,7 @@ func _draw() -> void:
 ## between two projected ends: the column walks the ground's rises and falls,
 ## and at the camera's tilt a chord over a hill left the piece walking off its
 ## own road (owner 2026-09-30: 实际行进路线也和画的不一致).
-func _draw_routes() -> void:
+func _draw_routes(regiments: Array) -> void:
 	if not view.military():
 		return
 	var repo := ctx.repo
@@ -156,11 +233,15 @@ func _draw_routes() -> void:
 		return
 	var s := ctx.viewport_px_scale()
 	var w := route_px
-	var shown := view.unit_positions()
-	for r: Dictionary in ctx.regiments():
+	var shown: Dictionary = {}
+	var origins_ready := false
+	for r: Dictionary in regiments:
 		var code := String(r["regiment_code"])
 		if ctx.fogged(code) or ArmySystem.order_of(repo, st, code) != ArmySystem.ORDER_MARCH:
 			continue  # an enemy's road ahead is not the crown's to see
+		if not origins_ready:
+			shown = view.unit_positions()
+			origins_ready = true
 		# along its route still ahead, the curve it walks (spec 2026-10-07-march-waypoints)
 		var prev: Vector2 = shown.get(code, ctx.to_world(ArmySystem.position_of(repo, st, r)))
 		var pts := PackedVector2Array()

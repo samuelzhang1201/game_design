@@ -5,6 +5,30 @@ const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const Play := preload("res://tests/invasion_play.gd")
 var _fixture := RunDir.dir("unit_symbols").path_join("world.tscn")
 
+class CountedSight extends Map3DContext:
+	var calls := 0
+	var ghost_calls := 0
+	func ghosts() -> Array:
+		ghost_calls += 1
+		return super.ghosts()
+	func regiments() -> Array:
+		calls += 1
+		return super.regiments()
+
+
+class CountedPositionsView extends Map3DView:
+	var position_calls := 0
+	func unit_positions() -> Dictionary:
+		position_calls += 1
+		return {}
+
+
+class CountedLegend extends Map3DMilitaryLegend:
+	var mode_calls := 0
+	func apply_mode(on: bool, military: bool) -> void:
+		mode_calls += 1
+		super.apply_mode(on, military)
+
 
 func _view() -> Map3DView:
 	var repo := SuiteData.repo()
@@ -224,6 +248,154 @@ func test_camera_jitter_and_json_reload_preserve_full_campaign_and_physical_grou
 	view.look_at_pack(target, 1600)
 	assert_eq(view.unit_count(), 2)
 	assert_eq(SaveLoad.state_hash(reloaded), before)
+
+
+func test_camera_only_model_refresh_does_not_rescan_admission_per_unit() -> void:
+	var repo := SuiteData.repo()
+	var st := SuiteData.campaign(repo, 7)
+	var ctx := CountedSight.new(repo, {})
+	ctx.state_fn = func() -> GameState: return st
+	var units := Map3DLayerUnits.new()
+	autofree(units)
+	units.bind(ctx)
+	var key := units._roster_key()
+	for i: int in 10:
+		ctx.distance = 100 + i
+		assert_eq(units._roster_key(), key, "camera moves do not change roster inputs")
+	assert_lt(ctx.calls, 3, "render refresh must not multiply the public sight scan by the unit count")
+
+
+func test_symbol_admission_cache_is_independent_of_camera_and_refreshes_same_day() -> void:
+	var repo := SuiteData.repo()
+	var st := SuiteData.campaign(repo, 7)
+	var ctx := CountedSight.new(repo, {})
+	ctx.state_fn = func() -> GameState: return st
+	var hud := Map3DHudArmies.new()
+	autofree(hud)
+	hud.ctx = ctx
+	assert_true(hud.has_method("_symbol_observations"))
+	if not hud.has_method("_symbol_observations"): return
+	var expected := ctx.regiments()
+	ctx.calls = 0
+	var initial: Dictionary = hud.call("_symbol_observations")
+	assert_eq(initial["regiments"], expected)
+	for i: int in 10:
+		ctx.distance = 100 + i
+		assert_eq(hud.call("_symbol_observations"), initial)
+	assert_eq(ctx.calls, 1, "panning must not repeat admission")
+	assert_eq(ctx.ghost_calls, 1, "panning must not repeat last-known sight queries")
+	var code: String = st.regiments.keys()[0]
+	st.regiments[code]["x_m"] = int(st.regiments[code].get("x_m", 0)) + 1
+	hud.call("_symbol_observations")
+	assert_eq(ctx.calls, 2, "a same-day move invalidates admission")
+	st.day += 1
+	hud.call("_symbol_observations")
+	assert_eq(ctx.ghost_calls, 3, "a new day invalidates last-known age")
+	ctx.dev = true
+	hud.call("_symbol_observations")
+	assert_eq(ctx.calls, 4, "DEV mode invalidates public admission")
+	repo.balance["map3d_declutter_step_px"] = repo.bal("map3d_declutter_step_px") + 1.0
+	hud.call("_symbol_observations")
+	assert_eq(ctx.calls, 4, "a layout-only setting does not invalidate public admission")
+	repo.balance["ghost_keep_days"] = repo.bal("ghost_keep_days") + 1.0
+	hud.call("_symbol_observations")
+	assert_eq(ctx.calls, 5, "last-known expiry is an admission input")
+	var arm: String = repo.army_scouting.keys()[0]
+	repo.army_scouting[arm]["scout_km"] = int(repo.army_scouting[arm]["scout_km"]) + 1
+	hud.call("_symbol_observations")
+	assert_eq(ctx.calls, 6, "scouting definitions are admission inputs")
+
+
+func test_offscreen_near_piece_stops_animation_and_returns_with_same_identity() -> void:
+	var view := _view()
+	var units := view.world().get_node("Units") as Map3DLayerUnits
+	var code: String = units._pieces.keys()[0]
+	var piece: Dictionary = units._pieces[code]
+	var node: Node3D = piece["node"]
+	var target := view._ctx.to_pack(view.target())
+	var before := SaveLoad.state_hash(view._ctx.state())
+	view.look_at_pack(target + Vector2(100, 0), 100)
+	assert_true(node.visible, "clip culling preserves scouting fans, sound and render culling")
+	for anim: AnimationPlayer in piece["anims"]: assert_false(anim.active)
+	view.look_at_pack(target, 1500)
+	assert_same(units._pieces[code]["node"], node)
+	assert_true(node.visible)
+	for anim: AnimationPlayer in piece["anims"]: assert_true(anim.active)
+	assert_eq(SaveLoad.state_hash(view._ctx.state()), before)
+
+
+func test_symbol_ink_is_retained_while_projection_moves() -> void:
+	var view := _view()
+	view.look_at_pack(view._ctx.to_pack(view.target()), 2000)
+	var hud := view.get_node("Hud/Armies") as Map3DHudArmies
+	assert_true(hud.has_method("_sync_symbol_nodes"))
+	if not hud.has_method("_sync_symbol_nodes"): return
+	hud.call("_sync_symbol_nodes", view.army_markers())
+	var nodes: Dictionary = hud.get("_symbol_nodes")
+	var code: String = nodes.keys()[0]
+	var ink: Node2D = nodes[code]
+	var before := ink.position
+	view.look_at_pack(view._ctx.to_pack(view.target()) + Vector2(0.1, 0), 2000)
+	hud.call("_sync_symbol_nodes", view.army_markers())
+	assert_same((hud.get("_symbol_nodes") as Dictionary)[code], ink)
+	assert_ne(ink.position, before, "pan moves the retained ink without rebuilding it")
+	view.set_military(false)
+	assert_true((hud.get("_symbol_nodes") as Dictionary).is_empty(), "mode commit clears retained ink immediately")
+	hud.call("_sync_symbol_nodes", view.army_markers())
+	assert_true((hud.get("_symbol_nodes") as Dictionary).is_empty())
+	assert_true(ink.is_queued_for_deletion(), "military off removes retained commands")
+
+
+func test_standing_units_do_not_build_march_route_origins() -> void:
+	var view := _view()
+	var st := view.context().state()
+	for code: String in st.regiments: st.regiments[code]["order"] = ArmySystem.ORDER_STANDBY
+	for code: String in st.foes: st.foes[code]["order"] = ArmySystem.ORDER_STANDBY
+	var counted := CountedPositionsView.new()
+	autofree(counted)
+	var hud := view.get_node("Hud/Armies") as Map3DHudArmies
+	hud.view = counted
+	hud._draw_routes(hud.ctx.regiments())
+	assert_eq(counted.position_calls, 0, "route-origin projection is unnecessary when every admitted unit stands")
+	hud.view = view
+
+
+func test_route_draw_reuses_the_admitted_units_from_symbol_layout() -> void:
+	var view := _view()
+	var st := view.context().state()
+	for code: String in st.regiments: st.regiments[code]["order"] = ArmySystem.ORDER_STANDBY
+	for code: String in st.foes: st.foes[code]["order"] = ArmySystem.ORDER_STANDBY
+	var counted := CountedSight.new(view.context().repo, view.context().meta)
+	counted.state_fn = func() -> GameState: return st
+	var admitted := counted.regiments()
+	counted.calls = 0
+	var hud := view.get_node("Hud/Armies") as Map3DHudArmies
+	var original := hud.ctx
+	hud.ctx = counted
+	hud.call("_draw_routes", admitted)
+	assert_eq(counted.calls, 0, "route paint must not repeat admission already obtained for symbol layout")
+	hud.ctx = original
+
+
+func test_camera_pan_does_not_reapply_an_unchanged_legend_mode() -> void:
+	var view := _view()
+	var scroll := view.get_node("Hud/LegendScroll") as ScrollContainer
+	var old := scroll.get_node("MilitaryLegend") as Map3DMilitaryLegend
+	var legend := CountedLegend.new()
+	for field: String in ["symbols", "row_size", "icon_size", "text_offset", "panel", "text_ink"]: legend.set(field, old.get(field))
+	scroll.remove_child(old)
+	old.queue_free()
+	legend.name = "MilitaryLegend"
+	scroll.add_child(legend)
+	var target := view.context().to_pack(view.target())
+	view.look_at_pack(target, 2000)
+	var calls := legend.mode_calls
+	assert_true(legend.visible)
+	view.look_at_pack(target + Vector2(1, 0), 2000)
+	assert_eq(legend.mode_calls, calls, "camera-only movement retains static legend commands")
+	view.set_military(false)
+	assert_false(legend.visible)
+	assert_gt(legend.mode_calls, calls, "military off commits immediately")
 
 
 func after_all() -> void:

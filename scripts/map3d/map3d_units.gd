@@ -36,13 +36,14 @@ static func height_m(repo: DataRepository, fov_deg: float, view_h_px: float, ref
 
 ## A piece ({node, anims}) shown or hidden; its AnimationPlayers run only while
 ## it is shown (perf 2026-10-02; under the LEDGER or the WAR ROOM the view stops).
-static func show_piece(piece: Dictionary, on: bool) -> void:
+static func show_piece(piece: Dictionary, on: bool, animate: bool = true) -> void:
 	(piece["node"] as Node3D).visible = on
-	if bool(piece.get("running", true)) == on:
+	var active := on and animate
+	if bool(piece.get("running", true)) == active:
 		return
-	piece["running"] = on
+	piece["running"] = active
 	for anim: AnimationPlayer in piece["anims"]:
-		anim.active = on
+		anim.active = active
 
 
 ## Whether the camera is far enough out that a COURIER is its flat mark
