@@ -424,3 +424,55 @@ func test_partial_rock_preserves_other_units_native_targets_in_four_shapes() -> 
 		var goals := BattleGroups.targets(f.repo, f.state, f.battle, f.a)
 		assert_eq(_points(goals).slice(0, 7), _points(native).slice(0, 7), shape)
 		assert_eq(BattleGroups.targets(f.repo, f.state, f.battle, ally), ally_native, shape + " unrelated ally remains native")
+
+func test_diamond_centre_reserve_rock_keeps_legal_native_slots_and_ally() -> void:
+	for with_ally: bool in [false, true]:
+		var f := _fixture(800)
+		var ally := ""
+		if with_ally:
+			var codes: Array = f.state.regiments.keys()
+			codes.sort()
+			ally = String(codes[1])
+			Personnel.replace(f.repo, f.state, ally, 100)
+			f.state.regiments[ally].merge({"x_m": 40, "y_m": 100, "facing_deg": 0}, true)
+			f.battle.att.append(ally)
+		f.battle.place_y_m = 250
+		f.battle.formations.att.current = "diamond"
+		BattleGroups.refresh(f.repo, f.state, f.battle)
+		for i: int in f.battle.groups[f.a].size():
+			f.battle.groups[f.a][i].x_m = 40
+			f.battle.groups[f.a][i].y_m = 250 + i * 20
+		var bytes := PackedByteArray()
+		bytes.resize(500 * 500)
+		f.repo.balance["army_march_grid_px"] = 1.0
+		var grid := MarchPath.build(f.repo, 500, 500, 1, bytes)
+		MarchPath.use(f.repo, grid)
+		var native := BattleGroups.targets(f.repo, f.state, f.battle, f.a)
+		assert_eq(native.size(), 8)
+		assert_eq(native[0].role, "reserve")
+		if not with_ally:
+			assert_eq(_points(native), [Vector2i(200, 250), Vector2i(220, 250), Vector2i(200, 270),
+				Vector2i(180, 250), Vector2i(200, 230), Vector2i(240, 250), Vector2i(200, 290), Vector2i(160, 250)])
+		var ally_native: Array[Dictionary] = []
+		if with_ally:
+			ally_native = BattleGroups.targets(f.repo, f.state, f.battle, ally)
+		grid.closed[int(native[0].y_m) * 500 + int(native[0].x_m)] = 1
+		var before := JSON.stringify(f.state.to_dict())
+		var goals := BattleGroups.targets(f.repo, f.state, f.battle, f.a)
+		var desired := BattleGroups.layout(f.repo, "diamond", 8,
+			BattleGroups.deployment(f.repo, f.state, f.battle)[f.a], int(f.battle.group_facing[f.a]))
+		var retained := 0
+		for row: Dictionary in native.slice(1):
+			# A slot already displaced by the ally is overflow, not a native target.
+			if Vector2i(int(row.x_m), int(row.y_m)) != desired[int(row.slot)]: continue
+			assert_true(goals.has(row), "legal native slot %s survives a blocked centre lane seed" % row.slot)
+			retained += 1
+		assert_eq(retained, 6 if with_ally else 7)
+		for row: Dictionary in goals:
+			assert_true(BattleGroups._ground_clear(grid, Vector2i(int(row.x_m), int(row.y_m)),
+				Vector2i(int(row.x_m), int(row.y_m)), 10.0), "every retained/fallback footprint remains legal")
+		if not with_ally:
+			assert_eq(goals.size(), 7, "only blocked overflow waits when no fallback lane exists")
+		else:
+			assert_eq(BattleGroups.targets(f.repo, f.state, f.battle, ally), ally_native)
+		assert_eq(JSON.stringify(f.state.to_dict()), before, "native preservation is a pure query")

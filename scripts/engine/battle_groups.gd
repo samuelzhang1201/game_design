@@ -611,7 +611,6 @@ static func targets(repo: DataRepository, state: GameState, battle: Dictionary, 
 				high += 1
 			if high - low + 1 > lanes.size(): lanes.assign(candidate.slice(low, high + 1))
 		lanes.sort_custom(func(a: float, b: float) -> bool: return a < b if is_equal_approx(absf(a), absf(b)) else absf(a) < absf(b))
-		if lanes.is_empty(): return out
 	var chosen := {}
 	var claimed: Array[Vector2i] = []
 	# Reserve reachable native slots before filling holes; a rear rock cannot
