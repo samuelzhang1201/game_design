@@ -529,10 +529,14 @@ static func _snapshot_flank(repo: DataRepository, state: GameState, unit: String
 	var size := BattleGroups.saved_size(repo, battle) if battle.has("groups") else int(repo.bal("battle_group_size"))
 	if size <= 0: return
 	var n := BattleGroups.counts(ArmySystem.fit_count(repo, state, target), size).size()
-	var radius := 0
-	for offset: Vector2i in BattleGroups.layout(repo, shape if shape != "" else BattleFormation.DEFAULT, n, Vector2i.ZERO, 0):
-		radius = maxi(radius, ceili(Vector2(offset).length()))
 	var positions := BattleGroups.layout(repo, shape if shape != "" else BattleFormation.DEFAULT, n, there, facing)
+	if battle.get("groups", {}).has(target):
+		positions.clear()
+		for row: Dictionary in battle.groups[target]:
+			positions.append(Vector2i(int(row.x_m), int(row.y_m)))
+	var radius := 0
+	for point: Vector2i in positions:
+		radius = maxi(radius, ceili(Vector2(point - there).length()))
 	var geometry := {"x_m": there.x, "y_m": there.y, "facing_deg": facing, "radius_m": radius,
 		"points_m": MarchRoute.to_pairs(positions)}
 	if flank.get("known", {}) != geometry:
@@ -660,7 +664,7 @@ static func deploy_flank(repo: DataRepository, state: GameState, battle: Diction
 		distance -= 1
 		walked = MarchRoute.walk(here, [path[0]], distance)
 		to = walked["at"]
-	if not BattleCharge._clear(repo, battle, unit, to - here):
+	if not BattleGroups.sweep_clear(repo, state, battle, unit, -1, here, [to]):
 		return true
 	BattleGroups.translate(repo, state, battle, unit, to - here)
 	flank["path_m"] = MarchRoute.to_pairs((walked["path"] as Array) + path.slice(1))

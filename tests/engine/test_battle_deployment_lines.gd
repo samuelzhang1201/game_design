@@ -11,12 +11,15 @@ func _fixture() -> Dictionary:
 	codes.sort()
 	var a := String(codes[0])
 	var enemy := String(state.foes.keys()[0])
+	# One physical row per unit makes the summary mean equal its measured point.
+	Personnel.replace(repo, state, a, 1)
+	Personnel.replace(repo, state, enemy, 1)
 	state.regiments[a]["x_m"] = 4000
 	state.regiments[a]["y_m"] = 0
 	state.foes[enemy]["x_m"] = 0
 	state.foes[enemy]["y_m"] = 0
 	var battle := {"id": 9446, "att": [a], "def": [enemy], "rounds": 0,
-		"town": "", "place_x_m": 0, "place_y_m": 0, "actions": {}}
+		"town": "", "place_x_m": 0, "place_y_m": 0, "actions": {"att": {"kind": "hold"}, "def": {"kind": "hold"}}}
 	state.battles = [battle]
 	BattleFormation.ensure(battle)
 	return {"repo": repo, "state": state, "a": a, "enemy": enemy, "battle": battle}
@@ -98,21 +101,27 @@ func test_a_step_across_water_is_not_taken() -> void:
 	BattleGroups.deploy_day(f.repo, f.state, f.battle)
 	MarchPath.forget()
 	assert_eq(_at(f, f.a), Vector2i(4000, 0))
-	assert_eq(_at(f, f.enemy), Vector2i(-50, 0), "the defender's dry step is taken")
+	assert_eq(_at(f, f.enemy), Vector2i(0, 0), "raw out-of-grid target is refused")
 
-func test_deployment_translates_existing_rows_once() -> void:
+func test_deployment_moves_rows_once_and_synchronizes_mean() -> void:
 	var f := _fixture()
-	Personnel.replace(f.repo, f.state, f.a, 100)
+	Personnel.replace(f.repo, f.state, f.a, 101)
+	f.battle.formations.att.current = "line"
 	f.battle["groups"] = {f.a: [
-		{"count": 50, "role": "front", "x_m": 4000, "y_m": 200},
-		{"count": 50, "role": "reserve", "x_m": 3960, "y_m": 200}]}
+		{"slot": 0, "count": 100, "role": "front", "x_m": 4000, "y_m": 200},
+		{"slot": 1, "count": 1, "role": "front", "x_m": 4000, "y_m": -200}]}
+	f.battle.group_size_version = 2
+	f.battle.group_size_men = 100
 	f.state.day = 5
 	BattleGroups.deploy_day(f.repo, f.state, f.battle)
-	assert_eq(_at(f, f.a), Vector2i(1500, 0))
-	var expected := [Vector2i(1500, 200), Vector2i(1460, 200)]
+	# Each delta toward (50,+/-25) is (-3950,-/+175). Its length is
+	# 3953.875 m; a 2500 m budget rounds inward to (-2497,-/+111).
+	var expected := [Vector2i(1503, 89), Vector2i(1503, -89)]
+	assert_eq(_at(f, f.a), Vector2i(1503, 0), "rounded mean, never a second rigid step")
 	assert_eq((f.battle.groups[f.a] as Array).map(func(row: Dictionary) -> Vector2i:
 		return Vector2i(int(row.x_m), int(row.y_m))), expected)
 	var before: Dictionary = f.battle.duplicate(true)
+	BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.a)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	BattleGroups.deploy_day(f.repo, f.state, f.battle)
 	assert_eq(f.battle, before)

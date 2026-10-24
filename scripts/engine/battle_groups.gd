@@ -301,6 +301,351 @@ static func deployment(repo: DataRepository, state: GameState, battle: Dictionar
 	return out
 
 
+## Distance to a closed segment; tangency is legal for both terrain and people.
+static func _distance_sq(point: Vector2, a: Vector2, b: Vector2) -> float:
+	var delta := b - a
+	var t := clampf((point - a).dot(delta) / delta.length_squared(), 0.0, 1.0) if delta != Vector2.ZERO else 0.0
+	return point.distance_squared_to(a + delta * t)
+
+
+static func _rect_distance_sq(a: Vector2, b: Vector2, rect: Rect2) -> float:
+	var corners := [rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]
+	var best := minf(a.distance_squared_to(a.clamp(rect.position, rect.end)), b.distance_squared_to(b.clamp(rect.position, rect.end)))
+	for i: int in 4:
+		if Geometry2D.segment_intersects_segment(a, b, corners[i], corners[(i + 1) % 4]) != null:
+			return 0.0
+		best = minf(best, _distance_sq(corners[i], a, b))
+	return best
+
+
+## Every closed cell intersecting the capsule's interior counts, including caps.
+static func _ground_clear(grid: MarchPath, a: Vector2i, b: Vector2i, radius: float) -> bool:
+	if grid == null:
+		return true
+	var low := Vector2(mini(a.x, b.x), mini(a.y, b.y)) - Vector2.ONE * radius
+	var high := Vector2(maxi(a.x, b.x), maxi(a.y, b.y)) + Vector2.ONE * radius
+	if low.x < 0.0 or low.y < 0.0 or high.x > grid.cols * grid.cell_m or high.y > grid.rows * grid.cell_m:
+		return false
+	# The destination is never opened as a march endpoint.
+	if grid.is_closed(grid.cell_of(a)) or grid.is_closed(grid.cell_of(b)):
+		return false
+	var first := Vector2i(low / float(grid.cell_m))
+	var last := Vector2i(high / float(grid.cell_m))
+	for y: int in range(first.y, mini(last.y + 1, grid.rows)):
+		for x: int in range(first.x, mini(last.x + 1, grid.cols)):
+			if grid.is_closed(Vector2i(x, y)) and _rect_distance_sq(Vector2(a), Vector2(b),
+					Rect2(Vector2(x, y) * grid.cell_m, Vector2.ONE * grid.cell_m)) < radius * radius:
+				return false
+	return true
+
+
+## Pure swept disk validation. Rigid movement excludes only its own rigid rows.
+static func sweep_clear(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
+		slot: int, here: Vector2i, path: Array) -> bool:
+	var spacing := float(repo.bal("battle_group_spacing_m"))
+	var grid := MarchPath.of_pack(repo)
+	var source := {}
+	if slot >= 0 and state != null and BattleRules.side_of(battle, code) != "" \
+			and not BattleSystem._stored(state, code).is_empty():
+		for row: Dictionary in battle.get("groups", {}).get(code, []):
+			if _whole(row.get("slot")) and int(row.slot) == slot and int(row.get("count", 0)) > 0:
+				source = row
+	var at_source := not source.is_empty() and here == Vector2i(int(source.x_m), int(source.y_m))
+	var offsets: Array[Vector2i] = [Vector2i.ZERO]
+	if slot < 0:
+		offsets.clear()
+		for row: Dictionary in battle.get("groups", {}).get(code, []):
+			offsets.append(Vector2i(int(row.x_m), int(row.y_m)) - here)
+	for offset: Vector2i in offsets:
+		var previous := here + offset
+		for point: Vector2i in [here] + path:
+			var next := point + offset
+			if not _ground_clear(grid, previous, next, spacing / 2.0):
+				return false
+			for other_code: String in battle.get("groups", {}):
+				for other: Dictionary in battle.groups[other_code]:
+					if other_code == code and (slot < 0 or int(other.slot) == slot):
+						continue
+					var q := Vector2(int(other.x_m), int(other.y_m))
+					if _distance_sq(q, Vector2(previous), Vector2(next)) < spacing * spacing:
+						# Only committed same-unit facts may separate; candidate origins cannot opt in.
+						var exiting := at_source and other_code == code and int(other.get("count", 0)) > 0 \
+							and _whole(other.get("slot")) and int(other.slot) >= 0 \
+							and Vector2(here).distance_squared_to(q) < spacing * spacing \
+							and Vector2(previous).distance_squared_to(q) < spacing * spacing \
+							and (Vector2(previous) - q).dot(Vector2(next - previous)) >= 0.0
+						if not exiting: return false
+			previous = next
+	return true
+
+
+## A private expanded grid; neither pack terrain nor its cached road is changed.
+static func _route(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
+		slot: int, here: Vector2i, to: Vector2i, occupancy := true) -> Array:
+	var grid := MarchPath.of_pack(repo)
+	var radius := float(repo.bal("battle_group_spacing_m")) / 2.0
+	if not _ground_clear(grid, here, here, radius) or not _ground_clear(grid, to, to, radius):
+		return []
+	if (sweep_clear(repo, state, battle, code, slot, here, [to]) if occupancy else _ground_clear(grid, here, to, radius)):
+		return [to]
+	if grid != null and not grid.joins(here, to):
+		return []
+	# Pack cells describe terrain, not tactical occupancy. Refine only this route's box.
+	var cell := mini(grid.cell_m, maxi(1, floori(radius))) if grid != null else maxi(1, floori(radius))
+	var low := Vector2i(mini(here.x, to.x), mini(here.y, to.y))
+	var high := Vector2i(maxi(here.x, to.x), maxi(here.y, to.y))
+	var controls: Array = [here, to]
+	if grid != null and not _ground_clear(grid, here, to, radius):
+		controls.append_array(grid.road(here, to))
+	var blockers: Array[Vector2i] = []
+	if occupancy:
+		for other_code: String in battle.get("groups", {}):
+			for row: Dictionary in battle.groups[other_code]:
+				if other_code == code and int(row.slot) == slot: continue
+				var at := Vector2i(int(row.x_m), int(row.y_m))
+				blockers.append(at)
+				controls.append(at)
+	for point: Vector2i in controls:
+		low = Vector2i(mini(low.x, point.x), mini(low.y, point.y))
+		high = Vector2i(maxi(high.x, point.x), maxi(high.y, point.y))
+	low -= Vector2i.ONE * ceili(radius * 4.0)
+	high += Vector2i.ONE * ceili(radius * 4.0)
+	if grid != null:
+		low = Vector2i(maxi(0, low.x), maxi(0, low.y))
+		high = Vector2i(mini(grid.cols * grid.cell_m, high.x), mini(grid.rows * grid.cell_m, high.y))
+	# Align the factual source to a cell centre: a snapped first corner must not
+	# deepen its old overlap or cut into a tangent neighbouring group.
+	var start_cell := Vector2i(floori(float(here.x - low.x) / cell), floori(float(here.y - low.y) / cell))
+	@warning_ignore("integer_division")
+	var origin := here - start_cell * cell - Vector2i.ONE * (cell / 2)
+	if grid != null:
+		if origin.x < 0: origin.x += ceili(float(-origin.x) / cell) * cell
+		if origin.y < 0: origin.y += ceili(float(-origin.y) / cell) * cell
+	var cols := maxi(1, ceili(float(high.x - origin.x) / cell))
+	var rows := maxi(1, ceili(float(high.y - origin.y) / cell))
+	var bytes := PackedByteArray()
+	bytes.resize(cols * rows)
+	var private := MarchPath.build(repo, cols, rows, cell, bytes)
+	var spacing := radius * 2.0
+	for y: int in rows:
+		for x: int in cols:
+			var at := private.centre_m(Vector2i(x, y)) + origin
+			var legal := _ground_clear(grid, at, at, radius)
+			if legal:
+				for q: Vector2i in blockers:
+					if at.distance_squared_to(q) < spacing * spacing:
+						legal = false
+						break
+			private.closed[y * cols + x] = 0 if legal else 1
+	var start := here - origin
+	var end := to - origin
+	if occupancy and sweep_clear(repo, state, battle, code, slot, here, []):
+		private.closed[private.cell_of(start).y * cols + private.cell_of(start).x] = 0
+	if private.is_closed(private.cell_of(start)) or private.is_closed(private.cell_of(end)) or not private.joins(start, end):
+		return []
+	# Centre-line string pulling can shave the expanded edge. Retain the legal
+	# cell-centre route when its shortened polyline fails the actual disk test.
+	private._astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
+	var raw: Array = []
+	for cell_at: Vector2i in private._cells(private.cell_of(start), private.cell_of(end)).slice(1):
+		raw.append(private.centre_m(cell_at))
+	raw.append(end)
+	for candidate: Array in [private.road(start, end), raw]:
+		if not ArmySystem.leg_clear(private, start, candidate): continue
+		var path: Array = []
+		for point: Vector2i in candidate:
+			path.append(point + origin)
+		if occupancy:
+			if sweep_clear(repo, state, battle, code, slot, here, path): return path
+		else:
+			var previous := here
+			var legal := true
+			for point: Vector2i in path:
+				legal = legal and _ground_clear(grid, previous, point, radius)
+				previous = point
+			if legal: return path
+	return []
+
+
+
+## Commits one row only; the anchor is synchronized once after all ordinary rows.
+static func move_row(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
+		slot: int, path: Array, budget: int) -> Dictionary:
+	var row := {}
+	for candidate: Dictionary in battle.get("groups", {}).get(code, []):
+		if int(candidate.slot) == slot:
+			row = candidate
+	if row.is_empty():
+		return {"at": Vector2i.ZERO, "path": path, "moved_m": 0, "arrived": false}
+	var here := Vector2i(int(row.x_m), int(row.y_m))
+	var result := {"at": here, "path": path, "moved_m": 0, "arrived": path.is_empty()}
+	if battle.has("pending_round") or budget <= 0 or path.is_empty():
+		return result
+	# Terrain connectivity applies to the whole route; moving people block this step.
+	var previous := here
+	for point: Vector2i in path:
+		if not _ground_clear(MarchPath.of_pack(repo), previous, point, float(repo.bal("battle_group_spacing_m")) / 2.0):
+			return result
+		previous = point
+	var limit := budget
+	var walked := MarchRoute.walk(here, path, budget)
+	var traversed: Array = (walked.passed as Array).duplicate()
+	traversed.append(walked.at)
+	while MarchRoute.length_from(here, traversed) > float(limit):
+		budget -= 1
+		walked = MarchRoute.walk(here, path, budget)
+		traversed = (walked.passed as Array).duplicate()
+		traversed.append(walked.at)
+	if not sweep_clear(repo, state, battle, code, slot, here, traversed):
+		return result
+	var at: Vector2i = walked.at
+	row.x_m = at.x
+	row.y_m = at.y
+	row.path_m = MarchRoute.to_pairs(walked.path)
+	return {"at": at, "path": walked.path, "moved_m": floori(MarchRoute.length_from(here, traversed)), "arrived": (walked.path as Array).is_empty()}
+
+
+static func _ordered_rows(battle: Dictionary, code: String) -> Array:
+	var rows: Array = battle.get("groups", {}).get(code, []).duplicate()
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.slot) < int(b.slot))
+	return rows
+
+
+## Desired targets are pure: transient friendly queues affect travel, not capacity.
+static func targets(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
+		_region := "") -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var side := BattleRules.side_of(battle, code)
+	if side == "": return out
+	var goals := deployment(repo, state, battle)
+	var codes: Array = (battle[side] as Array).duplicate()
+	codes.sort()
+	var requested := 0
+	var centre := Vector2.ZERO
+	var native := {}
+	var native_roles := {}
+	var grid := MarchPath.of_pack(repo)
+	var spacing := float(repo.bal("battle_group_spacing_m"))
+	var depth := float(repo.bal("battle_group_depth_m"))
+	var fits := true
+	for member: String in codes:
+		var rows := _ordered_rows(battle, member)
+		var shape := BattleFormation.of_unit(state, member)
+		var slots := BattleFormation.slots(shape, rows.size())
+		var front := 0.0
+		for point: Vector2 in slots:
+			front = minf(front, point.y)
+		var width := 0
+		var roles: Array[String] = []
+		for point: Vector2 in slots:
+			roles.append("front" if is_equal_approx(point.y, front) else "reserve")
+			width += 1 if is_equal_approx(point.y, front) else 0
+		requested += width
+		centre += Vector2(goals[member]) * width
+		var points := layout(repo, shape, rows.size(), goals[member], int(battle.get("group_facing", {}).get(member, 0)))
+		native[member] = points
+		native_roles[member] = roles
+		for point: Vector2i in points:
+			fits = fits and _ground_clear(grid, point, point, spacing / 2.0)
+	if requested == 0: return out
+	var total := 0
+	for member: String in codes: total += (native[member] as Array).size()
+	var max_ranks := total * maxi(1, ceili(spacing / maxf(1.0, depth)))
+	if fits:
+		var chosen := {}
+		var occupied: Array[Vector2i] = []
+		# Reserve desired front points first, so overflow cannot steal a later slot's front.
+		for phase: String in ["front", "reserve"]:
+			for member: String in codes:
+				var rows := _ordered_rows(battle, member)
+				var back := -WarFront.facing_vector(int(battle.get("group_facing", {}).get(member, 0))) * depth
+				for i: int in rows.size():
+					if native_roles[member][i] != phase: continue
+					var point: Vector2i = native[member][i]
+					for rank: int in max_ranks:
+						var candidate := point + Vector2i((back * rank).round())
+						if not _ground_clear(grid, candidate, candidate, spacing / 2.0) \
+								or occupied.any(func(other: Vector2i) -> bool: return candidate.distance_squared_to(other) < spacing * spacing): continue
+						var here := Vector2i(int(rows[i].x_m), int(rows[i].y_m))
+						if not _route(repo, state, battle, member, int(rows[i].slot), here, candidate, false).is_empty():
+							chosen[[member, int(rows[i].slot)]] = {"slot": int(rows[i].slot), "x_m": candidate.x,
+								"y_m": candidate.y, "role": phase if rank == 0 else "reserve"}
+							occupied.append(candidate)
+						break
+		for row: Dictionary in _ordered_rows(battle, code):
+			if chosen.has([code, int(row.slot)]): out.append(chosen[[code, int(row.slot)]])
+		return out
+	centre /= float(requested)
+	var face := WarFront.facing_vector(int(battle.get("group_facing", {}).get(codes[0], 0)))
+	var across := Vector2(-face.y, face.x)
+	var lanes: Array[float] = []
+	if not fits:
+		# Compare the native half-pitch and centred pitch; never cross a closed gap.
+		for centred: bool in [false, true]:
+			var candidate: Array[float] = []
+			for i: int in requested:
+				var offset := (float(i) - float(requested - 1) / 2.0) * spacing
+				if centred:
+					offset += spacing / 2.0
+				if absf(offset) <= float(requested - 1) * spacing / 2.0:
+					candidate.append(offset)
+			var seed := -1
+			for i: int in candidate.size():
+				if seed < 0 or absf(candidate[i]) < absf(candidate[seed]): seed = i
+			if seed < 0: continue
+			var at := Vector2i((centre + across * candidate[seed]).round())
+			if not _ground_clear(grid, at, at, spacing / 2.0): continue
+			var low := seed
+			var high := seed
+			while low > 0:
+				at = Vector2i((centre + across * candidate[low - 1]).round())
+				if not _ground_clear(grid, at, at, spacing / 2.0): break
+				low -= 1
+			while high + 1 < candidate.size():
+				at = Vector2i((centre + across * candidate[high + 1]).round())
+				if not _ground_clear(grid, at, at, spacing / 2.0): break
+				high += 1
+			if high - low + 1 > lanes.size(): lanes.assign(candidate.slice(low, high + 1))
+		lanes.sort_custom(func(a: float, b: float) -> bool: return a < b if is_equal_approx(absf(a), absf(b)) else absf(a) < absf(b))
+		if lanes.is_empty(): return out
+	var available: Array[Dictionary] = []
+	var claimed: Array[Vector2i] = []
+	for rank: int in max_ranks:
+		for lane: float in lanes:
+			var point := Vector2i((centre + across * lane - face * rank * depth).round())
+			if not _ground_clear(grid, point, point, spacing / 2.0) \
+					or claimed.any(func(other: Vector2i) -> bool: return point.distance_squared_to(other) < spacing * spacing): continue
+			available.append({"x_m": point.x, "y_m": point.y, "role": "front" if rank == 0 else "reserve"})
+			claimed.append(point)
+			if available.size() == total: break
+		if available.size() == total: break
+	var index := 0
+	for member: String in codes:
+		for row: Dictionary in _ordered_rows(battle, member):
+			if index >= available.size(): return out
+			var goal: Dictionary = available[index].duplicate()
+			index += 1
+			var here := Vector2i(int(row.x_m), int(row.y_m))
+			if _route(repo, state, battle, member, int(row.slot), here, Vector2i(int(goal.x_m), int(goal.y_m)), false).is_empty(): continue
+			if member == code:
+				goal.slot = int(row.slot)
+				out.append(goal)
+	return out
+
+
+static func _mean_anchor(repo: DataRepository, state: GameState, battle: Dictionary, code: String) -> void:
+	var rows: Array = battle.get("groups", {}).get(code, [])
+	if rows.is_empty(): return
+	var sum := Vector2i.ZERO
+	for row: Dictionary in rows:
+		sum += Vector2i(int(row.x_m), int(row.y_m))
+	var mean := Vector2i((Vector2(sum) / rows.size()).round())
+	var entry := BattleSystem._stored(state, code)
+	entry.x_m = mean.x
+	entry.y_m = mean.y
+	battle.group_anchor_m[code] = [mean.x, mean.y]
+
+
 ## Saved front-group contact, with active pursuit restricted to its received
 ## region. An attacking opponent still permits self-defence outside it.
 ## A pursuit_target asks only for pursuit contact with that enemy, not defence.
@@ -337,8 +682,8 @@ static func engaged_counts(repo: DataRepository, state: GameState, battle: Dicti
 				var dx := int(row["x_m"]) - int(other["x_m"])
 				var dy := int(row["y_m"]) - int(other["y_m"])
 				if dx * dx + dy * dy <= reach * reach:
-					if grid != null and not grid.clear(Vector2i(int(row["x_m"]), int(row["y_m"])),
-							Vector2i(int(other["x_m"]), int(other["y_m"]))):
+					if not _ground_clear(grid, Vector2i(int(row["x_m"]), int(row["y_m"])),
+							Vector2i(int(other["x_m"]), int(other["y_m"])), float(repo.bal("battle_group_spacing_m")) / 2.0):
 						continue
 					touching = true
 					break
@@ -382,12 +727,18 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 	if int(battle.get("deployed_day", -1)) == today or withdrawing(state, battle) or battle.has("pending_round"):
 		return
 	battle["deployed_day"] = today
-	var targets := deployment(repo, state, battle)
-	var step := float(repo.bal("battle_deploy_step_m"))
-	var grid := MarchPath.of_pack(repo)   # the land grid: no step into water or over a scarp
+	var step := int(repo.bal("battle_deploy_step_m"))
 	var charges := {}
 	refresh(repo, state, battle)
-	for code: String in targets:
+	var goals := {}
+	var codes: Array[String] = []
+	for side: String in BattleSystem.SIDES:
+		var members: Array = (battle[side] as Array).duplicate()
+		members.sort()
+		for code: String in members:
+			codes.append(code)
+			goals[code] = targets(repo, state, battle, code)
+	for code: String in codes:
 		var e := BattleSystem._stored(state, code)
 		if e.is_empty() or bool(e.get("captured", false)) or ArmySystem.fit_count(repo, state, code) <= 0 \
 				or ArmyGround.seated_in(repo, state, code) != "":
@@ -404,20 +755,29 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 			charge["phase"] = "disengage"
 		if BattleTaskSystem.deploy_flank(repo, state, battle, code):
 			continue
-		var from := BattleSystem._at_m(repo, state, code)
-		var to: Vector2i = targets[code]
 		var action := BattleSystem.unit_action(repo, state, battle, code)
+		var back := 0.0
 		if action["kind"] == "attack" and not action.has("pursuit_target") \
 				and BattleRanged.share(repo, state, code) >= int(repo.bal("battle_context_arm_threshold_permille")):
-			# Target and offset each round to metres: reserve their combined half-diagonal error.
-			var back := maxf(0.0, float(repo.bal("battle_ranged_reach_m") - repo.bal("battle_line_gap_m")) / 2.0 - sqrt(2.0))
-			to -= Vector2i((WarFront.facing_vector(int(battle["group_facing"][code])) * back).round())
-		var d := Vector2(to - from)
-		var moved := to if d.length() <= step else from + Vector2i((d.normalized() * step).round())
-		# ponytail: a blocked straight step waits in place; a routed approach round water is later work
-		if grid != null and not grid.clear(from, moved, [grid.cell_of(from)]):
-			continue
-		translate(repo, state, battle, code, moved - from)
+			back = maxf(0.0, float(repo.bal("battle_ranged_reach_m") - repo.bal("battle_line_gap_m")) / 2.0 - sqrt(2.0))
+		for goal: Dictionary in goals[code]:
+			var slot := int(goal.slot)
+			var row: Dictionary
+			for candidate: Dictionary in battle.groups[code]:
+				if int(candidate.slot) == slot: row = candidate
+			var here := Vector2i(int(row.x_m), int(row.y_m))
+			var to := Vector2i(int(goal.x_m), int(goal.y_m)) - Vector2i((WarFront.facing_vector(int(battle.group_facing[code])) * back).round())
+			if goal.role == "reserve": row.role = "reserve"
+			var path: Array = [to]
+			var direct := MarchRoute.walk(here, path, step)
+			if not _ground_clear(MarchPath.of_pack(repo), here, to, float(repo.bal("battle_group_spacing_m")) / 2.0) \
+					or not sweep_clear(repo, state, battle, code, slot, here, (direct.passed as Array) + [direct.at]):
+				path = _route(repo, state, battle, code, slot, here, to)
+				if path.is_empty():
+					path = _route(repo, state, battle, code, slot, here, to, false)
+			if not path.is_empty():
+				move_row(repo, state, battle, code, slot, path, step)
+		_mean_anchor(repo, state, battle, code)
 
 	refresh(repo, state, battle)
 	for code: String in charges:

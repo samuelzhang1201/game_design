@@ -193,8 +193,8 @@ same finite search around the saved target point.
 
 In battle, `deploy_flank` replaces that recipient’s generic line deployment,
 using the existing daily deployment budget, one routed leg at a time. Movement
-stops at first front-group contact; swept group corridors use the charge
-clearance predicate, without granting charge momentum. Pending rounds freeze
+stops at first front-group contact; full swept group footprints use `BattleGroups.sweep_clear`
+(the same terrain/occupancy predicate as charge), without granting charge momentum. Pending rounds freeze
 deployment. Actual contact commits the approach (`flank.phase = contact`),
 preserved by synonymous receipts on that canonical battlefield: this task never starts an automatic second
 circle, including after leaving the battlefield. Subsequent repositioning requires leaving the committed approach through
