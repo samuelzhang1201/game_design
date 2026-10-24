@@ -1,0 +1,63 @@
+{
+  "base": "55c5ada2becbbc0f94a74c3cc14459d987c49edf",
+  "protected_unchanged": {
+    "assets/3D/units/archers/archers.glb": "7484f4977058fed353c12d5507837257992e97bc52283487d61c7886e6481b9b",
+    "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
+    "assets/3D/units/archers/archers_archers_body_normal.jpg": "264cb3ab255df74c2dad64ef48541be7c234eb6af3bca2e94fa9a86a81c28ec4",
+    "assets/3D/units/archers/archers_archers_body_metal_rough.jpg": "c94059dc1cd9c2ff7d6f5ce29283e08e433cf638a8d08f5686417bb47baa0ba7",
+    "scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a"
+  },
+  "final_assets": {
+    "assets/3D/units/archers/archers_arrow.glb.import": "5cca5f78641503275516bb0b6ced697bf5b4165356ce19718490163ab6a866ed",
+    "assets/3D/units/archers/archers_arrow_archers_arrow_normal.jpg": "d10ef1f7eaab6cf3eeed80cbe195770e386d5a9b32fee4d7423a99538702ad52",
+    "assets/3D/units/archers/archers_quiver.glb": "a9688d6033c0e8c82be4500776fed501e152118631ad113d599e5d1896017174",
+    "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg": "f1225d1d75e4bd47f82ec957e875c8d65cc7c7576eb330b2eee85bfd5d7615c4",
+    "assets/3D/units/archers/archers_arrow_archers_arrow_metal_rough.jpg.import": "ac785e4ba611b66502a77c43e89c6069f3ba99713adfa2ebb365ef964e6ddbaf",
+    "assets/3D/units/archers/archers_bow.glb": "43973d645eb61a1670a3466048868c2f8e3ab35ca1e056cc8a3edb0331a5f3b7",
+    "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_0.jpg.import": "2ff91d064b76d61d9ff6ae1edafee50bad88e0ea033042978eb15b71f9450dda",
+    "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_0.jpg.import": "655aa7cedc5c1968b5828991c3ee55483c500aa868d4d82ed03e765f38261a7c",
+    "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_0.jpg": "1164ae683442cb6da8be06b1ef91f4196b898d5b9f2797d2ac9fdfeb72a3bb8a",
+    "assets/3D/units/archers/archers_bow.glb.import": "510e600c0096df3444b6d453cfd67f3bf8a80851189079c29f2fbdcca9c9ccaa",
+    "assets/3D/units/archers/archers_arrow.glb": "eee634aae8a84ce91b2816248de7e396c5feb32889aab6a97a08753caa698f16",
+    "assets/3D/units/archers/archers_arrow_archers_arrow_normal.jpg.import": "953e21e16fb391c6df20a17e1bef7571252497374e5013ebb4a9dc45d8cf7355",
+    "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg.import": "3d1b0b7a807b6798161b3ad06e9b4fc9d38f151661dcfd68ad84fa847080348f",
+    "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_2.jpg.import": "11d5c08b1d6fde3ca11c87c4473b8918245e8e440b7374c892aa67f223ed5d24",
+    "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_1.jpg.import": "26c7ad9d67c50819914931d2b10b495224e5e577c1962b05e4577f98dbdfe944",
+    "assets/3D/units/archers/archers_arrow_tripo_image_a0b7e2fc-bcdd-4027-9e2f-c1aedd82e123_0.jpg.import": "22b8cd14eef4ea5a63e0b4c5f20bc21479135aac43e4cb191fb9376938aaa121",
+    "assets/3D/units/archers/archers_arrow.res": "60db0721273e60b499e839f755d314343671c4e389a4055d788c2339efd318fd",
+    "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_0.jpg": "245dde1da3b707110efa45b17a04a4fc0f34b60e46a3eb65cb6d1f2e0df0a804",
+    "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_1.jpg": "9b562f22dfccb2968aa2ab45db155119cbc96f8b3b94c7739176e5afe490bb36",
+    "assets/3D/units/archers/archers_arrow_archers_arrow_metal_rough.jpg": "df3567a1636d4dffbf621283deed1bd18e3b5d4bbd336caf0e257f3018f222d3",
+    "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_2.jpg": "a45721d6fc4f8bcc409f47da94dd74ca12ab3cd3fc327cfed53666b607da5732",
+    "assets/3D/units/archers/archers_quiver.glb.import": "608c86f98eccbd40a547a13f6e90024f9c2f8d037e2fbd43bfa27e7bfa009512",
+    "assets/3D/units/archers/archers_bow.res": "193c73bf7ebff99067a03ccd8bc644a5ebcadbcad40e2b619fbfef47e3f3ff29",
+    "assets/3D/units/archers/archers_arrow_tripo_image_a0b7e2fc-bcdd-4027-9e2f-c1aedd82e123_0.jpg": "e809ca8fd8ccfcf78f4d547cea4efc1d9aaf6faf5b34eca1b63d7f1c7496ec32",
+    "assets/3D/units/archers/archers_quiver.res": "c6ffbb9806925ac42f75b3e6a0271a4cf113cf86ed0d364badc5b37de02df975"
+  },
+  "images": {
+    "game-100-overview.png": "bd679b9a20edf94ad42e28ab727d64f11857679de8e443534a08ca6c195147eb",
+    "near-front.png": "5298063c7bd2f64f4a9938c805bbab5ef0220f45543b503b299f9e93dba1d762",
+    "game-before-after.png": "91a3fe9b8662df95fc7e1b91f93d43ad660e44a6ab03652873f8a5d4137e0cf0",
+    "six-clips.png": "1be0f05ebcd4145febc246ba62e7c1066219d8c675da85b03f5fde80cc474af9",
+    "game-1000-overview.png": "6205ba901ea746d0b96882a510a85f67d8916ea0999dea4b0d3c59bf3789d7d4",
+    "near-back.png": "3c968a7a812efb308bc069871d63df37544325142ed1700249642b4817d783ee",
+    "before-after.png": "fcda1abbba9b181246ad69938489c37d0bfc37048c990b0a3f7191cdfd06aaff",
+    "game-100-crop.png": "3070131f439f154b5cd008f3b94c669328b697c3a84fcea28258a171a731e45b"
+  },
+  "checks": {
+    "targeted_gut": {
+      "scripts": 7,
+      "tests": 40,
+      "assertions": 39644,
+      "result": "pass"
+    },
+    "six_clips": {
+      "samples_each": 11,
+      "method": "bidirectional posed surface distance",
+      "result": "pass"
+    },
+    "roundtrip_default_decikit": "pass",
+    "python_compile": "pass",
+    "diff_check": "pass"
+  }
+}

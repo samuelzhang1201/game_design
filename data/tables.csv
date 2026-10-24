@@ -123,3 +123,4 @@ battle,orders
 battle,behaviors
 battle,battle_events
 battle,battle_event_choices
+screens/map3d,archer_gear_lod

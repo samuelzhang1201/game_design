@@ -1,0 +1,4 @@
+part,edge_m,feature_deg,conservative_edge_m,conservative_feature_deg,surface_percent,iterations,tri_budget,atlas_px,cage_m,shading_deg,uv_angle_deg,uv_margin,bake_margin_px,jpeg_quality
+bow,0.016,90,0.012,60,0.1,8,20000,2048,0.006,40,66,0.005,16,95
+arrow,0.0045,60,0.0045,60,0.1,8,20000,2048,0.004,40,66,0.005,16,95
+quiver,0.020,90,0.012,60,0.1,8,20000,2048,0.006,40,66,0.005,16,95

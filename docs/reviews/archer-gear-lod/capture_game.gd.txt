@@ -1,0 +1,40 @@
+extends SceneTree
+func _initialize() -> void:
+	call_deferred("setup")
+func setup() -> void:
+	var packed: PackedScene = load("res://scenes/tools/snapshot_screen.tscn")
+	var driver := packed.instantiate()
+	root.add_child(driver)
+	var focused := false
+	while is_instance_valid(driver):
+		await process_frame
+		if not is_instance_valid(driver):
+			return
+		if not focused and int(driver.get("_frames")) >= 30:
+			var game_root: Node = driver.get("_root")
+			if game_root == null or not game_root.current_screen.has_method("map3d_view"):
+				continue
+			var view: Variant = game_root.current_screen.map3d_view()
+			if view == null or not view.is_loaded():
+				continue
+			for node: Node in view.world().find_children("*", "", true, false):
+				if node.get_script() == null or node.get_script().get_global_name() != "Map3DLayerUnits":
+					continue
+				for code: String in node._pieces:
+					var piece: Dictionary = node._pieces[code]
+					if piece.get("model", "") != "archers" or not code in node._shown_xz:
+						continue
+					var figure: Node3D = piece["figs"][0]
+					var position := figure.global_position
+					var rig: Variant = view.component("rig")
+					rig.place(Vector2(position.x, position.z), float(driver.get("_zoom3d")), 120.0)
+					for shown_figure: Node in piece["figs"]:
+						for player: AnimationPlayer in shown_figure.find_children("*", "AnimationPlayer", true, false):
+							if player.current_animation != "":
+								player.seek(player.current_animation_length * 0.5, true)
+								player.pause()
+					print("GEAR_CAPTURE ", code, " target=", position, " scale=", figure.global_transform.basis.get_scale(), " model-height=", piece["height_m"])
+					focused = true
+					break
+				if focused:
+					break
