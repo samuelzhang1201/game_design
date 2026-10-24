@@ -1,0 +1,146 @@
+{
+  "bow": {
+    "source_sha256": "a34b68d900421e07fa0f45452f6570c6699602adf9937b71af92537c251adb37",
+    "preflight": {
+      "scale_applied": true,
+      "shape_keys": false,
+      "verts_before": 54633,
+      "nonmanifold_before": 0,
+      "verts_after": 48203,
+      "nonmanifold_after": 0,
+      "boundary_edges": 0,
+      "tris": 96426
+    },
+    "audit": {
+      "pass": true,
+      "fails": [],
+      "notes": [
+        "decimation merges/moves UVs: re-unwrap + bake, or check the textured look"
+      ],
+      "metrics": {
+        "tris": 8130,
+        "nonmanifold": 0,
+        "loose_verts": 0,
+        "zero_area": 0,
+        "sliver_share": 0.0027,
+        "ngons": 0,
+        "ngons_non_planar": 0,
+        "soft_creases": 0,
+        "ref_diag_m": 1.711,
+        "dev_low_to_high_p95": 0.0,
+        "dev_high_to_low_p95": 0.00097,
+        "dev_max": 0.00294,
+        "flipped_share": 0.00062,
+        "components_ref": 1,
+        "components_low": 1,
+        "unskinned_ref": 0.0,
+        "unskinned_low": 0.0
+      }
+    },
+    "skin": [
+      "DEF-bow",
+      "DEF-string"
+    ],
+    "uv": "new UVs; selected-to-active albedo/metal-rough/normal bake",
+    "image_names": {
+      "base": "tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_0",
+      "normal": "tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_2",
+      "mr": "tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_1"
+    }
+  },
+  "arrow": {
+    "source_sha256": "0ea0c104cdcada3c07c8dae67b8c91d742a6f678e474de09fa03dfb13ae1ff29",
+    "preflight": {
+      "scale_applied": true,
+      "shape_keys": false,
+      "verts_before": 65919,
+      "nonmanifold_before": 0,
+      "verts_after": 47911,
+      "nonmanifold_after": 16,
+      "boundary_edges": 7,
+      "tris": 95936
+    },
+    "audit": {
+      "pass": true,
+      "fails": [],
+      "notes": [
+        "decimation merges/moves UVs: re-unwrap + bake, or check the textured look"
+      ],
+      "metrics": {
+        "tris": 13310,
+        "nonmanifold": 0,
+        "loose_verts": 0,
+        "zero_area": 0,
+        "sliver_share": 0.0203,
+        "ngons": 0,
+        "ngons_non_planar": 0,
+        "soft_creases": 0,
+        "ref_diag_m": 0.8644,
+        "dev_low_to_high_p95": 0.0,
+        "dev_high_to_low_p95": 0.00115,
+        "dev_max": 0.0036,
+        "flipped_share": 0.00477,
+        "components_ref": 1,
+        "components_low": 1,
+        "unskinned_ref": 0.0,
+        "unskinned_low": 0.0
+      }
+    },
+    "skin": [
+      "DEF-arrow"
+    ],
+    "uv": "new UVs; selected-to-active albedo/metal-rough/normal bake",
+    "image_names": {
+      "base": "tripo_image_a0b7e2fc-bcdd-4027-9e2f-c1aedd82e123_0",
+      "normal": "archers_arrow_normal",
+      "mr": "archers_arrow_metal_rough"
+    }
+  },
+  "quiver": {
+    "source_sha256": "a2c8951759d88b5f245de49b14f11ee7ca148323baf10f122514b61a90cd5135",
+    "preflight": {
+      "scale_applied": true,
+      "shape_keys": false,
+      "verts_before": 64990,
+      "nonmanifold_before": 0,
+      "verts_after": 47356,
+      "nonmanifold_after": 7,
+      "boundary_edges": 8,
+      "tris": 95168
+    },
+    "audit": {
+      "pass": true,
+      "fails": [],
+      "notes": [
+        "decimation merges/moves UVs: re-unwrap + bake, or check the textured look"
+      ],
+      "metrics": {
+        "tris": 17863,
+        "nonmanifold": 0,
+        "loose_verts": 0,
+        "zero_area": 0,
+        "sliver_share": 0.006,
+        "ngons": 0,
+        "ngons_non_planar": 0,
+        "soft_creases": 0,
+        "ref_diag_m": 1.0182,
+        "dev_low_to_high_p95": 0.0,
+        "dev_high_to_low_p95": 0.00141,
+        "dev_max": 0.00498,
+        "flipped_share": 0.00107,
+        "components_ref": 2,
+        "components_low": 2,
+        "unskinned_ref": 0.0,
+        "unskinned_low": 0.0
+      }
+    },
+    "skin": [
+      "DEF-quiver"
+    ],
+    "uv": "new UVs; selected-to-active albedo/metal-rough/normal bake",
+    "image_names": {
+      "base": "tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_0",
+      "normal": "tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2"
+    }
+  }
+}

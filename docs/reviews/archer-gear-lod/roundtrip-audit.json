@@ -1,0 +1,116 @@
+{
+  "bow": {
+    "preflight": {
+      "scale_applied": true,
+      "shape_keys": false,
+      "verts_before": 9035,
+      "nonmanifold_before": 0,
+      "verts_after": 4055,
+      "nonmanifold_after": 0,
+      "boundary_edges": 0,
+      "tris": 8130
+    },
+    "audit": {
+      "pass": true,
+      "fails": [],
+      "notes": [
+        "decimation merges/moves UVs: re-unwrap + bake, or check the textured look"
+      ],
+      "metrics": {
+        "tris": 8130,
+        "nonmanifold": 0,
+        "loose_verts": 0,
+        "zero_area": 0,
+        "sliver_share": 0.0027,
+        "ngons": 0,
+        "ngons_non_planar": 0,
+        "soft_creases": 0,
+        "ref_diag_m": 1.711,
+        "dev_low_to_high_p95": 0.0,
+        "dev_high_to_low_p95": 0.00097,
+        "dev_max": 0.00294,
+        "flipped_share": 0.00061,
+        "components_ref": 1,
+        "components_low": 1,
+        "unskinned_ref": 0.0,
+        "unskinned_low": 0.0
+      }
+    }
+  },
+  "arrow": {
+    "preflight": {
+      "scale_applied": true,
+      "shape_keys": false,
+      "verts_before": 13336,
+      "nonmanifold_before": 0,
+      "verts_after": 6617,
+      "nonmanifold_after": 0,
+      "boundary_edges": 74,
+      "tris": 13310
+    },
+    "audit": {
+      "pass": true,
+      "fails": [],
+      "notes": [
+        "decimation merges/moves UVs: re-unwrap + bake, or check the textured look"
+      ],
+      "metrics": {
+        "tris": 13310,
+        "nonmanifold": 0,
+        "loose_verts": 0,
+        "zero_area": 0,
+        "sliver_share": 0.0203,
+        "ngons": 0,
+        "ngons_non_planar": 0,
+        "soft_creases": 0,
+        "ref_diag_m": 0.8644,
+        "dev_low_to_high_p95": 0.0,
+        "dev_high_to_low_p95": 0.00115,
+        "dev_max": 0.0036,
+        "flipped_share": 0.00477,
+        "components_ref": 1,
+        "components_low": 1,
+        "unskinned_ref": 0.0,
+        "unskinned_low": 0.0
+      }
+    }
+  },
+  "quiver": {
+    "preflight": {
+      "scale_applied": true,
+      "shape_keys": false,
+      "verts_before": 20651,
+      "nonmanifold_before": 0,
+      "verts_after": 8708,
+      "nonmanifold_after": 0,
+      "boundary_edges": 19,
+      "tris": 17863
+    },
+    "audit": {
+      "pass": true,
+      "fails": [],
+      "notes": [
+        "decimation merges/moves UVs: re-unwrap + bake, or check the textured look"
+      ],
+      "metrics": {
+        "tris": 17863,
+        "nonmanifold": 0,
+        "loose_verts": 0,
+        "zero_area": 0,
+        "sliver_share": 0.0059,
+        "ngons": 0,
+        "ngons_non_planar": 0,
+        "soft_creases": 0,
+        "ref_diag_m": 1.0182,
+        "dev_low_to_high_p95": 0.0,
+        "dev_high_to_low_p95": 0.00141,
+        "dev_max": 0.00498,
+        "flipped_share": 0.00107,
+        "components_ref": 2,
+        "components_low": 2,
+        "unskinned_ref": 0.0,
+        "unskinned_low": 0.0
+      }
+    }
+  }
+}

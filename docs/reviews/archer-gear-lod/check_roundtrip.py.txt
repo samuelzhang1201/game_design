@@ -1,0 +1,18 @@
+import bpy,bmesh,importlib.util,json,math
+from pathlib import Path
+q='/Users/samuelzhang/game_design/.agents/skills/blender-decimate-quality/scripts/decikit.py';s=importlib.util.spec_from_file_location('dk',q);dk=importlib.util.module_from_spec(s);s.loader.exec_module(dk)
+report={}
+for part in ['bow','arrow','quiver']:
+ bpy.ops.wm.read_factory_settings(use_empty=True)
+ bpy.ops.import_scene.gltf(filepath=f'/tmp/archer_gear_master/archers_{part}.glb');hi=next(o for o in bpy.context.scene.objects if o.type=='MESH');dk.preflight(hi,weld=1e-7)
+ old=set(bpy.context.scene.objects);bpy.ops.import_scene.gltf(filepath=f'/tmp/archer_gear_final/proposed/archers_{part}.glb');low=next(o for o in bpy.context.scene.objects if o not in old and o.type=='MESH')
+ pre=dk.preflight(low,weld=1e-7,recalc_normals=False) # retain the delivered winding of intentionally open feather surfaces
+ # Canonical inspection joins render seams and interprets the exported normal discontinuities.
+ bm=dk._bm(low)
+ for e in bm.edges:
+  if len(e.link_faces)==2 and e.calc_face_angle(0)>math.radians(40):e.smooth=False
+ bm.to_mesh(low.data);bm.free()
+ report[part]={'preflight':pre,'audit':dk.audit_decimate(low,high=hi,budget=20000)}
+ print('ROUNDTRIP',part,report[part],flush=True)
+ assert report[part]['audit']['pass']
+Path('/tmp/archer_gear_final/roundtrip_audit.json').write_text(json.dumps(report,indent=2)+'\n')

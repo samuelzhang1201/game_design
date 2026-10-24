@@ -1,0 +1,62 @@
+extends SceneTree
+func _initialize() -> void:
+	call_deferred("bench")
+func bench() -> void:
+	root.size = Vector2i(2560,1600)
+	var world := Node3D.new()
+	root.add_child(world)
+	var camera := Camera3D.new()
+	camera.position = Vector3(5,5,-9)
+	world.add_child(camera)
+	camera.look_at(Vector3(0,1,0))
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-45,-30,0)
+	sun.shadow_enabled = true
+	world.add_child(sun)
+	var scene: PackedScene = load("res://scenes/models/units/archers.tscn")
+	var report := {}
+	for variant: String in ["before","proposed"]:
+		var figures: Array[Node] = []
+		var materials := {}
+		for i in 9:
+			var figure := scene.instantiate()
+			world.add_child(figure)
+			figure.position = Vector3((i%3-1)*1.5,0,(i/3-1)*1.7)
+			for mesh: MeshInstance3D in figure.find_children("*","MeshInstance3D",true,false):
+				mesh.lod_bias = 100000.0
+				if variant != "before" or String(mesh.name) == "archers": continue
+				var key := String(mesh.name)
+				mesh.mesh = load("/tmp/archer_bench_original/"+key+".res")
+				if not materials.has(key):
+					var mat := mesh.get_surface_override_material(0).duplicate() as StandardMaterial3D
+					for property: String in ["albedo_texture","roughness_texture","metallic_texture","normal_texture"]:
+						var old: Texture2D = mat.get(property)
+						if old == null: continue
+						var pixels := Image.load_from_file("/tmp/archer_bench_original/"+old.resource_path.get_file())
+						pixels.generate_mipmaps()
+						mat.set(property,ImageTexture.create_from_image(pixels))
+					materials[key] = mat
+				mesh.set_surface_override_material(0,materials[key])
+			var player := Map3DUnits.find_anim(figure)
+			player.play(Map3DUnits.clip_named(player,"MARCH"))
+			player.seek(player.current_animation_length*float(i)/9.0,true)
+			figures.append(figure)
+		for _warm in 90: await process_frame
+		var samples: Array[float] = []
+		var previous := Time.get_ticks_usec()
+		for _sample in 180:
+			await process_frame
+			var now := Time.get_ticks_usec()
+			samples.append(float(now-previous)/1000.0)
+			previous = now
+		samples.sort()
+		var total := 0.0
+		for value: float in samples:total+=value
+		report[variant] = {"figures":9,"frames":180,"mean_ms":total/180.0,"median_ms":samples[90],"p95_ms":samples[171],"base_meshes_forced":true}
+		for figure: Node in figures:figure.queue_free()
+		await process_frame
+	var file := FileAccess.open("/tmp/archer_gear_final/formation-bench.json",FileAccess.WRITE)
+	file.store_string(JSON.stringify(report,"\t")+"\n")
+	file.close()
+	print(JSON.stringify(report))
+	quit()

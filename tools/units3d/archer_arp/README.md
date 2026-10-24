@@ -34,7 +34,8 @@ right, the bow is parented to `DEF-weapon.L`, and fingers retain the equipped
 grip. Walking, aiming and sprinting wrists are fitted to this bow. Locomotion root travel is removed and its
 measured walk stride goes into `army_art.csv`. Sole contact is corrected at
 each sampled frame. The falling wrist lays the bow flat as the body lands.
-No decimation is applied: the original geometry and UVs remain intact.
+The body retains its original geometry and UVs; the gear follows the
+simplification pipeline below.
 The scene uses generated LODs with `lod_bias = 0.1`. The quiver and arrow
 fade beyond the close map view; the body and bow remain visible at every
 zoom. Per-surface roughness, metallic response and normal strength are baked
@@ -76,5 +77,39 @@ left-hand grip, checks the loaded arrow against the evaluated string, measures
 MARCH stride from planted-foot speed, and compares body coordinates, topology,
 UVs and weights against the corrected source. It rejects missing or
 unnormalized weights. `export_metrics.json` and `validation.json` record the
-actual measurements in WORK. The export has 73 bones and 381,626 triangles
-across four meshes; benchmark the full formation when changing this geometry.
+actual measurements in WORK. The original export has 73 bones; its body and clip tracks are retained by
+the gear pipeline below. Benchmark the full formation when changing geometry.
+
+## Gear simplification
+
+The body, its original skin and all six clips remain unchanged. Only the bow,
+arrow and loaded quiver use surface-constrained isotropic retopology, new UVs
+and rebaked albedo/metal-rough/normal atlases. Bow-string weights are interpolated
+from the original surface; both other props retain their rigid named mounts.
+The installed meshes retain generated LODs and the scene's existing visibility
+settings and material overrides. No scene edit is needed for a mesh delivery.
+
+Build settings are `archer_gear_lod` in the data index. Keep the original
+high-resolution GLBs in a local `model_wip/` source directory; the installed
+GLBs are the simplified deliveries, not the inputs for another simplification.
+The build writes both candidates outside the installed assets and rejects any
+failed default decikit topology/surface/skin audit before export. It requires
+Blender, NumPy and PyMeshLab only when rebuilding, never when playing.
+
+```sh
+python3 tools/units3d/archer_arp/gear_lod.py WORK \
+  --source HIGH_RES_GEAR_GLB_DIRECTORY --blender BLENDER_BINARY \
+  --decikit PATH_TO_BLENDER_DECIMATE_QUALITY_SKILL/scripts/decikit.py
+Godot --path . --script res://tools/units3d/archer_arp/gear_install.gd -- WORK
+# After comparing both candidates, explicitly install the selected one:
+Godot --path . --script res://tools/units3d/archer_arp/gear_install.gd -- WORK --install proposed
+Godot --headless --path . --import
+```
+
+`gear_install.gd` transfers the imported palette indices onto the existing
+scene's named binds, saves compressed meshes with their original UIDs and
+installs the matching GLBs/atlases. The GLBs preserve the extracted image names,
+so a fresh import and the scene's existing material overrides use the same UVs.
+The proposed gear has 8,130 / 13,310 / 17,863 triangles (bow / arrow / quiver),
+39,303 together; the body remains 94,096 triangles. Acceptance evidence and
+source hashes are in `docs/reviews/archer-gear-lod/`.

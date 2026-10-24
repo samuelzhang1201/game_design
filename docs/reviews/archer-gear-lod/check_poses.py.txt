@@ -1,0 +1,58 @@
+import bpy,json,math,hashlib
+from pathlib import Path
+from mathutils import Vector,kdtree
+from mathutils.bvhtree import BVHTree
+import numpy as np
+project=Path('/Users/samuelzhang/.codex/worktrees/archer-gear-lod/game_design')
+bpy.ops.wm.read_factory_settings(use_empty=True)
+bpy.ops.import_scene.gltf(filepath=str(project/'assets/3D/units/archers/archers.glb'))
+body=next(o for o in bpy.context.scene.objects if o.type=='ARMATURE')
+actions={a.name.split('|')[-1]:a for a in bpy.data.actions}
+assert set(actions)=={'STANDBY','MARCH','SPRINT','DRAW','GARRISON','DEATH'},list(actions)
+gear={}
+for part in ['bow','arrow','quiver']:
+ gear[part]={}
+ for kind,folder in [('high',Path('/tmp/archer_gear_master')),('low',Path('/tmp/archer_gear_final/proposed'))]:
+  old=set(bpy.context.scene.objects);bpy.ops.import_scene.gltf(filepath=str(folder/f'archers_{part}.glb'))
+  ob=next(o for o in bpy.context.scene.objects if o not in old and o.type=='MESH')
+  rig=next(m.object for m in ob.modifiers if m.type=='ARMATURE')
+  gear[part][kind]=(ob,rig)
+report={}
+for clip,action in actions.items():
+ for track in body.animation_data.nla_tracks:track.mute=True
+ body.animation_data.action=action
+ body.animation_data.action_slot=action.slots[0]
+ first,last=action.frame_range
+ report[clip]={p:[] for p in gear}
+ for sample in range(11):
+  frame=first+(last-first)*sample/10
+  bpy.context.scene.frame_set(int(frame),subframe=frame-int(frame));bpy.context.view_layer.update()
+  for part,pair in gear.items():
+   evaluated={}
+   for kind,(ob,rig) in pair.items():
+    for bone in rig.pose.bones:
+     body_rest=body.matrix_world@body.data.bones[bone.name].matrix_local
+     gear_rest=rig.matrix_world@bone.bone.matrix_local
+     expected=body.matrix_world@body.pose.bones[bone.name].matrix@body_rest.inverted()@gear_rest
+     bone.matrix=rig.matrix_world.inverted()@expected
+     bpy.context.view_layer.update()
+     actual=rig.matrix_world@bone.matrix
+     assert max(abs(actual[i][j]-expected[i][j]) for i in range(4) for j in range(4))<1e-4
+    bpy.context.view_layer.update()
+    ev=ob.evaluated_get(bpy.context.evaluated_depsgraph_get());mesh=ev.to_mesh()
+    evaluated[kind]=[ob.matrix_world@v.co for v in mesh.vertices]
+    ev.to_mesh_clear()
+   high=evaluated['high']
+   high_faces=[list(p.vertices) for p in pair['high'][0].data.polygons]
+   low_faces=[list(p.vertices) for p in pair['low'][0].data.polygons]
+   tree=BVHTree.FromPolygons(high,high_faces,all_triangles=True)
+   reverse=BVHTree.FromPolygons(evaluated['low'],low_faces,all_triangles=True)
+   distances=[tree.find_nearest(p)[3] for p in evaluated['low']]
+   distances += [reverse.find_nearest(p)[3] for p in high[::max(1,len(high)//10000)]]
+   dist=np.array(distances)
+   report[clip][part].append({'sample':sample,'p95_m':float(np.percentile(dist,95)),'max_m':float(dist.max())})
+ summary={p:{'p95_m':max(x['p95_m'] for x in xs),'max_m':max(x['max_m'] for x in xs)} for p,xs in report[clip].items()}
+ print('POSE',clip,summary,flush=True)
+path=Path('/tmp/archer_gear_final/pose_check.json');path.write_text(json.dumps(report,indent=2)+'\n')
+assert all(x['p95_m']<.006 and x['max_m']<.02 for part in report.values() for samples in part.values() for x in samples),'posed gear drifted from original'
+print('POSE PASS all six clips, 11 samples each',flush=True)

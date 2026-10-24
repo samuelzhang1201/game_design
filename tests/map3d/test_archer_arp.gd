@@ -81,3 +81,32 @@ func test_all_clips_keep_the_left_grip_and_draw_with_the_right_hand() -> void:
 			if clip == "DRAW" and sample >= 4:
 				assert_lt(skeleton.get_bone_global_pose(right).origin.distance_to(
 					skeleton.get_bone_global_pose(arrow).origin), 0.16, "the right hand retrieves and draws the arrow")
+
+
+func test_equipment_is_bounded_and_keeps_every_vertex_skinned() -> void:
+	var model: Node = load(GameArt.path(GameArt.ARMY_MODELS, "archers")).instantiate()
+	autofree(model)
+	var total := 0
+	for gear: String in ["archers_bow", "archers_quiver", "archers_arrow"]:
+		var mesh := model.find_child(gear, true, false) as MeshInstance3D
+		assert_not_null(mesh)
+		if mesh == null:
+			continue
+		var triangles := 0
+		var max_weight_error := 0.0
+		for surface in mesh.mesh.get_surface_count():
+			var arrays := mesh.mesh.surface_get_arrays(surface)
+			var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+			triangles += indices.size() / 3
+			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+			var influences := weights.size() / vertices.size()
+			for vertex in vertices.size():
+				var weight := 0.0
+				for influence in influences:
+					weight += weights[vertex * influences + influence]
+				max_weight_error = maxf(max_weight_error, absf(weight - 1.0))
+		assert_lt(max_weight_error, 0.001, gear + " keeps every vertex skinned with normalized weights")
+		total += triangles
+		assert_lt(triangles, 20000, gear + " does not retain a dense generation mesh")
+	assert_lt(total, 40000, "the three props together cost less than the original body")
