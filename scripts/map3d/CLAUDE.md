@@ -60,7 +60,7 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 
 - `Map3DFormation` reads a battle's saved current tactical deployment through `BattleFormation`; stance layouts remain the fallback outside battle. Unit overrides use the recipient's terrain for frontage, while legacy defaults retain side context. Narrow lines fold into ranks using the same slots as the WAR ROOM, preserving the figure-count tier and physical spacing. Deployment changes rebuild only that piece.
 
-- **Saved physical battle groups** (`Map3DBattleGroups`, `Map3DLayerUnits`): after ordinary sight admission, each valid saved group draws one existing figure at its exact integer-metre point converted through pack pixels to built-world XZ. Only copied count/role/position/optional slot and the unit's saved group facing enter the view. Present malformed or personnel-mismatched groups are invalid; absent legacy groups, nonbattle units and ghosts retain their ordinary presentation. The physical aggregate remains one unit for picks, signals, camps, sound and WAR ROOM anchor exports; its child boxes union into that unit's hit box. Group roots stand upright, independent of march interpolation, lag, slope tilt and camera facing. Figure scale is capped by the existing group spacing/depth in built-world units; camp scale retains the ordinary reference calculation. Optional slots retain models/clip phase identities; same-day row/facing changes refresh without a camera event. `group_geometry()` measures the instantiated admitted nodes for developer captures only, never simulation state or a new player overlay.
+- **Saved physical battle groups** (`Map3DBattleGroups`, `Map3DLayerUnits`): after ordinary sight admission, each valid saved group draws one existing figure at its exact integer-metre point converted through pack pixels to built-world XZ. Only copied count/role/position/optional slot and the unit's saved group facing enter the view. Present malformed or personnel-mismatched groups are invalid; absent legacy groups, nonbattle units and ghosts retain their ordinary presentation. The physical aggregate remains one unit for picks, signals, camps, sound and WAR ROOM anchor exports; its child boxes union into that unit's hit box. Group roots stand upright, independent of march interpolation, lag, slope tilt and camera facing. Figures and camps retain the ordinary reference scale; saved battle spacing/depth never resizes miniatures. Optional slots retain models/clip phase identities; same-day row/facing changes refresh without a camera event. `group_geometry()` measures the instantiated admitted nodes for developer captures only, never simulation state or a new player overlay.
 
 - The near reader includes group version/size and admitted active fit in its cache
   key. Frozen legacy rows use their saved size without a new-size truncation;
@@ -69,11 +69,10 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
   existing single counter and never instantiate soldier groups. Empty physical
   roots contribute no hit rectangle.
 
-- Ordinary near formations and generic ghosts retain the original reference
-  scale from `Map3DUnits.scale_for`; physical battle-group spacing must not
-  shrink them. Camps share that ordinary reference scale.
+- Ordinary near formations, generic ghosts and saved physical battle groups
+  retain each arm's original reference scale from `Map3DUnits.scale_for` through
+  encounter entry and exit. Camps share that ordinary reference scale.
 
-- `Map3DLayerUnits.figure_footprint_gap` is the editor-owned scale ceiling for
-  saved physical battle-group figures only, separate from `formation_gap`,
-  which spaces ordinary formation centres. It never changes saved source
-  slots, XZ/facing or the camp reference scale.
+- `Map3DLayerUnits.figure_footprint_gap` remains a legacy serialized property
+  for existing scenes; it has no effect. `formation_gap` spaces ordinary
+  formation centres. Neither changes saved battle slots, XZ/facing or scale.

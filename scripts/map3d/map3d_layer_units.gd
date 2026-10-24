@@ -18,7 +18,7 @@ const MARCH := "MARCH"
 
 ## Figure spacing, × a figure's footprint (owner 2026-09-30: 可以适当分开一些).
 @export var formation_gap := 1.6
-## Saved physical battle-group ceiling; ordinary miniatures retain their reference size.
+## Legacy serialized setting; all figures retain their ordinary reference size.
 @export var figure_footprint_gap := 1.6
 ## Seconds a clip blends into the next (owner 2026-09-27: 行进的动作非常突兀).
 @export var blend_s := 0.3

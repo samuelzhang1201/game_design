@@ -117,17 +117,11 @@ static func sync(repo: DataRepository, reg: Dictionary, piece: Dictionary, sampl
 	piece["sample_key"] = sampled["key"].duplicate(true) if sampled.has("key") else []
 	piece["action"] = ""
 
-static func scale_cap(old_scale: float, extent: Vector2, pitches: Vector2, gap: float) -> float:
-	return minf(old_scale, minf(pitches.x / maxf(2.0 * extent.x * gap, 0.0001),
-		pitches.y / maxf(2.0 * extent.y * gap, 0.0001)))
-
-static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, gap: float, selected: bool) -> Rect2:
+static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: float, selected: bool) -> Rect2:
 	var root: Node3D = piece["node"]
 	root.global_transform = Transform3D(Basis.IDENTITY, Vector3(anchor.x, ctx.height_at(anchor), anchor.y))
 	var repo := ctx.repo
 	var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
-	var ratio := float(ctx.meta["m_per_px"]) / ArmySystem.metres_per_pack_px(repo)
-	var pitch := Vector2(repo.bal("battle_group_spacing_m"), repo.bal("battle_group_depth_m")) * ratio
 	piece["camp_scale"] = Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
 		piece["reference_height_m"], piece["reference_size"])
 	var box := Rect2()
@@ -138,9 +132,8 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, gap: fl
 		var child: Dictionary = group["piece"]
 		var node: Node3D = child["node"]
 		var xz := ctx.to_world(ArmySystem.metres_to_pack(repo, Vector2i(group["x_m"], group["y_m"])))
-		var old_scale := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
+		var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
 			child["reference_height_m"], child["size"])
-		var k := scale_cap(old_scale, child["extent"], pitch, gap)
 		var yaw := Map3DUnits.facing_yaw(WarFront.facing_vector(piece["facing_deg"]), child["stand_deg"])
 		var y := ctx.height_at(xz)
 		for offset: Vector2 in Map3DUnits.footprint(child["extent"], yaw, k, int(repo.bal("map3d_unit_seat_ring"))):

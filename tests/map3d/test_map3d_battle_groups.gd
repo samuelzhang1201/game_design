@@ -30,11 +30,81 @@ func test_saved_rows_drive_actual_nodes() -> void:
 	assert_eq(helper.evidence(piece).size(), rows.size())
 	assert_eq(SaveLoad.state_hash(state), before)
 
-func test_footprint_cap_is_in_built_world_units() -> void:
-	var helper: GDScript = load("res://scripts/map3d/map3d_battle_groups.gd") if ResourceLoader.exists("res://scripts/map3d/map3d_battle_groups.gd") else null
-	assert_not_null(helper)
-	if helper != null:
-		assert_eq(helper.scale_cap(10.0, Vector2(0.5, 1.5), Vector2(8, 12), 2.0), 2.0)
+func test_real_encounter_retains_ordinary_figure_size_and_returns_to_it() -> void:
+	var repo := SuiteData.repo()
+	var state := preload("res://tests/fixtures/battle_scenario.gd").contact(repo, 10)
+	var foe := String(state.foes.keys()[0])
+	state.foes[foe]["order"] = ArmySystem.ORDER_GARRISON
+	var own := ""
+	for code: String in state.regiments:
+		if Vector2(int(state.regiments[code]["x_m"]), int(state.regiments[code]["y_m"])).distance_to(
+				Vector2(int(state.foes[foe]["x_m"]), int(state.foes[foe]["y_m"]))) < 2000:
+			own = code
+			break
+	assert_ne(own, "")
+	if own == "": return
+	state.regiments[own]["order"] = ArmySystem.ORDER_MARCH
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 50.0})
+	ctx.state_fn = func() -> GameState: return state
+	ctx.view_size = Vector2(2560, 1600)
+	ctx.camera = Camera3D.new()
+	add_child_autofree(ctx.camera)
+	ctx.camera.position = Vector3(0, 500, 500)
+	ctx.camera.look_at(Vector3.ZERO)
+	var layer := Map3DLayerUnits.new()
+	add_child_autofree(layer)
+	layer.bind(ctx)
+	var scales := {}
+	for code: String in [own, foe]:
+		var piece := layer._piece_of(code)
+		layer._shown_xz[code] = Vector2.ZERO
+		layer._place(code, piece)
+		scales[code] = (piece["node"] as Node3D).scale.x
+	var contacts := BattleSystem.discover_contacts(repo, state)
+	assert_false(contacts.is_empty(), "real contact starts the encounter")
+	assert_false(state.battles.is_empty())
+	assert_eq(state.battles[0]["att"], [own], "marching into the enemy garrison makes the player attack")
+	var frozen := SaveLoad.state_hash(state)
+	for code: String in [own, foe]:
+		var piece := layer._piece_of(code)
+		assert_eq(piece.get("layout", ""), "physical_groups")
+		layer._place(code, piece)
+		for group: Dictionary in piece["groups"]:
+			assert_almost_eq((group["piece"]["node"] as Node3D).scale.x, float(scales[code]), 0.0001,
+				code + " keeps its ordinary miniature size on contact")
+	assert_eq(SaveLoad.state_hash(state), frozen, "drawing never changes saved battle points/counts/facing")
+	state.battles.clear()
+	for code: String in [own, foe]:
+		var piece := layer._piece_of(code)
+		assert_ne(piece.get("layout", ""), "physical_groups")
+		layer._shown_xz[code] = Vector2.ZERO
+		layer._place(code, piece)
+		assert_almost_eq((piece["node"] as Node3D).scale.x, float(scales[code]), 0.0001)
+
+func test_every_battle_arm_uses_its_ordinary_reference_scale() -> void:
+	var repo := SuiteData.repo()
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 50.0})
+	ctx.view_size = Vector2(2560, 1600)
+	var checked := {}
+	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		var arm := MapObjects.army_piece(repo, reg)
+		if checked.has(arm) or String(reg.get("is_naval", "0")) == "1": continue
+		var ordinary := Map3DFormation.of_regiment(repo, reg, {"figures": 1, "slots": [Vector2.ZERO]}, 1.6)
+		autofree(ordinary["node"])
+		var piece := Map3DBattleGroups.build(repo, reg, {"rows": [
+			{"slot": 0, "count": 1, "role": "front", "x_m": 0, "y_m": 0}], "facing_deg": 90})
+		add_child_autofree(piece["node"])
+		var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
+		var expected := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y,
+			reference, ordinary["height_m"], ordinary["size"])
+		for gap: float in [0.8, 1.6, 3.2]:
+			Map3DBattleGroups.place(ctx, piece, Vector2.ZERO, gap, false)
+			assert_almost_eq((piece["groups"][0]["piece"]["node"] as Node3D).scale.x, expected, 0.0001,
+				arm + " battle figure keeps its original size independently of spacing")
+		checked[arm] = true
+	assert_true(checked.has("infantry"))
+	assert_true(checked.has("archers"))
+	assert_true(checked.has("cavalry"))
 
 func test_empty_legacy_and_invalid_groups() -> void:
 	var helper: GDScript = load("res://scripts/map3d/map3d_battle_groups.gd") if ResourceLoader.exists("res://scripts/map3d/map3d_battle_groups.gd") else null
@@ -269,7 +339,7 @@ func test_group_mode_preserves_unit_seams() -> void:
 	if layer.get("figure_footprint_gap") == null: return
 	layer.set("figure_footprint_gap", 0.8)
 	layer._place(code, piece)
-	assert_almost_eq(child.scale.x, source_scale * 2.0, 0.0001)
+	assert_almost_eq(child.scale.x, source_scale, 0.0001, "legacy footprint setting cannot resize battle figures")
 	assert_eq(Vector2(child.global_position.x, child.global_position.z), source_xz)
 	assert_eq(float(piece.camp_scale), camp_before)
 	var state_hash := SaveLoad.state_hash(state)
@@ -705,7 +775,7 @@ func test_every_ordinary_arm_retains_original_readable_scale() -> void:
 	var node: Node3D = ordinary.node
 	var scale_before := node.scale.x
 	var camp_before: float = ordinary.camp_scale
-	assert_not_null(layer.get("figure_footprint_gap"), "figure cap is an editor-owned control independent of layout spacing")
+	assert_not_null(layer.get("figure_footprint_gap"), "legacy scene property remains compatible")
 	if layer.get("figure_footprint_gap") == null: return
 	layer.set("figure_footprint_gap", 0.8)
 	layer._place(ordinary_code, ordinary)
