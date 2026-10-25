@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+export CC_FORCE_OFFLINE=1
+python3 tools/run_with_timeout.py 30 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s .superpowers/cluster-cf01/create_fixture.gd > /tmp/cf01-fixture.log 2>&1
+for variant in baseline compact wide; do
+  env CF01_SPACING="$variant" python3 tools/run_with_timeout.py 180 /Applications/Godot.app/Contents/MacOS/Godot --path . res://.superpowers/cluster-cf01/capture.tscn -- --screen root --resolution 2560x1600 --out "$PWD/.superpowers/cluster-cf01/$variant.png" --zoom3d 2600 --yaw3d 0 --still > "/tmp/cf01-$variant.log" 2>&1
+done

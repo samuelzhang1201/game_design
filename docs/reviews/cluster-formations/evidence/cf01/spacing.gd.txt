@@ -1,0 +1,70 @@
+extends "res://tools/snapshot_screen.gd"
+
+var staged := false
+var home_xz := Vector2.INF
+
+func _process(delta: float) -> void:
+	super._process(delta)
+	var sequence := OS.get_environment("CF01_SEQUENCE") == "1"
+	if sequence and _frames in [9, 49, 89, 129]:
+		OS.set_environment("CF01_ARM", ["infantry", "archers", "cavalry", "artillery"][int((_frames - 9) / 40)])
+		staged = false
+	elif sequence: return
+	if staged or (not sequence and _frames != 9) or _root == null: return
+	staged = true
+	var view: Map3DView = _root.current_screen.map3d_view()
+	var layer := view.find_child("Units", true, false) as Node3D
+	layer.visible = false
+	var measurements: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://.superpowers/cluster-cf01/measurements.json"))
+	var variant := OS.get_environment("CF01_SPACING")
+	var arm_only := OS.get_environment("CF01_ARM")
+	if home_xz == Vector2.INF: home_xz = view._ctx.target
+	var centre: Vector2 = home_xz + Vector2(2200.0, 650.0 if arm_only != "" else 0.0)
+	var previous := view._world.get_node_or_null("CF01Bodies")
+	if previous != null: previous.free()
+	var holder := Node3D.new()
+	holder.name = "CF01Bodies"
+	view._world.add_child(holder)
+	(view.component("rig") as Map3DCameraRig).place(centre, _zoom3d, _yaw3d)
+	var rows: Array[Dictionary] = []
+	var arms: Array[String] = ["infantry", "archers", "cavalry", "artillery"]
+	for n in arms.size():
+		var arm := arms[n]
+		if arm_only != "" and arm != arm_only: continue
+		var row: Dictionary = measurements.models[arm]
+		var scene: PackedScene = load(GameArt.path(GameArt.ARMY_MODELS, arm))
+		var root := Node3D.new()
+		holder.add_child(root)
+		var base := centre + Vector2((n % 2 - 0.5) * 1050.0, (floori(n / 2.0) - 0.5) * 450.0)
+		if arm_only != "": base = centre
+		var radius := float(row.body_radius_m)
+		var pitch := ceili(radius * (3.0 if variant == "compact" else 4.0))
+		var offsets: Array = []
+		var world_pitch := Vector2.ONE * pitch * float(measurements.world_per_sim_m)
+		if variant == "baseline":
+			var art: Dictionary = Game.data.army_art[arm]
+			var extent: Array = row.scale_inputs.stand_extent
+			world_pitch = Vector2(float(extent[0]), float(extent[1])) * 2.0 * 1.6 * Map3DFormation.spacing(art) * float(row.scale_inputs.world_scale)
+			world_pitch.y *= Map3DFormation.rank_depth(art)
+		for i in 10:
+			var fig := scene.instantiate() as Node3D
+			root.add_child(fig)
+			var offset := Vector2((i % 5 - 2) * world_pitch.x, (floori(i / 5.0) - 0.5) * world_pitch.y)
+			var xz := base + offset
+			var k := float(row.scale_inputs.world_scale)
+			fig.scale = Vector3.ONE * k
+			var half: Array = row.scale_inputs.stand_extent
+			Map3DUnitRig.seat(Game.data, view._ctx.height_at, {"node": fig,
+				"extent": Vector2(float(half[0]), float(half[1])),
+				"height_m": float(row.scale_inputs.model_height)}, xz, 0.0, k)
+			var player := Map3DUnits.find_anim(fig)
+			if player != null:
+				var clip := Map3DUnits.clip_named(player, "STANDBY")
+				if clip != "":
+					player.play(clip)
+					player.seek(0.0, true)
+					player.advance(0.0)
+					player.active = false
+			offsets.append([offset.x, offset.y])
+		rows.append({"arm":arm,"pitch_sim_m":pitch,"world_pitch_m":[world_pitch.x, world_pitch.y],"world_scale":row.scale_inputs.world_scale,"offsets_world_m":offsets})
+	print("CF01_SPACING ", variant, " ", JSON.stringify(rows))
