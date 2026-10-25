@@ -46,7 +46,9 @@
 - `Map3DView` 实际位于 `scripts/map3d/map3d_view.gd`，复用 `selected_armies/select_box/apply_battle_snapshot`；`Map3DInput` 当前 Shift+左拖框选、普通左拖平移。CF22 明确替换普通左拖的军事框选语义，并保留可用的平移手势和路线编辑优先级。
 - `Map3DFormation.fit_tier` 近景已经按可战人数取整；`army_formations.csv`、`tier_of`、WAR ROOM 仍有 3/6/9 档，不可据此宣称十人合同完成。
 
-**p4.N1 门禁：**共享 registry 中 `p4-narrow-deployment-capacity` / PR #178 在调查时 active，拥有空间、Groups/Formation/Charge/Task、ArmySystem/Ground、BattleSystem/Merge/Ranged、相关测试和 guide。保留原负责人和 PR；不派工、不唤醒、不抢文件。CF01 可先做只读测量（独占新工具／证据），CF08 可只做新独立纯布局模块；CF02–07 和任何修改 N1 拥有文件的步骤，须等 #178 合并且必要验收通过，再从当时 `origin/main` 调整接入。若 N1 改了接口，先更新本计划对应接口清单，不能套用其未合并工作树或重复实现其容量恢复规则。
+**p4.N1 替代接入门禁：**PR #178 不再是 CF 的“合并且验收”前置。原固定 pair 的 Audit 2 只通过迁移保全，不能证明运行、视觉或性能通过。必要基础要求迁入已有 CF02–06，精确接收文件、失败继承和 source/commit/patch/hash 索引见 `docs/reviews/cluster-formations/n1-migration.md`。CF02 从当时 `origin/main` 按 #181/#182 实现，不套用 #178 未合并树、整包 patch 或旧四阵型 allocator；后续依次等待 CF02→03→04a→04b→04c→05→06 的当前 HEAD CI 与各自适用验收通过并合并，CF07 才退役旧语义。每步必须证明自己接收的基础要求，保全文档不能替代 runtime 门禁。
+
+#178 的原实施／唯一 Review、工作树、分支、失败证据仍保留；其产品开发、测试及整包合并仍暂停。只有原 controller 与原 pair 在实际替代依赖落地并明确 close-ready 后处理 superseded、关闭及 ownership release；本计划不宣称这些操作完成。CF01/CF08 已有 owner 继续，不重派、不唤醒旧产品 owner；其他步骤仍须由唯一派工方核对共享 registry 的活跃文件归属、解除冲突及前置验收后登记，不能借文档改门禁抢占尚未释放的文件。
 
 **旧规范冲突登记：**本 spec 优先于 `2026-10-16-battle-system-design.md` 的 unit 四阵型、部署缩放与旧显示约定，以及 `2026-10-17-unit-behavior-and-battlefield-design.md` §6/§16/§18 的 50 人分档、按队内 front/reserve 推导战术、无接触比例近战。CF07 在旧规范相应节加简短替代指针，保留未冲突的 120% 步跑、130% 消耗、人员／军法／事务规则；不重写历史设计。当前规则只在实际落地的 guide 更新。
 
@@ -80,14 +82,14 @@
 
 **Interfaces:** 新 `measure(scene: PackedScene, art: Dictionary) -> Dictionary` 返回 `{model_hash, scale_inputs, radius_m, sampled_clips, deploy_min_width_m, deploy_min_depth_m}`。调用现有 `Map3DUnits.model_size/stand_extent/scale_for` 和 `GameArt.ARMY_MODELS`，按世界米校准；不得把源模型本地单位直接当仿真米。
 
-- [ ] 红灯 `test_body_measurement`: 合成两倍缩放模型的保守半径是原来的两倍；骑兵含坐骑、炮兵含器械；旋转及行走/待命采样均被包络包含；缺模型明确失败。
+- [ ] 红灯 `test_body_measurement`: 合成两倍缩放模型的保守半径是原来的两倍；骑兵含坐骑；炮兵暂用用户批准的步兵 placeholder，报告明确该输入和限制，换真实火炮后重测含器械包络；旋转及行走/待命采样均被包络包含；缺模型明确失败。
 - [ ] 运行 `test_unit_body_measurement.gd` 看到上述缺接口失败，再实现测量导出；记录输入 GLB/scene/art/scale hash、十空位与通路计算、未覆盖动作。
 - [ ] 绿灯并真实窗口按 visual-review 比较原尺度及两种间距；唯一 Review 独立批评全图/裁图。输出各兵种可配置尺寸及性能测量方法；尚不声称动画全阶段已验收。
 - [ ] 提交／PR：`docs: measure unit body envelopes for clusters`。模型或缩放输入变化使本证据失效。
 
 ## Task CF02：固定占地、持久身体与安全迁移
 
-**依赖：**CF01、N1 已合并验收。**拥有：**新 `scripts/engine/unit_bodies.gd`、`data/army/unit_footprints.csv`、`tests/engine/test_unit_bodies.gd`；修改 `battle_groups.gd`、`battle_system.gd`、`battle_merge.gd`、`game_state.gd`、`military_reorganization.gd`、`data_repository.gd`、`data/tables.csv`、`scripts/ui/game.gd`、`guide/battle_groups.md`。新增 guide 放 `scripts/engine/guide/cluster_formations.md`，由 engine `CLAUDE.md` 索引。
+**依赖：**CF01 已合并且实测验收通过；N1 替代接入门禁及活跃文件归属冲突已解除（见迁移索引），不依赖 #178 合并。**拥有：**新 `scripts/engine/unit_bodies.gd`、`data/army/unit_footprints.csv`、`tests/engine/test_unit_bodies.gd`；修改 `battle_groups.gd`、`battle_system.gd`、`battle_merge.gd`、`game_state.gd`、`military_reorganization.gd`、`data_repository.gd`、`data/tables.csv`、`scripts/ui/game.gd`、`guide/battle_groups.md`。新增 guide 放 `scripts/engine/guide/cluster_formations.md`，由 engine `CLAUDE.md` 索引。
 
 **Interfaces:** `UnitBodies.rows(repo,state,unit: String) -> Array`；`footprint(repo,unit: String,state) -> Vector2i` 返回固定宽深；`home_slots(repo,state,unit: String) -> Array[Vector2i]` 总是十空位；`migrate(repo,state) -> Dictionary` 返回 status/error/reason。
 
@@ -376,21 +378,21 @@ CF14 引入 `ClusterTactics.intents(repo,state,cluster: Dictionary,known: Dictio
 
 仅用于实际含合法battle groups的新系统save；非战斗或面板截图使用现有普通 `--screen root` 实际交互路径，不能给 `--battle-save` 不满足其前置的数据。动态穿插录制逐帧/多时点实际窗口与引擎完整轨迹同时留证，单张静态图不能证明全过程。不得 headless 3D；截图源和输出分离；raw/loaded/final hash区分迁移，loaded=final证明拍摄不改状态。
 
-窗口至少2560×1600及当前项目支持的较小窗口，近/中/远与不同yaw；模型尺度/占位一致、骑马/火炮不穿体；敌人保留真实遮挡。必须涵盖：901→900范围保持、相向/三队/窄路/转身、敌接触与合法缺口、骑兵真实侧绕、弓炮挡线、重组中伤亡/停滞失败、分批收令、实际随阵国王、增援仅新成员走位。任何“看不清/被遮挡”按真实结果记录，不能隐掉场景强行过关。
+窗口至少2560×1600及当前项目支持的较小窗口，近/中/远与不同yaw；模型尺度/占位一致、骑马/当前炮兵 placeholder 不穿体；真实火炮替换后重测身体、旋转、运动、视觉及性能，当前证据不覆盖真实火炮；敌人保留真实遮挡。必须涵盖：901→900范围保持、相向/三队/窄路/转身、敌接触与合法缺口、骑兵真实侧绕、弓炮挡线、重组中伤亡/停滞失败、分批收令、实际随阵国王、增援仅新成员走位。任何“看不清/被遮挡”按真实结果记录，不能隐掉场景强行过关。
 
 性能沿用 `tools/map3d/bench.gd` 及 map guide tiers，在相同场景/分辨率/硬件记录 median/mean/p95 和pan；新引擎运动预算由CF24冻结。数据CSV或模型尺寸有变，重跑相关手算/轨迹/保存和视觉；无关文档变化不重跑游戏全套。
 
 ## 依赖、并行和实际派工规则
 
-关键顺序：CF01 →（N1验收后）CF02→03→04→05→06→07；独立CF08可与测量并行，但修改loader/index时不得与CF02同启。CF07+08→09→10→11→12→13→14→15→16→17→18→19→20→21。CF22在CF13后可与自动行为链并行，CF23与CF21共享 `battle_presentation.gd`，两者必须串行或先只完成不重叠的独立步骤；CF24等待CF21+23；CF25最后。
+关键顺序：CF01 →（替代接入门禁及文件归属冲突解除后）CF02→03→04a→04b→04c→05→06→07；独立CF08可与测量并行，但修改loader/index时不得与CF02同启。CF07+08→09→10→11→12→13→14→15→16→17→18→19→20→21。CF22在CF13后可与自动行为链并行，CF23与CF21共享 `battle_presentation.gd`，两者必须串行或先只完成不重叠的独立步骤；CF24等待CF21+23；CF25最后。
 
 串行不仅由箭头决定：任意 shared guide、loader、index、Game、测试fixture、CSV都算文件归属冲突；默认串行，不能两PR同时拥有一文件不同区域。CF08若先合并，CF02基于其新loader再接入；反之亦然。每步引入自己的小fixture，不擅改N1或全局BattleScenario；真需共享fixture，先追加精确归属并重新审计冲突。
 
-**未派工清单：**以上29个有界任务当前实施/Review均未分配，工作树/分支仅为上述模板，不存在产品会话。获准执行后，唯一派工方逐步登记 `step_id/dependencies/owned_files/acceptance/worktree/branch/implementation_session/review_session`，核对 active registry/PR/检查点后才创建一次；Review最迟交接前确定。依赖已合并且适用验收通过才能启动。CF04a/b/c、CF07a/b、CF21a/b各是独立step_id与PR，禁止合成大实现；其余步骤如遇额外未预见范围，先修订边界再启动。当前计划编写者交付后结束，不兼任后续调度。
+**派工状态：**CF01/CF08 已有实施 owner，保留其实际登记及唯一 Review，不重复创建；其余任务的模板不代表已派工，实际状态以共享 registry、现有 PR 和各自检查点核对。获准执行后，唯一派工方逐步登记 `step_id/dependencies/owned_files/acceptance/worktree/branch/implementation_session/review_session`，核对 active registry/PR/检查点后才创建一次；Review最迟交接前确定。依赖已合并且适用验收通过才能启动。CF04a/b/c、CF07a/b、CF21a/b各是独立step_id与PR，禁止合成大实现；其余步骤如遇额外未预见范围，先修订边界再启动。当前计划编写者交付后结束，不兼任后续调度。
 
 ## 本计划自审与停止条件
 
 - spec §2–3／验收1–2：CF01–07及CF25；§4选择/行军/信使/增援：CF08–13/22–23；§5失败：CF11/13；§6八阵型：CF14–21；§7条件优势：CF06/21/24；§8保存/迁移：CF02/07/09/25；§9真实窗口：各视觉PR及CF25。没有疲劳度步骤。
 - 签名以本计划定义的新接口和调查到的旧入口为界；每个实现者先核对上游最终签名，若不一致更新该步计划再动调用方，不增加兼容wrapper掩盖错误。
 - 本计划PR只做文档检查、路径/覆盖自审和必需CI；不启动Godot、测模型或声称数值/视觉已通过。
-- 当前停止于计划文档PR由唯一Review审查及交用户审阅；不自动开始CF01，不创建产品实施会话。
+- 本次依赖维护停止于文档 PR 由唯一 Review 审查、当前 HEAD 必需 CI 成功并合并；不创建产品实施会话、不派 CF02、不操作 #178 终态。
