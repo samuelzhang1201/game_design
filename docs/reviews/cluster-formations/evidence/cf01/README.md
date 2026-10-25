@@ -1,6 +1,6 @@
 # CF01 evidence
 
-Native PNGs are direct Godot window captures. The contact sheets only crop/enlarge the original pixels and add outside labels. `verification.json` hashes outputs and the frozen tool/test inputs; `measurements.json` contains GLB, inherited scene, texture, art-table and scale-source hashes plus per-arm calibration and clip samples. Exact model scale and fixture positions are retained in the capture text records.
+Native PNGs are direct Godot window captures. The contact sheets only crop/enlarge the original pixels and add outside labels. `verification.json` hashes outputs and the frozen tool/test inputs; `measurements.json` contains GLB, inherited scene, texture, art-table and scale-source hashes and importer sidecars plus per-arm calibration and clip samples. Exact model scale and fixture positions are retained in the capture text records.
 
 For independent visual critique start with `comparison-full.png`, `comparison-crop3x.png`, `near-detail3x.png` and the original PNGs, then read the measurement report. The overview order is infantry upper left, archers upper right, cavalry lower left, artillery placeholder lower right. `near-cliff-rejected.png` is a rejected first placement with terrain occlusion; do not treat it as acceptance.
 

@@ -46,7 +46,7 @@ Finite samples do not prove continuous clip extrema, clip cross-fades, runtime I
 
 The four initial synthetic contracts failed on the missing interface (`/tmp/cf01-all-red.log`), then passed 4/4 (`/tmp/cf01-four-green.log`). They cover doubled drawn size, nested horse/equipment geometry, explicit missing-model failure, animated idle/march translation and rotation, and CPU skin deformation. Calibration and integer-slot assertions extend this coverage; the final targeted run passed **7/7 tests, 17 assertions**, including both additional contracts after their expected RED failures. Export succeeded in **7805 ms** (CPU measurement only; not a runtime frame-budget result). Source hashes are frozen in the raw JSON and verification manifest.
 
-`export_all(repo, out_path)` resolves current army models and the default built pack and writes raw JSON with source dependency hashes. It is intentionally an offline caller API; the archived tiny runner can be copied to `.superpowers/cluster-cf01/export.gd` and run from the repository root:
+`export_all(repo, out_path)` resolves current army models and the default built pack and writes raw JSON with source dependency hashes, including every existing `.import` sidecar (import options can change clips and geometry without changing the GLB). It is intentionally an offline caller API; the archived tiny runner can be copied to `.superpowers/cluster-cf01/export.gd` and run from the repository root:
 
 ```sh
 /Users/samuelzhang/game_design-wt/godot_lock.sh python3 tools/run_with_timeout.py 300 \
@@ -63,3 +63,11 @@ Any model, scene, art row, scale calibration, stature/tilt input or sampling alg
 ![Same-scale spacing comparison](evidence/cf01/comparison-full.png)
 
 ![Native model details, enlarged three times](evidence/cf01/near-detail3x.png)
+
+## Review fix verification
+
+The importer fingerprint now includes existing `.import` sidecars for every resource dependency. A synthetic scene regression holds source bytes and loaded geometry fixed, edits only its sidecar, and requires the model fingerprint to change: RED was 7 passing / 1 expected failure; final GREEN is **8/8 tests, 21 assertions**, locked runner exit 0. Refreshed CPU export succeeded in 7334 ms.
+
+Compared with `eabab22d`, all physical measurement, clip, calibration and ten-slot fields are exactly equal; only `input_hashes` and `model_hash` differ. Existing source hashes changed only for the measurement tool, all new input paths are importer sidecars, and no importer settings changed. `verification.json.visual_reuse` records that comparison and the prior raw JSON hash. The original PNG bytes and unaffected 72-script map3d regression are retained; this hash-collection change does not alter the image or envelope algorithm. The sole Review's first independent eight-axis pass accepted the spacing comparison only, with 4R's sparse appearance and finite-sampling limits retained.
+
+Archived log whitespace is cleaned. The delivery check is explicitly `git diff --check b4415486b8bdec0e6457a32a3db2ab8dfa5d7758 HEAD`, not an empty working-tree diff. Current-HEAD CI and re-review remain merge gates.

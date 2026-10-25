@@ -175,5 +175,7 @@ static func export_all(repo: DataRepository, out_path: String) -> Dictionary:
 static func _hash_dependencies(path: String, hashes: Dictionary) -> void:
 	if hashes.has(path) or not FileAccess.file_exists(path): return
 	hashes[path] = FileAccess.get_sha256(path)
+	var settings := path + ".import"
+	if FileAccess.file_exists(settings): hashes[settings] = FileAccess.get_sha256(settings)
 	for dependency: String in ResourceLoader.get_dependencies(path):
 		_hash_dependencies(dependency.get_slice("::", dependency.get_slice_count("::") - 1), hashes)

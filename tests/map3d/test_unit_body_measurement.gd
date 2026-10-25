@@ -154,3 +154,21 @@ func test_attack_weapon_vertices_are_separate_from_body() -> void:
 	var k := float(result.scale_inputs.simulation_scale)
 	assert_almost_eq(float(result.radius_m), 9.0 * k, 0.001)
 	assert_gt(float(result.get("all_mesh_radius_m", 0)), 99.0 * k)
+
+func test_sidecar_only_change_invalidates_model_fingerprint() -> void:
+	var run_dir: Script = preload("res://tests/run_dir.gd")
+	var path: String = run_dir.dir("unit-body-fingerprint").path_join("fixture.tscn")
+	assert_eq(ResourceSaver.save(_scene(), path), OK)
+	var scene := load(path) as PackedScene
+	var source_hash := FileAccess.get_sha256(path)
+	var file := FileAccess.open(path + ".import", FileAccess.WRITE)
+	file.store_string("[params]\nanimation/import=true\n")
+	file.close()
+	var before := _measure(scene)
+	file = FileAccess.open(path + ".import", FileAccess.WRITE)
+	file.store_string("[params]\nanimation/import=false\n")
+	file.close()
+	var after := _measure(scene)
+	assert_eq(FileAccess.get_sha256(path), source_hash, "Only importer settings changed")
+	assert_eq(after.radius_m, before.radius_m, "Loaded fixture geometry is unchanged")
+	assert_ne(after.model_hash, before.model_hash, "Import-only edits must invalidate model evidence")

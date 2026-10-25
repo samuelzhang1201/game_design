@@ -58,12 +58,12 @@ res://tests/map3d/test_unit_body_measurement.gd
 * test_skin_pose_includes_mount_or_machine_vertices
 * test_calibration_is_required_and_simulation_conversion_is_explicit
 * test_configured_stature_and_terrain_tilt_are_conservative
-    [Failed]:  [514.56094237077286379645] expected to equal [579.994862165895] +/- [0.001]:  
+    [Failed]:  [514.56094237077286379645] expected to equal [579.994862165895] +/- [0.001]:
       at line 147
 * test_attack_weapon_vertices_are_separate_from_body
-    [Failed]:  [11620.99161102294601732865] expected to equal [1035.53390593274] +/- [0.001]:  
+    [Failed]:  [11620.99161102294601732865] expected to equal [1035.53390593274] +/- [0.001]:
       at line 155
-    [Failed]:  [0.0] expected to be > than [11390.8729652601]:  
+    [Failed]:  [0.0] expected to be > than [11390.8729652601]:
       at line 156
 5/7 passed.
 
@@ -76,12 +76,12 @@ res://tests/map3d/test_unit_body_measurement.gd
 
 res://tests/map3d/test_unit_body_measurement.gd
 - test_configured_stature_and_terrain_tilt_are_conservative
-    [Failed]:  [514.56094237077286379645] expected to equal [579.994862165895] +/- [0.001]:  
+    [Failed]:  [514.56094237077286379645] expected to equal [579.994862165895] +/- [0.001]:
           at line 147
 - test_attack_weapon_vertices_are_separate_from_body
-    [Failed]:  [11620.99161102294601732865] expected to equal [1035.53390593274] +/- [0.001]:  
+    [Failed]:  [11620.99161102294601732865] expected to equal [1035.53390593274] +/- [0.001]:
           at line 155
-    [Failed]:  [0.0] expected to be > than [11390.8729652601]:  
+    [Failed]:  [0.0] expected to be > than [11390.8729652601]:
           at line 156
 
 ---- Totals ----
@@ -155,3 +155,91 @@ Time              155.012s
 WARNING: 106 ObjectDB instances were leaked at exit (run with `--verbose` for details).
    at: cleanup (core/object/object.cpp:2536)
 
+Sidecar-only regression RED (7 pass / 1 expected failure)
+res://tests/map3d/test_unit_body_measurement.gd
+* test_body_measurement_scales_and_contains_nested_mount_or_machine
+* test_missing_model_fails_explicitly
+* test_idle_walk_and_rotation_are_sampled
+* test_skin_pose_includes_mount_or_machine_vertices
+* test_calibration_is_required_and_simulation_conversion_is_explicit
+* test_configured_stature_and_terrain_tilt_are_conservative
+* test_attack_weapon_vertices_are_separate_from_body
+* test_sidecar_only_change_invalidates_model_fingerprint
+    [Failed]:  ["ee59c5cb262f85337642be8f3c5de567d055d84bb752e884999b267a4a0c433c"] expected to not equal ["ee59c5cb262f85337642be8f3c5de567d055d84bb752e884999b267a4a0c433c"]:  Import-only edits must invalidate model evidence
+      at line 174
+7/8 passed.
+
+
+
+
+==============================================
+= Run Summary
+==============================================
+
+res://tests/map3d/test_unit_body_measurement.gd
+- test_sidecar_only_change_invalidates_model_fingerprint
+    [Failed]:  ["ee59c5cb262f85337642be8f3c5de567d055d84bb752e884999b267a4a0c433c"] expected to not equal ["ee59c5cb262f85337642be8f3c5de567d055d84bb752e884999b267a4a0c433c"]:  Import-only edits must invalidate model evidence
+          at line 174
+
+---- Totals ----
+Scripts           1
+Tests             8
+  Passing         7
+  Failing         1
+Asserts           21
+Time              0.437s
+
+
+[Orphans]:  Total orphans in run 1.0
+Note:  This count does not include GUT objects that will be freed upon exit.
+       It also does not include any orphans created by global scripts
+       loaded before tests were ran.
+Total orphans = 2.0
+
+---- 1 failing tests ----
+
+
+FATAL: GUT exited with code 1 (test failures)
+
+Sidecar fingerprint GREEN (8/8, 21 assertions, locked runner exit 0)
+res://tests/map3d/test_unit_body_measurement.gd
+* test_body_measurement_scales_and_contains_nested_mount_or_machine
+* test_missing_model_fails_explicitly
+* test_idle_walk_and_rotation_are_sampled
+* test_skin_pose_includes_mount_or_machine_vertices
+* test_calibration_is_required_and_simulation_conversion_is_explicit
+* test_configured_stature_and_terrain_tilt_are_conservative
+* test_attack_weapon_vertices_are_separate_from_body
+* test_sidecar_only_change_invalidates_model_fingerprint
+8/8 passed.
+
+
+
+
+==============================================
+= Run Summary
+==============================================
+
+---- Totals ----
+Scripts           1
+Tests             8
+  Passing         8
+Asserts           21
+Time              0.449s
+
+
+[Orphans]:  Total orphans in run 1.0
+Note:  This count does not include GUT objects that will be freed upon exit.
+       It also does not include any orphans created by global scripts
+       loaded before tests were ran.
+Total orphans = 2.0
+
+---- All tests passed! ----
+
+
+Refreshed CPU export
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+CF01_EXPORT ok  elapsed_ms=7334
+
+Physical JSON equality: PASS after removing only input_hashes and per-model model_hash. Existing input hashes unchanged except measurement tool; newly added inputs are existing .import sidecars. No importer settings changed from eabab22d. PNGs reused byte-for-byte.
