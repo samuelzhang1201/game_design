@@ -33,3 +33,5 @@ A separate dispatcher may create multiple independent steps after recording each
 Save compact worktree-local checkpoints and structured handover records. Reconcile unknown creation results before retrying. Implementation waits after handing its PR to its unique Review and resumes only for returned findings; after merge both owners finish; a dispatcher may continue managing other authorized steps without participating in their implementation or review.
 
 Use the Git-common-dir registry to validate declared tasks and ownership across worktrees. Preserve compatible historical records and unchanged-input verification evidence. Stop on user pause; create no empty or unauthorized tasks.
+
+Unmerged steps may be retired only through the explicit human-authorized `step_terminal` marker described in `cicd_procedure.md`. The original implementation/Review pair retains ownership and all failed evidence; atomic `superseded`/`cancelled` retirement releases active file claims only. It cannot count as an accepted dependency, restart the old step, replace owners or authorize a successor. Never rewrite the shared registry directly.

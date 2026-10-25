@@ -18,3 +18,4 @@
 - Stop hook 只验证显式声明记录，通过 Git common dir 的共享 registry、文件锁及原子更新检查跨工作树冲突。它不截获所有创建工具，也不自行证明 CI、依赖或验收已经通过。
 - 不读取 transcript，不自动启动后台调度循环，不关闭 hook，不修改权限、trust、MCP、trusted_hash 或测试门槛以绕过限制。
 - 新会话只读检查点、实际 diff 和必要指导/spec/plan，不重做批准的设计、不重新读取全部历史。用户明确暂停时停止；没有授权后续任务时结束，不创建空会话。
+- 未合并步骤只有原实施／唯一 Review 可用独立 `kind: "step_terminal"` 标记封存：`step_id`、`terminal_status`（`superseded`／`cancelled`）、`unmerged: true`、非空 `reason`、`human_authorization`（非空 `statement` 和 `reference`），并保留正常 source/status/summary。须先核实明确人类授权及未合并事实；hook 只验证声明，不能证明授权或 GitHub 状态。锁内原子保留完整 `previous_step`、原 owner、失败验收及历史，仅释放活跃文件归属；不能当已合并验收依赖、复活、换 owner 或派后继。相同重试幂等，禁止改写终态或直接修改 registry 绕过。详细字段见 `cicd_procedure.md`。
