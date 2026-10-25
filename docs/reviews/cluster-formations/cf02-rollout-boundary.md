@@ -206,13 +206,13 @@ Real current campaign boot/save/load, military reorganization, actual defeat con
 
 源建议保留 `UnitBodies.rows/footprint/home_slots/migrate`、`BodyMotion.plan/commit` 及既有外部入口签名；但 march/placement/render/battle/damage 的显式候选入口确切名称、参数、返回值与“普通入口不可达”测试尚未给出。请原负责方在获准验收拆分后确认：候选迁移与 missing-pose 请求如何区分？候选调用如何不触及生产发布/版本？现有外部入口最终如何一次切换？这些缺口使本文不能直接启动实施，不由文档作者设计答案。
 
-## 待人类明确决策
+## 待人类批准与实施前技术阻塞（分别处理）
 
 1. 是否批准有限 passive/candidate staging 例外及 plan 的 CF02–06 暂存映射，同时保留全部最终验收？原 CF02 原 acceptance 和 ownership 在明确合法处理前仍有效、blocked。
 2. 怎样从保留 WIP 提取 passive foundation，现有 fixture 改动怎样保留/归属？拒绝过的额外12测试文件仍未授权，`test_enemy_invasion.gd` 在这里只是未来激活提议。
-3. missing legacy nonbattle pose 与 malformed/missing required rows 的 schema 分类、显式初始化或拒绝政策是什么？必须保留合法原位旧档、非法档 fail closed、冻结事务、版本兼容和新当前战役 roundtrip。
+3. missing-pose/schema/初始化方案不提交人类作代码级选择：由未来实施者在授权范围内收敛，是实施及激活前必须解决的技术阻塞。合法 legacy 缺字段与 malformed/missing required rows 必须区分；不得拒绝合法旧档绕过兼容。合法旧档原位/路径/slot/人员/成本保全、非法档 fail closed、失败不修改原文件或发布当前 state、冻结事务、版本兼容及新当前战役 roundtrip 全是不可放弃硬验收。
 4. 是否批准新依赖图；激活正式 ID、owner/pair、原 CF02 延后生产 acceptance 的归属如何处理？不得第二次启动或替换 CF02 owner。
-5. 是否需先进一步拆分激活？它只可接线，若算法/实现尚未就绪就停止，不能成为大 feature PR。精确候选 API、tests、scope 与 shared guides 要在每步登记前确认。
+5. 未来实施者须在每步登记前确认精确候选 API、tests、scope 与 shared guides，并判断激活是否仍为接线；算法/实现未就绪就停止并先拆分，不能成为大 feature PR。这是技术收敛阻塞，不要求人类设计签名或算法。
 6. 人类批准后由授权规则步骤与合法 registry 流程处理 acceptance/claims，再登记唯一派工方、依赖、文件、worktree、branch、owner、Review；本文不提供该授权，不直接写 registry，不 terminal CF02，也不派产品后继。
 
 ## 端态保全与文档验收
@@ -224,3 +224,5 @@ Real current campaign boot/save/load, military reorganization, actual defeat con
 ## 派工方补充的登记约束（非产品建议）
 
 现有 `record_terminal` helper（`.codex/hooks/task-handover.md`）允许原 step owner 在明确人类授权下封存 superseded / unmerged，不要求已有 PR；但不能直接改写 CF02 不可变 acceptance。拟议合法路线：原 owner 先保全37 WIP/失败/输入证据，再本人用 helper 封存旧 CF02，保留原身份、owner、完整 previous_step 与未完成事实，仅释放活跃 claims。修订子步骤使用新 step IDs 和新固定 pair，依赖新被动基础的实际 accepted merge，不能以旧 CF02 为 accepted 依赖，也不复用结束的原 session 拥有另一 step。这样保留历史，并非更换旧 step owner。源建议中的 owner 归属问题仍须在这些规则内由人类决定。其他路线若需修改不可变 acceptance，现有 helper 不支持，必须先有独立合法规则处理。此草案不执行封存、释放、acceptance 改写或派工。
+
+批准问题仅聚焦有具体结果的 staging/acceptance 拆分、WIP 范围与旧 CF02 合法封存/新身份处理；第3/5项为实施者的技术阻塞说明，不能作为用户可取消既定兼容和安全义务的选择。源入口合同中的 “or fail with a clear reason” 是原作者建议原文，不授权拒绝原本必须兼容的合法旧档。

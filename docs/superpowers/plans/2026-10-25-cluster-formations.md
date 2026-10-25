@@ -420,15 +420,15 @@ CF14 引入 `ClusterTactics.intents(repo,state,cluster: Dictionary,known: Dictio
 
 激活仅可为已验证函数的有界接线 PR；若仍需新产品算法或大规模修复，先停止并拆分设计/实施，不能用大 label 吞大 feature。全部真正生成、运动、接触、伤害、render 和 load 安全必须先已可用，再原子切换所有 writer：新游戏 placement 在世界发布前；入战/merge/撤出/结束/取消在删除前转移唯一身体；候选 load 验证版本与冻结事务后才发布。同步移除过时绑定，不留物理 fallback；CF07 随后只退役旧战术语义。
 
-合法旧档原位、原路径、slot、人员和已付成本必须保留；重叠/损坏/未来版本 fail closed，失败不改原文件或当前运行 state，不提高 MIN_SAVE_VERSION 丢弃兼容。missing legacy nonbattle pose 的分类及初始化政策尚待明确批准：仅可经已证明 placement 在 load candidate 显式初始化，或明确拒绝；不能把缺失必需身体行一概当 legacy。新当前战役 boot/save/load 必须成功。未完成事务保留冻结数据，恢复不重复人员/移动/费用，非法恢复明确拒绝。
+合法旧档原位、原路径、slot、人员和已付成本必须保留；重叠/损坏/未来版本 fail closed，失败不改原文件或当前运行 state，不提高 MIN_SAVE_VERSION 丢弃兼容。missing legacy nonbattle pose 的分类及初始化是未来实施者必须在授权范围内收敛的技术阻塞：兼容的合法缺字段须经已证明 placement 在 load candidate 显式处理，非法输入明确拒绝；不能拒绝合法旧档绕过兼容，也不能把缺失必需身体行一概当 legacy。新当前战役 boot/save/load 必须成功。未完成事务保留冻结数据，恢复不重复人员/移动/费用，非法恢复明确拒绝。
 
 激活须以 CF01 生产半径通过未改弱的道路接敌、defeat 续行、新战役 roundtrip、military reorganization、slot/人员/成本守恒、保存确定性及最终受影响 selector/runtime gate/current-HEAD CI/独立 Review。继承的 55 fail 和 6 risky/pending 须逐项分类并解决，无排除、门槛变化或继承 PASS。真实窗口 visual-review 验收满员十人、各强度固定占地、全程无穿体、实际生成/接战/射击及性能；CF01 有限17采样及炮兵步兵替代限制仍保留，输入改变须重测。
 
 ### 批准与执行前清单
 
 - [ ] 人类明确批准上述有限 staging 例外、原 CF02–06 acceptance 拆分和补验落点；最终 spec §2–9、十兵人/固定占地/全过程扫掠/军法通信/八集群/保存确定性/真实视觉性能要求全部不变；后续 CF09–26 不删除或提前算完成。
-- [ ] 明确保留 WIP 的提取方式及现有 fixture 改动处理，保留全部失败；未获准的额外12测试路径仍不得编辑。
-- [ ] 批准 missing-pose/schema/版本兼容政策，区分合法 legacy 缺字段与损坏的必需字段；锁定新战役 roundtrip、合法原位旧档与非法档拒绝测试。
+- [ ] 人类明确批准 WIP 保全/提取范围及现有 fixture 改动的归属处理；具体提取操作由实施者收敛，保留全部失败；未获准的额外12测试路径仍不得编辑。
+- [ ] 未来实施者在授权范围内收敛 missing-pose/schema/初始化技术方案并锁定测试，这是实施及激活前阻塞，不是请人类选择 API 或算法。合法 legacy 缺字段与损坏必需字段必须区分；新战役 roundtrip、合法原位旧档、非法档拒绝及既定版本兼容是不可放弃验收。
 - [ ] 确定激活 step 的正式 ID/唯一派工方/唯一实施与 Review，以及原 CF02 owner 是否保留延后生产验收；不得替换 owner 或在原 scope 累积后续功能。
 - [ ] 在单独授权的规则处理及合法 registry 流程明确验收修订/claims 后，再逐步登记精确文件、依赖、owner、worktree、branch；原 CF02 在此之前仍 blocked，不能当作已完成依赖。不得直接改 registry accepted/ownership 或由本文终态原 CF02。
 - [ ] 每步登记前确认候选入口的确切签名与测试、guide 路径及授权。源建议没有给出全部候选 API 名称，故这些任务尚非可执行计划；由原负责方确认后补齐，本文不发明签名/算法。
