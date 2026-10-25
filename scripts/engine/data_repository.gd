@@ -150,6 +150,8 @@ var battle_stances: Dictionary = {}
 var parley_clauses: Dictionary = {}
 var prisoner_terms: Dictionary = {}
 var battle_formations: Dictionary = {}
+var cluster_formations: Dictionary = {}
+var cluster_slots: Array[Dictionary] = []
 var battle_orders: Dictionary = {}
 var battle_behaviors: Dictionary = {}
 var battle_events: Dictionary = {}
@@ -1034,6 +1036,17 @@ func _load(dir: String) -> bool:
 		return false
 	battle_outcomes.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["eff_min"]) < int(b["eff_min"]))
+	if not _load_if_present(table_path(dir, "cluster_formations"),
+			["formation", "label", "recipe", "behavior"],
+			func(r): cluster_formations[String(r["formation"])] = r.duplicate()):
+		return false
+	if not _load_if_present(table_path(dir, "cluster_slots"),
+			["formation", "arm", "role", "lateral", "depth", "priority"],
+			func(r): cluster_slots.append({"formation": String(r["formation"]),
+				"arm": String(r["arm"]), "role": String(r["role"]),
+				"lateral": int(r["lateral"]), "depth": int(r["depth"]),
+				"priority": int(r["priority"])})):
+		return false
 	if not _load_if_present(table_path(dir, "formations"),
 			["formation", "label", "frontage_m", "narrow_terrains", "narrow_width_m", "required_arms",
 			"min_morale", "min_training", "centre_required", "attack_permille", "defence_permille",

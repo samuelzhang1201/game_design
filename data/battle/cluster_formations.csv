@@ -1,0 +1,9 @@
+formation,label,recipe,behavior
+steady_line,横线稳进,infantry:2,coordinated_advance
+archer_infantry,弓步协同,infantry:1+archers:1,screen_and_shoot
+double_envelopment,两翼包抄,infantry:1+cavalry:2,pin_and_envelop
+cavalry_charge,骑兵突击,cavalry:3|cavalry:2+infantry:1,run_up_and_follow
+depth_defence,纵深守御,infantry:2+archers:1|infantry:2+artillery:1,hold_and_replace
+strong_wing,斜线强翼,infantry:3,press_strong_wing
+lure_counter,诱进反击,infantry:1+archers:1+cavalry:1,withdraw_receive_counter
+artillery_hold,炮兵据守,infantry:2+artillery:1,deploy_guard_fire

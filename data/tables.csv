@@ -118,6 +118,8 @@ screens/ledger,ledger_lenses
 screens/ledger,ledger_palette
 battle,prisoner_terms
 battle,parley_clauses
+battle,cluster_formations
+battle,cluster_slots
 battle,formations
 battle,orders
 battle,behaviors
