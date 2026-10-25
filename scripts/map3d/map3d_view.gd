@@ -426,14 +426,14 @@ func refresh_hud() -> void:  # the selection changed: the HUD and the pieces' gl
 	if _loaded: _units.set_selected(_selection.armies); _hud.refresh()
 func _sync_unit_mode(force: bool = false) -> void:
 	if _ctx == null: return
-	var next := Map3DUnits.symbol_mode(unit_symbol_mode, _ctx.distance, _repo.bal("map3d_unit_symbol_enter_m"), _repo.bal("map3d_unit_symbol_leave_m"))
+	var enter := Map3DGeometry.distance_for_bar(_repo, _meta, _repo.bal("map3d_unit_symbol_enter_scale"), _ctx.view_size.y)
+	var leave := Map3DGeometry.distance_for_bar(_repo, _meta, _repo.bal("map3d_unit_symbol_leave_scale"), _ctx.view_size.y)
+	var next := Map3DUnits.symbol_mode(unit_symbol_mode, _ctx.distance, enter, leave)
 	var changed := next != unit_symbol_mode
 	unit_symbol_mode = next
 	if _units.shown != (_military and not next): _units.set_shown(_military and not next)
 	_hud.apply_military_mode(next, _military and _loaded, changed or force)
-
 func compass_rect() -> Rect2: return _hud.compass_rect() if _loaded else Rect2()
-
 ## The 3D map MEASURES LIKE THE 2D MAP (owner 2026-09-18; Map3DGeometry).
 func map_units_per_metre() -> float: return Map3DGeometry.map_units_per_metre(_repo.map_info, _meta)
 func map_unit() -> String: return Map3DGeometry.map_unit(_repo.map_info, _meta)

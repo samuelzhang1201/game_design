@@ -81,7 +81,8 @@ existing one.
 - **A mark on the map is ink, not a badge.**
 - **The object is its own label.** Nothing floats over a piece on the map —
   no counters, numbers or bars; what it is and how it fares live in its card.
-  Lettering shows only at the zoom where it helps.
+  Lettering shows only at the zoom where it helps. Strategic military symbols
+  belong to distant overview scales; ordinary map play keeps the physical miniatures.
 - **Pieces behave like objects in the world, not billboards.** They keep the
   heading they last moved on; the camera never turns them.
 - **A selection strengthens what is already there** instead of laying a new
