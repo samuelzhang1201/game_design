@@ -3,8 +3,8 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const BattleScenario := preload("res://tests/fixtures/battle_scenario.gd")
 
-# One 40-person group per unit. p1 faces its distant opponent eastwards;
-# f2 is 300 m east: 100^2 < 300^2 <= 400^2, unobstructed and inside the cone.
+# One 40-person group per unit. p1 faces its distant opponent eastwards.
+# f2 centre reach is 873 + 538 + 300 = 1711m: a legal 300m exposed firing gap.
 func _fixture(gap := 300) -> Dictionary:
 	var repo := SuiteData.open_country(SuiteData.repo())
 	var state := SuiteData.campaign(repo, 9447)
@@ -17,7 +17,7 @@ func _fixture(gap := 300) -> Dictionary:
 	var f1 := String(foes[0])
 	var f2 := String(foes[1])
 	var positions := {p1: Vector2i(1000, 1000), f1: Vector2i(5000, 1000),
-		p2: Vector2i(5000, 5000), f2: Vector2i(1000 + gap, 1000)}
+		p2: Vector2i(10000, 10000), f2: Vector2i(2411 + gap, 1000)}
 	for code: String in positions:
 		for arm: String in repo.world_table("military", "unit_types"):
 			state.army_roster[code][arm] = "0"
@@ -40,7 +40,7 @@ func _fixture(gap := 300) -> Dictionary:
 		BattleFormation.ensure(battle)
 		BattleRules.freeze(repo, state, battle)
 		battle["deployed_day"] = state.absolute_day()
-		BattleGroups.refresh(repo, state, battle)
+		assert_true(BattleGroups.refresh(repo, state, battle))
 	return {"repo": repo, "state": state, "a": a, "b": b, "p1": p1, "p2": p2, "f1": f1, "f2": f2}
 
 func test_prepare_day_merges_real_cross_battle_fire_without_moving_units() -> void:
@@ -70,10 +70,10 @@ func test_retreating_shooter_does_not_merge() -> void:
 
 func test_cross_battle_friendly_group_obstructs_fire() -> void:
 	var f := _fixture()
-	BattleGroups.translate(f.repo, f.state, f.b, f.p2,
-		Vector2i(1150, 1020) - BattleSystem._at_m(f.repo, f.state, f.p2))
-	BattleGroups.refresh(f.repo, f.state, f.b)
-	assert_eq(BattleMerge.day(f.repo, f.state), [], "20 m tangency blocks the 300 m segment")
+	# An overlapping legacy record cannot grant a shot through a full friendly footprint.
+	f.b.groups[f.p2][0].x_m = 1855
+	f.b.groups[f.p2][0].y_m = 1020
+	assert_eq(BattleMerge.day(f.repo, f.state), [], "The actual friendly footprint obstructs the exposed firing segment")
 
 func test_json_and_retry_preserve_once_only_daily_receipt() -> void:
 	var f := _fixture()

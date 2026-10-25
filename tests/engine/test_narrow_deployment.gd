@@ -8,6 +8,7 @@ func after_each() -> void:
 
 func _fixture(people := 101, legacy := false) -> Dictionary:
 	var repo := SuiteData.open_country(SuiteData.repo())
+	SuiteData.no_clearance(repo) # isolate the explicitly configured metre-scale geometry below
 	repo.balance["army_living_cap_men"] = 10000.0 # isolated scale fixture, not production capacity
 	repo.balance["battle_group_spacing_m"] = 20.0
 	repo.balance["battle_group_depth_m"] = 20.0
@@ -476,3 +477,120 @@ func test_diamond_centre_reserve_rock_keeps_legal_native_slots_and_ally() -> voi
 		else:
 			assert_eq(BattleGroups.targets(f.repo, f.state, f.battle, ally), ally_native)
 		assert_eq(JSON.stringify(f.state.to_dict()), before, "native preservation is a pure query")
+
+func test_calibrated_formation_expands_real_saved_points_and_surface_contact() -> void:
+	var f := _fixture(300)
+	f.repo.balance["army_clearance_on"] = 1
+	f.state.army_roster[f.a]["organization_arm"] = "infantry"
+	f.state.regiments[f.a].merge({"x_m": 10000, "y_m": 10000, "facing_deg": 0}, true)
+	f.state.foes[f.enemy].merge({"x_m": 20000, "y_m": 10000, "facing_deg": 180}, true)
+	f.battle.formations.att.current = "line"
+	f.battle.erase("groups")
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var r := BattleGroups.figure_radius(f.repo, ArmySystem.regiment(f.repo, f.a, f.state))
+	assert_eq(r, 538)
+	assert_eq(_points(f.battle.groups[f.a]), [Vector2i(10000, 8924), Vector2i(10000, 10000), Vector2i(10000, 11076)])
+	assert_eq(Vector2i(f.battle.group_anchor_m[f.a][0], f.battle.group_anchor_m[f.a][1]), Vector2i(10000, 10000))
+	assert_eq(ArmyGround.unit_radius(f.repo, ArmySystem.regiment(f.repo, f.a, f.state), f.state), 1614)
+	# Exact surface-contact boundary: infantry538 + archer873 + configured100 = 1511.
+	f.battle.groups[f.a] = [{"slot": 0, "count": 100, "role": "front", "x_m": 10000, "y_m": 10000}]
+	f.battle.groups[f.enemy] = [{"slot": 0, "count": 100, "role": "front", "x_m": 11511, "y_m": 10000}]
+	f.battle.group_radius_m[f.enemy] = 873
+	assert_eq(BattleGroups.engaged_counts(f.repo, f.state, f.battle, f.a), Vector2i(100, 100))
+	f.battle.groups[f.enemy][0].x_m += 1
+	assert_eq(BattleGroups.engaged_counts(f.repo, f.state, f.battle, f.a), Vector2i(0, 100))
+	var before := JSON.stringify(f.state.to_dict())
+	assert_false(BattleGroups.sweep_clear(f.repo, f.state, f.battle, f.a, 0, Vector2i(10000, 10000), [Vector2i(10200, 10000)]), "another unit's visible footprint blocks a new overlap")
+	assert_eq(JSON.stringify(f.state.to_dict()), before)
+	var restored := GameState.from_dict(JSON.parse_string(before))
+	assert_eq(restored.battles[0].group_radius_m, f.battle.group_radius_m)
+
+func test_calibrated_full_footprint_rejects_a_rock_off_the_clear_centre_line() -> void:
+	var f := _fixture(100)
+	f.repo.balance["army_clearance_on"] = 1
+	f.state.army_roster[f.a]["organization_arm"] = "infantry"
+	f.battle.erase("group_radius_m")
+	f.battle.groups[f.a] = [{"slot": 0, "count": 100, "role": "front", "x_m": 10000, "y_m": 10000}]
+	f.battle.groups[f.enemy] = []
+	var bytes := PackedByteArray()
+	bytes.resize(100 * 100)
+	f.repo.balance["army_march_grid_px"] = 1.0
+	var grid := MarchPath.build(f.repo, 100, 100, 400, bytes)
+	MarchPath.use(f.repo, grid)
+	grid.closed[26 * 100 + 26] = 1
+	assert_true(grid.clear(Vector2i(10000, 10000), Vector2i(11000, 10000)))
+	assert_eq(BattleGroups.group_radius(f.repo, f.state, f.battle, f.a), 538)
+	assert_false(BattleGroups.sweep_clear(f.repo, f.state, f.battle, f.a, 0, Vector2i(10000, 10000), [Vector2i(11000, 10000)]), "the expanded model's actual disk reaches the off-centre rock")
+
+func test_new_formation_folds_its_real_footprints_inside_the_arrival_strip() -> void:
+	var f := _fixture(1000)
+	f.repo.balance["army_clearance_on"] = 1
+	f.state.army_roster[f.a]["organization_arm"] = "infantry"
+	f.state.regiments[f.a].merge({"x_m": 20000, "y_m": 12000, "facing_deg": 0}, true)
+	f.state.foes[f.enemy].merge({"x_m": 30000, "y_m": 12000, "facing_deg": 180}, true)
+	var bytes := PackedByteArray()
+	bytes.resize(80 * 40)
+	bytes.fill(255)
+	for y: int in range(20, 28):
+		for x: int in 80: bytes[y * 80 + x] = 0
+	f.repo.balance["army_march_grid_px"] = 1.0
+	var grid := MarchPath.build(f.repo, 80, 40, 500, bytes)
+	MarchPath.use(f.repo, grid)
+	f.battle.erase("groups")
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(f.battle.groups[f.a].size(), 10)
+	assert_eq(f.battle.groups[f.a].reduce(func(n: int, r: Dictionary) -> int: return n + int(r.count), 0), 1000)
+	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), Vector2i(20000, 12000))
+	for row: Dictionary in f.battle.groups[f.a]:
+		var at := Vector2i(int(row.x_m), int(row.y_m))
+		assert_true(BattleGroups._ground_clear(grid, at, at, 538), "new physical rows cannot be born over closed ground")
+
+func test_failed_new_formation_publishes_neither_rows_nor_slot_ids() -> void:
+	var f := _fixture(1000)
+	f.repo.balance["army_clearance_on"] = 1
+	f.state.army_roster[f.a]["organization_arm"] = "infantry"
+	var bytes := PackedByteArray()
+	bytes.resize(80 * 40)
+	bytes.fill(255)
+	f.repo.balance["army_march_grid_px"] = 1.0
+	MarchPath.use(f.repo, MarchPath.build(f.repo, 80, 40, 500, bytes))
+	f.battle.erase("groups")
+	var before := JSON.stringify(f.state.to_dict())
+	assert_false(BattleGroups.refresh(f.repo, f.state, f.battle), "no newborn footprint fits closed terrain")
+	assert_eq(JSON.stringify(f.state.to_dict()), before, "a failed birth preserves all committed facts and identities")
+	assert_eq(BattleGroups.migrate_size(f.repo, f.state, f.battle).get("status"), "error", "migration cannot report a failed birth as complete")
+	assert_eq(JSON.stringify(f.state.to_dict()), before)
+
+func test_real_calibrated_saved_overlap_exits_then_loses_its_exemption() -> void:
+	var f := _fixture(200)
+	f.repo.balance = SuiteData.repo().balance.duplicate(true)
+	f.state.army_roster[f.a].organization_arm = "infantry"
+	f.state.regiments[f.a].merge({"x_m": 10010, "y_m": 10000}, true)
+	f.battle.groups[f.a] = [
+		{"slot": 0, "count": 100, "role": "front", "x_m": 10000, "y_m": 10000},
+		{"slot": 1, "count": 100, "role": "reserve", "x_m": 10020, "y_m": 10000}]
+	f.battle.group_anchor_m[f.a] = [10010, 10000]
+	var bytes := PackedByteArray()
+	bytes.resize(80 * 80)
+	f.repo.balance["army_march_grid_px"] = 1
+	var grid := MarchPath.build(f.repo, 80, 80, 500, bytes)
+	MarchPath.use(f.repo, grid)
+	assert_eq(BattleGroups.group_radius(f.repo, f.state, f.battle, f.a), 538)
+	var budget := int(f.repo.bal("battle_deploy_step_m"))
+	var first := BattleGroups.move_row(f.repo, f.state, f.battle, f.a, 0, [Vector2i(9000, 10000)], budget)
+	assert_eq(first.at, Vector2i(9000, 10000), "20m old overlap may separate while retaining the original 538m figure radius")
+	assert_lte(int(first.moved_m), budget)
+	assert_eq(_points(f.battle.groups[f.a])[1], Vector2i(10020, 10000))
+	assert_false(BattleGroups.sweep_clear(f.repo, f.state, f.battle, f.a, 0, Vector2i(9001, 10000), [Vector2i(8000, 10000)]), "a fake source cannot claim the still-overlapping exit")
+	var saved := JSON.stringify(f.state.to_dict())
+	var clear := BattleGroups.move_row(f.repo, f.state, f.battle, f.a, 0, [Vector2i(8800, 10000)], budget)
+	assert_eq(clear.at, Vector2i(8800, 10000))
+	assert_false(BattleGroups.sweep_clear(f.repo, f.state, f.battle, f.a, 0, clear.at, [Vector2i(9100, 10000)]), "normal swept checks reject reentry after legal spacing")
+	var restored := GameState.from_dict(JSON.parse_string(saved))
+	var battle: Dictionary = restored.battles[0]
+	assert_false(Personnel.replace(f.repo, restored, f.enemy, 100).has("error"))
+	restored.foes[f.enemy].merge({"x_m": 9000, "y_m": 10020}, true)
+	battle.groups[f.enemy] = [{"slot": 0, "count": 100, "role": "front", "x_m": 9000, "y_m": 10020}]
+	assert_false(BattleGroups.sweep_clear(f.repo, restored, battle, f.a, 0, first.at, [Vector2i(8000, 10000)]), "a foreign unit never receives the same-unit exception")
+	grid.closed[20 * 80 + 18] = 1
+	assert_false(BattleGroups.sweep_clear(f.repo, f.state, f.battle, f.a, 0, clear.at, [Vector2i(8000, 10000)]), "the old overlap cannot grant a terrain exception")

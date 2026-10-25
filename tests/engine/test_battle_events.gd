@@ -161,6 +161,7 @@ func test_local_decision_revalidates_before_consuming_day_token() -> void:
 
 func test_true_join_reserve_changes_only_attacking_contribution() -> void:
 	var f := _fixture()
+	SuiteData.no_clearance(f.repo) # hand-built event/power fixture, not a deployment test
 	_only(f, "ev_33")
 	var other := ""
 	for code: String in f.state.regiments:

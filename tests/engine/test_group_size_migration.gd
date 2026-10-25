@@ -3,7 +3,7 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture() -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.no_clearance(SuiteData.repo()) # explicit 10m/50m legacy geometry, not miniature calibration
 	var state := SuiteData.campaign(repo, 319)
 	var codes := state.regiments.keys()
 	codes.sort()

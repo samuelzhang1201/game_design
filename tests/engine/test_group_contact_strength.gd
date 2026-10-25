@@ -11,10 +11,10 @@ func _fixture(gap_m: int) -> Dictionary:
 	codes.sort()
 	var a := String(codes[0])
 	var enemy := String(state.foes.keys()[0])
-	state.regiments[a]["x_m"] = 0
-	state.regiments[a]["y_m"] = 0
-	state.foes[enemy]["x_m"] = gap_m
-	state.foes[enemy]["y_m"] = 0
+	state.regiments[a]["x_m"] = 10000
+	state.regiments[a]["y_m"] = 10000
+	state.foes[enemy]["x_m"] = 11076 + gap_m
+	state.foes[enemy]["y_m"] = 10000
 	var battle := {"id": 9447, "att": [a], "def": [enemy], "rounds": 0,
 		"town": "", "place_x_m": 0, "place_y_m": 0, "actions": {}}
 	state.battles = [battle]
@@ -25,8 +25,16 @@ func _fixture(gap_m: int) -> Dictionary:
 		state.army_roster[a][arm] = "0"
 	state.army_roster[a]["infantry"] = "201"
 	Personnel.replace(repo, state, a, 201)
-	BattleGroups.refresh(repo, state, battle)
-	battle.groups[a][2].x_m = -500  # The other front group is still approaching.
+	for arm: String in repo.world_table("military", "unit_types"):
+		state.army_roster[enemy][arm] = "0"
+	state.army_roster[enemy].infantry = "100"
+	Personnel.replace(repo, state, enemy, 100)
+	assert_true(BattleGroups.refresh(repo, state, battle))
+	# Three nonoverlapping own figures; only the first front faces the single foe.
+	var positions := [Vector2i(10000, 10000), Vector2i(8924, 10000), Vector2i(10000, 12152)]
+	for i: int in positions.size():
+		battle.groups[a][i].x_m = positions[i].x
+		battle.groups[a][i].y_m = positions[i].y
 	return {"repo": repo, "state": state, "a": a, "enemy": enemy, "battle": battle}
 
 func test_front_groups_in_reach_fight_in_full() -> void:

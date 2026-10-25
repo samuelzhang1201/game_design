@@ -45,7 +45,8 @@ func _spot(_s: GameState, code: String) -> Vector2i:
 
 ## A suite campaign with the player's army parked out of the way
 ## (Play.park_army): a camp round the tests' ground would join their battles.
-func _campaign(seed_value: int) -> GameState:
+func _campaign(seed_value: int, stacked := false) -> GameState:
+	if stacked: SuiteData.no_clearance(repo) # only explicitly stacked reporting fixtures opt out
 	var s := SuiteData.campaign(repo, seed_value)
 	Play.park_army(repo, s, _spot(s, _mine()[0]))
 	return s
@@ -84,8 +85,8 @@ func _one_tier(att_loss: int, def_loss: int, share: int, att_morale: int, def_mo
 
 
 ## A campaign with one foe on top of one of the player's columns: the foe attacks.
-func _meeting(seed_value := 7) -> Array:
-	var s := _campaign(seed_value)
+func _meeting(seed_value := 7, stacked := false) -> Array:
+	var s := _campaign(seed_value, stacked)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
 	var at := _spot(s, p)
@@ -144,7 +145,7 @@ func _advance_day_auto(engine: TickEngine, state: GameState) -> void:
 
 func test_battle_day_writes_one_missive() -> void:
 	_one_tier(100, 100, 500, -10, -10)
-	var m := _meeting()
+	var m := _meeting(7, true)
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
 	_day(engine, s)
@@ -166,7 +167,7 @@ func test_two_remote_battles_send_separate_letters_on_actual_arrival() -> void:
 	if mine.size() < 2 or theirs.size() < 2:
 		pending("the pack has fewer than two land regiments a side")
 		return
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	var far := Vector2i(200_000, 0)
 	var at := _spot(s, mine[0])
 	_place(s, mine[0], at)
@@ -238,7 +239,7 @@ func test_a_delivered_stance_takes_hold_the_day_the_courier_lands() -> void:
 
 func test_report_numbers_come_from_the_engine() -> void:
 	_one_tier(100, 200, 500, -10, -10)
-	var m := _meeting()
+	var m := _meeting(7, true)
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
 	_day(engine, s)
@@ -267,7 +268,7 @@ func test_report_numbers_come_from_the_engine() -> void:
 
 func test_every_morale_change_carries_a_reason() -> void:
 	_one_tier(100, 100, 500, -10, -10)
-	var m := _meeting()
+	var m := _meeting(7, true)
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
 	_day(engine, s)
@@ -288,7 +289,7 @@ func test_every_morale_change_carries_a_reason() -> void:
 
 func test_a_regiment_that_leaves_is_named_with_why() -> void:
 	_one_tier(1000, 100, 500, -10, -10)
-	var m := _meeting()
+	var m := _meeting(7, true)
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
 	_day(engine, s)
@@ -314,7 +315,7 @@ func test_a_regiment_that_leaves_is_named_with_why() -> void:
 ## the enemy's strength away.
 func test_the_letter_gives_no_exact_foe_figure() -> void:
 	_one_tier(100, 200, 500, -10, -10)
-	var m := _meeting()
+	var m := _meeting(7, true)
 	var s: GameState = m[0]
 	var f := String(m[2])
 	var engine := TickEngine.new(repo)
@@ -362,7 +363,7 @@ func test_report_text_uses_templates_and_no_realm_names() -> void:
 			assert_false(n != "" and authored.contains(n), "%s names %s" % [row["key"], n])
 	# the letter is the templates' words, filled
 	_one_tier(100, 100, 500, -10, -10)
-	var m := _meeting()
+	var m := _meeting(7, true)
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
 	_day(engine, s)
@@ -393,9 +394,9 @@ func _separate_routed_side(s: GameState, engine: TickEngine, meeting: Array, rou
 	_day(engine, s)
 
 
-func _ending_text(rout: String) -> Array:
+func _ending_text(rout: String, stacked := false) -> Array:
 	_one_tier(100, 100, 500, -10, -10, rout)
-	var m := _meeting()
+	var m := _meeting(7, stacked)
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
 	_day(engine, s)
@@ -407,13 +408,13 @@ func _ending_text(rout: String) -> Array:
 
 func test_the_ending_is_told_from_the_players_side() -> void:
 	# the attacker (the foe) routs: we hold the field
-	var won := _ending_text("attacker")
+	var won := _ending_text("attacker", true)
 	var want_won := MissiveWriter.battle_words(repo, "battle_end_won", {"place": won[1], "rounds": won[2]}, 0)
 	assert_string_contains(String(won[0]), want_won)
 	assert_false(String(won[0]).contains(MissiveWriter.battle_words(repo, "battle_end_lost",
 		{"place": won[1], "rounds": won[2]}, 0)))
 	# the defender (us) routs: the foe holds the field
-	var lost := _ending_text("defender")
+	var lost := _ending_text("defender", true)
 	var want_lost := MissiveWriter.battle_words(repo, "battle_end_lost", {"place": lost[1], "rounds": lost[2]}, 0)
 	assert_string_contains(String(lost[0]), want_lost)
 	assert_ne(want_won, want_lost, "told differently")

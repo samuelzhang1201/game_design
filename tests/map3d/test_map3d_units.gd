@@ -444,3 +444,35 @@ func test_behind_a_south_facing_line_is_north() -> void:
 	assert_almost_eq(at.y, 172.0, 0.001)
 	var east := Map3DUnitCamps.behind(Vector2(0, 0), 0.0, 10.0)
 	assert_almost_eq(east.y, 10.0, 0.001, "yaw 0: the rear is +Z")
+
+func test_held_line_keeps_engine_ground_points_on_a_slope() -> void:
+	var repo := preload("res://tests/suite_data.gd").repo()
+	var state := preload("res://tests/suite_data.gd").campaign(repo, 7)
+	var reg: Dictionary = {}
+	for candidate: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		if MapObjects.regiment_arm(repo, candidate) == "infantry":
+			reg = candidate
+			break
+	var code := String(reg.regiment_code)
+	state.regiments[code].merge({"x_m": 10000, "y_m": 10000, "facing_deg": 0,
+		"stance": "hold", "order": ArmySystem.ORDER_GARRISON}, true)
+	var ctx := Map3DContext.new(repo, {"pack_origin": [-500, -500], "m_per_px": 50.0})
+	ctx.state_fn = func() -> GameState: return state
+	ctx.height_fn = func(at: Vector2) -> float: return at.y * 0.15
+	ctx.camera = Camera3D.new()
+	add_child_autofree(ctx.camera)
+	ctx.camera.position = Vector3(500, 500, 500)
+	ctx.camera.look_at(Vector3.ZERO)
+	var layer := Map3DLayerUnits.new()
+	add_child_autofree(layer)
+	layer.bind(ctx)
+	var piece := layer._piece_of(code)
+	layer._shown_xz[code] = Vector2.ZERO
+	layer._place(code, piece)
+	var expected := BattleGroups.layout(repo, "line", piece.figures, Vector2i(10000, 10000), 0, reg)
+	for i: int in piece.figs.size():
+		var fig: Node3D = piece.figs[i]
+		var point := ctx.to_world(ArmySystem.metres_to_pack(repo, expected[i]))
+		assert_almost_eq(fig.global_position.x, point.x, 0.01)
+		assert_almost_eq(fig.global_position.z, point.y, 0.01, "grounding must not slide the line outside its engine footprint")
+	assert_eq(Vector2((piece.node as Node3D).global_position.x, (piece.node as Node3D).global_position.z), Vector2.ZERO)

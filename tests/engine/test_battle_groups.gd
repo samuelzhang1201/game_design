@@ -6,6 +6,7 @@ const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture() -> Dictionary:
 	var repo := SuiteData.repo()
+	SuiteData.no_clearance(repo) # isolate the explicitly configured metre-scale geometry below
 	var state := SuiteData.campaign(repo, 9445)
 	var codes := state.regiments.keys()
 	codes.sort()
@@ -215,3 +216,25 @@ func test_legacy_rows_cannot_gain_contact_through_closed_ground() -> void:
 	MarchPath.use(f.repo, MarchPath.build(f.repo, 3, 1, 10, PackedByteArray([0, 0, 0])))
 	assert_eq(BattleGroups.engaged_counts(f.repo, f.state, f.battle, f.a), Vector2i(50, 50))
 	MarchPath.forget()
+
+func test_visible_formation_uses_calibrated_footprint_without_changing_data() -> void:
+	var repo := SuiteData.repo()
+	var helper: GDScript = load("res://scripts/engine/battle_groups.gd")
+	assert_true(helper.has_method("figure_radius"), "formation pitch and occupied terrain need a shared physical footprint")
+	if not helper.has_method("figure_radius"): return
+	var before := SuiteData.content_hash(repo)
+	var infantry := {"organization_arm": "infantry", "is_naval": "0"}
+	# Nine-figure calibration, 1140m full-piece radius: ceil(1140 * sqrt(2/9)) = 538.
+	assert_eq(helper.call("figure_radius", repo, infantry), 538)
+	assert_eq(helper.call("figure_radius", repo, {"organization_arm": "archers", "is_naval": "0"}), 873)
+	assert_eq(helper.call("figure_radius", repo, {"organization_arm": "cavalry", "is_naval": "0"}), 1038)
+	assert_eq(SuiteData.content_hash(repo), before, "deriving the real footprint cannot retune CSVs or mutate data")
+
+func test_compact_unit_circle_scales_its_nominal_calibration_without_retuning() -> void:
+	var repo := SuiteData.repo()
+	var reg := {"organization_arm": "infantry", "is_naval": "0"}
+	# Nominal square axis span3, ten current compact slots span5: ceil(1140*sqrt(2)*5/3).
+	assert_eq(BattleGroups.compact_radius(repo, reg, 10), 2688)
+	assert_eq(BattleGroups.compact_radius(repo, reg, 5), 1613)
+	assert_eq(BattleGroups.compact_radius(repo, {"organization_arm": "archers"}, 10), 4361)
+	assert_eq(BattleGroups.compact_radius(repo, {"organization_arm": "cavalry"}, 10), 5186)

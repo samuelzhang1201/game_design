@@ -5,9 +5,9 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 ## Battle 1: crown p1 (att) vs foe f1 (def). Battle 2: foe f2 attacks crown p2 when
-## `flip`, else crown p2 attacks f2. f2 stands 80 m from p1 (contact 100 m).
+## `flip`, else crown p2 attacks f2. f2 stands an 80 m footprint-edge gap from p1 (contact 100 m).
 func _fixture(flip: bool) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
 	var state := SuiteData.campaign(repo, 9448)
 	var mine := state.regiments.keys()
 	mine.sort()
@@ -17,16 +17,19 @@ func _fixture(flip: bool) -> Dictionary:
 	var p2 := String(mine[1])
 	var f1 := String(foes[0])
 	var f2 := String(foes[1])
-	var at := {p1: Vector2i(0, 0), f1: Vector2i(0, 3000), p2: Vector2i(5000, 20000), f2: Vector2i(80, 0)}
+	var at := {p1: Vector2i(10000, 10000), f1: Vector2i(10000, 20000), p2: Vector2i(30000, 30000), f2: Vector2i(11156, 10000)}
 	for code: String in at:
 		var e: Dictionary = state.foes.get(code, state.regiments.get(code, {}))
 		e["x_m"] = at[code].x
 		e["y_m"] = at[code].y
+		for arm: String in repo.world_table("military", "unit_types"):
+			state.army_roster[code][arm] = "0"
+		state.army_roster[code]["infantry"] = "40"
 		Personnel.replace(repo, state, code, 40)
 	var b1 := {"id": 1, "att": [p1], "def": [f1], "rounds": 1, "start_day": 5, "town": "",
-		"place_x_m": 0, "place_y_m": 0, "actions": {}, "parley": {"battle_id": 1, "agreed": {}}}
+		"place_x_m": 10000, "place_y_m": 10000, "actions": {}, "parley": {"battle_id": 1, "agreed": {}}}
 	var b2 := {"id": 2, "att": [f2] if flip else [p2], "def": [p2] if flip else [f2], "rounds": 3, "start_day": 3,
-		"town": "", "place_x_m": 80, "place_y_m": 0, "actions": {}, "parley": {"battle_id": 2, "agreed": {}}}
+		"town": "", "place_x_m": 11156, "place_y_m": 10000, "actions": {}, "parley": {"battle_id": 2, "agreed": {}}}
 	state.battles = [b1, b2]
 	state.tick = 1
 	state.day = 7
@@ -37,7 +40,7 @@ func _fixture(flip: bool) -> Dictionary:
 		BattleFormation.ensure(b)
 		BattleReport.enroll(state, b, String(b["att"][0]), "att")
 		BattleReport.enroll(state, b, String(b["def"][0]), "def")
-		BattleGroups.refresh(repo, state, b)
+		assert_true(BattleGroups.refresh(repo, state, b), "Legal full-size merge fixture publishes groups")
 	return {"repo": repo, "state": state, "p1": p1, "p2": p2, "f1": f1, "f2": f2}
 
 func _warrant(f: Dictionary, side: String) -> void:

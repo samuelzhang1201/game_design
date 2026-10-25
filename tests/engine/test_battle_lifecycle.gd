@@ -1,5 +1,6 @@
 extends GutTest
 const People := preload("res://tests/fixtures/military_people.gd")
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const Play := preload("res://tests/invasion_play.gd")
 ## A battle's life (spec 2026-10-07-enemy-ai-and-battle-design §4.1, §4.4):
@@ -60,7 +61,8 @@ func _spot(_s: GameState = null) -> Vector2i:
 ## A suite campaign with the player's army out of the tests' way: every land
 ## unit leaves its seat and camp and stands far off (a camp round the spot's
 ## town would otherwise join, or garrison the town); a test brings its own up.
-func _campaign(seed_value: int) -> GameState:
+func _campaign(seed_value: int, stacked := false) -> GameState:
+	if stacked: SuiteData.no_clearance(repo) # authored lifecycle arithmetic deliberately stacks actors
 	var s := SuiteData.campaign(repo, seed_value)
 	Play.park_army(repo, s, _spot())
 	return s
@@ -129,16 +131,20 @@ func _next_day(s: GameState) -> void:
 ## --- contact -------------------------------------------------------------
 
 func test_field_contact_starts_one_battle() -> void:
+	SuiteData.open_country(repo) # isolate encounter discovery from the pack’s terrain
 	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
 	var at := _spot(s)
+	assert_false(Personnel.replace(repo, s, p, 100).has("error"))
+	assert_false(Personnel.replace(repo, s, f, 100).has("error"))
+	var contact := BattleGroups.figure_radius(repo, ArmySystem.regiment(repo, p, s)) + BattleGroups.figure_radius(repo, ArmySystem.regiment(repo, f, s)) + int(repo.bal("battle_group_contact_m"))
 	_place(s, p, at)
 	# the column was marching on: it walked into the foe, so it attacks
 	s.regiments[p]["order"] = ArmySystem.ORDER_MARCH
 	s.regiments[p]["dest_x_m"] = at.x + 50_000
-	_foe(s, f, at + Vector2i(1000, 0))
+	_foe(s, f, at + Vector2i(contact, 0))
 	var events := BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 1, "one battle")
 	var b: Dictionary = s.battles[0]
@@ -147,7 +153,7 @@ func test_field_contact_starts_one_battle() -> void:
 	assert_eq(int(b["start_day"]), s.absolute_day())
 	assert_eq(int(b["rounds"]), 1, "the first round is fought the day they meet")
 	assert_eq(String(b["town"]), "", "in the open")
-	assert_eq(Vector2i(int(b["place_x_m"]), int(b["place_y_m"])), at + Vector2i(1000, 0),
+	assert_eq(Vector2i(int(b["place_x_m"]), int(b["place_y_m"])), at + Vector2i(contact, 0),
 		"fought where the defender stands")
 	assert_gt(int(b["id"]), 0)
 	assert_ne(ArmySystem.order_of(repo, s, p), ArmySystem.ORDER_MARCH, "the column halts to fight")
@@ -162,23 +168,25 @@ func test_field_contact_starts_one_battle() -> void:
 
 
 func test_no_contact_no_battle() -> void:
+	SuiteData.open_country(repo) # this case retains calibrated clearance and its exact boundary
 	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
-	var reach := int(repo.bal("battle_contact_km")) * 1000
 	_place(s, p, _spot(s))
+	_foe(s, f, _spot(s) + Vector2i(50000, 0))
+	var reach := maxi(int(repo.bal("battle_contact_km") * 1000.0), ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, p, s), s) + ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, f, s), s) + int(repo.bal("army_clearance_touch_m")))
 	_foe(s, f, _spot(s) + Vector2i(reach + 1, 0))
 	BattleSystem.settle_day(repo, s)
-	assert_eq(s.battles.size(), 0, "a metre beyond battle_contact_km: no battle")
+	assert_eq(s.battles.size(), 0, "one metre beyond the complete occupied contact boundary: no battle")
 	_foe(s, f, _spot(s) + Vector2i(reach, 0))
 	BattleSystem.detect_contacts(repo, s)
-	assert_eq(s.battles.size(), 1, "at battle_contact_km exactly: contact")
+	assert_eq(s.battles.size(), 1, "at the complete occupied contact boundary exactly: contact")
 	assert_eq(int(s.battles[0]["rounds"]), 0, "detect_contacts fights no round")
 
 
 func test_town_contact_needs_a_garrison() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, 0)
 	repo.balance["battle_contact_km"] = 0.0   # only the town can bring them together
 	var p: String = _mine()[0]
@@ -203,7 +211,7 @@ func test_town_contact_needs_a_garrison() -> void:
 	assert_eq(fight["def"], [p])
 	assert_eq(Vector2i(int(fight["place_x_m"]), int(fight["place_y_m"])), town_m, "fought at the town")
 	# the unit on the town's seat garrisons it standing by (ArmyGround.seated_in)
-	var s2 := _campaign(7)
+	var s2 := _campaign(7, true)
 	_place(s2, p, town_m)
 	s2.town_seat[town] = p
 	@warning_ignore("integer_division")
@@ -213,7 +221,7 @@ func test_town_contact_needs_a_garrison() -> void:
 	assert_eq(s2.battles.size(), 1, "the seat's unit is attacked")
 	assert_eq(String(s2.battles[0]["town"]), town)
 	# and so does a unit camped round it, outside the town's reach (camp_town)
-	var s3 := _campaign(7)
+	var s3 := _campaign(7, true)
 	_place(s3, p, town_m + Vector2i(reach_m * 2, 0))
 	s3.regiments[p]["camp_town"] = town
 	@warning_ignore("integer_division")
@@ -226,7 +234,7 @@ func test_town_contact_needs_a_garrison() -> void:
 
 
 func test_a_sieging_host_fights_only_on_its_assault_day() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -251,14 +259,14 @@ func test_a_sieging_host_fights_only_on_its_assault_day() -> void:
 	assert_eq(s.battles.size(), 1, "its assault is an ordinary battle")
 	# a column of the player's that is NOT the besieged town's garrison (a
 	# relief in the open) meets the besiegers any day
-	var s3 := _campaign(7)
+	var s3 := _campaign(7, true)
 	_place(s3, p, town_m)
 	_foe(s3, f, town_m + Vector2i(500, 0), "raid_main")
 	s3.ai_hosts["raid_main"] = {"mode": "SIEGE", "assault": 0, "target_kind": "town", "target_id": town}
 	assert_eq(ArmyGround.garrison_town(repo, s3, p), "", "standing by off seat and camp: no garrison")
 	BattleSystem.settle_day(repo, s3)
 	assert_eq(s3.battles.size(), 1, "a relief is fought in the field")
-	var s2 := _campaign(7)
+	var s2 := _campaign(7, true)
 	_place(s2, p, town_m)
 	_foe(s2, f, town_m + Vector2i(500, 0), "raid_main")
 	s2.ai_hosts["raid_main"] = {"mode": "ADVANCE"}
@@ -269,7 +277,7 @@ func test_a_sieging_host_fights_only_on_its_assault_day() -> void:
 ## --- a round -------------------------------------------------------------
 
 func test_round_matches_hand_computed_tier() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	# attackers lose 100 per mille, defenders 50; 600 per mille of the lost wounded
 	_one_tier(100, 50, 600, -5, -2)
 	var p: String = _mine()[0]
@@ -295,7 +303,7 @@ func test_round_matches_hand_computed_tier() -> void:
 
 
 func test_round_uses_the_outcome_table_tier_of_the_odds() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	repo.balance["battle_variance_permille"] = 0.0   # eff = odds
 	for k: String in repo.battle_stances:
 		repo.battle_stances[k]["retreat_odds_permille"] = 0
@@ -328,7 +336,7 @@ func test_round_uses_the_outcome_table_tier_of_the_odds() -> void:
 
 
 func test_hold_loses_heart_slower() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, -8)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -347,7 +355,7 @@ func test_hold_loses_heart_slower() -> void:
 ## --- the end -------------------------------------------------------------
 
 func test_battle_keeps_its_id_beyond_five_rounds_and_rout_until_separation() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -364,7 +372,7 @@ func test_battle_keeps_its_id_beyond_five_rounds_and_rout_until_separation() -> 
 		assert_eq(int(s.battles[0]["rounds"]), day + 1)
 		_next_day(s)
 	# A rout requests a route; the same battle remains until actual separation.
-	var s2 := _campaign(7)
+	var s2 := _campaign(7, true)
 	_one_tier(30, 150, 600, 5, -20, "defender")
 	_place(s2, p, _spot(s2))
 	_foe(s2, f, _spot(s2) + Vector2i(1000, 0))
@@ -393,7 +401,7 @@ func test_battle_keeps_its_id_beyond_five_rounds_and_rout_until_separation() -> 
 
 
 func test_both_hold_preserves_round_zero_and_rng() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -409,7 +417,7 @@ func test_both_hold_preserves_round_zero_and_rng() -> void:
 
 
 func test_evade_stance_starts_route_but_stays_exposed_in_contact() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(50, 50, 600, 0, 0)
 	assert_true(bool(repo.battle_stances["evade"]["retreats_on_contact"]), "the table says evade leaves at once")
 	var mine := _mine()
@@ -437,7 +445,7 @@ func test_hold_stance_never_retreats() -> void:
 	assert_eq(int(repo.battle_stances["hold"]["retreat_odds_permille"]), 0, "the table: hold never retreats")
 	assert_false(bool(repo.battle_stances["hold"]["retreats_on_contact"]))
 	for stance: String in ["hold", "steady"]:
-		var s := _campaign(7)
+		var s := _campaign(7, true)
 		repo.balance["battle_variance_permille"] = 0.0
 		repo.battle_outcomes.clear()
 		repo.battle_outcomes.append({"tier": "hand_made", "eff_min": 0, "eff_max": 1000,
@@ -461,7 +469,7 @@ func test_hold_stance_never_retreats() -> void:
 func test_steady_retreats_below_retreat_odds() -> void:
 	var outcomes := {}
 	for margin: int in [1, 0]:
-		var s := _campaign(7)
+		var s := _campaign(7, true)
 		_one_tier(0, 0, 600, 0, 0)
 		var p: String = _mine()[0]
 		var f: String = _theirs()[0]
@@ -483,7 +491,7 @@ func test_steady_retreats_below_retreat_odds() -> void:
 
 
 func test_no_safe_town_leaves_withdrawing_army_exposed() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -508,7 +516,7 @@ func test_no_safe_town_leaves_withdrawing_army_exposed() -> void:
 ## --- reinforcements and leaving ------------------------------------------
 
 func test_reinforcement_joins_and_is_capped() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, 0)
 	repo.balance["battle_max_units"] = 2.0
 	var mine := _mine()
@@ -537,7 +545,7 @@ func test_reinforcement_joins_and_is_capped() -> void:
 
 
 func test_march_away_mid_battle_removes_unit() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, 0)
 	var mine := _mine()
 	var f: String = _theirs()[0]
@@ -565,7 +573,7 @@ func test_march_away_mid_battle_removes_unit() -> void:
 
 
 func test_battle_with_one_side_emptied_ends() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -582,7 +590,7 @@ func test_battle_with_one_side_emptied_ends() -> void:
 	assert_eq(String(end["why"]), "emptied")
 	assert_eq(String(end["winner"]), "att")
 	# a foe that vanishes (taken off by its host) leaves an empty side too
-	var s2 := _campaign(7)
+	var s2 := _campaign(7, true)
 	_place(s2, p, _spot(s2))
 	_foe(s2, f, _spot(s2) + Vector2i(1000, 0))
 	BattleSystem.settle_day(repo, s2)
@@ -614,7 +622,7 @@ func _melee(s: GameState) -> void:
 
 
 func test_battle_state_is_deterministic() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_melee(s)
 	var twin := GameState.from_dict(s.to_dict())
 	var a := _five_days(s)
@@ -628,7 +636,7 @@ func test_battle_state_is_deterministic() -> void:
 
 
 func test_each_engaged_round_draws_once_and_same_day_retry_is_inert() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, 0)
 	_melee(s)
 	var expected := Rng.from_dict(s.rng.to_dict())
@@ -663,7 +671,7 @@ func _no_floats(v: Variant, where: String) -> void:
 
 
 func test_a_battle_saves_whole_numbers_and_loads_back() -> void:
-	var s := _campaign(7)
+	var s := _campaign(7, true)
 	_one_tier(0, 0, 600, 0, 0)
 	_melee(s)
 	BattleSystem.settle_day(repo, s)

@@ -58,10 +58,26 @@ static func arm_radius(repo: DataRepository, arm: String) -> int:
 
 
 ## A unit's clearance radius: its chief arm's (a royal unit too); a fleet's 0.
-static func unit_radius(repo: DataRepository, reg: Dictionary) -> int:
+static func unit_radius(repo: DataRepository, reg: Dictionary, state: GameState = null) -> int:
 	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 		return 0
-	return arm_radius(repo, MapObjects.regiment_arm(repo, reg))
+	var base := arm_radius(repo, MapObjects.regiment_arm(repo, reg))
+	if base == 0: return 0
+	var code := String(reg.get("regiment_code", ""))
+	var fit := ArmySystem.fit_count(repo, state, code) if state != null else ArmySystem.headcount(repo, reg)
+	base = maxi(base, BattleGroups.compact_radius(repo, reg, BattleGroups.counts(fit, int(repo.bal("battle_group_size"))).size()))
+	if state == null: return base
+	var battle := BattleSystem.battle_of(state, code)
+	if battle.get("groups", {}).has(code):
+		return maxi(base, ArmySystem._group_reach(repo, battle.groups[code],
+			BattleSystem._at_m(repo, state, code), BattleGroups.group_radius(repo, state, battle, code)))
+	var shape := BattleFormation.of_unit(state, code)
+	if shape == "":
+		shape = String(repo.battle_stances.get(BattleSystem.stance_of(state, code), {}).get("formation", "block"))
+		if ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH: shape = "block"
+	if shape == "block" or shape == "": return base
+	var count := BattleGroups.counts(ArmySystem.fit_count(repo, state, code), int(repo.bal("battle_group_size"))).size()
+	return maxi(base, BattleGroups.occupied_radius(repo, reg, shape, count))
 
 
 ## The largest radius of any arm.
@@ -154,8 +170,8 @@ static func in_reach(repo: DataRepository, town: String, p_m: Vector2i) -> bool:
 ## order breaking ties. `from_ring` > 0 starts the search at that ring whatever the arm.
 ## `max_radius_m` >= 0 bounds every candidate to that circle round the centre.
 static func free_slot(repo: DataRepository, centre_m: Vector2i, arm: String, taken: Dictionary,
-		town: String, any_terrain := false, near_m := NONE, from_ring := 0, max_radius_m := -1) -> Vector2i:
-	var radius := arm_radius(repo, arm)
+		town: String, any_terrain := false, near_m := NONE, from_ring := 0, max_radius_m := -1, occupied_radius_m := -1) -> Vector2i:
+	var radius := arm_radius(repo, arm) if occupied_radius_m < 0 else occupied_radius_m
 	if town == "" and is_free(repo, taken, centre_m, any_terrain, radius):
 		return centre_m
 	var spacing := int(repo.bal("army_slot_spacing_m"))
@@ -280,7 +296,7 @@ static func held_taken(repo: DataRepository, state: GameState, except_code: Stri
 		var r: Dictionary = all[c]
 		if c == except_code or String(r.get("is_naval", "0")) == "1":
 			continue
-		take(taken, ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, r)), unit_radius(repo, r))
+		take(taken, ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, r)), unit_radius(repo, r, state))
 	return taken
 
 
@@ -306,6 +322,13 @@ static func settle(repo: DataRepository, state: GameState, code: String, near_m 
 		return
 	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
 	var town := ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, here))
+	var aim: Array = entry.get("halt_aim_m", [])
+	var blocker := String(entry.get("halted_by", ""))
+	if town == "" and aim.size() == 2 and not ArmySystem.is_foe(state, blocker):
+		var intended := ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, Vector2i(int(aim[0]), int(aim[1]))))
+		if intended != "" and garrison_town(repo, state, blocker) == intended:
+			var reach := town_reach_m(repo, intended) + unit_radius(repo, reg, state) 				+ unit_radius(repo, ArmySystem.regiment(repo, blocker, state), state)
+			if Vector2(here - town_point_m(repo, intended)).length() <= reach + 1.0: town = intended
 	if town != "" and not holds(repo, state, String(reg["kingdom_code"]), town):
 		town = ""
 	entry["camp_town"] = town
@@ -315,14 +338,15 @@ static func settle(repo: DataRepository, state: GameState, code: String, near_m 
 	var taken := held_taken(repo, state, code)
 	# the seat is the town's point: taken only while no other unit stands within clearance of it
 	if town != "" and seat_of(repo, state, town) == "" \
-			and (not clearance_on(repo) or is_free(repo, taken, centre, true, unit_radius(repo, reg))):
+			and (not clearance_on(repo) or is_free(repo, taken, centre, true, unit_radius(repo, reg, state))):
 		state.town_seat[town] = code
 		_put(entry, centre)
 		return
 	var arm := MapObjects.regiment_arm(repo, reg)
-	var slot := free_slot(repo, centre, arm, taken, town, false, near_m)
+	var slot := free_slot(repo, centre, arm, taken, town, false, near_m, 0, -1, unit_radius(repo, reg, state))
 	if slot == NONE:
-		slot = free_slot(repo, centre, arm, taken, town, true, near_m)
+		if unit_radius(repo, reg, state) <= unit_radius(repo, reg):
+			slot = free_slot(repo, centre, arm, taken, town, true, near_m, 0, -1, unit_radius(repo, reg, state))
 	if slot != NONE:
 		_put(entry, slot)
 
@@ -363,6 +387,8 @@ static func refill(repo: DataRepository, state: GameState, town: String) -> Stri
 			var r: Dictionary = all[c]
 			var n := int(float(r.get("infantry", 0))) if pass_foot else int(MapObjects.regiment_personnel(repo, r))
 			if n > best:
+				if clearance_on(repo) and not is_free(repo, held_taken(repo, state, c),
+						town_point_m(repo, town), true, unit_radius(repo, r, state)): continue
 				best = n
 				pick = c
 		if pick != "":
@@ -420,5 +446,4 @@ static func reconcile(repo: DataRepository, state: GameState) -> void:
 	var empty := camps.keys()
 	empty.sort()
 	for town: String in empty:
-		if is_free(repo, held_taken(repo, state, ""), town_point_m(repo, town), true, max_radius(repo)):
-			refill(repo, state, town)
+		refill(repo, state, town)

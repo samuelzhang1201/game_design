@@ -72,7 +72,7 @@ func test_new_law_may_strengthen_but_cannot_break_battle_obligations() -> void:
 	assert_true("pursue" in BattleRules.legal_actions(repo, state, 999, "att"))
 
 func test_reinforcements_inherit_existing_agreements() -> void:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.no_clearance(SuiteData.repo()) # clause inheritance in a hand-built battlefield
 	var state := SuiteData.campaign(repo, 90)
 	var battle := _battle(repo, state)
 	BattleRules.freeze(repo, state, battle)

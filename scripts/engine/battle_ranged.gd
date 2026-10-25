@@ -20,13 +20,13 @@ static func point(row: Dictionary) -> Vector2i:
 	return Vector2i(int(row["x_m"]), int(row["y_m"]))
 
 
-static func touching(repo: DataRepository, battle: Dictionary, code: String) -> bool:
+static func touching(repo: DataRepository, battle: Dictionary, code: String, state: GameState = null) -> bool:
 	var side := BattleRules.side_of(battle, code)
 	if side == "":
 		return false
-	var reach := int(repo.bal("battle_group_contact_m"))
 	for row: Dictionary in battle.get("groups", {}).get(code, []):
 		for foe: String in battle["def" if side == "att" else "att"]:
+			var reach := BattleGroups.contact_reach(repo, state, battle, code, foe)
 			for other: Dictionary in battle.get("groups", {}).get(foe, []):
 				var d := point(other) - point(row)
 				if int(row["count"]) > 0 and int(other["count"]) > 0 and d.length_squared() <= reach * reach:
@@ -36,32 +36,36 @@ static func touching(repo: DataRepository, battle: Dictionary, code: String) -> 
 
 ## Inclusive reach and cone edge; a friendly disc tangent to the open segment blocks.
 static func clear_shot(repo: DataRepository, from: Vector2i, to: Vector2i,
-		facing: Vector2i, friends: Array[Vector2i]) -> bool:
+		facing: Vector2i, friends: Array[Vector2i], footprints := Vector2i.ZERO,
+		friend_radii: Array[int] = []) -> bool:
 	var d := to - from
 	var length_sq := d.length_squared()
-	var reach := int(repo.bal("battle_ranged_reach_m"))
-	var close := int(repo.bal("battle_group_contact_m"))
+	var reach := int(repo.bal("battle_ranged_reach_m")) + footprints.x + footprints.y
+	var close := int(repo.bal("battle_group_contact_m")) + footprints.x + footprints.y
 	if length_sq <= close * close or length_sq > reach * reach:
 		return false
 	var forward := d.x * facing.x + d.y * facing.y
 	var cross := d.x * facing.y - d.y * facing.x
 	if forward <= 0 or absi(cross) * 1000 > forward * int(repo.bal("battle_ranged_cone_permille")):
 		return false
-	var radius := int(repo.bal("battle_ranged_block_radius_m"))
-	for at: Vector2i in friends:
-		var offset := at - from
+	var length := sqrt(float(length_sq))
+	for i: int in friends.size():
+		var radius := maxi(int(repo.bal("battle_ranged_block_radius_m")), friend_radii[i] if i < friend_radii.size() else 0)
+		var offset := friends[i] - from
 		var along := offset.x * d.x + offset.y * d.y
-		if along <= 0:
-			if offset.length_squared() < radius * radius:
-				return false
-			continue
-		if along >= length_sq:
-			if (at - to).length_squared() < radius * radius:
-				return false
-			continue
-		var area := offset.x * d.y - offset.y * d.x
-		if area * area <= radius * radius * length_sq:
-			return false
+		# Relative integer geometry avoids world-coordinate Vector2 precision changing tangency.
+		if float(along) <= footprints.x * length:
+			var distance_sq := float(offset.length_squared()) + float(footprints.x * footprints.x) - 2.0 * footprints.x * float(along) / length
+			if distance_sq < radius * radius: return false
+		elif float(along) >= float(length_sq) - footprints.y * length:
+			var end_offset := friends[i] - to
+			var end_along := end_offset.x * d.x + end_offset.y * d.y
+			var distance_sq := float(end_offset.length_squared()) + float(footprints.y * footprints.y) + 2.0 * footprints.y * float(end_along) / length
+			if distance_sq < radius * radius: return false
+		else:
+			var area := offset.x * d.y - offset.y * d.x
+			if float(area) * float(area) <= float(radius * radius) * float(length_sq): return false
+
 	return true
 
 
@@ -77,7 +81,7 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 			or bool(BattleSystem._stored(state, code).get("captured", false)):
 		return out
 	var action := BattleSystem.unit_action(repo, state, battle, code)
-	var in_melee := touching(repo, battle, code)
+	var in_melee := touching(repo, battle, code, state)
 	if action["kind"] == "retreat" or (not in_melee and battle.get("reserves", {}).has(code) and action["task_id"] == ""):
 		return out
 	var task := BattleTaskSystem.current(state, code)
@@ -85,25 +89,25 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 	var opponents := battle if opposing_battle.is_empty() else opposing_battle.duplicate(true)
 	var friendly := side if opposing_battle.is_empty() else BattleSystem._side_for(state, opponents, code)
 	var other := "def" if friendly == "att" else "att"
-	var close := int(repo.bal("battle_group_contact_m"))
 	var sight := int(repo.bal("ai_sight_km" if ArmySystem.is_foe(state, code) else "player_sight_km") * 1000)
 	var axis := Vector2i((WarFront.facing_vector(int(battle.get("group_facing", {}).get(code, 0))) * 1000).round())
-	var friends: Array[Vector2i] = []
-	for member: String in battle[side]:
-		for row: Dictionary in battle.get("groups", {}).get(member, []):
-			if int(row["count"]) > 0:
-				friends.append(point(row))
-	if not opposing_battle.is_empty():
-		for member: String in opponents[friendly]:
-			for row: Dictionary in opponents.get("groups", {}).get(member, []):
+	var friends: Array[Dictionary] = []
+	for field: Dictionary in [battle] if opposing_battle.is_empty() else [battle, opponents]:
+		for member: String in field[side if is_same(field, battle) else friendly]:
+			var radius := BattleGroups.group_radius(repo, state, field, member) if ArmyGround.clearance_on(repo) else 0
+			for row: Dictionary in field.get("groups", {}).get(member, []):
 				if int(row["count"]) > 0:
-					friends.append(point(row))
+					friends.append({"row": row, "radius": radius})
 	for row: Dictionary in rows:
 		if int(row["count"]) <= 0:
 			continue
 		var from := point(row)
-		var blockers: Array[Vector2i] = friends.duplicate()
-		blockers.erase(from)  # exclude this shooter, retaining any overlapping other group
+		var blockers: Array[Vector2i] = []
+		var blocker_radii: Array[int] = []
+		for friend: Dictionary in friends:
+			if is_same(friend.row, row): continue
+			blockers.append(point(friend.row))
+			blocker_radii.append(int(friend.radius))
 		var inside := true
 		var region := String(action.get("pursuit_region", ""))
 		if region != "":
@@ -135,6 +139,8 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 			var visible := BattleSystem._at_m(repo, state, foe) - BattleSystem._at_m(repo, state, code)
 			if visible.length_squared() > sight * sight:
 				continue
+			var close := BattleGroups.contact_reach(repo, state, battle, code, foe, opponents)
+			var footprints := Vector2i(BattleGroups.group_radius(repo, state, battle, code), BattleGroups.group_radius(repo, state, opponents, foe)) if ArmyGround.clearance_on(repo) else Vector2i.ZERO
 			var engaged := false
 			for enemy: Dictionary in opponents.get("groups", {}).get(foe, []):
 				if int(enemy["count"]) <= 0:
@@ -144,7 +150,7 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 					if row["role"] == "front" and (to - from).length_squared() <= close * close:
 						out["melee"] += int(row["count"])
 						engaged = true
-				elif clear_shot(repo, from, to, axis, blockers):
+				elif clear_shot(repo, from, to, axis, blockers, footprints, blocker_radii):
 					out["firing"] += int(row["count"])
 					engaged = true
 				if engaged:

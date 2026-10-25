@@ -124,6 +124,7 @@ func test_take_seat_swaps_and_refuses_a_field_unit() -> void:
 ## ArmyGround.refill: the camp unit with the most infantry steps in, ties to
 ## the earlier code; with no infantry anywhere, the largest unit.
 func test_refill_prefers_infantry_then_the_earlier_code_then_the_larger() -> void:
+	SuiteData.no_clearance(repo) # this case replaces equipment counts to isolate candidate ranking
 	var x := _setup()
 	var s: GameState = x["s"]
 	var town := String(x["town"])

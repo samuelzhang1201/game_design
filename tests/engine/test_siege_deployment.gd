@@ -227,7 +227,10 @@ func test_a_column_held_in_a_field_battle_cannot_remotely_occupy_the_empty_town(
 	s.foes.erase(late)
 	EnemyAi.step_day(repo, s)
 	var relief := String(Play.land_regiments(repo)[1])
-	Play.place(repo, s, relief, at + Vector2i(16000, 0), ArmySystem.ORDER_STANDBY)
+	# A real field encounter starts at nonoverlapping full-unit contact, not 1km interpenetration.
+	var distance := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, first, s), s) + ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, relief, s), s) + int(repo.bal("army_clearance_touch_m"))
+	Play.place(repo, s, relief, at + Vector2i(15000 + distance, 0), ArmySystem.ORDER_STANDBY)
+	assert_gt(distance, 1000, "The original 1km separation cannot contain the actual full-size figures")
 	BattleSystem.prepare_day(repo, s)
 	assert_false(BattleSystem.battle_of(s, first).is_empty())
 	Play.place(repo, s, guard, at + Vector2i(-50000, 0), ArmySystem.ORDER_MARCH)

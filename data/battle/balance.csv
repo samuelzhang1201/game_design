@@ -42,18 +42,18 @@ battle_disengage_days,2,"battles §4.1: a battle that ends on battle_max_rounds 
 battle_search_days,2,"unit tasks (P4.4c4): days a flank or pursuit unit that lost its target searches at the last point it saw before the task ends in search_failed (first draft)"
 battle_search_range_m,8000,"unit tasks (P4.4c4): whole metres from the last known point within which a fresh sighting of the lost target resumes the follow; farther sightings leave the search running (first draft)"
 battle_group_size,100,"battle groups (P4.4d1): people per representative group; a unit's fit count splits into groups of this size, the last the remainder (spec 6.1; first draft)"
-battle_group_spacing_m,50,"battle groups (P4.4d1): whole metres between neighbouring groups across the front; 10 groups of a line span 500 m, the line's frontage_m (first draft)"
-battle_group_depth_m,40,"battle groups (P4.4d1): whole metres between ranks, measured back from the front away from the enemy (first draft)"
-battle_line_gap_m,100,"battle deployment lines (P4.4d2): whole metres between the two sides' line centres at the battle place (first draft)"
+battle_group_spacing_m,50,Minimum configured whole-metre spacing across the front; actual pitch also contains the full calibrated figure diameter
+battle_group_depth_m,40,Minimum configured whole-metre spacing between ranks; actual pitch also contains the full calibrated figure diameter
+battle_line_gap_m,100,Whole-metre gap between opposing formation footprint edges at the battle place
 battle_deploy_step_m,2500,"battle deployment lines (P4.4d2): most whole metres a battle unit's anchor steps toward its line slot per day; 5 km of contact takes two days (first draft)"
-battle_group_contact_m,100,"battle groups (P4.4d4): whole metres within which a front group counts as in contact with an enemy group, inclusive; the d2 line gap, so fronts deployed opposite each other engage (first draft)"
+battle_group_contact_m,100,Inclusive whole-metre contact gap between actual group footprint edges
 battle_reserve_permille,500,"battle groups (P4.4d4): permille of strength that a fit person not in contact (reserve ranks, a front still approaching) counts for (first draft)"
 family_loss_opinion_dead_named,-3,"family losses (P2-B1): opinion each family member in the player's realm takes per named noble killed, applied once per loss id (first draft)"
 family_loss_opinion_dead_cadre,-2,"family losses (P2-B1): opinion per family member for each unnamed noble cadre killed (first draft)"
 family_loss_opinion_captured_named,-2,"family losses (P2-B1): opinion per family member for each named noble captured (first draft)"
 family_loss_opinion_captured_cadre,-1,"family losses (P2-B1): opinion per family member for each unnamed noble cadre captured (first draft)"
 battle_charge_runup_m,300,"Minimum actual continuous mounted approach before impact; renewal needs this clear separation beyond contact and a regroup day"
-battle_ranged_reach_m,400,Inclusive direct-fire reach between saved group centres in whole metres
+battle_ranged_reach_m,400,Inclusive direct-fire reach between actual group footprint edges in whole metres
 battle_ranged_cone_permille,1000,Maximum lateral to forward ratio in permille for direct fire (45 degree half-cone)
 battle_ranged_block_radius_m,20,Friendly group disc radius obstructing an open direct-fire segment in whole metres
 battle_flank_front_half_deg,60,"Flank geometry: contact outside this half-angle from the defender facing is side/rear contact"

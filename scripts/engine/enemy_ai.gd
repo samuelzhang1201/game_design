@@ -61,14 +61,14 @@ static func spawn(repo: DataRepository, state: GameState, host: Dictionary) -> v
 		var reg := ArmySystem.regiment(repo, unit, state)
 		var at := start
 		if ArmyGround.clearance_on(repo):
+			var radius := maxi(ArmyGround.unit_radius(repo, reg), ArmyGround.unit_radius(repo, reg, state))
 			if not first:
 				var arm := MapObjects.regiment_arm(repo, reg)
-				at = ArmyGround.free_slot(repo, start, arm, taken, "")
+				at = ArmyGround.free_slot(repo, start, arm, taken, "", false, ArmyGround.NONE, 0, -1, radius)
 				if at == ArmyGround.NONE:
-					at = ArmyGround.free_slot(repo, start, arm, taken, "", true)
-				if at == ArmyGround.NONE:
-					at = start
-			ArmyGround.take(taken, at, ArmyGround.unit_radius(repo, reg))
+					at = ArmyGround.free_slot(repo, start, arm, taken, "", true, ArmyGround.NONE, 0, -1, radius)
+				if at == ArmyGround.NONE: return
+			ArmyGround.take(taken, at, radius)
 			first = false
 		# Initial rations use the live personnel and actual assembly terrain.
 		var opening_reg := reg.duplicate()
@@ -661,7 +661,11 @@ static func arrival_mode(repo: DataRepository, state: GameState, host_code: Stri
 				var here := _at_m(repo, state, c)
 				var touches := _within(here, at, maxi(reach, town_m))
 				for p: String in garrison:
-					touches = touches or _within(here, _at_m(repo, state, p), reach)
+					var pair_reach := reach
+					if ArmyGround.clearance_on(repo):
+						pair_reach = maxi(pair_reach, ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, c, state), state)
+							+ ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, p, state), state) + int(repo.bal("army_clearance_touch_m")))
+					touches = touches or _within(here, _at_m(repo, state, p), pair_reach)
 				if touches:
 					if role_of(repo, host_code) != ROLE_RESERVE and _besieged_by_another(repo, state, host_code, id):
 						return ARRIVAL_RETHINK
@@ -895,8 +899,8 @@ static func _stands_halted(repo: DataRepository, state: GameState, code: String,
 	# A displaced enemy releases the march; friendly camps hold their target slot.
 	var theirs := String(ArmySystem.regiment(repo, b, state).get("kingdom_code", ""))
 	if theirs != repo.resolve_realm("raider_realm"):
-		var radius := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, code, state)) \
-			+ ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, b, state))
+		var radius := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, code, state), state) \
+			+ ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, b, state), state)
 		return not MarchClearance.first_entry(here, [to],
 			[Vector2i(int(be["x_m"]), int(be["y_m"]))], [radius]).is_empty()
 	return _within(here, Vector2i(aim[0], aim[1]), reach)

@@ -52,16 +52,16 @@ static func mergeable(repo: DataRepository, state: GameState, a: Dictionary, b: 
 				return false
 	if not _compatible(repo, state, a, b):
 		return false
-	var reach := int(repo.bal("battle_group_contact_m"))
 	for ua: String in _units(a):
 		for ub: String in _units(b):
 			if ArmySystem.is_foe(state, ua) == ArmySystem.is_foe(state, ub):
 				continue
+			var reach := BattleGroups.contact_reach(repo, state, a, ua, ub, b)
 			for ga: Dictionary in a.get("groups", {}).get(ua, []):
 				for gb: Dictionary in b.get("groups", {}).get(ub, []):
 					var dx := int(ga["x_m"]) - int(gb["x_m"])
 					var dy := int(ga["y_m"]) - int(gb["y_m"])
-					if dx * dx + dy * dy <= reach * reach:
+					if int(ga["count"]) > 0 and int(gb["count"]) > 0 and dx * dx + dy * dy <= reach * reach:
 						return true
 	return _ranged_contact(repo, state, a, b) or _ranged_contact(repo, state, b, a)
 

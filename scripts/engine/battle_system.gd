@@ -46,7 +46,7 @@ static func unit_action(repo: DataRepository, state: GameState, battle: Dictiona
 			action["kind"] = "hold"
 			action["reason"] = "Unit task holds: insufficient personnel or carried supplies"
 	if action["kind"] == "attack" and not action.has("pursuit_target") and BattleRanged.share(repo, state, code) >= int(repo.bal("battle_context_arm_threshold_permille")) \
-			and BattleRanged.touching(repo, battle, code):
+			and BattleRanged.touching(repo, battle, code, state):
 		action["kind"] = "hold"
 		action["reason"] = "Ranged unit defends at actual close contact"
 		action["close_defence"] = true
@@ -447,8 +447,8 @@ static func town_contact(repo: DataRepository, state: GameState, town: String, f
 	# radii off it, outside the village's reach: it touches within a few metres of that
 	if ArmyGround.clearance_on(repo):
 		var seat := ArmySystem.regiment(repo, ArmyGround.seat_of(repo, state, town), state)
-		var r_seat := ArmyGround.max_radius(repo) if seat.is_empty() else ArmyGround.unit_radius(repo, seat)
-		var limit := r_seat + ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, f, state)) \
+		var r_seat := ArmyGround.max_radius(repo) if seat.is_empty() else ArmyGround.unit_radius(repo, seat, state)
+		var limit := r_seat + ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, f, state), state) \
 			+ int(repo.bal("army_clearance_touch_m"))
 		if roundi(away * float(ArmySystem.metres_per_pack_px(repo))) <= limit:
 			return town
@@ -506,10 +506,15 @@ static func join(repo: DataRepository, state: GameState, battle_id: int, code: S
 	var list: Array = b[side]
 	if list.size() >= int(repo.bal("battle_max_units")):
 		return false
+	var before := b.duplicate(true)
 	BattleRules.ensure_parties(b)   # an old save's default is taken before the newcomer is in the list
 	if b.has("parley"):   # the frozen terms are inherited: the reinforcement becomes a party
 		b.parley.parties[side].append(code)
 	list.append(code)
+	if not BattleGroups.refresh(repo, state, b):
+		b.clear()
+		b.merge(before)
+		return false
 	BattleReport.enroll(state, b, code, side)
 	if not b.has("event_reinforcements"):
 		b["event_reinforcements"] = []
@@ -519,7 +524,6 @@ static func join(repo: DataRepository, state: GameState, battle_id: int, code: S
 	b.reinforcement_evidence.append({"unit": code, "side": side, "day": state.absolute_day(),
 		"reason": "This regiment physically joined the existing battle."})
 	_halt(state, code)
-	BattleGroups.refresh(repo, state, b)
 	return true
 
 
@@ -555,7 +559,11 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 				continue    # a besieged town's garrison waits for the assault
 			# read fresh: a column halted in a town's reach today is its garrison now
 			var town := town_contact(repo, state, ArmyGround.garrison_town(repo, state, p), f)
-			if town == "" and not _within(_at_m(repo, state, f), _at_m(repo, state, p), reach):
+			var pair_reach := reach
+			if ArmyGround.clearance_on(repo):
+				pair_reach = maxi(pair_reach, ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, p, state), state)
+					+ ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, f, state), state) + int(repo.bal("army_clearance_touch_m")))
+			if town == "" and not _within(_at_m(repo, state, f), _at_m(repo, state, p), pair_reach):
 				continue
 			var bf := battle_of(state, f)
 			var bp := battle_of(state, p)
@@ -619,7 +627,9 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 	for entry_side: String in SIDES:
 		for member: String in b[entry_side]:
 			BattleReport.enroll(state, b, member, entry_side)
-	BattleGroups.refresh(repo, state, b)
+	if not BattleGroups.refresh(repo, state, b):
+		state.battles.erase(b)
+		return
 	for side: String in SIDES:
 		var actor := String(b[side][0])
 		if ArmySystem.is_foe(state, actor):

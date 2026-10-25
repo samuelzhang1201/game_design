@@ -130,6 +130,8 @@ func _end_day(s: GameState) -> Array:
 
 
 func test_stance_order_lands_after_day_end_and_applies_next_day() -> void:
+	# This stacked, bloodless encounter isolates courier/day ordering from footprint admission.
+	repo = SuiteData.no_clearance(repo)
 	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	# a long, bloodless, dice-free battle nobody leaves

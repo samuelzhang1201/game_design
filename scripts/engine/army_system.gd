@@ -1404,9 +1404,9 @@ static func _spread_foe(repo: DataRepository, state: GameState, code: String, en
 			return
 	var arm := MapObjects.regiment_arm(repo, regiment(repo, code, state))
 	var taken := ArmyGround.held_taken(repo, state, code)
-	var slot := ArmyGround.free_slot(repo, aim, arm, taken, "", false, at, 1, reach)
+	var slot := ArmyGround.free_slot(repo, aim, arm, taken, "", false, at, 1, reach, ArmyGround.unit_radius(repo, regiment(repo, code, state), state))
 	if slot == ArmyGround.NONE:
-		slot = ArmyGround.free_slot(repo, aim, arm, taken, "", true, at, 1, reach)
+		slot = ArmyGround.free_slot(repo, aim, arm, taken, "", true, at, 1, reach, ArmyGround.unit_radius(repo, regiment(repo, code, state), state))
 	if slot == ArmyGround.NONE or MarchClearance.dist2(slot, aim) > reach * reach:
 		return
 	entry["x_m"] = slot.x
@@ -1479,9 +1479,9 @@ static func clearance_blockers(repo: DataRepository, state: GameState) -> Dictio
 		realm[code] = row[2]
 		var at: Vector2i = Vector2i(int(st["x_m"]), int(st["y_m"])) if st.has("x_m") \
 			else pack_to_metres(repo, position_of(repo, state, all[code]))
-		var radius := int(row[1])
+		var radius := ArmyGround.unit_radius(repo, all.get(code, {"regiment_code": code}), state)
 		if spread.has(code):                # its deployed groups are the ground it holds
-			radius = maxi(radius, _group_reach(repo, spread[code], at))
+			radius = maxi(radius, _group_reach(repo, spread[code], at, BattleGroups.figure_radius(repo, all.get(code, {}))))
 		rad[code] = radius
 		maxr = maxi(maxr, radius)
 		pos[code] = at
@@ -1510,7 +1510,7 @@ static func _deployment_reach(_repo: DataRepository, state: GameState) -> Dictio
 
 ## The radius that covers a unit's groups round `anchor`: the farthest group's
 ## distance rounded up to whole metres, plus half the group spacing.
-static func _group_reach(repo: DataRepository, rows: Array, anchor: Vector2i) -> int:
+static func _group_reach(repo: DataRepository, rows: Array, anchor: Vector2i, figure_radius_m := -1) -> int:
 	var far := 0
 	for g: Dictionary in rows:
 		var dx := int(g["x_m"]) - anchor.x
@@ -1523,7 +1523,7 @@ static func _group_reach(repo: DataRepository, rows: Array, anchor: Vector2i) ->
 			d -= 1
 		far = maxi(far, d)
 	@warning_ignore("integer_division")
-	return far + int(repo.bal("battle_group_spacing_m")) / 2
+	return far + (int(repo.bal("battle_group_spacing_m")) / 2 if figure_radius_m < 0 else figure_radius_m)
 
 
 ## What never changes about a roster unit: [headcount, clearance radius, kingdom]

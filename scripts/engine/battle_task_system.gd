@@ -529,7 +529,7 @@ static func _snapshot_flank(repo: DataRepository, state: GameState, unit: String
 	var size := BattleGroups.saved_size(repo, battle) if battle.has("groups") else int(repo.bal("battle_group_size"))
 	if size <= 0: return
 	var n := BattleGroups.counts(ArmySystem.fit_count(repo, state, target), size).size()
-	var positions := BattleGroups.layout(repo, shape if shape != "" else BattleFormation.DEFAULT, n, there, facing)
+	var positions := BattleGroups.layout(repo, shape if shape != "" else BattleFormation.DEFAULT, n, there, facing, ArmySystem.regiment(repo, target, state))
 	if battle.get("groups", {}).has(target):
 		positions.clear()
 		for row: Dictionary in battle.groups[target]:
@@ -539,6 +539,11 @@ static func _snapshot_flank(repo: DataRepository, state: GameState, unit: String
 		radius = maxi(radius, ceili(Vector2(point - there).length()))
 	var geometry := {"x_m": there.x, "y_m": there.y, "facing_deg": facing, "radius_m": radius,
 		"points_m": MarchRoute.to_pairs(positions)}
+	if ArmyGround.clearance_on(repo):
+		var moving_radius := BattleGroups.figure_radius(repo, ArmySystem.regiment(repo, unit, state))
+		var target_radius := BattleGroups.group_radius(repo, state, battle, target)
+		geometry["radius_m"] = radius + target_radius
+		geometry["approach_m"] = moving_radius + target_radius + int(repo.bal("battle_group_contact_m"))
 	if flank.get("known", {}) != geometry:
 		flank["known"] = geometry
 		flank.erase("path_m")
@@ -558,7 +563,7 @@ static func flank_route(repo: DataRepository, here: Vector2i, known: Dictionary)
 	var points := MarchRoute.from_pairs(known.get("points_m", [[centre.x, centre.y]]))
 	if points.is_empty():
 		return []
-	var reach := float(repo.bal("battle_group_contact_m"))
+	var reach := float(known.get("approach_m", repo.bal("battle_group_contact_m")))
 	var best: Array = []
 	var length := INF
 	for sign_: int in [1, -1]:

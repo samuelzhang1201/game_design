@@ -187,3 +187,45 @@ func test_fit_tier_counts_people_and_reuses_tactical_slots() -> void:
 			assert_eq(tier.figures, int(pair[1]))
 			var parts := layout.split(":")
 			assert_eq(Map3DFormation.slots_of(tier, layout), BattleFormation.slots(parts[0], int(pair[1]), int(parts[1]) if parts.size() == 2 else 1000))
+
+func test_garrison_line_spreads_in_engine_metres_at_original_scale() -> void:
+	var repo := preload("res://tests/suite_data.gd").repo()
+	var reg: Dictionary = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))[0]
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 50.0})
+	ctx.view_size = Vector2(2560, 1600)
+	var tier := {"figures": 3, "slots": [Vector2(-1, 0), Vector2.ZERO, Vector2(1, 0)]}
+	var piece := Map3DFormation.of_regiment(repo, reg, tier, 1.6, "line")
+	add_child_autofree(piece.node)
+	var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
+	var scale := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference, piece.height_m, piece.size)
+	Map3DFormation.spread(ctx, piece, scale)
+	var world_pitch := BattleGroups.pitch(repo, reg).x * 50.0 / ArmySystem.metres_per_pack_px(repo)
+	assert_almost_eq((piece.figs[0] as Node3D).position.x * scale, -world_pitch, 0.001)
+	assert_almost_eq((piece.figs[1] as Node3D).position.x * scale, 0.0, 0.001)
+	assert_almost_eq((piece.figs[2] as Node3D).position.x * scale, world_pitch, 0.001)
+	assert_eq((piece.node as Node3D).position, Vector3.ZERO, "the unit anchor cannot shift to make room")
+	assert_eq((piece.node as Node3D).scale, Vector3.ONE, "spread changes offsets, not miniature size")
+	assert_lte(Vector2(world_pitch, 0).length(), float(BattleGroups.occupied_radius(repo, reg, "line", 3)) * 50.0 / ArmySystem.metres_per_pack_px(repo))
+
+func test_compact_calibrated_circle_contains_actual_models_at_each_count() -> void:
+	var repo := preload("res://tests/suite_data.gd").repo()
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 50.0})
+	ctx.view_size = Vector2(2560, 1600)
+	var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
+	var done := {}
+	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		var model := MapObjects.army_piece(repo, reg)
+		if done.has(model) or String(reg.get("is_naval", "0")) == "1": continue
+		done[model] = true
+		for count: int in [1, 5, 8, 10]:
+			var piece := Map3DFormation.of_regiment(repo, reg, Map3DFormation.fit_tier(repo, count * int(repo.bal("battle_group_size")), "block"), 1.6, "block")
+			add_child(piece.node)
+			var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference, piece.height_m, piece.size)
+			(piece.node as Node3D).scale = Vector3.ONE * k
+			var radius := BattleGroups.compact_radius(repo, reg, count) * 50.0 / ArmySystem.metres_per_pack_px(repo)
+			for fig: Node3D in piece.figs:
+				var box := Map3DBattleGroups.model_bounds(fig)
+				for i: int in 8:
+					var point := fig.global_transform * box.get_endpoint(i)
+					assert_lte(Vector2(point.x, point.z).length(), radius, "%s count%d model must fit the engine occupied circle" % [model, count])
+			(piece.node as Node3D).free()

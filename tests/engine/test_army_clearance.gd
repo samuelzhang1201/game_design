@@ -126,7 +126,7 @@ func test_halts_in_front_of_the_occupant_facing_it() -> void:
 	var q: String = ids[0]
 	var r: String = ids[1]
 	var d := _d(q, r)
-	assert_eq(d, 2280, "two foot: 2 x 1140")
+	assert_gte(d, 2 * ArmyGround.arm_radius(repo, "infantry"), "the complete visible formations cannot hold less than their arm calibration")
 	var s := _alone([q, r])
 	var o := _o()
 	_stand(s, q, o + Vector2i(10000, 0))
@@ -644,8 +644,16 @@ func test_each_seed_establishes_a_siege_with_only_physically_deployed_columns() 
 						assert_true((e.get("route_m", []) as Array).is_empty(), "stationed columns have no stale march route")
 						expected_attack += ArmySystem.power(repo2, s, c, "attack")
 					elif not SiegeSystem.at_town(repo2, s, c, town) and int(e.get("disengaging", 0)) == 0:
-						if String(e.get("road_blocked_by", "")) != "":
-							# Clearance stops await the next day's host route planning.
+						var blocker := String(e.get("road_blocked_by", e.get("halted_by", "")))
+						if blocker != "":
+							# Expanded formations can hold the column outside the target's camp circle.
+							if String(e.get("road_blocked_by", "")) == "":
+								var other := BattleSystem._stored(s, blocker)
+								assert_false(other.is_empty())
+								var need := ArmyGround.unit_radius(repo2, ArmySystem.regiment(repo2, c, s), s) + ArmyGround.unit_radius(repo2, ArmySystem.regiment(repo2, blocker, s), s)
+								var distance := Vector2(BattleSystem._at_m(repo2, s, c) - BattleSystem._at_m(repo2, s, blocker)).length()
+								assert_gte(distance, float(need), "the waiting column remains outside its blocker's complete footprint")
+								assert_lte(distance, float(need + int(repo2.bal("army_clearance_touch_m"))), "a saved halt alone cannot excuse a free remote column")
 							assert_eq(String(e["order"]), ArmySystem.ORDER_GARRISON)
 							assert_eq(Vector2i(int(e["dest_x_m"]), int(e["dest_y_m"])), Vector2i(int(e["x_m"]), int(e["y_m"])))
 							assert_true((e.get("route_m", []) as Array).is_empty())
@@ -780,3 +788,72 @@ func test_spreading_accepts_actual_boundary_contact_but_not_a_remote_old_halt() 
 	e["halt_aim_m"] = [o.x, o.y]
 	ArmySystem._spread_foe(repo, s, codes[2], e, o, ArmySystem.clearance_blockers(repo, s))
 	assert_eq(_at(s, codes[2]), far, "a remote stale halt cannot teleport into camp")
+
+func test_held_line_holds_its_expanded_ground_around_the_same_anchor() -> void:
+	var ids := _mine()
+	var state := _alone([ids[0], ids[1]])
+	var origin := _o()
+	var stand: String = ids[0]
+	var mover: String = ids[1]
+	var personnel: GDScript = preload("res://tests/engine/personnel_helpers.gd")
+	assert_false(personnel.replace(repo, state, stand, 300).has("error"))
+	_stand(state, stand, origin + Vector2i(30000, 0))
+	_stand(state, mover, origin)
+	state.regiments[stand]["stance"] = "hold"
+	state.regiments[stand]["order"] = ArmySystem.ORDER_GARRISON
+	var reg := ArmySystem.regiment(repo, stand, state)
+	assert_eq(BattleGroups.figure_radius(repo, reg), 538)
+	assert_eq(ArmyGround.unit_radius(repo, reg, state), 1614, "three figures span 2152m plus the two 538m end caps")
+	assert_eq(_at(state, stand), origin + Vector2i(30000, 0), "expanding its held ground cannot move its accurate anchor")
+	var blockers := ArmySystem.clearance_blockers(repo, state)
+	assert_eq(blockers.r[stand], 1614)
+	var before := JSON.stringify(state.to_dict())
+	_march(state, mover, origin + Vector2i(30000, 0))
+	_pace(40)
+	var projection_before := JSON.stringify(state.to_dict())
+	var need := 1614 + ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, mover, state), state)
+	var predicted := ArmySystem.march_ahead(repo, state, mover, state.regiments[mover].duplicate(true))
+	assert_eq(predicted.x, origin.x + 30000 - need - 1, "a march halts just outside the visible held line")
+	assert_eq(JSON.stringify(state.to_dict()), projection_before, "querying the new footprint never commits movement")
+	assert_eq(_at(state, stand), origin + Vector2i(30000, 0))
+	assert_eq(GameState.from_dict(JSON.parse_string(before)).regiments[stand], state.regiments[stand])
+
+func test_automatic_seat_refill_checks_the_selected_units_complete_footprint() -> void:
+	var ids := _mine()
+	var candidate: String = ids[0]
+	var blocker: String = ids[1]
+	var state := _alone([candidate, blocker])
+	var town := String(repo.kingdoms[repo.resolve_realm("player_realm")].capital_burg)
+	var centre := ArmyGround.town_point_m(repo, town)
+	state.town_seat.clear()
+	_stand(state, candidate, centre + Vector2i(20000, 0))
+	state.regiments[candidate].camp_town = town
+	state.regiments[candidate].stance = "hold"
+	var own_radius := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, candidate, state), state)
+	var other_radius := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, blocker, state), state)
+	_stand(state, blocker, centre + Vector2i(own_radius + other_radius - 1, 0))
+	var before := JSON.stringify(state.to_dict())
+	assert_eq(ArmyGround.refill(repo, state, town), "", "a blocked seat cannot create new cross-unit overlap")
+	assert_eq(JSON.stringify(state.to_dict()), before)
+	_stand(state, blocker, centre + Vector2i(own_radius + other_radius + 1, 0))
+	assert_eq(ArmyGround.refill(repo, state, town), candidate)
+	assert_eq(_at(state, candidate), centre)
+
+func test_a_host_reaches_a_garrison_at_the_same_occupied_surface_boundary() -> void:
+	var defender: String = _mine()[0]
+	var enemy: String = _foe_codes()[0]
+	var state := _alone([defender, enemy])
+	var town := String(repo.kingdoms[repo.resolve_realm("player_realm")].capital_burg)
+	var anchor := ArmyGround.town_point_m(repo, town) + Vector2i(30000, 0)
+	state.town_seat.clear()
+	_stand(state, defender, anchor)
+	state.regiments[defender].camp_town = town
+	state.regiments[defender].stance = "hold"
+	var host := String(state.foes[enemy].host)
+	state.ai_hosts[host].merge({"mode": EnemyAi.MODE_ADVANCE, "target_kind": "town", "target_id": town}, true)
+	var distance := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, defender, state), state) 		+ ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, enemy, state), state) + int(repo.bal("army_clearance_touch_m"))
+	assert_gt(distance, int(repo.bal("battle_contact_km") * 1000.0))
+	_stand(state, enemy, anchor + Vector2i(distance, 0))
+	assert_eq(EnemyAi.arrival_mode(repo, state, host), EnemyAi.MODE_DEPLOYING)
+	_stand(state, enemy, anchor + Vector2i(distance + 1, 0))
+	assert_eq(EnemyAi.arrival_mode(repo, state, host), "")

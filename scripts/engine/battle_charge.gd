@@ -57,7 +57,7 @@ static func _point(row: Dictionary) -> Vector2:
 
 ## First contact along the actual forward corridor, including lateral group offsets.
 static func _approach(repo: DataRepository, battle: Dictionary, code: String, foe: String, axis: Vector2) -> float:
-	var reach := float(repo.bal("battle_group_contact_m"))
+	var reach := float(BattleGroups.contact_reach(repo, null, battle, code, foe))
 	var distance := INF
 	for row: Dictionary in battle.get("groups", {}).get(code, []):
 		if row["role"] != "front":

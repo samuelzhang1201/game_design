@@ -168,6 +168,10 @@ static func of_regiment(repo: DataRepository, reg: Dictionary, tier: Dictionary,
 		return {}
 	var built := piece(repo, scene, repo.army_art.get(model, {}), tier, gap, layout)
 	built["model"] = model  # keys its march's sound (Map3DUnitSound)
+	if ArmyGround.clearance_on(repo) and layout != BLOCK:
+		var pitch := BattleGroups.pitch(repo, reg)
+		built["metre_slots"] = Array(slots_of(tier, layout)).map(func(slot: Vector2) -> Vector2:
+			return slot * Vector2(pitch))
 	if bool(built.get("exact_pace", false)):  # each man his own height and cadence (Map3DMarchLag.stature)
 		var spread := repo.bal("map3d_march_stature_spread")
 		built["statures"] = range(built["figs"].size()).map(func(i: int) -> float:
@@ -176,3 +180,22 @@ static func of_regiment(repo: DataRepository, reg: Dictionary, tier: Dictionary,
 			(built["figs"][i] as Node3D).scale = Vector3.ONE * float(built["statures"][i])
 		built["figure_extent"] *= float((built["statures"] as Array).max())
 	return built
+
+## The same metre layout held by the engine, expanded around the exact unit anchor.
+static func spread(ctx: Map3DContext, piece: Dictionary, k: float) -> void:
+	if not piece.has("metre_slots"): return
+	var factor := float(ctx.meta.get("m_per_px", 50.0)) / ArmySystem.metres_per_pack_px(ctx.repo) / k
+	var key := [factor, piece["metre_slots"]]
+	if piece.get("spread_key", []) == key: return
+	var offsets := PackedVector2Array()
+	for at: Vector2 in piece["metre_slots"]:
+		offsets.append(at * factor)
+	for i: int in offsets.size():
+		var at := Vector3(offsets[i].x, 0.0, offsets[i].y)
+		piece["slots"][i] = at
+		(piece["figs"][i] as Node3D).position = at
+	var half := half_extent(offsets, piece["figure_extent"])
+	piece["extent"] = half
+	piece["half_w_m"] = maxf(half.x, half.y)
+	piece["spread_key"] = key
+	piece.erase("seat_key")

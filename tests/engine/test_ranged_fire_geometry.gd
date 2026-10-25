@@ -16,21 +16,23 @@ func _fixture(gap := 300, people := 100, formation := "line") -> Dictionary:
 		state.army_roster[code]["archers" if code == a else "infantry"] = str(people)
 		Personnel.replace(repo, state, code, people)
 		var e := BattleSystem._stored(state, code)
-		e["x_m"] = 20000 if code == friend else 1000 + (gap if code == enemy else 0)
-		e["y_m"] = 1000
+		e["x_m"] = 30000 if code == friend else 10000
+		e["y_m"] = 10000
 		e["supplies"] = 100000
 		e["morale"] = 100
 		e.erase("camp_town")
 		e["order"] = ArmySystem.ORDER_STANDBY
+	# Gap is the exposed distance between full-size archer/infantry footprints.
+	state.foes[enemy].x_m += 1411 + gap
 	var battle := {"id": 9463, "att": [a], "def": [enemy], "rounds": 0,
-		"town": "", "place_x_m": 1050, "place_y_m": 1000,
+		"town": "", "place_x_m": 10855, "place_y_m": 10000,
 		"actions": {"att": {"kind": "attack"}, "def": {"kind": "hold"}}}
 	state.battles = [battle]
 	BattleFormation.ensure(battle)
 	BattleRules.freeze(repo, state, battle)
 	battle.formations.att.current = formation
 	battle.formations.def.current = "line"
-	BattleGroups.refresh(repo, state, battle)
+	assert_true(BattleGroups.refresh(repo, state, battle), "Full-size legal firing fixture must publish its groups")
 	return {"repo": repo, "state": state, "a": a, "friend": friend, "enemy": enemy, "battle": battle}
 
 func _power(f: Dictionary) -> int:
@@ -93,10 +95,13 @@ func test_own_front_rank_obstructs_rear_without_reserve_output() -> void:
 
 func _block(f: Dictionary) -> void:
 	f.battle.att.append(f.friend)
-	f.state.regiments[f.friend].x_m = 1150
 	f.state.army_roster[f.friend].infantry = "0"
 	f.state.army_roster[f.friend].archers = "50"
-	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	# Malformed legacy overlap must fail closed; ordinary births never admit it.
+	var row: Dictionary = f.battle.groups[f.friend][0]
+	row.x_m = 10855
+	row.y_m = 10500
 	f.battle.group_facing[f.friend] = 180
 
 func test_friendly_unit_blocks_actual_power_and_casualties() -> void:
@@ -270,9 +275,9 @@ func test_diagonal_opposing_firing_lines_remain_in_reach_after_rounding() -> voi
 	f.state.army_roster[f.enemy].infantry = "0"
 	f.state.army_roster[f.enemy].archers = "50"
 	BattleGroups.translate(f.repo, f.state, f.battle, f.enemy,
-		Vector2i(1394, 1070) - BattleSystem._at_m(f.repo, f.state, f.enemy))
-	f.battle.place_x_m = 1197
-	f.battle.place_y_m = 1035
+		Vector2i(12112, 10375) - BattleSystem._at_m(f.repo, f.state, f.enemy))
+	f.battle.place_x_m = 11056
+	f.battle.place_y_m = 10187
 	f.battle.actions.def.kind = "attack"
 	BattleSystem.prepare_day(f.repo, f.state)
 	assert_eq(_shots(f).firing, 50, "Rounded diagonal firing lines must stay within inclusive reach")
@@ -294,3 +299,56 @@ func test_mixed_equipment_scales_only_its_ranged_personnel_share() -> void:
 	var strength := BattleSystem.unit_strength(f.repo, f.state, f.a, Callable(), true, [f.enemy])
 	assert_true(strength.factors.any(func(row: Dictionary) -> bool:
 		return row.source == "contact:ranged" and row.permille == 250))
+
+
+func test_full_size_footprint_edges_define_range_contact_and_json() -> void:
+	# 873 + 538 + 400 = 1811 centre metres; 1812 is outside unchanged reach.
+	var f := _fixture(400, 50)
+	assert_eq(f.battle.group_radius_m[f.a], 873)
+	assert_eq(f.battle.group_radius_m[f.enemy], 538)
+	assert_eq(_shots(f).firing, 50)
+	var loaded := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
+	assert_eq(BattleRanged.counts(f.repo, loaded, loaded.battles[0], f.a).firing, 50)
+	f.battle.groups[f.enemy][0].x_m += 1
+	assert_eq(_shots(f).firing, 0)
+	f.battle.groups[f.enemy][0].x_m = 11511
+	assert_true(BattleRanged.touching(f.repo, f.battle, f.a), "873 + 538 + 100 is inclusive contact")
+	assert_eq(_shots(f).melee, 50)
+	f.battle.groups[f.enemy][0].x_m += 1
+	assert_false(BattleRanged.touching(f.repo, f.battle, f.a))
+	assert_eq(_shots(f).firing, 50, "One metre beyond melee permits direct fire")
+
+
+func test_full_friendly_footprint_blocks_only_the_exposed_open_segment() -> void:
+	var f := _fixture(400, 50)
+	var friends: Array[Vector2i] = [Vector2i(1000, 538)]
+	var radii: Array[int] = [538]
+	var ends := Vector2i(873, 538)
+	assert_false(BattleRanged.clear_shot(f.repo, Vector2i.ZERO, Vector2i(1811, 0), Vector2i.RIGHT, friends, ends, radii), "Full infantry disc tangent inside the exposed segment blocks")
+	friends[0].y = 539
+	assert_true(BattleRanged.clear_shot(f.repo, Vector2i.ZERO, Vector2i(1811, 0), Vector2i.RIGHT, friends, ends, radii))
+	friends[0] = Vector2i(335, 0)
+	assert_true(BattleRanged.clear_shot(f.repo, Vector2i.ZERO, Vector2i(1811, 0), Vector2i.RIGHT, friends, ends, radii), "335 + 538 = 873: excluded shooter-edge tangency")
+	friends[0].x += 1
+	assert_false(BattleRanged.clear_shot(f.repo, Vector2i.ZERO, Vector2i(1811, 0), Vector2i.RIGHT, friends, ends, radii))
+
+
+func test_legacy_json_without_radius_metadata_uses_actual_equipment_for_defence() -> void:
+	var f := _fixture(100, 50)
+	var loaded := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
+	loaded.battles[0].erase("group_radius_m")
+	var before := SaveLoad.state_hash(loaded)
+	assert_eq(BattleSystem.unit_action(f.repo, loaded, loaded.battles[0], f.a).kind, "hold")
+	assert_eq(BattleRanged.counts(f.repo, loaded, loaded.battles[0], f.a).melee, 50)
+	assert_eq(SaveLoad.state_hash(loaded), before, "A legacy read computes its radius without publishing state")
+
+
+func test_exposed_ray_tangency_is_invariant_under_world_translation() -> void:
+	var f := _fixture(389, 50)
+	# |(1080,1440)|=1800; gap=389. (172,1121) is 535m from this ray.
+	var radii: Array[int] = [535]
+	for origin: Vector2i in [Vector2i.ZERO, Vector2i(1000000, 1000000)]:
+		var friends: Array[Vector2i] = [origin + Vector2i(172, 1121)]
+		assert_false(BattleRanged.clear_shot(f.repo, origin, origin + Vector2i(1080, 1440), Vector2i(3, 4), friends, Vector2i(873, 538), radii), "535m interior tangent must block at every whole-metre world origin")
+		friends[0] += Vector2i(-4, 3)
+		assert_true(BattleRanged.clear_shot(f.repo, origin, origin + Vector2i(1080, 1440), Vector2i(3, 4), friends, Vector2i(873, 538), radii), "Moving 5m farther outside the ray clears it")

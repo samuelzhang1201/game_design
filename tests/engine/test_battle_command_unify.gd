@@ -1,11 +1,11 @@
 extends GutTest
-## P4.4e2: a merge picks ONE commander per surviving side. Fixture as test_battle_merge:
+## P4.4e2: direct union of legal full-footprint fields picks ONE commander per side:
 ## battle 1 (survivor) foe f1 att / crown p1 def; battle 2 crown p2 att / foe f2 def; so the
 ## absorbed battle's att commander (p2's officer, B) joins survivor def (p1's officer, A).
 const SuiteData := preload("res://tests/suite_data.gd")
 
 func _fixture(a_skill := 5, b_skill := 7) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
 	var state := SuiteData.campaign(repo, 9447)
 	var mine := state.regiments.keys()
 	mine.sort()
@@ -15,15 +15,27 @@ func _fixture(a_skill := 5, b_skill := 7) -> Dictionary:
 	var p2 := String(mine[1])
 	var f1 := String(foes[0])
 	var f2 := String(foes[1])
-	var at := {p1: Vector2i(0, 0), f1: Vector2i(0, 3000), p2: Vector2i(5000, 20000), f2: Vector2i(80, 0)}
+	var at := {p1: Vector2i(10000, 10000), f1: Vector2i(10000, 20000), p2: Vector2i(30000, 30000), f2: Vector2i(15000, 10000)}
 	for code: String in at:
 		var e: Dictionary = state.foes.get(code, state.regiments.get(code, {}))
 		e["x_m"] = at[code].x
 		e["y_m"] = at[code].y
+		# Keep the enlisted officer; release only excess unnamed troops through the ledger.
+		var remaining := 39 if state.military_rosters[code].get("commander_id", "") != "" else 40
+		var changes: Array = []
+		for id: String in state.military_rosters[code].cohort_ids:
+			var cohort: Dictionary = state.military_cohorts[id]
+			if String(cohort.get("person_id", "")) != "": continue
+			var kept := mini(remaining, int(cohort.fit))
+			remaining -= kept
+			if int(cohort.fit) > kept:
+				changes.append({"cohort_id": id, "from": "fit", "to": "released", "count": int(cohort.fit) - kept})
+		if not changes.is_empty():
+			assert_false(MilitaryRoster.transition(repo, state, "fixture:release:" + code, changes, "Commander union fixture size").has("error"))
 	var b1 := {"id": 1, "att": [f1], "def": [p1], "rounds": 1, "start_day": 5, "town": "",
-		"place_x_m": 0, "place_y_m": 0, "actions": {}, "parley": {"battle_id": 1, "agreed": {}}}
+		"place_x_m": 10000, "place_y_m": 10000, "actions": {}, "parley": {"battle_id": 1, "agreed": {}}}
 	var b2 := {"id": 2, "att": [p2], "def": [f2], "rounds": 3, "start_day": 3, "town": "",
-		"place_x_m": 80, "place_y_m": 0, "actions": {}, "parley": {"battle_id": 2, "agreed": {}}}
+		"place_x_m": 11156, "place_y_m": 10000, "actions": {}, "parley": {"battle_id": 2, "agreed": {}}}
 	state.battles = [b1, b2]
 	state.tick = 1
 	state.day = 7
@@ -31,7 +43,7 @@ func _fixture(a_skill := 5, b_skill := 7) -> Dictionary:
 		BattleFormation.ensure(b)
 		BattleReport.enroll(state, b, String(b["att"][0]), "att")
 		BattleReport.enroll(state, b, String(b["def"][0]), "def")
-		BattleGroups.refresh(repo, state, b)
+		assert_true(BattleGroups.refresh(repo, state, b), "Legal full-size merge fixture publishes groups")
 		BattleCommand.update_battle(repo, state, b)
 	var a := String(state.military_rosters[p1].commander_id)
 	var b_id := String(state.military_rosters[p2].commander_id)

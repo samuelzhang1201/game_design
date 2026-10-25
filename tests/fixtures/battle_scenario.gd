@@ -4,6 +4,7 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const Play := preload("res://tests/invasion_play.gd")
 
 static func contact(repo: DataRepository, day: int) -> GameState:
+	SuiteData.no_clearance(repo) # transactional fixture: its 1km stacked armies are not a physical-space scenario
 	var s := SuiteData.campaign(repo, 71)
 	s.tick = 1
 	s.day = day

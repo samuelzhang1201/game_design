@@ -209,21 +209,20 @@ static func _split(repo: DataRepository, state: GameState, code: String, targets
 		unit.organization_reason = REASON
 		unit.organization_arm = arm
 		unit.source_parts = []
+		for kind: String in repo.world_table("military", "unit_types"):
+			unit[kind] = str(BattleSystem.apportion(targets, int(parent.get(kind, 0)))[i])
 		if i > 0:
 			unit.is_royal = "0"
 			var point := at
 			if not naval and not battle:
-				point = ArmyGround.free_slot(repo, centre, arm, taken, town)
+				var radius := ArmyGround.unit_radius(repo, unit)
+				point = ArmyGround.free_slot(repo, centre, arm, taken, town, false, ArmyGround.NONE, 0, -1, radius)
 				if point == ArmyGround.NONE:
 					return "No legal neighboring camp for " + String(children[i])
-				ArmyGround.take(taken, point, ArmyGround.arm_radius(repo, arm))
+				ArmyGround.take(taken, point, radius)
 			ArmySplit._put(repo, unit, point)
 			unit.camp_town = town if not battle else ""
 		units.append(unit)
-	for kind: String in repo.world_table("military", "unit_types"):
-		var amounts := BattleSystem.apportion(targets, int(parent.get(kind, 0)))
-		for i: int in children.size():
-			units[i][kind] = str(amounts[i])
 	for part: Dictionary in parts:
 		var left := int(part.equipment_count)
 		var kind := String(part.arm)

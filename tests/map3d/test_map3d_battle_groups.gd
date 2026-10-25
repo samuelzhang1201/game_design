@@ -876,3 +876,29 @@ func test_row_reconciliation_reuses_seat_and_retains_measured_bounds() -> void:
 	assert_eq(after[0].count, 99)
 	assert_eq(after[0].bounds_world, before[0].bounds_world)
 	assert_eq(after[0].screen_bounds, before[0].screen_bounds)
+
+func test_calibrated_physical_ground_contains_each_unchanged_arm_model() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 7)
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 50.0})
+	ctx.state_fn = func() -> GameState: return state
+	ctx.view_size = Vector2(2560, 1600)
+	var factor := 50.0 / ArmySystem.metres_per_pack_px(repo)
+	var checked := {}
+	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		var model := MapObjects.army_piece(repo, reg)
+		if checked.has(model) or String(reg.get("is_naval", "0")) == "1": continue
+		var radius := BattleGroups.figure_radius(repo, reg) * factor
+		var piece := Map3DBattleGroups.build(repo, reg, {"rows": [
+			{"slot": 0, "count": 100, "role": "front", "x_m": 10000, "y_m": 10000}], "facing_deg": 0})
+		add_child_autofree(piece["node"])
+		Map3DBattleGroups.place(ctx, piece, ctx.to_world(ArmySystem.metres_to_pack(repo, Vector2i(10000, 10000))), 1.6, false)
+		var child: Dictionary = piece.groups[0].piece
+		var centre: Vector3 = (child.node as Node3D).global_position
+		for corner: Vector3 in child.world_corners:
+			assert_lte(Vector2(corner.x - centre.x, corner.z - centre.z).length(), radius,
+				model + " visible model must fit the engine's calibrated terrain footprint")
+		checked[model] = true
+	assert_true(checked.has("infantry"))
+	assert_true(checked.has("archers"))
+	assert_true(checked.has("cavalry"))

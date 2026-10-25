@@ -6,6 +6,7 @@ const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture() -> Dictionary:
 	var repo := SuiteData.open_country(SuiteData.repo())   # straight steps; the water test lays its own grid
+	SuiteData.no_clearance(repo) # isolate the explicitly configured metre-scale geometry below
 	var state := SuiteData.campaign(repo, 9446)
 	var codes := state.regiments.keys()
 	codes.sort()

@@ -7,9 +7,10 @@ const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const BattleScenario := preload("res://tests/fixtures/battle_scenario.gd")
 
 ## Battle 1: foe f1 attacks crown p1; battle 2: crown p2 attacks foe f2.
-## p1 (0,0), f1 (0,3000), p2 (5000,20000), f2 (80,0): f2 stands 80 m from p1.
+## p1 starts at (10000,10000); f2 is two full radii plus the requested edge gap east.
+## Other units stay well apart. Both fixtures keep actual calibrated clearance enabled.
 func _fixture(f2_at := Vector2i(80, 0), p2_at := Vector2i(5000, 20000)) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
 	var state := SuiteData.campaign(repo, 9447)
 	var mine := state.regiments.keys()
 	mine.sort()
@@ -20,16 +21,22 @@ func _fixture(f2_at := Vector2i(80, 0), p2_at := Vector2i(5000, 20000)) -> Dicti
 	var p2 := String(mine[1])
 	var f1 := String(foes[0])
 	var f2 := String(foes[1])
-	var at := {p1: Vector2i(0, 0), f1: Vector2i(0, 3000), p2: p2_at, f2: f2_at}
+	var origin := Vector2i(10000, 10000)
+	# All units use one full-size infantry figure: 538 + 538 metres before the edge gap.
+	var at := {p1: origin, f1: origin + Vector2i(0, 10000),
+		p2: origin + Vector2i(1076, 0) + p2_at, f2: origin + Vector2i(1076, 0) + f2_at}
 	for code: String in at:
 		var e: Dictionary = state.foes.get(code, state.regiments.get(code, {}))
 		e["x_m"] = at[code].x
 		e["y_m"] = at[code].y
+		for arm: String in repo.world_table("military", "unit_types"):
+			state.army_roster[code][arm] = "0"
+		state.army_roster[code]["infantry"] = "40"
 		Personnel.replace(repo, state, code, 40)
 	var b1 := {"id": 1, "att": [f1], "def": [p1], "rounds": 1, "start_day": 5, "town": "",
-		"place_x_m": 0, "place_y_m": 0, "actions": {}, "parley": {"battle_id": 1, "agreed": {}}}
+		"place_x_m": 10000, "place_y_m": 10000, "actions": {}, "parley": {"battle_id": 1, "agreed": {}}}
 	var b2 := {"id": 2, "att": [p2], "def": [f2], "rounds": 3, "start_day": 3, "town": "",
-		"place_x_m": 80, "place_y_m": 0, "actions": {}, "parley": {"battle_id": 2, "agreed": {"marker": 1}}}
+		"place_x_m": 11156, "place_y_m": 10000, "actions": {}, "parley": {"battle_id": 2, "agreed": {"marker": 1}}}
 	state.battles = [b1, b2]
 	state.tick = 1
 	state.day = 7
@@ -37,7 +44,7 @@ func _fixture(f2_at := Vector2i(80, 0), p2_at := Vector2i(5000, 20000)) -> Dicti
 		BattleFormation.ensure(b)
 		BattleReport.enroll(state, b, String(b["att"][0]), "att")
 		BattleReport.enroll(state, b, String(b["def"][0]), "def")
-		BattleGroups.refresh(repo, state, b)
+		assert_true(BattleGroups.refresh(repo, state, b), "Legal full-size merge fixture publishes groups")
 	return {"repo": repo, "state": state, "p1": p1, "p2": p2, "f1": f1, "f2": f2, "b1": b1, "b2": b2}
 
 func test_contact_inside_reach_merges_by_allegiance() -> void:

@@ -1,7 +1,9 @@
 # Ranged fire (`BattleRanged`, `BattleGroups`, `BattleSystem`)
 
 `BattleRanged` uses saved whole-metre group positions and `group_facing` for
-direct fire. A shot lies beyond `battle_group_contact_m`, within the inclusive
+direct fire. Range and close contact measure the gap between actual calibrated
+figure-footprint edges; saved centres and radius metadata determine the inclusive
+squared centre bound (both radii plus the unchanged gap). A shot lies beyond `battle_group_contact_m`, within the inclusive
 `battle_ranged_reach_m`, and inside the forward cone whose lateral/forward
 ratio is at most `battle_ranged_cone_permille`. The saved whole-degree facing
 is converted to a transient integer direction. Squared distances, dot and
@@ -9,7 +11,8 @@ cross products decide reach, cone and obstruction; no projectile, rendering,
 wall-clock or random draw decides eligibility.
 
 Every positive-count friendly group, including the shooter's own front ranks,
-obstructs the open firing segment with `battle_ranged_block_radius_m`.
+obstructs the open firing segment between shooter/target footprint edges with its
+actual calibrated radius, floored by `battle_ranged_block_radius_m`.
 Tangency within the segment blocks; touching only an excluded endpoint does
 not. Only the shooter itself is excluded. Each eligible group counts once,
 regardless of how many enemy groups it can reach. Rear ranks receive no

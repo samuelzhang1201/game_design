@@ -200,7 +200,8 @@ preserved by synonymous receipts on that canonical battlefield: this task never 
 circle, including after leaving the battlefield. Subsequent repositioning requires leaving the committed approach through
 a different received task; there is no automatic disengagement/regroup cycle.
 `BattleFormation.context` grants its existing single flank factor only when an
-enemy front group really contacts a defending group outside the defender’s
+enemy front group really contacts a defending group (inclusive actual footprint-edge
+gap, with the unchanged contact value) outside the defender’s
 `battle_flank_front_half_deg` cone. Remote columns and a task label grant nothing.
 Turning the defender so contact becomes frontal removes that factor immediately
 for the next unfrozen round; no benefit accumulates per day or per circle.

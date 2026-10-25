@@ -5,7 +5,7 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture(merge := true) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
 	var state := SuiteData.campaign(repo, 9447)
 	var mine := state.regiments.keys()
 	mine.sort()
@@ -16,7 +16,7 @@ func _fixture(merge := true) -> Dictionary:
 	var p3 := String(mine[2])
 	var f1 := String(foes[0])
 	var f2 := String(foes[1])
-	var at := {p1: Vector2i(0, 0), f1: Vector2i(0, 3000), p2: Vector2i(5000, 20000), f2: Vector2i(80, 0), p3: Vector2i(40000, 40000)}
+	var at := {p1: Vector2i(10000, 10000), f1: Vector2i(10000, 20000), p2: Vector2i(30000, 30000), f2: Vector2i(11156, 10000), p3: Vector2i(40000, 40000)}
 	for code: String in at:
 		var e: Dictionary = state.foes.get(code, state.regiments.get(code, {}))
 		e["x_m"] = at[code].x
@@ -28,10 +28,10 @@ func _fixture(merge := true) -> Dictionary:
 		Personnel.replace(repo, state, code, 40)
 	var term := {"policy": "protect", "scope": "battle", "until_day": 0, "end_condition": "battle_end", "conditions": {}}
 	var b1 := {"id": 1, "att": [f1], "def": [p1], "rounds": 1, "start_day": 5, "town": "",
-		"place_x_m": 0, "place_y_m": 0, "actions": {},
+		"place_x_m": 10000, "place_y_m": 10000, "actions": {},
 		"parley": {"battle_id": 1, "agreed": {"ceasefire": term}, "parties": {"att": [f1], "def": [p1]}}}
 	var b2 := {"id": 2, "att": [p2], "def": [f2], "rounds": 3, "start_day": 3, "town": "",
-		"place_x_m": 80, "place_y_m": 0, "actions": {}, "parley": {"battle_id": 2, "agreed": {}, "parties": {"att": [p2], "def": [f2]}}}
+		"place_x_m": 11156, "place_y_m": 10000, "actions": {}, "parley": {"battle_id": 2, "agreed": {}, "parties": {"att": [p2], "def": [f2]}}}
 	state.battles = [b1, b2]
 	state.tick = 1
 	state.day = 7
@@ -39,7 +39,7 @@ func _fixture(merge := true) -> Dictionary:
 		BattleFormation.ensure(b)
 		BattleReport.enroll(state, b, String(b["att"][0]), "att")
 		BattleReport.enroll(state, b, String(b["def"][0]), "def")
-		BattleGroups.refresh(repo, state, b)
+		assert_true(BattleGroups.refresh(repo, state, b), "Legal full-size merge fixture publishes groups")
 	if merge:
 		BattleMerge.day(repo, state)
 	return {"repo": repo, "state": state, "p1": p1, "p2": p2, "p3": p3, "f1": f1, "f2": f2}
@@ -78,8 +78,8 @@ func test_freeze_records_parties_and_join_appends() -> void:
 	BattleRules.freeze(f.repo, f.state, b)
 	assert_eq(b.parley.parties, {"att": [f.f1], "def": [f.p1]})
 	var e: Dictionary = f.state.regiments[f.p3]
-	e["x_m"] = 0
-	e["y_m"] = 100
+	e["x_m"] = 30000
+	e["y_m"] = 40000
 	assert_true(BattleSystem.join(f.repo, f.state, 3, f.p3, "def"))
 	assert_eq(b.parley.parties.def, [f.p1, f.p3])
 

@@ -195,6 +195,7 @@ func _place(code: String, piece: Dictionary) -> void:
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), piece["size"])
 	piece["camp_scale"] = k
+	Map3DFormation.spread(ctx, piece, k)
 	var heading := Map3DUnitRig.heading_for(repo, ctx.state(), code, _track.get(code, {}))
 	_want_yaw[code] = Map3DUnits.facing_yaw(heading, piece.get("stand_deg", 0.0))
 	_yaw[code] = _yaw.get(code, _want_yaw[code])
@@ -202,6 +203,9 @@ func _place(code: String, piece: Dictionary) -> void:
 	if piece.get("seat_key", []) != [xz, yaw, k]:  # a pan moves none of it: seated once per stand
 		piece["seat_key"] = [xz, yaw, k]
 		Map3DUnitRig.seat(repo, ctx.height_at, piece, xz, yaw, k)
+		if piece.has("metre_slots"):
+			(piece["node"] as Node3D).global_basis = Basis(Vector3.UP, yaw).scaled(Vector3.ONE * k)
+			Map3DUnitRig.plant(repo, ctx.height_at, piece) # feet follow height; XZ stays on the engine slots
 	var ground: Vector3 = piece["ground"]
 	var box := Map3DUnits.screen_box(ctx.camera, ground, float(piece["height_m"]) * k,
 		float(piece["half_w_m"]) * k, ctx.viewport_px_scale())

@@ -47,13 +47,13 @@ static func context(repo: DataRepository, state: GameState, battle: Dictionary, 
 		if not ArmySystem.is_foe(state, code) and Vector2(KingSystem.position(state)).distance_to(Vector2(place)) <= repo.bal("king_command_radius_m"):
 			out["centre"] = "king"
 	var other := "def" if side == "att" else "att"
-	var reach := float(repo.bal("battle_group_contact_m"))
 	var frontal := cos(deg_to_rad(float(repo.bal("battle_flank_front_half_deg"))))
 	for code: String in battle[other]:
 		var reg := ArmySystem.regiment(repo, code, state)
 		for member: String in members:
 			if bool(out["flanked"]):
 				break
+			var reach := BattleGroups.contact_reach(repo, state, battle, member, code)
 			var facing := WarFront.facing_vector(int(battle.get("group_facing", {}).get(member, 0)))
 			for own: Dictionary in battle.get("groups", {}).get(member, []):
 				if bool(out["flanked"]):

@@ -161,7 +161,7 @@ static func _preview_crews(repo: DataRepository, roster: Dictionary, cap: int) -
 	var taken := ArmyGround.new_taken(repo)
 	for row: Dictionary in roster.values():
 		if String(row.get("is_naval", "0")) != "1":
-			ArmyGround.take(taken, ArmySystem.pack_to_metres(repo, Vector2(float(row.x), float(row.y))), ArmyGround.arm_radius(repo, MapObjects.regiment_arm(repo, row)))
+			ArmyGround.take(taken, ArmySystem.pack_to_metres(repo, Vector2(float(row.x), float(row.y))), ArmyGround.unit_radius(repo, row))
 	for code: String in roster.keys():
 		var source: Dictionary = roster[code]
 		var arm := MapObjects.regiment_arm(repo, source)
@@ -237,13 +237,14 @@ static func _held(repo: DataRepository, town: String, k: String) -> String:
 ## field) outside its reach (R16) — its centre when none is free.
 static func _place(repo: DataRepository, unit: Dictionary, centre: Vector2i, arm: String,
 		taken: Dictionary, town: String, strict := false) -> bool:
-	var slot := ArmyGround.free_slot(repo, centre, arm, taken, town)
+	var radius := ArmyGround.unit_radius(repo, unit)
+	var slot := ArmyGround.free_slot(repo, centre, arm, taken, town, false, ArmyGround.NONE, 0, -1, radius)
 	if slot == ArmyGround.NONE:  # a town among the blocked terrains camps on them
-		slot = ArmyGround.free_slot(repo, centre, arm, taken, town, true)
+		slot = ArmyGround.free_slot(repo, centre, arm, taken, town, true, ArmyGround.NONE, 0, -1, radius)
 	if slot == ArmyGround.NONE:
 		if strict: return false
 		slot = centre
-	ArmyGround.take(taken, slot, ArmyGround.arm_radius(repo, arm))
+	ArmyGround.take(taken, slot, radius)
 	_put(repo, unit, slot)
 	return true
 
@@ -357,7 +358,7 @@ static func _crown(repo: DataRepository, rows: Array, roster: Dictionary) -> voi
 
 ## Every held town's seat (§4.4): among the holder's land units camped
 ## around it, the most infantry (ties to the earlier code), else the largest;
-## that unit steps onto the town's point.
+## that unit steps onto the town's point only while its full clearance fits.
 static func _seat(repo: DataRepository, roster: Dictionary) -> Dictionary:
 	var by_town: Dictionary = {}
 	var codes := roster.keys()
@@ -386,8 +387,15 @@ static func _seat(repo: DataRepository, roster: Dictionary) -> Dictionary:
 					best = size
 					pick = c
 		if pick != "":
+			var taken := ArmyGround.new_taken(repo)
+			for other: String in codes:
+				if other == pick or String(roster[other].get("is_naval", "0")) == "1": continue
+				var row: Dictionary = roster[other]
+				ArmyGround.take(taken, ArmySystem.pack_to_metres(repo, Vector2(float(row.x), float(row.y))), ArmyGround.unit_radius(repo, row))
+			var centre := ArmyGround.town_point_m(repo, town)
+			if not ArmyGround.is_free(repo, taken, centre, true, ArmyGround.unit_radius(repo, roster[pick])): continue
 			seats[town] = pick
-			_put(repo, roster[pick], ArmyGround.town_point_m(repo, town))
+			_put(repo, roster[pick], centre)
 	return seats
 
 

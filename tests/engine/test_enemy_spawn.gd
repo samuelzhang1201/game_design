@@ -33,6 +33,17 @@ func _all_foe_codes() -> Array:
 	return out
 
 
+## Three occupied-footprint rings, with each diameter rounded up to the existing lattice.
+## E.g. R=5186, pitch=4400: ceil(10372/4400)=3, bound=3*3*4400+100=39700.
+func _assembly_limit(s: GameState, host: Dictionary) -> float:
+	var radius := 0
+	for code: String in EnemyAi.host_units(repo, s, host):
+		var reg := ArmySystem.regiment(repo, code, s)
+		radius = maxi(radius, maxi(ArmyGround.unit_radius(repo, reg), ArmyGround.unit_radius(repo, reg, s)))
+	var spacing := int(repo.bal("army_slot_spacing_m"))
+	return 3.0 * spacing * maxi(1, ceili(2.0 * radius / spacing)) + 100.0
+
+
 ## --- the units a host raises ------------------------------------------------
 
 func test_a_pack_regiment_raises_its_land_units() -> void:
@@ -97,7 +108,12 @@ func test_new_campaign_spawns_every_host() -> void:
 				assert_eq(at, start, "the first unit stands at the assembly point")
 				first = false
 			else:
-				assert_lte(Vector2(at - start).length(), 3.0 * float(repo.bal("army_slot_spacing_m")) + 100.0, "the rest camp round the assembly point (three rings at most)")
+				assert_lte(Vector2(at - start).length(), _assembly_limit(s, h), "the rest camp within three full-footprint pitches of rings")
+			for other: String in EnemyAi.host_units(repo, s, h):
+				if other >= rc: continue
+				var other_at := Vector2i(int(s.foes[other].x_m), int(s.foes[other].y_m))
+				var radius := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, rc, s), s) + ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, other, s), s)
+				assert_gte(MarchClearance.dist2(at, other_at), radius * radius, "Every actual host footprint is disjoint")
 			assert_eq(Vector2i(int(f["dest_x_m"]), int(f["dest_y_m"])), at)
 			assert_eq(String(f["order"]), ArmySystem.ORDER_STANDBY)
 			# the shape of a regiment's state, plus the host
@@ -200,8 +216,11 @@ func test_a_foe_is_seated_once_at_its_foe_position() -> void:
 		var m := ArmySystem.pack_to_metres(repo, hs[0])
 		if m == start:
 			on_point += 1
-		if Vector2(m - start).length() <= 3.0 * float(repo.bal("army_slot_spacing_m")) + 100.0:   # the units are spread round the point (clearance)
+		if Vector2(m - start).length() <= _assembly_limit(s, h):   # the same three full-footprint rings as the spawn check
 			here += 1
+	for member: String in EnemyAi.host_units(repo, s, h):
+		var wanted := Vector2i(int(s.foes[member].x_m), int(s.foes[member].y_m))
+		assert_true(hostiles.any(func(row: Array) -> bool: return ArmySystem.pack_to_metres(repo, row[0]) == wanted), "The actual saved foe position appears in the hostile view")
 	assert_eq(on_point, 1, "the first unit stands on its point")
 	assert_gte(here, EnemyAi.host_units(repo, s, h).size(), "the host is round its point")
 	var old_home := ArmySystem.pack_to_metres(repo, Vector2(float(reg["x"]), float(reg["y"])))
@@ -300,15 +319,26 @@ func test_step_day_never_moves_or_orders_a_foe_by_itself_before_its_day() -> voi
 
 ## A foe of the first host with real arms, sent `days_x10 / 10` days east.
 func _march_foe(s: GameState, days_x10: int) -> String:
+	var blockers := ArmySystem.clearance_blockers(repo, s)
 	for rc: String in _all_foe_codes():
-		if ArmySystem.day_step_m(repo, s, rc) > 0:
-			var f: Dictionary = s.foes[rc]
-			var step := ArmySystem.day_step_m(repo, s, rc)
-			@warning_ignore("integer_division")
-			f["dest_x_m"] = int(f["x_m"]) + step * days_x10 / 10
-			f["dest_y_m"] = int(f["y_m"])
-			f["order"] = ArmySystem.ORDER_MARCH
-			return rc
+		if ArmySystem.day_step_m(repo, s, rc) <= 0: continue
+		var f: Dictionary = s.foes[rc]
+		var step := ArmySystem.day_step_m(repo, s, rc)
+		var from := Vector2i(int(f.x_m), int(f.y_m))
+		@warning_ignore("integer_division")
+		var to := from + Vector2i(step * days_x10 / 10, 0)
+		var centres: Array = []
+		var radii: Array = []
+		for other: String in blockers.codes:
+			if other == rc: continue
+			centres.append(blockers.pos[other])
+			radii.append(int(blockers.r[rc]) + int(blockers.r[other]))
+		# Timing needs an actually clear eastward corridor, without relocating or shrinking anyone.
+		if not MarchClearance.first_entry(from, [to], centres, radii).is_empty(): continue
+		f["dest_x_m"] = to.x
+		f["dest_y_m"] = to.y
+		f["order"] = ArmySystem.ORDER_MARCH
+		return rc
 	return ""
 
 
