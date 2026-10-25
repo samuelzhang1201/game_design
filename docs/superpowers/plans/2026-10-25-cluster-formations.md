@@ -56,7 +56,7 @@
 
 - `unit_bodies.gd`：身体行、固定模板、身体包络及单一存储访问；`body_motion.gd`：无场景依赖的扫掠和让行。复用已有代表组身份，不再另造人数账。
 - `battle_clusters.gd`：集群记录与资格；`cluster_orders.gd`：付费、版本、成员送达；`cluster_movement.gd`：阶段和预算；`cluster_tactics.gd`：预案决策；`cluster_support.gd`：条件事实。均在 `scripts/engine/`，按任务引入实际功能。
-- `BattleFormation` 改为集群布局纯查询，`BattleGroups` 继续代表精确人员及实际接触；既有类不因改名而复制。
+- `ClusterLayout` 是唯一集群布局查询；`BattleFormation` 在 CF07a 中停止旧战术收益、CF07b 完成消费者迁移后删除无调用的旧接口，不另造无消费者门面。`BattleGroups` 继续代表精确人员及实际接触。
 - `data/army/unit_footprints.csv`：`arm,body_radius_m,deploy_width_m,deploy_depth_m,slot_pitch_m,rank_pitch_m`，均正整数；十空位的包络须落在固定范围内并留合法通道。圆包络必须保守包含骑马和器械旋转的身体，不含伸出武器的攻击触点。
 - `data/battle/cluster_formations.csv`：`formation,label,recipe,behavior`。八 code 固定为 `steady_line,archer_infantry,double_envelopment,cavalry_charge,depth_defence,strong_wing,lure_counter,artillery_hold`。`recipe` 是 OR 分隔的整数下界组合（如 `infantry:1+cavalry:2`；骑兵突击 `cavalry:3|cavalry:2+infantry:1`）；都另验总数≥3，不按人员数或模型数算 unit。
 - `data/battle/cluster_slots.csv`：`formation,arm,role,lateral,depth,priority`，整数逻辑格；格距由固定范围及通道推导，额外单位按同兵种职责、邻接预备稳定填充。强翼以镜像表达，不另造左右阵型。
@@ -87,14 +87,14 @@
 
 ## Task CF02：固定占地、持久身体与安全迁移
 
-**依赖：**CF01、N1 已合并验收。**拥有：**新 `scripts/engine/unit_bodies.gd`、`data/army/unit_footprints.csv`、`tests/engine/test_unit_bodies.gd`；修改 `battle_groups.gd`、`game_state.gd`、`military_reorganization.gd`、`data_repository.gd`、`data/tables.csv`、`scripts/ui/game.gd`、`guide/battle_groups.md`。新增 guide 放 `scripts/engine/guide/cluster_formations.md`，由 engine `CLAUDE.md` 索引。
+**依赖：**CF01、N1 已合并验收。**拥有：**新 `scripts/engine/unit_bodies.gd`、`data/army/unit_footprints.csv`、`tests/engine/test_unit_bodies.gd`；修改 `battle_groups.gd`、`battle_system.gd`、`battle_merge.gd`、`game_state.gd`、`military_reorganization.gd`、`data_repository.gd`、`data/tables.csv`、`scripts/ui/game.gd`、`guide/battle_groups.md`。新增 guide 放 `scripts/engine/guide/cluster_formations.md`，由 engine `CLAUDE.md` 索引。
 
 **Interfaces:** `UnitBodies.rows(repo,state,unit: String) -> Array`；`footprint(repo,unit: String,state) -> Vector2i` 返回固定宽深；`home_slots(repo,state,unit: String) -> Array[Vector2i]` 总是十空位；`migrate(repo,state) -> Dictionary` 返回 status/error/reason。
 
-单一权威：在战斗中复用 `battle.groups[unit]`，非战斗放 unit entry 的 `body_groups`；进入/离开战斗原子转移，绝不保留两份可写身体。稳定 slot 不等于 home index，行保存 `home_slot`、整数路径及 facing。战斗 merge 仍复用原 rows。兼容查询不凭空生成第二套位置。
+单一权威：在战斗中复用 `battle.groups[unit]`，非战斗放 unit entry 的 `body_groups`；进入/离开战斗原子转移，绝不保留两份可写身体。稳定 slot 不等于 home index，行保存 `home_slot`、整数路径及 facing。战斗 merge 仍复用原 rows。明确接入 `BattleSystem._start` 的入战、成员撤出/`_end`/`call_off` 的出战，以及 `BattleMerge` 的存活战场转移；必须在删除战场/成员前转出身体，不能等下一次 refresh 补救。`call_off` 现有可空 repo 路径转移保存行时不得依赖配置重新排位。兼容查询不凭空生成第二套位置。
 
 - [ ] 红灯 `test_count_and_fixed_footprint`: 1000/901/900/1/0→10/10/9/1/0；准确 count 总和等于 fit；901→900 生还 slot/点不变，固定宽深不变，退役 slot 不重用。十空位来源为 CF01 正整数配置。
-- [ ] 红灯 `test_transfer_and_load`: 非战斗→战斗→merge→退出 rows/人员守恒且只有一个存储；JSON 后等价；旧非重叠档原点保留；已重叠旧档 load 明确拒绝、原文件 hash 不变、当前运行 state 不发布。未完成旧事务保留冻结数据，在安全边界迁移；若恢复会产生非法重叠则明确拒绝恢复，不静默瞬移。
+- [ ] 红灯 `test_transfer_and_load`: 非战斗→战斗→merge→正常结束/取消战场/单成员撤出 rows/人员守恒且只有一个存储，转移后再次JSON加载保持点/路径/slot；JSON 后等价；旧非重叠档原点保留；已重叠旧档 load 明确拒绝、原文件 hash 不变、当前运行 state 不发布。未完成旧事务保留冻结数据，在安全边界迁移；若恢复会产生非法重叠则明确拒绝恢复，不静默瞬移。
 - [ ] 先跑新测试确认红灯；实现候选副本迁移、保存结构版本与 `Game.load_campaign` 发布前验证（map 回滚沿用现有路径）；无效／未来版本 fail closed。新集团字段后续加入，此步不生成集团。
 - [ ] 绿灯；回归 `test_battle_groups.gd`、`test_group_size_migration.gd`、`test_living_cap_battle_migration.gd`、`test_battle_save.gd`。最终宽深取实测值，测试用明确小 fixture 手算其十空位包络。
 - [ ] 提交／PR：`feat: preserve fixed unit footprints and physical rows`。
@@ -163,7 +163,7 @@
 
 **依赖：**CF06。**拥有：**`battle_formation.gd`、`battle_groups.gd`、`battle_system.gd`、`battle_rules.gd`、`battle_task_system.gd`、`courier_system.gd`、`action_system.gd`、`military_bootstrap.gd`、`data/battle/formations.csv`、`data/realm/order_costs.csv`；相关现有 formation/parley 测试及新 `tests/engine/test_legacy_formation_retirement.gd`，两份旧设计冲突指针和 deployment/data guides。
 
-**Interfaces:** `UnitBodies.home_slots` 替代队内 `BattleFormation.slots`；旧 `BATTLE_FORMATION` 与 task 的旧 `formation` 参数明确拒绝／旧在途回执“不再适用”。`BattleFormation` 名称保留供 CF08 集群查询；旧 effects 不再调用，不能保留默认 double_rank 光环。不要把单 unit 旧令解释成新 cluster。
+**Interfaces:** `UnitBodies.home_slots` 替代队内 `BattleFormation.slots`；旧 `BATTLE_FORMATION` 与 task 的旧 `formation` 参数明确拒绝／旧在途回执“不再适用”。CF08 的 `ClusterLayout.options/layout` 为新集群查询，CF09及CF22直接消费；旧 effects 不再调用，不能保留默认 double_rank 光环。不要把单 unit 旧令解释成新 cluster。
 
 - [ ] 红灯：四旧阵型字段不改变输出/身体模板；旧合法 primary task 仍有效；仅其退役 formation 子项留回执；已付钱不退扣、不二次结算；已送达旧收益消失但原点/人员不变。迟到旧 courier 惰性终止。
 - [ ] 先红灯；逐个调用者改到显示模板/中性状态，旧门面暂以中性固定显示模板兼容消费者；删除无调用旧数据/成本行前检查在途保存兼容；迁移幂等且不降低 MIN_SAVE_VERSION。
@@ -180,7 +180,7 @@
 
 ## Task CF08：八阵型资格及纯布局
 
-**依赖：**#181；可先独立实现新 `cluster_layout.gd`，不改 N1 的 `BattleFormation`；CF07 后才接入其门面。**拥有：**新 `scripts/engine/cluster_layout.gd`、两张 cluster_formations/cluster_slots CSV、`tests/engine/test_cluster_layout.gd`；`data_repository.gd`、`data/tables.csv`、`data/CLAUDE.md`。
+**依赖：**#181；可先独立实现新 `cluster_layout.gd`，不改 N1 的 `BattleFormation`；CF09/22直接调用本步接口，不安排额外旧类门面接入。**拥有：**新 `scripts/engine/cluster_layout.gd`、两张 cluster_formations/cluster_slots CSV、`tests/engine/test_cluster_layout.gd`；`data_repository.gd`、`data/tables.csv`、`data/CLAUDE.md`。
 
 **Interfaces:** `ClusterLayout.options(repo,units: Array) -> Array`（units 是获准投影 `{unit,arm,controllable,fit}`）；`layout(repo,formation: String,units: Array,origin: Vector2i,facing: int,strong_side: String) -> Dictionary` 返回 `{slots,roles,missing,blocked,reason}`。单位范围通过投影的 footprint 传入；全功能实际地形可达校验在 CF11，不假定格阵一定可放。
 
