@@ -79,13 +79,19 @@ activation flag, or public partial-field commit in this foundation.
 `migrate_candidate` validates raw body values before numeric normalization;
 finite integral JSON numbers become ints, fractional/nonfinite/string/bool
 values fail. It preserves every existing legal world point, path, identity,
-role, facing, personnel, paid cost and frozen cursor. It validates all present
-body envelopes against measured configuration and each other, including units
-awaiting placement's already present neighbors. Existing overlap is an error,
+role, facing, personnel, paid cost and frozen cursor, except identities retired
+by the explicitly defined safe-boundary legacy regroup below. After that
+boundary conversion it validates all present current body envelopes against
+measured configuration and each other, including units awaiting placement's
+already present neighbors. Existing current-world overlap is an error,
 never repaired. It never adds a world position. Repeated migration/JSON replay
 is idempotent; source state and RNG remain byte-equivalent on every status.
 
-`transfer_candidate` requires initialized current body schema and returns only
+`transfer_candidate` validates structure and unique ownership only; it requires
+an initialized current-schema source previously returned `complete` by the
+repo-aware `migrate_candidate`, with no intervening pose/configuration changes.
+This is a caller precondition, not a stored validation flag or proof that this
+repo-free API can infer radii. It returns only
 `complete`, `deferred` or `error`. Battle ID `0` means the nonbattle entry;
 positive IDs resolve existing battles by ID inside source, never caller-owned
 dictionaries. Negative/unknown IDs, same endpoints, wrong source membership,
@@ -101,7 +107,12 @@ may already contain other valid units, whose records remain exact. An identical
 replay against the result returns `complete` unchanged only when source has no
 membership/rows and destination has the exact requested unit owner; otherwise
 it errors. No configuration lookup, layout or movement occurs; repo-null end or
-cancel can therefore transfer rows verbatim. Frozen day/round means deferred.
+cancel can therefore transfer rows verbatim. Ownership-only transfer changes
+no point, path or body envelope, so cannot introduce a geometric collision into
+that validated world. It cannot diagnose pre-existing geometric collisions:
+callers must run repo-aware whole-world validation before live publication,
+including after any other staged writer or configuration change. No hidden
+global repo or copied radius/configuration is allowed. Frozen day/round means deferred.
 Lifecycle writers still own non-body side effects and final battle deletion;
 future binding prepares those effects in the same isolated candidate before
 publishing the whole transaction, never by mutating live state first.
@@ -159,8 +170,16 @@ metadata together, never just `get(field, default)`:
 - Unmarked legacy battle with valid old rows: retain exact positions and paths;
   infer missing stable slots only where existing legacy group migration allowed
   array-order allocation, with counter raised beyond all allocated IDs. Missing
-  home uses saved row order, missing facing uses valid saved unit/battle facing,
-  or the documented legacy zero convention. These add metadata, never points.
+  home is assigned only after safe-boundary regrouping, by resulting row order
+  0..9; missing facing uses valid saved unit/battle facing or the documented
+  legacy zero convention. Validate legacy input by its known saved size and fit
+  first: size 50 legitimately permits 20 rows for 1000 fit. Neither current
+  ten-row nor current home_slot constraints apply before conversion. At a safe
+  boundary consume rows in slot order using existing migrate_size semantics,
+  retain each output group's first surviving row point/path/slot/role, retire
+  consumed identities permanently, keep group_next_slot beyond every old slot,
+  then map the resulting at-most-ten rows to homes and validate current schema.
+  Metadata allocation and regrouping never create a world point.
 - A supported legacy battle whose old schema allowed no groups at all: legal
   missing placement for each member, with its exact battle/side and anchor.
   If a groups entry exists but omits required old `count,x_m,y_m,role`, has a
@@ -170,14 +189,19 @@ metadata together, never just `get(field, default)`:
   empty legacy arrays for positive fit also error unless the known legacy
   schema explicitly represented uninitialized groups by an empty array; test
   that provenance case separately rather than accepting arbitrary emptiness.
-- Duplicate ownership/slots/homes, overflow beyond ten, bad size/version,
+- Duplicate ownership/slots, duplicate current homes, current-schema overflow
+  beyond ten (legacy count limits follow its saved size), bad size/version,
   fractional coordinates/path points, invalid facing/role/count, invalid path
   shape or existing overlap: error. Fleets are excluded, not silently converted.
 - Frozen day or round: first validate supported versions and frozen/present row
   structure. Corrupt/future data errors; otherwise defer the entire migration
   without changing rows, cursor, costs or RNG until the existing safe boundary.
   Legacy frozen partial counts use their saved group size and frozen personnel,
-  not post-round fit. No eager regrouping or replay is permitted.
+  not post-round fit; 20 valid size-50 rows must defer unchanged, without adding
+  home_slot or applying current count/home limits. No eager regrouping or replay
+  is permitted. Physical readiness validation of the converted current world
+  occurs after the safe-boundary regroup, not as a current-schema prerequisite
+  that could reject a legitimate frozen legacy transaction.
 
 A future activation must accept all legal legacy cases above using explicit
 placement on a load candidate, retain legal existing poses, then validate the
@@ -228,15 +252,28 @@ implementation. These names and assertions define the successor's acceptance:
    existing rows preserved, no body_version completion marker or invented pose.
 5. `test_malformed_is_not_legacy`: each required field missing/type invalid,
    partial/empty current rows, illegal legacy empty provenance, bad counters,
-   duplicates, >10, totals, fractional/nonfinite/bool/string values, malformed
+   duplicates, current-schema >10, invalid legacy saved-size totals,
+   fractional/nonfinite/bool/string values, malformed
    paths, future versions, duplicate stores and measured overlap all error.
 6. `test_candidate_transfer_lifecycle`: enter→merge→exit/end/cancel, single-member
-   exit, null-repo equivalent transfer, only one owner, exact IDs/paths/counter,
+   exit, repo-free end/cancel on a previously repo-validated source, only one
+   owner, exact IDs/paths/counter,
    membership and personnel conservation, retained unrelated records, identical
-   replay inert; destination ID/member/side/schema/collision conflicts roll back.
+   replay inert; destination ID/member/side/schema conflicts roll back. Assert
+   every world point/envelope is unchanged, hence a valid geometry stays valid.
+   A separate repo-aware migration case rejects overlapping geometry before
+   transfer; transfer alone must not claim collision validation. Two repos with
+   different measured radii demonstrate that its structural outcome is identical
+   while repo-aware physical validation can differ; no shadow config is added.
 7. `test_frozen_candidate_defers_without_replay`: pending day/round with legacy
    partial rows and costs stays exact; corrupt frozen rows/future version error;
-   safe-boundary retry converts once without new RNG/cost/personnel action.
+   explicit 1000-fit fixture with slots 0..19 and 20 rows of 50 returns deferred
+   byte-exact under both pending-day and pending-round cases, with no homes added.
+   After clearing only the frozen boundary, retry yields ten rows of 100 with
+   slots 0,2,...,18, each survivor's exact point/path/role, homes 0..9 and
+   group_next_slot at least 20 (or its larger saved value); no retired ID reused.
+   Use legal measured spacing so physical validation passes. JSON/retry remains
+   identical without new RNG/cost/personnel action.
 8. `test_passive_serialization_and_production_route_unchanged`: actual baseline
    fresh campaign to_dict/from_dict succeeds with absent bodies remaining absent;
    existing valid metadata roundtrips; constants stay 7/6. Source-call assertions
