@@ -1,5 +1,7 @@
 # 多单位集群阵型 Implementation Plan
 
+> **DRAFT / CF02-rollout-plan：待人类明确批准。** 下文原批准任务及 acceptance 保留有效；新增“提议的有限分阶段接入”仅供审阅，不是执行或登记授权。原 CF02 仍 incomplete / boundary-blocked，唯一实施者 `01a17401-321b-71a2-9908-32857c8ef4f8` 不变；不能以被动基础宣告原 CF02 完成。即使本草案 CI 与文档 Review 通过，也必须等待人类明确批准 staging、验收和 ownership 处理后才能合并。证据、逐步文件和待决项见 `docs/reviews/cluster-formations/cf02-rollout-boundary.md`。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 仓库固定实施／唯一 Review 两人规则优先；不得采用另加实现、架构或嵌套 reviewer 的执行方式。
 
 **Goal:** 在唯一 3D 地图实现固定十兵人占地、全过程身体避碰、真实传令的多 unit 集群及八种条件式接敌预案。
@@ -396,3 +398,43 @@ CF14 引入 `ClusterTactics.intents(repo,state,cluster: Dictionary,known: Dictio
 - 签名以本计划定义的新接口和调查到的旧入口为界；每个实现者先核对上游最终签名，若不一致更新该步计划再动调用方，不增加兼容wrapper掩盖错误。
 - 本计划PR只做文档检查、路径/覆盖自审和必需CI；不启动Godot、测模型或声称数值/视觉已通过。
 - 本次依赖维护停止于文档 PR 由唯一 Review 审查、当前 HEAD 必需 CI 成功并合并；不创建产品实施会话、不派 CF02、不操作 #178 终态。
+
+## 提议的有限分阶段接入（DRAFT，未批准，未登记）
+
+本节转录原 CF02 owner 的边界建议；不修改以上 Task CF02–06 的当前批准合同。批准前不能按此执行、重新派工或释放 claims。CF01 (#186 / `068f33ba`) 和 CF08 (#185 / `579146b6`) 已 accepted；N1 为 superseded / unmerged、#178 closed，不是可满足依赖的 accepted 步骤。迁移索引 #184 / `4deeda27` 与 harness #183 / `08beb1f6` 已合并。本次核对仅消费作者报告，不审查 CF02 产品 diff。
+
+提议顺序：CF02 被动基础 → CF03 纯 planner → CF04a 候选 march → CF04b 候选 placement → CF04c 候选 render → CF05 候选 battle → CF06 候选 damage → **PROPOSED-CF-ACTIVATION** → CF07a → CF07b。激活依赖全部前置合并及适用验收，基础不反向依赖激活；不存在 CF03→CF02 回边。`PROPOSED-CF-ACTIVATION` 只是本文占位 ID，未登记、owner 未分配；其他标签也是建议边界，不是新的启动记录。共享文件/guide 必须串行。
+
+中间提交保持旧生产完整调用链；新 route 只能由显式候选入口在隔离副本上调用，读取不 materialize。不能自动 read 初始化、局部 live 混用、影子运行状态、全局 feature flag 或永久 fallback。被动序列化可保留明确存在且有效的元数据，不凭空制造 missing pose，也不对未改变的旧运行链全局强加新物理验证。新保存版本发布及生产 lifecycle 接线留至激活。每步须证明普通 march/spawn/battle/damage/render/load 调用链未改，并跑受影响旧回归。
+
+### 原生产验收暂存映射（仅提议）
+
+- **CF02：**保留十空位/固定范围/精确人数/稳定身份、候选单一存储及迁移的手算和原子测试；把真实 start/merge/exit/cancel/delete 接线、生产保存版本和 `Game.load_campaign` 发布前物理验证暂存至激活。候选迁移不等于旧档生产兼容完成。
+- **CF03：**全过程相对扫掠、旋转包络、确定性让行、预算、cursor 和拒绝原子性全部保留；只限制候选副本入口。普通世界全过程无穿体在激活补验。
+- **CF04a：**候选 anchor/rows/预算/补给同事务、普通/王军/敌军/撤退/预测共用合同；真实新游戏及生产 dispatch 暂存激活。CF04b：候选营地/离营/招募/敌方/split/reconcile 用真实生产半径和战役输入验证；普通 spawn 接线暂存激活。
+- **CF04c：**候选消费者仍须真实窗口近远、暂停/1x/4x、对穿/交叉/转向及性能验收；普通地图 dispatch 暂存激活，并在实际 live world 重做视觉/性能。CF04 不可凭候选渲染宣布原生产 a/b/c 验收完成。
+- **CF05：**候选冲锋/包抄/部署/撤退/接敌/merge/end/cancel 的全过程扫掠、同日预算/runup、bilateral parties 和军法协议全部保留；生产接线和真实道路接敌、defeat 日内续行留至激活再验。
+- **CF06：**候选真实近战投入与直接射击手算、射程±1米、遮挡、合法目标及零接触零伤害全部保留；生产伤害仍与旧运动成对，最终与其他 writer 同时切换。真实空间必须能形成合法接触/火力，不得缩 R 或暗调射程补失败。
+
+### 激活的不可删门禁
+
+激活仅可为已验证函数的有界接线 PR；若仍需新产品算法或大规模修复，先停止并拆分设计/实施，不能用大 label 吞大 feature。全部真正生成、运动、接触、伤害、render 和 load 安全必须先已可用，再原子切换所有 writer：新游戏 placement 在世界发布前；入战/merge/撤出/结束/取消在删除前转移唯一身体；候选 load 验证版本与冻结事务后才发布。同步移除过时绑定，不留物理 fallback；CF07 随后只退役旧战术语义。
+
+合法旧档原位、原路径、slot、人员和已付成本必须保留；重叠/损坏/未来版本 fail closed，失败不改原文件或当前运行 state，不提高 MIN_SAVE_VERSION 丢弃兼容。missing legacy nonbattle pose 的分类及初始化是未来实施者必须在授权范围内收敛的技术阻塞：兼容的合法缺字段须经已证明 placement 在 load candidate 显式处理，非法输入明确拒绝；不能拒绝合法旧档绕过兼容，也不能把缺失必需身体行一概当 legacy。新当前战役 boot/save/load 必须成功。未完成事务保留冻结数据，恢复不重复人员/移动/费用，非法恢复明确拒绝。
+
+激活须以 CF01 生产半径通过未改弱的道路接敌、defeat 续行、新战役 roundtrip、military reorganization、slot/人员/成本守恒、保存确定性及最终受影响 selector/runtime gate/current-HEAD CI/独立 Review。继承的 55 fail 和 6 risky/pending 须逐项分类并解决，无排除、门槛变化或继承 PASS。真实窗口 visual-review 验收满员十人、各强度固定占地、全程无穿体、实际生成/接战/射击及性能；CF01 有限17采样及炮兵步兵替代限制仍保留，输入改变须重测。
+
+### 批准与执行前清单
+
+- [ ] 人类明确批准上述有限 staging 例外、原 CF02–06 acceptance 拆分和补验落点；最终 spec §2–9、十兵人/固定占地/全过程扫掠/军法通信/八集群/保存确定性/真实视觉性能要求全部不变；后续 CF09–26 不删除或提前算完成。
+- [ ] 人类明确批准 WIP 保全/提取范围及现有 fixture 改动的归属处理；具体提取操作由实施者收敛，保留全部失败；未获准的额外12测试路径仍不得编辑。
+- [ ] 未来实施者在授权范围内收敛 missing-pose/schema/初始化技术方案并锁定测试，这是实施及激活前阻塞，不是请人类选择 API 或算法。合法 legacy 缺字段与损坏必需字段必须区分；新战役 roundtrip、合法原位旧档、非法档拒绝及既定版本兼容是不可放弃验收。
+- [ ] 确定激活 step 的正式 ID/唯一派工方/唯一实施与 Review，以及原 CF02 owner 是否保留延后生产验收；不得替换 owner 或在原 scope 累积后续功能。
+- [ ] 在单独授权的规则处理及合法 registry 流程明确验收修订/claims 后，再逐步登记精确文件、依赖、owner、worktree、branch；原 CF02 在此之前仍 blocked，不能当作已完成依赖。不得直接改 registry accepted/ownership 或由本文终态原 CF02。
+- [ ] 每步登记前确认候选入口的确切签名与测试、guide 路径及授权。源建议没有给出全部候选 API 名称，故这些任务尚非可执行计划；由原负责方确认后补齐，本文不发明签名/算法。
+
+详见边界记录中的源合同、文件清单与具体未决问题。本草案只允许文档 Review，不能创建任何产品后继。
+
+### 拟议 registry 处理路线（仍须人类批准）
+
+现有 helper 不支持直接改写已登记 CF02 的不可变 acceptance。可供人类批准的路线是：原 CF02 owner 先保全37份 WIP、失败和输入证据，再由本人依据明确人类授权通过合法 helper 把旧 CF02 标为 superseded / unmerged / 未完成；不要求它先有 PR/Review。保留原身份、owner 与完整 previous_step，只释放活跃 claims；这不是替换原 owner。修订后的子步骤须用新 step IDs/新固定 pair，依赖新被动基础的实际 accepted merge，绝不依赖旧 CF02 的终态，也不复用已结束原 session 拥有另一 step。本文仍用 CF02–06 作来源边界标签，非建议复用旧登记身份。原 owner 是否保留延后 acceptance 的问题须在此限制内决策，不能直接改写旧 scope 或让它累积新步骤。本草案不执行 terminal、释放或派工；若选其他路线，须先有支持该路线的独立合法规则处理，不能将其写成现有可执行能力。
