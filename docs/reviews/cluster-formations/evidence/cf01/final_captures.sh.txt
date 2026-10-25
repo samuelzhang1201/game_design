@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+export CC_FORCE_OFFLINE=1
+env CF01_SPACING=wide CF01_SEQUENCE=1 python3 tools/run_with_timeout.py 180 /Applications/Godot.app/Contents/MacOS/Godot --verbose --path . res://.superpowers/cluster-cf01/capture.tscn -- --screen root --resolution 2560x1600 --out "$PWD/.superpowers/cluster-cf01/near-artillery.png" --zoom3d 1200 --yaw3d 90 --still --shot-frame 160 --also "40:$PWD/.superpowers/cluster-cf01/near-infantry.png" --also "80:$PWD/.superpowers/cluster-cf01/near-archers.png" --also "120:$PWD/.superpowers/cluster-cf01/near-cavalry.png" > /tmp/cf01-near-sequence.log 2>&1
+env CF01_SPACING=wide python3 tools/run_with_timeout.py 180 /Applications/Godot.app/Contents/MacOS/Godot --verbose --path . res://.superpowers/cluster-cf01/capture.tscn -- --screen root --resolution 1600x1000 --out "$PWD/.superpowers/cluster-cf01/small.png" --zoom3d 2600 --yaw3d 90 --still > /tmp/cf01-small.log 2>&1
+env CF01_SPACING=wide python3 tools/run_with_timeout.py 180 /Applications/Godot.app/Contents/MacOS/Godot --verbose --path . res://.superpowers/cluster-cf01/capture.tscn -- --screen root --resolution 2560x1600 --out "$PWD/.superpowers/cluster-cf01/far.png" --zoom3d 6000 --yaw3d 45 --still > /tmp/cf01-far.log 2>&1
+./run_tests.sh --category map3d > /tmp/cf01-map3d.log 2>&1

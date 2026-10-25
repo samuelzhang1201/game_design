@@ -1,0 +1,12 @@
+extends SceneTree
+
+func _initialize() -> void:
+	call_deferred("_run")
+
+func _run() -> void:
+	var repo := DataRepository.load_all("res://data")
+	var tool: Script = load("res://tools/units3d/measure_unit_bodies.gd")
+	var began := Time.get_ticks_msec()
+	var result: Dictionary = tool.call("export_all", repo, "res://.superpowers/cluster-cf01/measurements.json")
+	print("CF01_EXPORT ", result.get("status"), " ", result.get("error", ""), " elapsed_ms=", Time.get_ticks_msec() - began)
+	quit(0 if result.get("status") == "ok" else 1)

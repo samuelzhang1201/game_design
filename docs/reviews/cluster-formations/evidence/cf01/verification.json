@@ -1,0 +1,50 @@
+{
+  "base": "b4415486b8bdec0e6457a32a3db2ab8dfa5d7758",
+  "godot": "4.7.2.stable.official.ed1daf0bf",
+  "hardware": "Apple M5 Pro, 18 cores, 48 GB RAM",
+  "numeric_and_visual_input_json_sha256": "ccc1195ecd8b28bda28ea43b628977974f507624eb37616573ee74f6f0333f84",
+  "source_inputs": {
+    "tools/units3d/measure_unit_bodies.gd": "3af58bc7f1c6c04b53b4413a10087471c648807f1b0e73aa40c4fa294d024df5",
+    "tests/map3d/test_unit_body_measurement.gd": "cef38d60213b011113263c02b19c0559943d70b56f1b447fca4f27fb6ef51238"
+  },
+  "artifacts": {
+    "README.md": "726a81e5db03ee3f4956242f8fec0a513fd62a849e51929b5f8b6f2e79d85dc9",
+    "baseline-capture.txt": "df2ac2c1536c5d5d3e528f4c06f35618af2f217e4e7698dbc137b24721618c26",
+    "baseline.png": "7cc1e72f1ac4bfce9c3a65810cc7ecaaf28005d9d2eb15fd7faed44642fb2b13",
+    "captures.sh.txt": "2bf889a2b7beb9908f7db597bf3cf21a084746d77d163c625b76e4a84f52fdac",
+    "checks.txt": "86db3ffd6ed1178ce82addcc4b0bd0dcb6e4495129f4052be0ed0dee3a671cd1",
+    "compact-capture.txt": "e763d86b767b23038a59784d842a6f7ccd69bc8bf94966db945b7ab1aff743f6",
+    "compact.png": "b3274fd2c562017aa8b1b67e0cc1638df314ea591242f383854fb11ce785b451",
+    "comparison-crop3x.png": "fccb97923edbc882e0c93a4e9c2e915674ad62cb7583d740519573c75a8d1202",
+    "comparison-full.png": "6b07a2efdb458fdb341c108748bd944170cca38dc762c0281715b375ee1ce9fc",
+    "create_fixture.gd.txt": "58cc603953694addd05b0b5b90afc8fbd91be7f9672b1c94dd5783577b92eb4f",
+    "export.gd.txt": "32ecb96285d89c4e0a90203111d499d9115e6c7e5bcaadfa6032d89f222ae8ef",
+    "far-capture.txt": "4764a278a2878993f10409c6a9868f689e0f7a071fb1504959a1d1dec0352945",
+    "far.png": "ebdfc02bee03f121f770a04ca3830e75a7affa798256feb19b2542f3973b1169",
+    "final_captures.sh.txt": "29d42f4de632733a45dfffd77ad98966bc8386bc49eab1655f8740b335f2782b",
+    "measurements.json": "ccc1195ecd8b28bda28ea43b628977974f507624eb37616573ee74f6f0333f84",
+    "near-archers.png": "5bdb66b0c74a1c405c0264a2edc3943caf63b3d695628964b87336479f427885",
+    "near-artillery.png": "3d07a47be98512877cd6e3c044a88479c57fdd3b51405a9eaf75e3c277a7e5e1",
+    "near-cavalry.png": "c64921c5c515fba86f27c08bebe2f592231878370656aa0191edca77ce78a799",
+    "near-cliff-rejected.png": "9aa1b8ada6a3b7c09775ce28eb7d50e0b6f2750a87521abac3bfcd9fed8d5eff",
+    "near-crop3x.png": "7e0d680a64992c2ee57890737504fccd9ce9c14aa160003dc256f82918f545c2",
+    "near-detail3x.png": "ad9fe779d123d13df2271866ab8ba78170aa842e55b0ef9f3fbe3d7cf33391c7",
+    "near-infantry.png": "4329d19267e65193a261efed7cf196e058a785405223c0baf5ada9dbc2ce8883",
+    "near-sequence-capture.txt": "c015d362117b593f1088c0c2ebba94cf0d7c709caaf29c8d5fd3406296b3b83a",
+    "original.png": "56eb776e8b3cb50b7e6c1148e27ad0118cef219de3b1cedf94f7202fcefa744c",
+    "small-capture.txt": "12985acf46c563b46d96fd0ca25705c82557aa4dad9c6d5da70c7b4e61618f03",
+    "small.png": "2d4dac76ea259d2ba428fff6a26ee81078a96c9ed83d8487476382c705f1c7ea",
+    "spacing.gd.txt": "bb4095629b36b556e039ab47555c36e32f9c3dc3858792e8b1f6205b11432e54",
+    "wide-capture.txt": "6e6183175e84ac4f853271cefd41a95329a32345534b3daa245f83dc62fa5a0d",
+    "wide.png": "598c69d2a0f162fb49dc78de81d62ac37746e58a1a61d999a2dc3f9bb2074dbb"
+  },
+  "checks": {
+    "targeted": "7/7, 17 assertions; /tmp/cf01-final-targeted.log",
+    "map3d": "72 scripts, 697/697 tests, 216539 assertions, 155.012s; locked runner exited 0 with all gates; /tmp/cf01-map3d.log"
+  },
+  "limits": [
+    "Artillery is user-authorized infantry placeholder; new gun invalidates artillery evidence.",
+    "Finite pose samples do not certify all animation phases, blending or swept paths.",
+    "One native-window startup timed out; it produced no accepted evidence. Successful captures retained separately."
+  ]
+}

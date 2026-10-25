@@ -1,0 +1,10 @@
+extends SceneTree
+func _initialize() -> void:
+	var node := Node.new()
+	node.name = "CF01Snapshot"
+	node.set_script(load("res://.superpowers/cluster-cf01/spacing.gd"))
+	var scene := PackedScene.new()
+	scene.pack(node)
+	var error := ResourceSaver.save(scene, "res://.superpowers/cluster-cf01/capture.tscn")
+	node.free()
+	quit(error)

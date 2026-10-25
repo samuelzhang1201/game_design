@@ -1,0 +1,441 @@
+{
+	"input_hashes": {
+		"res://assets/3D/terrain/beria/terrain_assets.tres": "7c42dd695282711bf6a0b902f2ce73e728fe4d397454403d7eeeed19e2361960",
+		"res://assets/3D/terrain/textures/aerial_canopy_alb_ht.png": "0243ec3a4e9fcb21fb39937fff61780e03f33ed57af7a671106f2db90dcc9473",
+		"res://assets/3D/terrain/textures/aerial_canopy_nrm_rgh.png": "2741dce8d8f9a2542a5abd986e71cafdbaf68e9bc733f5690532feec03d9e9f8",
+		"res://assets/3D/terrain/textures/aerial_upland_alb_ht.png": "b9d4c2e77cd271f79197cc1114a1c12de5dd7771db4110b72f097ecfee32136f",
+		"res://assets/3D/terrain/textures/aerial_upland_nrm_rgh.png": "96b8b99efecbf3893f62e9b4fd9ff5386ce989428dfe1fc503a3aa0eb55d2dca",
+		"res://assets/3D/terrain/textures/dirt_floor_alb_ht.png": "3c88d35744e2a7e38c9ba7788a8c04991c035087790df1fe15a9820c57f33fdb",
+		"res://assets/3D/terrain/textures/dirt_floor_nrm_rgh.png": "05008b67e20886e3588b58bbb5809abb96ccfae7836cf6dcd0b32e6fa3095408",
+		"res://assets/3D/terrain/textures/dry_decay_leaves_alb_ht.png": "6d46cbf52fe8fdc4e80d119027ea14d8fc1f7398309b0bc6753f1686ccd137c2",
+		"res://assets/3D/terrain/textures/dry_decay_leaves_nrm_rgh.png": "c3b58ed24144e68b256f1687fdb20b89e2f0ef60e0ef0433a558e59783548a3b",
+		"res://assets/3D/terrain/textures/excavated_soil_wall_alb_ht.png": "35dd301a88afb4e29d820287fcf471abdf4a1a6a11c12bf1ca00a0d0fb1d274a",
+		"res://assets/3D/terrain/textures/excavated_soil_wall_nrm_rgh.png": "e6f979e9aab7271e4ce907825afea6a5860218d6b85ac47e5c6ca25be56d9b90",
+		"res://assets/3D/terrain/textures/g2_crop_a_alb_ht.png": "65917ab53c0b01eb5a65cc4e1e7fbdbb07068f6740b3448896d3b718b1355c8b",
+		"res://assets/3D/terrain/textures/g2_crop_a_nrm_rgh.png": "7ee24b8f276a331b03b4c6a7ebdb30f73b85797e5e4e1893a2be3a8f1e8ad43a",
+		"res://assets/3D/terrain/textures/g2_crop_b_alb_ht.png": "4f54af51f907bff88648f2acb06ec483849ed2db0573f041ceb570575bd859a6",
+		"res://assets/3D/terrain/textures/g2_crop_b_nrm_rgh.png": "aa4e531e603970a0418bb884f40b7789bdbf1d6b1411b4a8309820343f3eadf3",
+		"res://assets/3D/terrain/textures/g2_meadow_a_alb_ht.png": "879a19b95714f336e7c3148e4fc382e6958c7c197095f80834117600b14e2026",
+		"res://assets/3D/terrain/textures/g2_meadow_a_nrm_rgh.png": "3b509a0a301dc9a75b398bd80f2c8a19d6a740106e2bef2ab57a2cc64ec3755f",
+		"res://assets/3D/terrain/textures/g2_meadow_b_alb_ht.png": "b33ac878f5f26b96040e35c43661b539789148b728db245d1ce2d6ca23e1ab74",
+		"res://assets/3D/terrain/textures/g2_meadow_b_nrm_rgh.png": "ca0c013e117be175ddea44cefb6bd6bac7668c98eba13578900598089c91e112",
+		"res://assets/3D/terrain/textures/g2_meadow_c_alb_ht.png": "b2dc2de92cb9c94b2f4141dcd322318dd5af996486b5b4b886756a1f7354f954",
+		"res://assets/3D/terrain/textures/g2_meadow_c_nrm_rgh.png": "3e2919278b8c9f8c01ecf517223867db4a21762dd38fbac0435f00ebdad1e947",
+		"res://assets/3D/terrain/textures/g2_upturf_a_alb_ht.png": "2c0be342a8eed498425edb6e1141332036c97af77db9b49ad0927f12ffae943b",
+		"res://assets/3D/terrain/textures/g2_upturf_a_nrm_rgh.png": "a7753adda4b7a618202449b1c6b12b5dc0a6116eebc09a6e3ae35177f5b1bc1f",
+		"res://assets/3D/terrain/textures/g2_upturf_b_alb_ht.png": "3b412e444133529ed75e2d900f44fdde387d23c83e727c49ffb0370c37088794",
+		"res://assets/3D/terrain/textures/g2_upturf_b_nrm_rgh.png": "b83dd62df4072f3652960faf392ca645ebfb391f53e643446cc62a78ff87eb54",
+		"res://assets/3D/terrain/textures/p2_ridge_alb_ht.png": "1cf20ed8878d0f68b3853bcc43869322bcc7899c93db458ccc3fd9776ca02104",
+		"res://assets/3D/terrain/textures/p2_ridge_nrm_rgh.png": "86b2c95ef6145fe277a1262bde995eaddd385fa8c434cafbf1fb783cbba30fa3",
+		"res://assets/3D/terrain/textures/p2_scree_alb_ht.png": "e82b0588c0fe40c6a8de705bb2f0aff4a9335bf2b5e7f5f8af66682381e0a9f4",
+		"res://assets/3D/terrain/textures/p2_scree_nrm_rgh.png": "19bf011386eadd306a462372bc3de77c512e92e414b6583f87e1f3f0e856c4ef",
+		"res://assets/3D/terrain/textures/p2_snow_alb_ht.png": "a1faab5c10cd45ed4793187c6271ca4c1c5e40c890afbb1011a14e831ce593a4",
+		"res://assets/3D/terrain/textures/p2_snow_nrm_rgh.png": "c6d82511f7bcc601fbc4be88fb459dd5c230b7ebae86e11d611f714c95d58f53",
+		"res://assets/3D/terrain/textures/p3_rock_face_alb_ht.png": "80b60d2f8584802c6211c45190e8131a6573ad09f31aa3a6a9bde42f550af8c4",
+		"res://assets/3D/terrain/textures/p3_rock_face_nrm_rgh.png": "4b0e9b5106337024867459b30210bda7be5e9ed399c706632b8d409379378ac0",
+		"res://assets/3D/terrain/textures/sand_03_alb_ht.png": "6c65c76ecbc301bcc9edb80f84519193c65c3e2bce5302d1b9013fe421836b4f",
+		"res://assets/3D/terrain/textures/sand_03_nrm_rgh.png": "a1f1433ebf8b3aeed32de91779be734d2e99f4ee046609bdbcac7c46a81de9a7",
+		"res://assets/3D/units/archers/archers.glb": "7484f4977058fed353c12d5507837257992e97bc52283487d61c7886e6481b9b",
+		"res://assets/3D/units/archers/archers_archers_body_metal_rough.jpg": "c94059dc1cd9c2ff7d6f5ce29283e08e433cf638a8d08f5686417bb47baa0ba7",
+		"res://assets/3D/units/archers/archers_archers_body_normal.jpg": "264cb3ab255df74c2dad64ef48541be7c234eb6af3bca2e94fa9a86a81c28ec4",
+		"res://assets/3D/units/archers/archers_arrow.res": "60db0721273e60b499e839f755d314343671c4e389a4055d788c2339efd318fd",
+		"res://assets/3D/units/archers/archers_arrow_archers_arrow_metal_rough.jpg": "df3567a1636d4dffbf621283deed1bd18e3b5d4bbd336caf0e257f3018f222d3",
+		"res://assets/3D/units/archers/archers_arrow_archers_arrow_normal.jpg": "d10ef1f7eaab6cf3eeed80cbe195770e386d5a9b32fee4d7423a99538702ad52",
+		"res://assets/3D/units/archers/archers_arrow_tripo_image_a0b7e2fc-bcdd-4027-9e2f-c1aedd82e123_0.jpg": "e809ca8fd8ccfcf78f4d547cea4efc1d9aaf6faf5b34eca1b63d7f1c7496ec32",
+		"res://assets/3D/units/archers/archers_bow.res": "193c73bf7ebff99067a03ccd8bc644a5ebcadbcad40e2b619fbfef47e3f3ff29",
+		"res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_0.jpg": "245dde1da3b707110efa45b17a04a4fc0f34b60e46a3eb65cb6d1f2e0df0a804",
+		"res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_1.jpg": "9b562f22dfccb2968aa2ab45db155119cbc96f8b3b94c7739176e5afe490bb36",
+		"res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_2.jpg": "a45721d6fc4f8bcc409f47da94dd74ca12ab3cd3fc327cfed53666b607da5732",
+		"res://assets/3D/units/archers/archers_quiver.res": "c6ffbb9806925ac42f75b3e6a0271a4cf113cf86ed0d364badc5b37de02df975",
+		"res://assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_0.jpg": "1164ae683442cb6da8be06b1ef91f4196b898d5b9f2797d2ac9fdfeb72a3bb8a",
+		"res://assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg": "f1225d1d75e4bd47f82ec957e875c8d65cc7c7576eb330b2eee85bfd5d7615c4",
+		"res://assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
+		"res://assets/3D/units/army_models.tres": "445f9d0925541e866af7e89ef054945bad84f18ad20efed014e18a72093a5786",
+		"res://assets/3D/units/cavalry/cavalry.glb": "545a6b66052a780c03c83eb476fea8853ce53d98d03c681bbb58dfdf0b0dd916",
+		"res://assets/3D/units/cavalry/cavalry_cavalry_atlas.jpg": "af3ffa3df4db6ebe779f9811b2acd2f839af163e33d775917cb46c81fc3eb80d",
+		"res://assets/3D/units/cavalry/cavalry_cavalry_atlas_mr.jpg": "c39d5f22577c5e46a306e81fd767fcfd73fc09fa479a8aa982b78d0413d00de9",
+		"res://assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg": "38f28344390a6b6844b3cedfb3da1a0383ce253025701a30cc232818c448e228",
+		"res://assets/3D/units/infantry/infantry.glb": "bb1d80b916be406f91390883034e07d0cf2d7690666951c3216b202393548085",
+		"res://assets/3D/units/infantry/infantry_infantry_atlas.jpg": "91fb05c250db5b07559e942bfbb374cf9947a8034b39c12ac1011c9b855f3c7d",
+		"res://assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg": "1bc292fff0198978e0d0dba7b612f6485cb41f9111eba49a1876e24ff603415d",
+		"res://assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "0b311e0f6b2b2759b6cd25ef2fb644f10db26cac49e893725e6bc3730a6e0a3e",
+		"res://assets/3D/units/royal/royal.glb": "3c5ca58c7bed3b946d95e255f179351a5650565e1a8b07904767740de1ac0527",
+		"res://assets/3D/units/royal/royal_royal_atlas.jpg": "9702f92409b3ceedf6307eae1e0d8fc7eec75df20bd0c7278debadbde8c35b41",
+		"res://assets/3D/units/royal/royal_royal_atlas_mr.jpg": "466effd8f91ee6e908d2eb386488c6c32a560cba672145a1647ec8c934f458b9",
+		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg": "87dae2d5426bf52b5f4dd43676ce6a2bf92b9ff22e922e1ba98a8628caffe2ed",
+		"res://data/screens/map3d/army_art.csv": "37dbb45fc641488a234fd43058b8156ccac37433249e4237fa2166618ae1fc51",
+		"res://data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
+		"res://data/world/maps.csv": "cd856ebde844cdac7b8f370c5a51b414eecbb091b3a48bcc12de9a23bd775443",
+		"res://scenes/map3d/worlds/beria.tscn": "c665914748691603c93ba9dfda0aacf6887c36f9b022e80a6a382d00f7237e81",
+		"res://scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
+		"res://scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
+		"res://scenes/models/units/infantry.tscn": "69256e86dfd2d93050522bdcef422afa3ce3d4c2472d063752b7b085da848921",
+		"res://scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
+		"res://scripts/engine/army_system.gd": "94d3d006e18ceb5e5016c35dc221c78d3fb979f4006892e6cf75a2aac88fcd63",
+		"res://scripts/engine/art_table.gd": "ae374d656f22d6542b66b8a6176e608c8112d4f6711bb847f1bb72dd7cae531a",
+		"res://scripts/map3d/map3d_formation.gd": "fc702e2e5371ec5f9a52a06f88962410d357da7ead28a22038762140a2a469e4",
+		"res://scripts/map3d/map3d_geometry.gd": "64797a53505cff9bd849e9245107f9be9f73fbb78cc2d27ab9f58b71bfce9e4c",
+		"res://scripts/map3d/map3d_units.gd": "e842566f033267ae5cbb8bf548bed2aefc88103a9234b344cdc1b3554e32fb4d",
+		"res://tools/units3d/measure_unit_bodies.gd": "3af58bc7f1c6c04b53b4413a10087471c648807f1b0e73aa40c4fa294d024df5"
+	},
+	"map_info": {
+		"distance_scale": "1",
+		"distance_unit": "km",
+		"height": "929",
+		"lat_n": "90",
+		"lat_s": "-90",
+		"lon_e": "180",
+		"lon_w": "-180",
+		"population_rate": "1000",
+		"width": "2560"
+	},
+	"meta": {
+		"format_version": 2,
+		"m_per_px": 50.0,
+		"pack_origin": [
+			-64000.0,
+			-23220.0
+		],
+		"pack_px": [
+			2560.0,
+			929.0
+		],
+		"sea_y": 5.0
+	},
+	"models": {
+		"archers": {
+			"all_mesh_radius_m": 931.426905999614,
+			"attack_only_vertices": 0,
+			"body_radius_m": 932,
+			"deploy_min_depth_m": 5592,
+			"deploy_min_width_m": 16776,
+			"model_hash": "3804b44d53f985876612da07ca30e8f2c6ffd4f96b2bba4763f7599e85d1b418",
+			"radius_m": 931.426905999614,
+			"rank_pitch_m": 3728,
+			"sampled_clips": [
+				{
+					"clip": "DEATH",
+					"length_s": 2.36666655540466,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DRAW",
+					"length_s": 1.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "GARRISON",
+					"length_s": 3.76666665077209,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "MARCH",
+					"length_s": 1.16666662693024,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "SPRINT",
+					"length_s": 0.5,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "STANDBY",
+					"length_s": 5.09999990463257,
+					"player": "AnimationPlayer",
+					"samples": 17
+				}
+			],
+			"scale_inputs": {
+				"attack_bones": [
+					"DEF-weapon.R"
+				],
+				"fov_deg": 45.0,
+				"max_stature": 1.06,
+				"max_tilt_deg": 14.0,
+				"model_height": 2.26497411727905,
+				"ref_m": 10973.6980107868,
+				"ref_px": 12.0,
+				"simulation_scale": 421.437687637757,
+				"size": 0.7,
+				"stand_extent": [
+					0.905093431472778,
+					0.948496401309967
+				],
+				"view_h_px": 1600.0,
+				"world_per_sim_m": 0.05,
+				"world_scale": 21.0718843818879
+			},
+			"slot_pitch_m": 3728,
+			"status": "ok",
+			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
+		},
+		"artillery": {
+			"all_mesh_radius_m": 944.88143545245,
+			"attack_only_vertices": 2816,
+			"body_radius_m": 875,
+			"deploy_min_depth_m": 5250,
+			"deploy_min_width_m": 15750,
+			"model_hash": "83473fb80796ad27ce5bac418e0b452bd30d02d17530804fbc95671556551ee9",
+			"radius_m": 874.19616047626,
+			"rank_pitch_m": 3500,
+			"sampled_clips": [
+				{
+					"clip": "ATTACK",
+					"length_s": 1.03333330154419,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "ATTACK_VAR1",
+					"length_s": 1.76666665077209,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "GARRISON",
+					"length_s": 3.70000004768372,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "MARCH",
+					"length_s": 1.20000004768372,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "SLASH",
+					"length_s": 1.53333330154419,
+					"player": "AnimationPlayer",
+					"samples": 17
+				}
+			],
+			"scale_inputs": {
+				"attack_bones": [
+					"cc_weapon.r"
+				],
+				"fov_deg": 45.0,
+				"max_stature": 1.0,
+				"max_tilt_deg": 14.0,
+				"model_height": 1.60416126251221,
+				"ref_m": 10973.6980107868,
+				"ref_px": 12.0,
+				"simulation_scale": 527.038375263168,
+				"size": 0.62,
+				"stand_extent": [
+					0.539257109165192,
+					0.650582790374756
+				],
+				"view_h_px": 1600.0,
+				"world_per_sim_m": 0.05,
+				"world_scale": 26.3519187631584
+			},
+			"slot_pitch_m": 3500,
+			"status": "ok",
+			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
+		},
+		"cavalry": {
+			"all_mesh_radius_m": 908.762789746312,
+			"attack_only_vertices": 120,
+			"body_radius_m": 804,
+			"deploy_min_depth_m": 4824,
+			"deploy_min_width_m": 14472,
+			"model_hash": "8f87fdfff9a6ff6e4ba80ad15be044424e8c5ddb9bde51e819ec724c46af48cc",
+			"radius_m": 803.439960672586,
+			"rank_pitch_m": 3216,
+			"sampled_clips": [
+				{
+					"clip": "ATTACK",
+					"length_s": 2.5,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEFEND",
+					"length_s": 2.66666674613953,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "GARRISON",
+					"length_s": 4.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "MARCH",
+					"length_s": 0.533333361148834,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "STANDBY",
+					"length_s": 4.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				}
+			],
+			"scale_inputs": {
+				"attack_bones": [
+					"Lance"
+				],
+				"fov_deg": 45.0,
+				"max_stature": 1.0,
+				"max_tilt_deg": 14.0,
+				"model_height": 3.32637906074524,
+				"ref_m": 10973.6980107868,
+				"ref_px": 12.0,
+				"simulation_scale": 409.946172319536,
+				"size": 1.0,
+				"stand_extent": [
+					0.484208613634109,
+					1.276118516922
+				],
+				"view_h_px": 1600.0,
+				"world_per_sim_m": 0.05,
+				"world_scale": 20.4973086159768
+			},
+			"slot_pitch_m": 3216,
+			"status": "ok",
+			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
+		},
+		"infantry": {
+			"all_mesh_radius_m": 1001.5743215796,
+			"attack_only_vertices": 2816,
+			"body_radius_m": 927,
+			"deploy_min_depth_m": 5562,
+			"deploy_min_width_m": 16686,
+			"model_hash": "83473fb80796ad27ce5bac418e0b452bd30d02d17530804fbc95671556551ee9",
+			"radius_m": 926.647930104835,
+			"rank_pitch_m": 3708,
+			"sampled_clips": [
+				{
+					"clip": "ATTACK",
+					"length_s": 1.03333330154419,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "ATTACK_VAR1",
+					"length_s": 1.76666665077209,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "GARRISON",
+					"length_s": 3.70000004768372,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "MARCH",
+					"length_s": 1.20000004768372,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "SLASH",
+					"length_s": 1.53333330154419,
+					"player": "AnimationPlayer",
+					"samples": 17
+				}
+			],
+			"scale_inputs": {
+				"attack_bones": [
+					"cc_weapon.r"
+				],
+				"fov_deg": 45.0,
+				"max_stature": 1.06,
+				"max_tilt_deg": 14.0,
+				"model_height": 1.60416126251221,
+				"ref_m": 10973.6980107868,
+				"ref_px": 12.0,
+				"simulation_scale": 527.038375263168,
+				"size": 0.62,
+				"stand_extent": [
+					0.539257109165192,
+					0.650582790374756
+				],
+				"view_h_px": 1600.0,
+				"world_per_sim_m": 0.05,
+				"world_scale": 26.3519187631584
+			},
+			"slot_pitch_m": 3708,
+			"status": "ok",
+			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
+		},
+		"royal": {
+			"all_mesh_radius_m": 748.848967771914,
+			"attack_only_vertices": 353,
+			"body_radius_m": 749,
+			"deploy_min_depth_m": 4494,
+			"deploy_min_width_m": 13482,
+			"model_hash": "ad74db2b169b8a20ef9550780f1fdbb46d1cef320cf32cecf7e7ae461852d6a9",
+			"radius_m": 748.848967771914,
+			"rank_pitch_m": 2996,
+			"sampled_clips": [
+				{
+					"clip": "ATTACK",
+					"length_s": 3.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEFEND",
+					"length_s": 2.66666674613953,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "GARRISON",
+					"length_s": 4.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "MARCH",
+					"length_s": 0.533333361148834,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "STANDBY",
+					"length_s": 4.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				}
+			],
+			"scale_inputs": {
+				"attack_bones": [
+					"Sword"
+				],
+				"fov_deg": 45.0,
+				"max_stature": 1.0,
+				"max_tilt_deg": 14.0,
+				"model_height": 2.40032076835632,
+				"ref_m": 10973.6980107868,
+				"ref_px": 12.0,
+				"simulation_scale": 409.036239973254,
+				"size": 0.72,
+				"stand_extent": [
+					0.520222902297974,
+					1.19684708118439
+				],
+				"view_h_px": 1600.0,
+				"world_per_sim_m": 0.05,
+				"world_scale": 20.4518119986627
+			},
+			"slot_pitch_m": 2996,
+			"status": "ok",
+			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
+		}
+	},
+	"pack": "beria",
+	"status": "ok",
+	"world_per_sim_m": 0.05
+}
