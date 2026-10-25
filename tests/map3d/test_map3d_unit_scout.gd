@@ -100,7 +100,7 @@ func test_only_a_marching_crown_unit_gets_a_fan() -> void:
 	assert_gt(codes.size(), 1)
 	var code: String = codes[0]
 	var r := ArmySystem.regiment(Game.data, code, Game.state)
-	v.look_at_pack(Vector2(float(r["x"]), float(r["y"])), Game.data.bal("map3d_unit_symbol_leave_m") * 0.5)
+	v.look_at_pack(Vector2(float(r["x"]), float(r["y"])), Map3DGeometry.distance_for_bar(Game.data, v._ctx.meta, Game.data.bal("map3d_unit_symbol_leave_scale") * 0.5, v._ctx.view_size.y))
 	Game.state.regiments[code]["order"] = ArmySystem.ORDER_STANDBY
 	units.step(0.0)
 	assert_eq(units.scout_codes(), [], "a standing crown unit sweeps nothing")

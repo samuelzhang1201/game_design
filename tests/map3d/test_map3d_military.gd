@@ -16,8 +16,8 @@ const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 
 
 func before_all() -> void:
-	_symbol_enter = Game.data.bal("map3d_unit_symbol_enter_m")
-	_symbol_leave = Game.data.bal("map3d_unit_symbol_leave_m")
+	_symbol_enter = Game.data.bal("map3d_unit_symbol_enter_scale")
+	_symbol_leave = Game.data.bal("map3d_unit_symbol_leave_scale")
 	var root := Node3D.new()
 	root.name = "Fixture"
 	root.set_meta("map3d_world", WORLD)
@@ -31,8 +31,8 @@ func before_all() -> void:
 func before_each() -> void:
 	Game.start_campaign(42)
 	# Keep the historical model/animation fixtures near; explicit strategic cases still cross.
-	Game.data.balance["map3d_unit_symbol_enter_m"] = 10000.0
-	Game.data.balance["map3d_unit_symbol_leave_m"] = 8000.0
+	Game.data.balance["map3d_unit_symbol_enter_scale"] = 100.0
+	Game.data.balance["map3d_unit_symbol_leave_scale"] = 80.0
 
 
 func _view() -> Map3DView:
@@ -368,8 +368,8 @@ func test_markers_are_cut_once_per_pose() -> void:
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
-	Game.data.balance["map3d_unit_symbol_enter_m"] = _symbol_enter
-	Game.data.balance["map3d_unit_symbol_leave_m"] = _symbol_leave
+	Game.data.balance["map3d_unit_symbol_enter_scale"] = _symbol_enter
+	Game.data.balance["map3d_unit_symbol_leave_scale"] = _symbol_leave
 	Map3DView.world_override = ""
 	Map3DWorldCache.clear()
 
@@ -406,7 +406,8 @@ func test_every_unit_round_a_town_has_its_own_symbol() -> void:
 	v.set_military(true)
 	var codes := _capital_units()
 	assert_gt(codes.size(), 1, "more than one unit stands round the capital")
-	v.look_at_pack(_capital_xy(), 20000.0)
+	v.look_at_pack(_capital_xy(), Map3DGeometry.distance_for_bar(Game.data, v._ctx.meta,
+		Game.data.bal("map3d_unit_symbol_enter_scale") * 1.2, v._ctx.view_size.y))
 	for c: String in codes:
 		assert_true(v.unit_rects().has(c), "%s has one unit rectangle" % c)
 		assert_false(_marker(v, c).is_empty(), "%s has its own symbol" % c)

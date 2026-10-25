@@ -32,8 +32,6 @@ class CountedLegend extends Map3DMilitaryLegend:
 
 func _view() -> Map3DView:
 	var repo := SuiteData.repo()
-	repo.balance["map3d_unit_symbol_enter_m"] = 2000.0
-	repo.balance["map3d_unit_symbol_leave_m"] = 1600.0
 	var state := SuiteData.campaign(repo, 7)
 	var own := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state)
 	var keep: Array = own.filter(func(r: Dictionary) -> bool: return String(r.get("is_naval", "0")) != "1").slice(0, 2)
@@ -57,6 +55,9 @@ func _view() -> Map3DView:
 	view.size = Vector2(1280, 720)
 	add_child_autofree(view)
 	view.activate()
+	var per_unit := Map3DGeometry.distance_for_bar(repo, view._ctx.meta, 1.0, view._ctx.view_size.y)
+	repo.balance["map3d_unit_symbol_enter_scale"] = 1999.99 / per_unit
+	repo.balance["map3d_unit_symbol_leave_scale"] = 1600.01 / per_unit
 	var target := ArmySystem.position_of(repo, state, keep[0])
 	view.look_at_pack(target, 1500)
 	return view
@@ -400,3 +401,17 @@ func test_camera_pan_does_not_reapply_an_unchanged_legend_mode() -> void:
 
 func after_all() -> void:
 	Map3DWorldCache.clear()
+
+
+func test_default_symbol_entry_follows_the_scale_bar_at_each_window_size() -> void:
+	var view := _view()
+	var defaults := SuiteData.repo()
+	view._repo.balance["map3d_unit_symbol_enter_scale"] = defaults.bal("map3d_unit_symbol_enter_scale")
+	view._repo.balance["map3d_unit_symbol_leave_scale"] = defaults.bal("map3d_unit_symbol_leave_scale")
+	for height: float in [720.0, 1600.0]:
+		view._ctx.view_size.y = height
+		for span: float in [50.0, 99.0, 100.0, 120.0, 99.0]:
+			view.unit_symbol_mode = false
+			view._ctx.distance = Map3DGeometry.distance_for_bar(view._repo, view._ctx.meta, span, height)
+			view._sync_unit_mode()
+			assert_eq(view.unit_symbol_mode, span >= 100.0, "entry follows the visible 100 km rung")
