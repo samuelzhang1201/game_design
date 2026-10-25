@@ -250,6 +250,122 @@ class HandoverHookTests(unittest.TestCase):
             self.assertEqual(self.dispatch([changed])['decision'], 'block')
         self.assertEqual(path.read_bytes(), before)
 
+    def terminate(self, status='superseded', source='worker-a', **fields):
+        return self.handoff(source, None, kind='step_terminal', step_id='a',
+            terminal_status=status, unmerged=True, reason='Replaced by smaller steps.',
+            human_authorization={'statement':'Human explicitly approved retiring step a.',
+                                 'reference':'checkpoint/approval.json'}, **fields)
+
+    def test_terminal_releases_files_preserves_snapshot_and_is_idempotent(self):
+        for status in ('superseded', 'cancelled'):
+            with self.subTest(status=status):
+                path = hook.registry_path(self.root)
+                path.unlink(missing_ok=True)
+                task = self.task(accepted=False, failed_acceptance={'visual':'failed'})
+                self.assertEqual(self.dispatch([task]), {})
+                self.assertEqual(self.terminate(status), {})
+                saved = json.loads(path.read_text())['steps']['a']
+                self.assertEqual(saved['terminal']['previous_step'], task)
+                self.assertEqual(saved['status'], status)
+                self.assertFalse(saved['accepted'])
+                self.assertEqual(saved['failed_acceptance'], task['failed_acceptance'])
+                before = path.read_bytes()
+                self.assertEqual(self.terminate(status), {})
+                self.assertEqual(path.read_bytes(), before)
+                self.assertEqual(self.dispatch([self.task('b','worker-b')]), {})
+                before = path.read_bytes()
+                for changed in [task, dict(saved, status='merged', accepted=True),
+                                dict(saved, acceptance='rewritten'),
+                                dict(saved, implementation_session_id='replacement')]:
+                    self.assertEqual(self.dispatch([changed])['decision'], 'block')
+                    self.assertEqual(path.read_bytes(), before)
+                self.assertEqual(self.dispatch([self.task('c','worker-c',['c'],['a'])])['decision'], 'block')
+
+    def test_terminal_is_not_an_accepted_dependency_even_with_prior_acceptance(self):
+        task = self.task(accepted=True)
+        self.assertEqual(self.dispatch([task]), {})
+        self.assertEqual(self.terminate(), {})
+        self.assertEqual(self.dispatch([self.task('b','worker-b',['b'],['a'])])['decision'], 'block')
+        saved = json.loads(hook.registry_path(self.root).read_text())['steps']['a']
+        self.assertEqual(self.dispatch([saved]), {})
+        for changed in [dict(saved, review_session_id='replacement'),
+                        dict(saved, status='active'), dict(saved, terminal={})]:
+            self.assertEqual(self.dispatch([changed])['decision'], 'block')
+        self.assertEqual(self.dispatch([dict(self.task('new','new-worker',['b']),
+                                           status='cancelled')])['decision'], 'block')
+
+    def test_terminal_rejects_missing_authority_wrong_owner_and_merged(self):
+        task = self.task()
+        self.assertEqual(self.dispatch([task]), {})
+        self.assertEqual(self.terminate(source='stranger')['decision'], 'block')
+        self.assertEqual(self.terminate(source='old')['decision'], 'block')
+        self.terminate()
+        marker_path = self.root/'.superpowers/session-handovers/worker-a.json'
+        valid = json.loads(marker_path.read_text())
+        # Start again with an active record, then exercise actual Stop marker validation.
+        path = hook.registry_path(self.root)
+        path.unlink()
+        self.assertEqual(self.dispatch([task]), {})
+        before = path.read_bytes()
+        for fields in ({'human_authorization':None}, {'human_authorization':{}},
+                       {'human_authorization':{'statement':'Approved', 'reference':''}},
+                       {'human_authorization':{'statement':' ', 'reference':'approval'}},
+                       {'unmerged':False}, {'reason':' '}, {'terminal_status':'merged'},
+                       {'tasks':[]}, {'pr_url':'https://example.com/pull/1'},
+                       {'next_session_id':'other'}):
+            marker_path.write_text(json.dumps(dict(valid, **fields)))
+            result = hook.respond(dict(self.event, session_id='worker-a'))
+            self.assertEqual(result.get('decision'), 'block', fields)
+            self.assertEqual(path.read_bytes(), before)
+        self.assertEqual(self.dispatch([dict(task, status='merged', accepted=True)]), {})
+        self.assertEqual(self.terminate()['decision'], 'block')
+
+    def test_terminal_freezes_pr_pair_and_rejects_handoff_or_changed_retry(self):
+        self.assertEqual(self.dispatch([self.task()]), {})
+        pair = dict(kind='pr_handoff', step_id='a', pr_url='https://example.com/pull/1',
+                    implementation_session_id='worker-a', review_session_id='review-a')
+        self.assertEqual(self.handoff('worker-a','review-a',**pair), {})
+        self.assertEqual(self.terminate(source='review-a'), {})
+        path = hook.registry_path(self.root)
+        before = path.read_bytes()
+        self.assertEqual(self.handoff('worker-a','review-a',**pair)['decision'], 'block')
+        self.assertEqual(self.terminate('cancelled',source='review-a')['decision'], 'block')
+        self.assertEqual(path.read_bytes(), before)
+        self.assertEqual(json.loads(before)['prs'][pair['pr_url']]['review_session_id'], 'review-a')
+
+    def test_terminal_runs_through_hook_process_and_shared_worktree_registry(self):
+        subprocess.run(['git','init','-q',str(self.root)],check=True)
+        subprocess.run(['git','-C',str(self.root),'-c','user.name=Test','-c','user.email=test@example.com',
+                        'commit','--allow-empty','-qm','fixture'],check=True)
+        linked = self.root/'linked'
+        subprocess.run(['git','-C',str(self.root),'worktree','add','--detach','-q',str(linked)],check=True)
+        self.assertEqual(self.dispatch([self.task()]), {})
+        self.terminate()
+        marker = json.loads((self.root/'.superpowers/session-handovers/worker-a.json').read_text())
+        # Restore active fixture via a fresh test registry, not by editing a production registry.
+        hook.registry_path(self.root).unlink()
+        self.assertEqual(self.dispatch([self.task()]), {})
+        (linked/'.superpowers/session-handovers').mkdir(parents=True)
+        (linked/'HANDOVER.md').write_text('Human authorized retirement; original evidence retained.')
+        marker['summary_path'] = 'HANDOVER.md'
+        (linked/'.superpowers/session-handovers/worker-a.json').write_text(json.dumps(marker))
+        event = dict(self.event, cwd=str(linked), session_id='worker-a')
+        result = subprocess.run(['python3',hook.__file__], input=json.dumps(event),
+                                capture_output=True, text=True, check=True)
+        self.assertEqual(json.loads(result.stdout), {})
+        saved = json.loads(hook.registry_path(self.root).read_text())['steps']['a']
+        self.assertEqual(saved['terminal']['previous_step']['status'], 'active')
+        self.assertEqual(self.dispatch([self.task('b','worker-b')]), {})
+
+    def test_terminal_atomic_failure_keeps_active_registry(self):
+        self.assertEqual(self.dispatch([self.task()]), {})
+        path = hook.registry_path(self.root)
+        before = path.read_bytes()
+        with patch.object(hook.os, 'replace', side_effect=OSError('disk failure')):
+            self.assertEqual(self.terminate()['decision'], 'block')
+        self.assertEqual(path.read_bytes(), before)
+        self.assertEqual(self.dispatch([self.task('b','worker-b')])['decision'], 'block')
+
     def test_dependencies_require_merged_and_accepted_declaration(self):
         self.assertEqual(self.dispatch([self.task()]), {})
         b = self.task('b','worker-b',['tools/b.py'],['a'])

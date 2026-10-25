@@ -33,6 +33,8 @@ def record_handoff(cwd, data):
         graph = json.loads(path.read_text()) if path.exists() else {'edges': {}, 'prs': {}}
         if data.get('kind') == 'dispatch':
             record_dispatch(graph, data)
+        elif data.get('kind') == 'step_terminal':
+            record_terminal(graph, data)
         else:
             record_pr_handoff(graph, data)
         temporary = None
@@ -44,6 +46,39 @@ def record_handoff(cwd, data):
         finally:
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
+
+
+def record_terminal(graph, data):
+    """Retire an unmerged step without discarding its owners or failed evidence."""
+    if (any(key in data for key in ('tasks', 'pr_url', 'next_session_ids')) or
+            data.get('next_session_id') is not None):
+        raise ValueError('terminal records must be separate from dispatch and PR handoff')
+    step = graph.get('steps', {}).get(data.get('step_id'))
+    if step is None:
+        raise ValueError('terminal record requires an existing step')
+    source = data['source_session_id']
+    if source not in (step['implementation_session_id'], step['review_session_id']):
+        raise ValueError('only an original step owner may declare its terminal status')
+    authorization = data.get('human_authorization')
+    if (not isinstance(authorization, dict) or
+            set(authorization) != {'statement', 'reference'} or
+            any(not isinstance(value, str) or not value.strip() for value in authorization.values())):
+        raise ValueError('terminal status requires explicit human authorization statement and reference')
+    if (data.get('terminal_status') not in ('superseded', 'cancelled') or
+            data.get('unmerged') is not True or
+            not isinstance(data.get('reason'), str) or not data['reason'].strip()):
+        raise ValueError('terminal status requires superseded/cancelled, unmerged true and a reason')
+    terminal = {key: data[key] for key in
+                ('source_session_id', 'terminal_status', 'unmerged', 'reason', 'human_authorization')}
+    if 'terminal' in step:
+        if terminal != {key: step['terminal'][key] for key in terminal}:
+            raise ValueError('terminal history cannot be replaced')
+        return
+    if step['status'] != 'active':
+        raise ValueError('only an active unmerged step may be retired')
+    terminal['previous_step'] = dict(step)
+    step['terminal'] = terminal
+    step['status'] = data['terminal_status']
 
 
 def record_pr_handoff(graph, data):
@@ -70,6 +105,8 @@ def record_pr_handoff(graph, data):
             raise ValueError('PR handoff must stay between implementation and its unique Review')
         step = graph.get('steps', {}).get(pair['step_id'])
         if step is not None:
+            if step['status'] in ('superseded', 'cancelled'):
+                raise ValueError('terminal step cannot resume PR handoffs')
             if (owners[0] != step['implementation_session_id'] or
                     step['review_session_id'] not in (None, owners[1])):
                 raise ValueError('PR owners must match the dispatched step')
@@ -160,9 +197,13 @@ def record_dispatch(graph, data):
         if (not isinstance(creation, dict) or creation.get('status') != 'created' or
                 creation.get('session_id') != owner):
             raise ValueError('reconcile unknown creation results before registering or retrying')
-        if task.get('status') not in ('active', 'merged'):
-            raise ValueError('step status must be active or merged')
         old = steps.get(step_id)
+        if old is not None and old['status'] in ('superseded', 'cancelled'):
+            if task != old:
+                raise ValueError('terminal step cannot be restarted or changed')
+            continue
+        if task.get('status') not in ('active', 'merged') or 'terminal' in task:
+            raise ValueError('use step_terminal to retire an existing active step')
         if old is not None:
             for key in ('dispatcher_session_id', 'dependencies', 'acceptance',
                         'worktree', 'branch', 'implementation_session_id', 'creation_result'):
@@ -271,9 +312,9 @@ def respond(event):
     if not summary.is_relative_to(cwd) or not summary.is_file() or not summary.read_text(encoding="utf-8").strip():
         return {"decision": "block", "reason": "任务交接尚未完成：先在当前工作树保存有效的精简 HANDOVER.md，再执行交接；不要重新读取全部历史。"}
     kind = data.get('kind')
-    if kind not in (None, 'pr_handoff', 'dispatch'):
+    if kind not in (None, 'pr_handoff', 'dispatch', 'step_terminal'):
         return {'decision': 'block', 'reason': 'unknown handover kind'}
-    if kind == 'dispatch':
+    if kind in ('dispatch', 'step_terminal'):
         try:
             record_handoff(cwd, data)
         except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
