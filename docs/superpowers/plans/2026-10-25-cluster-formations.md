@@ -434,3 +434,7 @@ CF14 引入 `ClusterTactics.intents(repo,state,cluster: Dictionary,known: Dictio
 - [ ] 每步登记前确认候选入口的确切签名与测试、guide 路径及授权。源建议没有给出全部候选 API 名称，故这些任务尚非可执行计划；由原负责方确认后补齐，本文不发明签名/算法。
 
 详见边界记录中的源合同、文件清单与具体未决问题。本草案只允许文档 Review，不能创建任何产品后继。
+
+### 拟议 registry 处理路线（仍须人类批准）
+
+现有 helper 不支持直接改写已登记 CF02 的不可变 acceptance。可供人类批准的路线是：原 CF02 owner 先保全37份 WIP、失败和输入证据，再由本人依据明确人类授权通过合法 helper 把旧 CF02 标为 superseded / unmerged / 未完成；不要求它先有 PR/Review。保留原身份、owner 与完整 previous_step，只释放活跃 claims；这不是替换原 owner。修订后的子步骤须用新 step IDs/新固定 pair，依赖新被动基础的实际 accepted merge，绝不依赖旧 CF02 的终态，也不复用已结束原 session 拥有另一 step。本文仍用 CF02–06 作来源边界标签，非建议复用旧登记身份。原 owner 是否保留延后 acceptance 的问题须在此限制内决策，不能直接改写旧 scope 或让它累积新步骤。本草案不执行 terminal、释放或派工；若选其他路线，须先有支持该路线的独立合法规则处理，不能将其写成现有可执行能力。

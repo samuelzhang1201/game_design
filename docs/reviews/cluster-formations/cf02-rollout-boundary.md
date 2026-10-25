@@ -220,3 +220,7 @@ Real current campaign boot/save/load, military reorganization, actual defeat con
 十兵人、固定占地、全过程身体扫掠及让行、实际生成/接敌/直接射击、军法/通信/成本、八种集群及自动行为、单一身体权威、保存/确定性、真实窗口视觉与性能验收全部保留。具体激活补验与 fail-closed 发布清单在 plan；后续 CF07–26 的任务不因 staging 删除。CF01 17采样及炮兵步兵替代限制继续披露，不能称完整动画/真实炮模型已验收。
 
 本 doc PR 验收只含：源建议 SHA 匹配、上述证据如实保持 FAILED/UNKNOWN、原批准 task 正文不被替换、guide 路径核对、纯文档 selector/harness/config/guide/whitespace 检查及当前 HEAD CI/唯一 Review。没有运行 Godot、产品视觉或性能，不为未实现入口造 PASS。文档 Review 只审本 PR 的来源、依赖、端态保全与 CI；不审原 CF02 产品、不编辑、不派工。CI 绿也不自动 merge，等待人类明确批准 staging/ownership 处理。
+
+## 派工方补充的登记约束（非产品建议）
+
+现有 `record_terminal` helper（`.codex/hooks/task-handover.md`）允许原 step owner 在明确人类授权下封存 superseded / unmerged，不要求已有 PR；但不能直接改写 CF02 不可变 acceptance。拟议合法路线：原 owner 先保全37 WIP/失败/输入证据，再本人用 helper 封存旧 CF02，保留原身份、owner、完整 previous_step 与未完成事实，仅释放活跃 claims。修订子步骤使用新 step IDs 和新固定 pair，依赖新被动基础的实际 accepted merge，不能以旧 CF02 为 accepted 依赖，也不复用结束的原 session 拥有另一 step。这样保留历史，并非更换旧 step owner。源建议中的 owner 归属问题仍须在这些规则内由人类决定。其他路线若需修改不可变 acceptance，现有 helper 不支持，必须先有独立合法规则处理。此草案不执行封存、释放、acceptance 改写或派工。
