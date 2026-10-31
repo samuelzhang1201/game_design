@@ -31,7 +31,9 @@ production lifecycle, load, march, damage or render callers.
 - `transfer_candidate` is repo-free and structural: callers first obtain a
   repo-validated complete world and preserve its poses/configuration. It moves
   exact rows, membership and per-unit body metadata in a detached candidate,
-  preserving other records and personnel. Pending descriptors are prohibited.
+  preserving other records and personnel. Growth after exit reads the saved
+  sole-owner `group_facing`, with explicit unit `facing_deg` taking precedence.
+  Pending descriptors are prohibited.
   It cannot certify geometric validity or publish live state.
 - Results have exactly `status,reason,error,candidate,placement_requests`.
   `complete` and `needs_placement` carry detached candidates; `error` and
@@ -39,6 +41,8 @@ production lifecycle, load, march, damage or render callers.
   deferral, retaining all rows/cursors/costs until the safe boundary. Legal
   legacy twenty-row size-50 worlds are not judged as current ten-row worlds.
 
+Body-opted saves preserve invalid raw cohort fit for candidate rejection before
+legacy rounding; unopted saves retain their existing normalization.
 Passive serialization preserves present fields and creates no bodies or
 pending defaults. Save constants stay 7/6. Placement, production activation,
 physical movement, visuals and performance remain separate accepted steps.

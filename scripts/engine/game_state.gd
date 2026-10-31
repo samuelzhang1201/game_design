@@ -676,6 +676,21 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.foes = _decode_values(d.get("foes", {}))
 	s.ai_hosts = _decode_values(d.get("ai_hosts", {}))
 	s.battles = _decode_values(d.get("battles", []))
+	# Opt-in body validation must see corrupt fit values before legacy rounding.
+	var body_schema := s.military_migration.has("body_version")
+	for units: Dictionary in [s.regiments, s.foes]:
+		for entry: Variant in units.values():
+			if entry is Dictionary and (entry.has("body_groups") or entry.has("body_reconciliation")):
+				body_schema = true
+	for battle: Variant in s.battles:
+		if battle is Dictionary and battle.has("body_version"): body_schema = true
+	if body_schema:
+		var raw_cohorts: Dictionary = _decode_values(d.get("military_cohorts", {}))
+		for id: Variant in raw_cohorts:
+			if raw_cohorts[id] is Dictionary and raw_cohorts[id].has("fit"):
+				var fit: Variant = raw_cohorts[id].fit
+				s.military_cohorts[id].fit = int(fit) if fit is float and is_finite(fit) \
+					and fit == float(int(fit)) else fit
 	s.battle_aliases = _whole(d.get("battle_aliases", {}))   # older saves: none merged
 	s.battle_orders = _whole(d.get("battle_orders", {}))
 	s.unit_tasks = _whole(d.get("unit_tasks", {}))

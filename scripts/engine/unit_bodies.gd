@@ -478,7 +478,7 @@ static func _regroup(saved: Array[Dictionary], total: int, size: int) -> Array[D
 	return out
 
 static func _facing(entry: Dictionary, battle: Dictionary, code: String) -> int:
-	var value: Variant = entry.get("facing_deg", battle.get("group_facing", {}).get(code, 0))
+	var value: Variant = entry.get("facing_deg", entry.get("group_facing", battle.get("group_facing", {}).get(code, 0)))
 	return int(value) if _whole(value) and int(value) >= 0 and int(value) < 360 else -1
 
 static func _request(state: GameState, code: String, battle: Dictionary, reason: String, saved: Array,

@@ -787,3 +787,57 @@ func test_measured_overlap_accepts_distant_int64_coordinates() -> void:
 		rows[0][axis] = 0
 		rows[1][axis] = diameter - 1
 		_migrate(api, f, "error")
+
+func test_body_json_preserves_invalid_raw_fit_without_import_marker() -> void:
+	var api := _api()
+	for version: int in [6, 7]:
+		for mode: String in ["marked", "pending", "rows", "battle"]:
+			for raw: Variant in [100.25, true]:
+				var f := _pending(api, 100, 101) if mode == "pending" else _fixture(100)
+				f.state.military_migration.erase("import_main_v7")
+				if mode == "rows": f.state.military_migration.erase("body_version")
+				if mode == "battle":
+					_battle(f)
+					f.state.military_migration.erase("body_version")
+				var id: String = f.state.military_rosters[f.code].cohort_ids[0]
+				var raw_fit: Variant = raw + 1 if mode == "pending" and raw is float else raw
+				f.state.military_rosters[f.code].cohort_ids = [id]
+				f.state.military_cohorts = {id: {"stage": "active", "fit": raw_fit}}
+				_migrate(api, f, "error")
+				var saved: Dictionary = f.state.to_dict()
+				saved.version = version
+				f.state = GameState.from_dict(JSON.parse_string(JSON.stringify(saved)), false)
+				assert_eq(f.state.military_cohorts[id].fit, raw_fit, "body opt-in retains invalid raw fit")
+				_migrate(api, f, "error")
+	var malformed := _fixture(100)
+	malformed.state.battles = [7]
+	malformed.state = _json(malformed.state)
+	_migrate(api, malformed, "error")
+	var old := _fixture(100)
+	old.state.military_migration = {}
+	old.state.regiments[old.code].erase("body_groups")
+	for id: String in old.state.military_rosters[old.code].cohort_ids:
+		old.state.military_cohorts[id].fit = 100.25
+	var loaded := _json(old.state)
+	for id: String in old.state.military_rosters[old.code].cohort_ids:
+		assert_eq(loaded.military_cohorts[id].fit, 100, "unopted production normalization retained")
+
+func test_exit_growth_keeps_saved_owner_facing() -> void:
+	var api := _api()
+	for json_roundtrip: bool in [false, true]:
+		for explicit: bool in [false, true]:
+			var f := _fixture(100)
+			f.state.regiments[f.code].erase("facing_deg")
+			var battle := _battle(f)
+			battle.group_facing[f.code] = 90
+			var valid := _migrate(api, f, "complete")
+			var exited := _transfer(api, valid.candidate, f.code, 1, 0, "complete")
+			f.state = _json(exited.candidate) if json_roundtrip else exited.candidate
+			assert_eq(f.state.regiments[f.code].group_facing, 90)
+			var saved_rows: Array = api.rows(null, f.state, f.code)
+			if explicit: f.state.regiments[f.code].facing_deg = 180
+			_replace(f.repo, f.state, f.code, 101)
+			var grown := _reconcile(api, f, 100, "needs_placement")
+			assert_eq(grown.placement_requests[0].facing_deg, 180 if explicit else 90)
+			assert_eq(api.rows(null, grown.candidate, f.code), saved_rows)
+			assert_eq(_json(grown.candidate).regiments[f.code].group_facing, 90)
