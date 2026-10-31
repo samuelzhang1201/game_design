@@ -39,6 +39,7 @@ economy,workshop_rates
 economy,road_speed
 army,army_camp_blocked
 army,army_clearance
+army,unit_footprints
 army,army_carry_loads
 army,army_formations
 army,army_ground_speed

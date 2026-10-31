@@ -33,3 +33,11 @@ work on unrelated idle units retains its private-candidate publication rules.
 Successful monthly wound recovery refreshes the unit's existing battle rows in
 the same settlement; surviving slots and points persist, and pending rounds
 retain their frozen rows through the existing refresh guard.
+
+
+The opt-in passive `UnitBodies` candidate API is documented in
+`guide/cluster_formations.md`. It validates and transfers existing body rows
+without calling ordinary `BattleGroups.refresh` or changing production lifecycle.
+Its explicit reconciliation handles staged personnel only on detached current
+worlds; a strictly validated pending descriptor requests future placement.
+Neither partial candidates nor frozen deferred results are live battle inputs.
