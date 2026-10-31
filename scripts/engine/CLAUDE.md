@@ -1,4 +1,4 @@
-# The simulation (`scripts/engine/`)
+# Simulation (`scripts/engine/`)
 
 The root `CLAUDE.md`'s invariants rule here first: deterministic, `RefCounted`, no `Game`, no wall-clock, every number from `data/`, a reason on every state move. Tuning values are `balance.csv` keys named below; read the CSV for the value. Design: `docs/design/MANOR_SYSTEM.md`, `COUNCIL_SYSTEM.md`, `CHAPTER_0.md`; each feature's spec is under `docs/superpowers/specs/`. The WAR ROOM's pure pieces here (`WarSheets`, `WarDrafts`, `WarFolio`, `WarRoom`) are described in `scripts/war_room/CLAUDE.md`.
 
@@ -9,7 +9,7 @@ Topic rules live in `guide/` and are not loaded automatically. Read the relevant
 - `scripts/engine/guide/area_tasks.md` — received search travel (`ArmyTasks`, `TaskCoverage`, `MarchPath`)
 - `scripts/engine/guide/regiments.md` — regiments and their march (`ArmySystem`)
 - `scripts/engine/guide/battle_deployment.md` — tactics (`BattleFormation`, `BattleRules`, `BattleTaskSystem`, `UnitGait`, `BattleOrders`, `BattleStrength`)
-- `scripts/engine/guide/cluster_formations.md` — `UnitBodies`.
+- `scripts/engine/guide/cluster_formations.md` — `UnitBodies`, `BodyMotion`.
 - `scripts/engine/guide/battle_groups.md` — groups (`BattleGroups`, `MilitaryReorganization`).
 - `guide/battle_ranged.md` — direct fire (`BattleRanged`).
 - `scripts/engine/guide/battle_charge.md` — actual mounted run-up, impact, disengagement and saved regrouping (`BattleCharge`, `BattleGroups`, `BattleSystem`)
