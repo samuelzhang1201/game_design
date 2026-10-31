@@ -771,6 +771,17 @@ func test_relief_force_joins_battle_and_can_lift_siege() -> void:
 	if starts.is_empty():
 		return
 	assert_eq(String(starts[0]["town"]), "", "a field battle, not the assault")
+	# Contact need not rout a side on its first roll; observe the actual battle.
+	for _day: int in range(Calendar.DAYS_PER_TICK):
+		if EnemyAi.regiments_of(s, main).any(func(c: String) -> bool:
+			return int(s.foes[c].get("disengaging", 0)) == 1):
+			break
+		var absolute := s.absolute_day() + 1
+		@warning_ignore("integer_division")
+		s.tick = 1 + (absolute - 1) / Calendar.DAYS_PER_TICK
+		s.day = 1 + (absolute - 1) % Calendar.DAYS_PER_TICK
+		ev.append_array(BattleSystem.settle_day(repo, s))
+	assert_eq(_of(ev, "error"), [], "each observed battle day completes")
 	for e: Dictionary in ev:
 		for k: String in ["att", "def"]:
 			assert_false(g in (e.get(k, []) as Array), "the garrison does not sortie")
