@@ -222,7 +222,7 @@ Matrix 5 (`test_malformed_is_not_legacy`):
 - Remove ONLY the descriptor from the matrix-2 partial (leave all other fields
   equal): both direct and J migration error for contradictory legacy totals.
   Add a global completion marker to that unmarked mismatch: error too.
-- On an otherwise valid complete 900-row basis staged to fit 901, pass raw
+- On an otherwise valid complete 900-person basis staged to fit 901, pass raw
   Variant arguments 900.5, true, null, "900", NaN and positive/negative infinity
   directly as `previous_fit`: each returns `error`, null candidate and no requests,
   with source/RNG unchanged. Also use a complete one-person basis staged to fit 2
