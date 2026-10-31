@@ -364,6 +364,10 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 						"place": place}, pick)))
 			"round":
 				_round_facts(repo, state, e, place, pick, facts)
+			"withdrawal":
+				for departure: Dictionary in e["left"]:
+					facts.append(MissiveLog.words("withdrawal@%d.%d.%s" % [id, int(e["day"]), departure["code"]], "Left the field",
+						battle_words(repo, "battle_left_" + String(departure["why"]), {"unit": _unit_label(repo, String(departure["code"]))}, pick)))
 			"end":
 				for departure: Dictionary in e.get("left", []):
 					facts.append(MissiveLog.words("left@%d.%d.%s" % [id, int(e["rounds"]), departure["code"]], "Left the field",
