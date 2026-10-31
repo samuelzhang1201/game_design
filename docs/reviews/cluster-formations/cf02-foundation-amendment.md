@@ -40,7 +40,7 @@ no cryptographic claim that a save came from a particular function.
 Retain all five #188 APIs and their result envelope unchanged. Add only:
 
 ```gdscript
-static func reconcile_candidate(repo: DataRepository, source: GameState, unit: String, previous_fit: int) -> Dictionary
+static func reconcile_candidate(repo: DataRepository, source: GameState, unit: String, previous_fit: Variant) -> Dictionary
 ```
 
 This is a passive body-only operation, never bound to production in foundation.
@@ -57,8 +57,15 @@ exception: the named eligible land unit's rows are validated against
 `previous_fit` instead of its staged target fit. It must have the #188 complete
 world marker, converted battle marker when applicable, and no pending descriptor
 anywhere. Its existing row store, slots, homes, counter, points, paths, facing,
-roles and measured geometry must all validate. Both fits are finite nonnegative
-integers; bool/string/fractional/nonfinite values are rejected before conversion.
+roles and measured geometry must all validate. `previous_fit` deliberately accepts
+a raw Variant: a typed int parameter may coerce a bool/float before the function
+can inspect it. Validate its raw type first; accept only INT or finite FLOAT
+with an exact integral value, nonnegative and within the configured ten-group
+capacity, then convert to an internal int. Thus 900 and integral JSON 900.0 have
+the same semantics; true, null, strings, 900.5, NaN and infinities return the
+normal `error` result, never an implicit coercion or argument-type failure.
+Apply the same raw-number rule to the staged target fit before normalization.
+All other parameters retain their declared types; no wrapper API is added.
 Unknown unit, fleet, null/invalid repo, ambiguous owner, legacy unconverted input,
 second mismatched unit or arbitrary partial input returns `error` atomically.
 The old marker on this specially declared input does not assert that its staged
@@ -215,6 +222,13 @@ Matrix 5 (`test_malformed_is_not_legacy`):
 - Remove ONLY the descriptor from the matrix-2 partial (leave all other fields
   equal): both direct and J migration error for contradictory legacy totals.
   Add a global completion marker to that unmarked mismatch: error too.
+- On an otherwise valid complete 900-row basis staged to fit 901, pass raw
+  Variant arguments 900.5, true, null, "900", NaN and positive/negative infinity
+  directly as `previous_fit`: each returns `error`, null candidate and no requests,
+  with source/RNG unchanged. Also use a complete one-person basis staged to fit 2
+  with raw true, proving bool cannot become an accepted prior fit of 1. Raw 900
+  and 900.0 both yield the same valid pending result. Negative and over-capacity
+  raw numbers error before conversion; pending/legacy validation is not involved.
 - Mutate each descriptor key independently: missing/extra key, null, bool,
   string, fractional/nonfinite, version 0/2, negative basis/target, target differs
   from ledger, B>=T, T>10, wrong row count/count partition/home value, bad
