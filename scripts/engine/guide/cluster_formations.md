@@ -12,6 +12,8 @@ production lifecycle, load, march, damage or render callers.
   accepted infantry substitute; the finite animation samples remain a limit.
 - `migrate_candidate` validates supported save provenance, ownership, raw integral
   numbers, paths, versions, count partitions, identities and measured circles.
+  Circle checks reject wrapped coordinate differences and exclude distant axes
+  before squaring; whole-metre int64 positions remain valid and tangency is legal.
   It deep-copies the entire state without load-time normalization or RNG use.
   Complete worlds receive `military_migration.body_version`; partial legacy
   worlds request placement without inventing a point. Converted battle markers

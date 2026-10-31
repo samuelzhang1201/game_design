@@ -760,3 +760,30 @@ func test_legacy_schema_closure_and_metadata_roundtrips() -> void:
 	f.state.regiments[f.code].erase("body_groups")
 	f.state.regiments[f.code].group_facing = 90
 	_migrate(api, f, "error")
+
+func test_measured_overlap_accepts_distant_int64_coordinates() -> void:
+	var api := _api()
+	var f := _fixture(200)
+	var rows: Array = f.state.regiments[f.code].body_groups
+	var piece := MapObjects.army_piece(f.repo, f.state.army_roster[f.code])
+	var diameter: int = 2 * int(f.repo.unit_footprints[piece].radius_m)
+	for axis: String in ["x_m", "y_m"]:
+		for pair: Array in [[0, 4000000000], [-9223372036854775807, 9223372036854775806],
+				[9223372036854770000, 9223372036854770000 + diameter],
+				[-9223372036854775807, -9223372036854775807 + diameter], [0, diameter]]:
+			rows[0].x_m = 0
+			rows[1].x_m = 0
+			rows[0].y_m = 0
+			rows[1].y_m = 0
+			rows[0][axis] = pair[0]
+			rows[1][axis] = pair[1]
+			var result := _migrate(api, f, "complete")
+			if result.candidate == null: continue
+			assert_eq(api.migrate_candidate(f.repo, result.candidate).candidate.to_dict(), result.candidate.to_dict())
+			var loaded := GameState.from_dict(result.candidate.to_dict(), false)
+			assert_eq(api.migrate_candidate(f.repo, loaded).candidate.to_dict(), loaded.to_dict())
+			if pair[0] == 0:
+				assert_eq(api.migrate_candidate(f.repo, _json(result.candidate)).candidate.to_dict(), result.candidate.to_dict())
+		rows[0][axis] = 0
+		rows[1][axis] = diameter - 1
+		_migrate(api, f, "error")

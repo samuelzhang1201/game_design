@@ -214,7 +214,12 @@ static func _migration(repo: DataRepository, source: GameState, reconciled: Stri
 			var b: Dictionary = envelopes[j]
 			var dx: int = a.x - b.x
 			var dy: int = a.y - b.y
+			# A wrapped difference has the opposite sign to the coordinate ordering.
+			if (a.x >= b.x and dx < 0) or (a.x < b.x and dx >= 0): continue
+			if (a.y >= b.y and dy < 0) or (a.y < b.y and dy >= 0): continue
 			var radius: int = a.radius + b.radius
+			# Only differences within the measured diameters reach the integer squares.
+			if dx >= radius or dx <= -radius or dy >= radius or dy <= -radius: continue
 			if dx * dx + dy * dy < radius * radius: return _failure("Measured bodies overlap: %s / %s" % [a.unit, b.unit])
 	for battle: Dictionary in candidate.battles:
 		if _live(battle) and battle.att.is_empty() and battle.def.is_empty():
