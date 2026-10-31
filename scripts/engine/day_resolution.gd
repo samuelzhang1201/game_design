@@ -171,4 +171,5 @@ static func body_march_incompatibility_reason(tx: Dictionary) -> String:
 	if not tx.get("march_entries") is Dictionary or not tx.get("march_budgets") is Dictionary \
 		or not tx.get("marching_codes") is Array or not tx.get("journal") is Dictionary:
 		return "Missing frozen march inputs"
+	if not tx.journal.get("arrivals") is Array: return "Invalid frozen march arrival journal"
 	return ""

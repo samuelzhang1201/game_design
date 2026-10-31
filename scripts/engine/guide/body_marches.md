@@ -29,3 +29,12 @@ no-ops; stale, forged or inconsistent controls reject without source/RNG changes
 A completed candidate day remains frozen; this API neither eats the base meal
 nor advances the calendar. Candidate acceptance does not certify production
 boot/load, placement, battle, rendering or the remaining P4 acceptance.
+
+Pursuit limits clip the desired slice, while the full received route determines
+remaining waypoints and actual arrival. The pursuit helper's boundary reason is
+forwarded only when the shared anchor reaches that boundary; an earlier body
+reservation cannot claim it. Adjacent duplicate waypoints contribute no leg or off-route progress.
+After any committed slice, including a completed day, the inner receipt must
+name today's preceding slice. Only the initial cursor may retain an older day's
+priority. The frozen journal must already contain an arrivals array; malformed
+journals fail before planning or payment and are never repaired in place.

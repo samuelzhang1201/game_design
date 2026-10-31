@@ -2285,6 +2285,7 @@ static func _body_source_error(repo: DataRepository, state: GameState) -> String
 	if state.military_migration.has("body_motion"):
 		if not BodyMotion._saved_ok(raw): return "Invalid inner motion receipt"
 		if int(raw.abs_day) > int(control.abs_day): return "Future inner motion receipt"
+		if int(control.next_substep) > 0 and int(raw.abs_day) != int(control.abs_day): return "Inner motion day disagrees with outer march cursor"
 		if int(raw.abs_day) == int(control.abs_day):
 			if int(control.next_substep) == 0 or int(raw.substep) != int(control.next_substep) - 1:
 				return "Inner motion receipt disagrees with outer march cursor"
@@ -2415,12 +2416,19 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 	var intents: Array = []
 	var units: Array = []
 	var requests := {}
+	var pursuit_limits := {}
 	for code: String in codes:
 		var current := _entry_of(candidate, code)
 		var saved: Dictionary = tx.march_entries[code].duplicate(true)
 		var here: Array = [int(current.x_m), int(current.y_m)]
 		var path: Array = [here]
 		for point: Vector2i in _path_of(saved): path.append([point.x, point.y])
+		# Full-route projection shares the real planner's local arithmetic bound.
+		for point: Array in path:
+			if absf(BodyMotion._difference(point[0], here[0])) > BodyMotion.LOCAL_LIMIT or absf(BodyMotion._difference(point[1], here[1])) > BodyMotion.LOCAL_LIMIT:
+				return {"error": "Received route exceeds safe local sweep range"}
+		# A slice limit clips intents, not the received route remaining after movement.
+		requests[code] = path.duplicate(true)
 		var budget := int(tx.march_budgets[code])
 		var step := 0
 		var allowed: bool = saved.get("order") == ORDER_MARCH and not bool(current.get("captured", false)) \
@@ -2440,8 +2448,9 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 				for point: Vector2i in walked.passed: path.append([point.x, point.y])
 				path.append([walked.at.x, walked.at.y])
 				step = mini(step, BodyMotion._length(path))
+				if not String(walked.pursuit_reason).is_empty():
+					pursuit_limits[code] = {"at": path.back(), "reason": walked.pursuit_reason}
 		if step < 0 or step > BodyMotion.LOCAL_LIMIT: return {"error": "Unsafe slice budget"}
-		requests[code] = path
 		for body: Dictionary in UnitBodies.rows(repo, candidate, code):
 			var translated: Array = []
 			for point: Array in path:
@@ -2505,7 +2514,9 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 				current.route_m = MarchRoute.to_pairs(route_m_of(repo, Vector2i(current.x_m, current.y_m),
 					MarchRoute.from_pairs(current.get("waypoints_m", [])), Vector2i(current.dest_x_m, current.dest_y_m)))
 		if not bool(current.get("battle_retreat", false)) and int(current.get("disengaging", 0)) != 1:
-			if BattleTaskSystem.credit_pursuit(repo, after, code, int(row.used_m)): _retire_saved_march(saved, current)
+			var limit: Dictionary = pursuit_limits.get(code, {})
+			var reason: String = limit.reason if not limit.is_empty() and common.back() == limit.at else ""
+			if BattleTaskSystem.credit_pursuit(repo, after, code, int(row.used_m), reason): _retire_saved_march(saved, current)
 		row.entry_after = current.duplicate(true)
 		row.saved_entry_after = saved.duplicate(true)
 		var anchor_error := _body_path_terrain(MarchPath.of_pack(repo), common, 0)
@@ -2528,6 +2539,7 @@ static func _body_route_prefix(path: Array, travelled: Array) -> Array:
 		for i: int in range(1, path.size()):
 			var ax: int = int(path[i][0]) - int(path[i - 1][0])
 			var ay: int = int(path[i][1]) - int(path[i - 1][1])
+			if ax == 0 and ay == 0: continue
 			var px: int = int(point[0]) - int(path[i - 1][0])
 			var py: int = int(point[1]) - int(path[i - 1][1])
 			if px * ay != py * ax or px * ax + py * ay < 0 or px * ax + py * ay > ax * ax + ay * ay: continue
@@ -2542,7 +2554,7 @@ static func _body_route_prefix(path: Array, travelled: Array) -> Array:
 
 static func _body_remaining(path: Array, prefix: Array) -> Array:
 	var index := prefix.size() - 1
-	if index < path.size() and prefix.back() == path[index]: index += 1
+	while index < path.size() and prefix.back() == path[index]: index += 1
 	return path.slice(index).duplicate(true)
 
 static func _body_terrain_error(repo: DataRepository, state: GameState, moves: Array) -> String:

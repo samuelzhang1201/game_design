@@ -652,3 +652,155 @@ func test_repeated_route_points_do_not_grant_untravelled_loop_progress() -> void
 	assert_eq(p.units[0].used_m, 0)
 	assert_eq(p.units[0].anchor_path_m, [[50000, 50000]], "already standing at a later route point cannot spend free route metres")
 	assert_eq(p.units[0].saved_entry_after.route_m, entry.route_m)
+
+func _pursuit(f: Dictionary, limit: int) -> void:
+	f.state.unit_tasks[f.code] = {"current_id": "review:pursuit", "orders": {"review:pursuit": {
+		"status": "received", "history": [], "request": {"task": "pursue", "target_unit": "observed:unit", "source": "king",
+			"max_route_m": limit, "region": ""}, "pursuit": {"route_m": 0}, "track": {"phase": "follow"}}}}
+
+func _assert_candidate_error(result: Dictionary) -> void:
+	assert_eq(result.keys().size(), 4, "all public failures retain the closed wire shape")
+	assert_true(result.has("status"))
+	if not result.has("status"): return
+	assert_eq(result.status, "error", str(result))
+	assert_false(result.reason.is_empty())
+	assert_null(result.candidate)
+	assert_eq(result.plan, {})
+
+func test_review_pursuit_preserves_full_route_through_slices_corners_and_blocking() -> void:
+	var f := _fixture([100])
+	_pursuit(f, 10000)
+	var state := _begin(f, 1000)
+	for slice: int in 3:
+		var result := _commit(f, state, _plan(f, state))
+		state = _json(result.candidate)
+		assert_eq(state.regiments[f.code].x_m, 50100 + slice * 100)
+		assert_eq(state.regiments[f.code].order, ArmySystem.ORDER_MARCH)
+		assert_eq(state.day_resolution.march_entries[f.code].route_m, [[60000, 50000]])
+		assert_eq(result.plan.arrivals, [])
+		assert_eq(BattleTaskSystem.current(state, f.code).pursuit.route_m, (slice + 1) * 100)
+	f = _fixture([100])
+	f.state.regiments[f.code].route_m = [[50300, 50000], [50300, 50400]]
+	f.state.regiments[f.code].dest_x_m = 50300
+	f.state.regiments[f.code].dest_y_m = 50400
+	_pursuit(f, 10000)
+	state = _begin(f, 1000)
+	for slice: int in 7:
+		var result := _commit(f, state, _plan(f, state))
+		state = _json(result.candidate)
+		assert_eq(result.plan.arrivals, [f.code] if slice == 6 else [])
+		assert_eq(BattleTaskSystem.current(state, f.code).pursuit.route_m, (slice + 1) * 100)
+		assert_eq(state.regiments[f.code].order, ArmySystem.ORDER_GARRISON if slice == 6 else ArmySystem.ORDER_MARCH)
+	assert_eq([state.regiments[f.code].x_m, state.regiments[f.code].y_m], [50300, 50400])
+	f = _fixture([100, 100])
+	var wall: Dictionary = f.state.regiments[f.codes[1]]
+	wall.order = ArmySystem.ORDER_GARRISON
+	var ra := int(f.repo.unit_footprints[MapObjects.army_piece(f.repo, f.state.army_roster[f.code])].radius_m)
+	var rb := int(f.repo.unit_footprints[MapObjects.army_piece(f.repo, f.state.army_roster[f.codes[1]])].radius_m)
+	wall.body_groups[0].x_m = 50000 + ra + rb + 50
+	wall.body_groups[0].y_m = 50000
+	_pursuit(f, 10000)
+	state = _begin(f, 1000)
+	var total := 0
+	for slice: int in 2:
+		var result := _commit(f, state, _plan(f, state))
+		total += int(result.plan.units[0].used_m)
+		state = result.candidate
+		assert_eq(result.plan.arrivals, [])
+		assert_eq(state.regiments[f.code].order, ArmySystem.ORDER_MARCH)
+		assert_eq(state.day_resolution.march_entries[f.code].route_m, [[60000, 50000]])
+		assert_eq(BattleTaskSystem.current(state, f.code).pursuit.route_m, total)
+	assert_true(total <= 50)
+
+func test_review_duplicate_adjacent_points_never_credit_off_route_side_legs() -> void:
+	var prefix := ArmySystem._body_route_prefix([[0, 0], [0, 0], [10, 0]], [[0, 0], [0, 5], [10, 5], [10, 0]])
+	assert_eq(prefix.back(), [10, 0])
+	assert_eq(ArmySystem._body_remaining([[0, 0], [0, 0], [10, 0]], [[0, 0]]), [[10, 0]], "already-reached zero legs are not remaining travel")
+	for point: Array in prefix: assert_eq(point[1], 0)
+	var f := _fixture([100, 100])
+	_set_route(f, 0, [45000, 60000], [55000, 60000])
+	_set_route(f, 1, [55000, 60000], [45000, 60000])
+	for code: String in f.codes:
+		var entry: Dictionary = f.state.regiments[code]
+		entry.route_m.push_front([entry.x_m, entry.y_m])
+	var state := _begin(f, 500000)
+	var p := _plan(f, state)
+	assert_true(p.motion.moves.any(func(m: Dictionary) -> bool: return m.path_m.size() > 2), "use a real planner avoidance route")
+	for row: Dictionary in p.units:
+		for point: Array in row.anchor_path_m: assert_eq(point[1], 60000, "anchor must rejoin the requested route")
+		var entry: Dictionary = state.day_resolution.march_entries[row.unit]
+		var original: Array = [[entry.x_m, entry.y_m]] + entry.route_m
+		assert_eq(row.saved_entry_after.get("route_m", []), ArmySystem._body_remaining(original, row.anchor_path_m))
+	_commit(f, state, p)
+
+func test_review_inner_receipt_day_matches_noninitial_and_completed_outer_cursor() -> void:
+	var f := _fixture([1])
+	var state := _begin(f)
+	var first := _commit(f, state, _plan(f, state))
+	state = first.candidate
+	var previous_day := UnitBodies._copy(state)
+	previous_day.day_resolution = {}
+	previous_day.day += 1
+	var engine := TickEngine.new(f.repo)
+	var resumed := engine.begin_body_march_candidate(_json(previous_day))
+	assert_eq(resumed.status, "complete", resumed.reason)
+	assert_eq(engine.step_body_march_candidate(resumed.candidate).status, "complete", "initial cursor accepts a legitimate prior-day receipt")
+	for boundary: int in [1, 10]:
+		while int(state.day_resolution.body_march.next_substep) < boundary:
+			state = _commit(f, state, _plan(f, state)).candidate
+		for roundtrip: bool in [false, true]:
+			var bad := UnitBodies._copy(state)
+			bad.military_migration.body_motion.abs_day = str(bad.absolute_day() - 1)
+			if roundtrip: bad = _json(bad)
+			var before := bad.to_dict()
+			_assert_candidate_error(engine.step_body_march_candidate(bad))
+			_assert_candidate_error(ArmySystem.commit_body_march_candidate(f.repo, bad, first.plan))
+			assert_eq(bad.to_dict(), before)
+
+func test_review_missing_or_malformed_arrival_journal_rejects_all_entries() -> void:
+	var f := _fixture([1])
+	var state := _begin(f)
+	var plan := _plan(f, state)
+	for journal: Dictionary in [{}, {"arrivals": null}, {"arrivals": 1}, {"arrivals": {}}, {"arrivals": false}]:
+		for roundtrip: bool in [false, true]:
+			var bad := UnitBodies._copy(state)
+			bad.day_resolution.journal = journal.duplicate(true)
+			if roundtrip: bad = _json(bad)
+			var before := bad.to_dict()
+			assert_false(DayResolution.body_march_incompatibility_reason(bad.day_resolution).is_empty())
+			_assert_candidate_error(TickEngine.new(f.repo).begin_body_march_candidate(bad))
+			_assert_candidate_error(ArmySystem.plan_body_march_candidate(f.repo, bad))
+			_assert_candidate_error(ArmySystem.commit_body_march_candidate(f.repo, bad, plan))
+			_assert_candidate_error(TickEngine.new(f.repo).step_body_march_candidate(bad))
+			assert_eq(bad.to_dict(), before, "invalid frozen journal is neither repaired nor partially committed")
+
+func test_review_region_limit_is_a_bound_not_a_destination_arrival() -> void:
+	var f := _fixture([1])
+	var provinces: Array = f.repo.province_borders.keys()
+	provinces.sort()
+	var province: String = provinces[0]
+	var scale := float(ArmySystem.metres_per_pack_px(f.repo))
+	f.repo.province_borders[province] = [PackedVector2Array([
+		Vector2(49000 / scale, 49000 / scale), Vector2(51000 / scale, 49000 / scale),
+		Vector2(51000 / scale, 51000 / scale), Vector2(49000 / scale, 51000 / scale)])]
+	f.state.manor_province = {}
+	_pursuit(f, 10000)
+	f.state.unit_tasks[f.code].orders["review:pursuit"].request.region = province
+	var state := _begin(f, 20000)
+	var result := _commit(f, state, _plan(f, state))
+	assert_eq(result.candidate.regiments[f.code].x_m, 51000)
+	assert_eq(result.plan.arrivals, [], "reaching a pursuit bound is not arrival at the received destination")
+	var record := BattleTaskSystem.current(result.candidate, f.code)
+	assert_eq(record.status, "bounded")
+	assert_eq(record.reason, "Pursuit reached its region's edge")
+
+func test_pursuit_full_route_keeps_motion_numerical_range_guard() -> void:
+	var f := _fixture([1])
+	_pursuit(f, 10000)
+	f.state.regiments[f.code].dest_x_m = -2147483648
+	f.state.regiments[f.code].dest_y_m = -2147483648
+	f.state.regiments[f.code].route_m = [[-2147483648, -2147483648]]
+	var state := _begin(f, 1000)
+	var before := state.to_dict()
+	_assert_candidate_error(TickEngine.new(f.repo).step_body_march_candidate(state))
+	assert_eq(state.to_dict(), before, "clipping a pursuit intent cannot hide an unsafe full-route projection")
