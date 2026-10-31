@@ -186,6 +186,8 @@ var task_kinds: Dictionary = {}
 var task_words: Dictionary = {}
 ## data/army/army_clearance.csv (R-A): arm -> the clearance radius in whole metres.
 var army_clearance: Dictionary = {}
+## CF01 calibrated circles and fixed ten-home extents, in simulation metres.
+var unit_footprints: Dictionary = {}
 ## data/army/army_camp_blocked.csv: terrain -> true where no unit makes camp (ArmyGround).
 var army_camp_blocked: Dictionary = {}
 ## data/army/army_speed.csv: arm -> km a day (int), the arm's own march
@@ -1157,6 +1159,14 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(table_path(dir, "task_words"), ["key", "text"],
 			func(r): task_words[String(r["key"])] = String(r["text"])):
+		return false
+	if not _load_if_present(table_path(dir, "unit_footprints"),
+			["arm", "radius_m", "pitch_m", "width_m", "depth_m", "files", "ranks"],
+			func(r):
+				var row: Dictionary = r.duplicate()
+				for key: String in ["radius_m", "pitch_m", "width_m", "depth_m", "files", "ranks"]:
+					row[key] = int(r[key])
+				unit_footprints[String(r.arm)] = row):
 		return false
 	if not _load_if_present(table_path(dir, "army_clearance"), ["arm", "clear_m"],
 			func(r): army_clearance[String(r["arm"])] = int(r["clear_m"])):

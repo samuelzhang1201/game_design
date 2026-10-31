@@ -474,6 +474,8 @@ const SAVE_VERSION := 7
 ## The oldest save this build loads (spec 2026-10-07-army-split-and-ground
 ## §2.3): a save from before the split names regiments that no longer exist.
 const MIN_SAVE_VERSION := 6
+## Provenance for explicit candidate validation, with no production activation.
+var loaded_save_version: int = SAVE_VERSION
 
 func to_dict() -> Dictionary:
 	var chars := {}
@@ -576,6 +578,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 			% [int(d.get("version", 1)), SAVE_VERSION])
 		return null
 	var s := GameState.new()
+	s.loaded_save_version = int(d.get("version", 1))
 	s.day_resolution = _decode_values(d.get("day_resolution", {}))
 	s.military_rosters = _whole(d.get("military_rosters", {}))
 	s.military_cohorts = _whole(d.get("military_cohorts", {}))
@@ -602,6 +605,11 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 		s.military_rosters = _decode_values(d.get("military_rosters", {}))
 		s.military_cohorts = _decode_values(d.get("military_cohorts", {}))
 		s.military_events = _decode_values(d.get("military_events", {}))
+	# Normalize integral JSON markers, preserving corrupt raw values for candidate validation.
+	if (d.get("military_migration", {}) as Dictionary).has("body_version"):
+		var marker: Variant = _decode_values(d.military_migration.body_version)
+		s.military_migration.body_version = int(marker) if (marker is int or marker is float) \
+			and is_finite(float(marker)) and float(marker) == float(int(marker)) else marker
 	s.map_id = String(d.get("map_id", ""))
 	s.tick = int(_decode_values(d["tick"]))
 	s.day = clampi(int(_decode_values(d.get("day", 1))), 1, Calendar.DAYS_PER_TICK)
@@ -668,6 +676,21 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.foes = _decode_values(d.get("foes", {}))
 	s.ai_hosts = _decode_values(d.get("ai_hosts", {}))
 	s.battles = _decode_values(d.get("battles", []))
+	# Opt-in body validation must see corrupt fit values before legacy rounding.
+	var body_schema := s.military_migration.has("body_version")
+	for units: Dictionary in [s.regiments, s.foes]:
+		for entry: Variant in units.values():
+			if entry is Dictionary and (entry.has("body_groups") or entry.has("body_reconciliation")):
+				body_schema = true
+	for battle: Variant in s.battles:
+		if battle is Dictionary and battle.has("body_version"): body_schema = true
+	if body_schema:
+		var raw_cohorts: Dictionary = _decode_values(d.get("military_cohorts", {}))
+		for id: Variant in raw_cohorts:
+			if raw_cohorts[id] is Dictionary and raw_cohorts[id].has("fit"):
+				var fit: Variant = raw_cohorts[id].fit
+				s.military_cohorts[id].fit = int(fit) if fit is float and is_finite(fit) \
+					and fit == float(int(fit)) else fit
 	s.battle_aliases = _whole(d.get("battle_aliases", {}))   # older saves: none merged
 	s.battle_orders = _whole(d.get("battle_orders", {}))
 	s.unit_tasks = _whole(d.get("unit_tasks", {}))

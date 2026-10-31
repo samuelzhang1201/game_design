@@ -1,0 +1,6 @@
+arm,radius_m,pitch_m,width_m,depth_m,files,ranks
+infantry,927,3708,16686,5562,5,2
+archers,932,3728,16776,5592,5,2
+cavalry,804,3216,14472,4824,5,2
+artillery,875,3500,15750,5250,5,2
+royal,749,2996,13482,4494,5,2

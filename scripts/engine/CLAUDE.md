@@ -4,11 +4,12 @@ The root `CLAUDE.md`'s invariants rule here first: deterministic, `RefCounted`, 
 
 ## Topic guides (read the one you need BEFORE editing its code)
 
-These topics' rules live in `guide/` beside this file, which Claude Code does NOT load on its own — open the guide when the task touches its topic:
+Topic rules live in `guide/` and are not loaded automatically. Read the relevant guide BEFORE editing its classes:
 
 - `scripts/engine/guide/area_tasks.md` — received search travel (`ArmyTasks`, `TaskCoverage`, `MarchPath`)
 - `scripts/engine/guide/regiments.md` — regiments and their march (`ArmySystem`)
 - `scripts/engine/guide/battle_deployment.md` — tactics (`BattleFormation`, `BattleRules`, `BattleTaskSystem`, `UnitGait`, `BattleOrders`, `BattleStrength`)
+- `scripts/engine/guide/cluster_formations.md` — `UnitBodies`.
 - `scripts/engine/guide/battle_groups.md` — groups (`BattleGroups`, `MilitaryReorganization`).
 - `guide/battle_ranged.md` — direct fire (`BattleRanged`).
 - `scripts/engine/guide/battle_charge.md` — actual mounted run-up, impact, disengagement and saved regrouping (`BattleCharge`, `BattleGroups`, `BattleSystem`)
