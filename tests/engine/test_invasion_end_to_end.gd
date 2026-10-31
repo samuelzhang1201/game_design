@@ -114,6 +114,9 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 				homeward_before[code] = {"at": Vector2i(int(entry["x_m"]), int(entry["y_m"])),
 					"can_march": CampSystem.can_march(s, code, today)}
 		Play.day(engine, s, true)
+		# main_fought includes continuing physical contact when neither side attacks again.
+		if _main_in_contact(s, main) and not today in seen["main_fought"]:
+			seen["main_fought"].append(today)
 		for code: String in homeward_before:
 			var entry: Dictionary = s.foes[code]
 			var at := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
@@ -206,6 +209,19 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 		if int(seen["home"]) < 0 and String(s.ai_hosts[main]["mode"]) in EnemyAi.HOMEWARD:
 			seen["home"] = today
 	return seen
+
+
+func _main_in_contact(s: GameState, main: String) -> bool:
+	for battle: Dictionary in s.battles:
+		for side: String in BattleSystem.SIDES:
+			var opposition: Array = (battle["def" if side == "att" else "att"] as Array).filter(
+				func(c: String) -> bool: return BattleSystem._can_fight(repo, s, c))
+			for code: String in battle[side]:
+				if String(s.foes.get(code, {}).get("host", "")) == main \
+						and BattleSystem._can_fight(repo, s, code) \
+						and not BattleSystem._separated(repo, s, code, opposition):
+					return true
+	return false
 
 
 ## The war's state in memory holds no float (it is saved whole).
