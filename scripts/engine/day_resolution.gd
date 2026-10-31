@@ -45,6 +45,10 @@ static func begin(day: int, month_end: bool, absolute_day := -1,
 ## Refuse to resume a transaction whose saved execution protocol this build
 ## cannot interpret. Never silently run it with today's phase ordering.
 static func incompatibility_reason(tx: Dictionary) -> String:
+	if tx.has("body_march"): return "Candidate body march requires its explicit consumer"
+	return _protocol_error(tx)
+
+static func _protocol_error(tx: Dictionary) -> String:
 	if not tx.has("protocol_version"):
 		return "" if String(tx.get("phase", "")) in ["prepare", "encounters", "battles", "finish"] else "unsupported legacy day phase"
 	for field: String in ["protocol_version", "substep_protocol_version", "substep_count", "phase_cursor", "substep_index", "battle_index"]:
@@ -139,3 +143,32 @@ static func block_on_encounter(tx: Dictionary, battle_id: int) -> Dictionary:
 		"substep_index": int(tx["substep_index"]), "choices": ["continue"], "selected": ""}
 	tx["pending_decision"] = pending
 	return pending
+
+## Candidate-only MARCH protocol. Raw decimal strings survive legacy save rounding.
+static func body_march_incompatibility_reason(tx: Dictionary) -> String:
+	var error := _protocol_error(tx)
+	if not error.is_empty(): return error
+	if int(tx.get("protocol_version", 0)) != 4 or tx.phase != "FIXED_TACTICAL_SUBSTEPS" \
+		or tx.battle_step != "" or not tx.pending_decision.is_empty() or not tx.substep_battle_ids.is_empty(): return "Candidate requires an idle v4 MARCH boundary"
+	for key: String in ["day", "absolute_day"]:
+		if not _whole_cursor(tx.get(key)): return "Invalid candidate day"
+	var control: Variant = tx.get("body_march")
+	if not control is Dictionary or not BodyMotion._keys(control, ["version", "abs_day", "next_substep", "substep_count", "last"]):
+		return "Invalid body march control schema"
+	if control.version != "1": return "Unsupported body march version"
+	for field: String in ["abs_day", "next_substep", "substep_count"]:
+		if not BodyMotion._decimal(control[field]): return "Invalid raw body march cursor: " + field
+	var next := int(control.next_substep)
+	if int(control.abs_day) != int(tx.absolute_day) or next != int(tx.substep_index) \
+		or int(control.substep_count) != int(tx.substep_count): return "Body march cursor disagrees with day header"
+	if not control.last is Dictionary: return "Invalid body march receipt"
+	var last: Dictionary = control.last
+	if next == 0:
+		if not last.is_empty(): return "Unexpected initial body march receipt"
+	elif not BodyMotion._keys(last, ["substep", "receipt"]) or not BodyMotion._decimal(last.substep) \
+		or int(last.substep) != next - 1 or not last.receipt is String or not BodyMotion._digest(last.receipt):
+		return "Missing or inconsistent body march receipt"
+	if not tx.get("march_entries") is Dictionary or not tx.get("march_budgets") is Dictionary \
+		or not tx.get("marching_codes") is Array or not tx.get("journal") is Dictionary:
+		return "Missing frozen march inputs"
+	return ""
