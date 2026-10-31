@@ -78,13 +78,10 @@ below. Otherwise remove the descriptor, return `complete`, and retain completion
 markers only if the entire world is complete. Zero fit has no rows and does not
 shrink the measured footprint or the ten-home query.
 
-An initialized complete unit has homes 0..row_count-1 in saved row order for this
-operation. This makes the prescribed tail-only survival and missing-home request
-unambiguous. A complete source with another valid home ordering may still be
-queried/migrated/transferred under #188, but reconciliation returns a causal
-`error` without rearranging it. Later placement must use canonical home order;
-if actual required fixtures demand other orderings, stop for a bounded amendment
-rather than silently accepting an ambiguous reconciliation rule.
+Retained rows keep their existing unique homes, even if these are not a prefix
+or not in numeric order. Select missing homes as the lowest unused values in
+0..9 until target_row_count is reached, then sort the request. This selects local
+layout identifiers only, never world coordinates; no existing home is reassigned.
 
 Before changing anything, validate versions and all present row/control structure.
 If a pending day/round exists, use its saved frozen personnel/group-size rules,
@@ -120,7 +117,7 @@ integers, `version` is exactly integer 1, no unknown keys, nulls, booleans,
 strings, fractional or nonfinite values. The descriptor exists only if the target
 requires strictly more rows than the basis. Let `B = ceil(basis_fit / group_size)`
 and `T = ceil(target_fit / group_size)`, with zero producing zero rows.
-Require `0 <= B < T <= 10`; exactly B present rows; homes in order 0..B-1;
+Require `0 <= B < T <= 10`; exactly B present rows; unique homes in 0..9;
 row i's count exactly the i-th canonical TARGET count; unique nonnegative stable
 slots, valid counter strictly above all present slots, and every other #188
 current row/path/role/facing/geometry validation. Zero-row basis requires a
@@ -162,7 +159,8 @@ repo-validated complete world with no pending descriptor anywhere.
 Existing legacy missing-pose requests retain their reasons/shapes unchanged.
 Add exactly `reason: "reconciliation_requires_pose"` for this variant, retaining
 #188's exact request fields, saved anchor/facing and unit/battle sort order.
-Missing homes are B..T-1. Existing points constrain future placement. That future
+Missing homes are the lowest T-B unused homes in 0..9, sorted. Existing points
+constrain future placement. That future
 separately contracted placement transaction allocates only fresh slots from the
 counter, validates the whole world and clears the descriptor only on complete
 success. Foundation has no placement writer/stub; no room means later placement
@@ -197,7 +195,9 @@ Matrix 2 (`test_counts_survivors_and_retired_slots`):
 4. Repeat operation boundaries for 1000/901/900/1/0 with hand-computed
    10/10/9/1/0 rows. Include growth 1→1000 (one retained row now count 100,
    nine missing homes) and 0→1 (zero existing rows, home [0] missing), casualty
-   901→1 and 1→0, same-fit no-op. No pending result is used as a complete input.
+   901→1 and 1→0, same-fit no-op. No pending result is used as a complete input. Include complete rows with
+   non-prefix/out-of-order homes: survivor homes stay exact, and missing homes
+   follow the lowest-unused rule rather than moving existing homes.
 
 Matrix 3 (`test_candidate_migration_isolated_and_idempotent`):
 
@@ -217,7 +217,7 @@ Matrix 5 (`test_malformed_is_not_legacy`):
   Add a global completion marker to that unmarked mismatch: error too.
 - Mutate each descriptor key independently: missing/extra key, null, bool,
   string, fractional/nonfinite, version 0/2, negative basis/target, target differs
-  from ledger, B>=T, T>10, wrong row count/count partition/home order, bad
+  from ledger, B>=T, T>10, wrong row count/count partition/home value, bad
   counter, absent body store, missing converted battle marker, unsupported
   group-size metadata or global completion marker: each direct and J-representable
   malformed case errors. Nonfinite raw values are tested before JSON, since
@@ -247,7 +247,7 @@ Matrix 5 (`test_malformed_is_not_legacy`):
   repo-precondition and freeze requirements retained; pending variant prohibited.
 - **Body schema / serialization:** exact-sum remains mandatory for complete rows;
   reconciliation input and serialized pending prefix are explicit exceptions.
-  Add one unit descriptor, canonical home order for reconciliation and new
+  Add one unit descriptor, explicit missing-home selection and new
   request reason. Stable IDs/counter, current counts, footprint and paths stay.
   Global marker completeness retained; converted battle marker meaning narrowed
   to schema, with validated pending-member exception. Save constants stay 7/6.
