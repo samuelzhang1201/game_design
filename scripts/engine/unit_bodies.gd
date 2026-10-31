@@ -42,6 +42,30 @@ static func home_slots(repo: DataRepository, state: GameState, unit: String) -> 
 static func migrate_candidate(repo: DataRepository, source: GameState) -> Dictionary:
 	return _migration(repo, source)
 
+## Validation only: never erase the frozen transaction or materialize a missing row.
+static func validate_march_candidate(repo: DataRepository, source: GameState, boundary: Dictionary) -> Dictionary:
+	if repo == null or source == null: return _failure("March validation requires data and source")
+	if not BodyMotion._keys(boundary, ["version", "abs_day", "substep"]): return _failure("Invalid march boundary schema")
+	for key: String in ["version", "abs_day", "substep"]:
+		if not BodyMotion._natural(boundary[key]): return _failure("Invalid raw march boundary")
+	if int(boundary.version) != 1: return _failure("Unsupported march boundary")
+	var error := DayResolution.body_march_incompatibility_reason(source.day_resolution)
+	if not error.is_empty(): return _failure(error)
+	var control: Dictionary = source.day_resolution.body_march
+	if int(boundary.abs_day) != source.absolute_day() or int(boundary.abs_day) != int(control.abs_day) \
+		or (int(boundary.substep) != int(control.next_substep) and int(boundary.substep) != int(control.next_substep) - 1):
+		return _failure("March boundary disagrees with saved cursor")
+	if not source.military_migration.has("body_version"): return _failure("March requires explicitly initialized current bodies")
+	for code: String in source.regiments.keys() + source.foes.keys():
+		if _entry(source, code).has("body_reconciliation"): return _failure("March cannot consume pending reconciliation")
+	var index := _owners(source)
+	if not index.error.is_empty(): return _failure(index.error)
+	for battle: Dictionary in source.battles:
+		if _live(battle) and not battle.get("pending_round", {}).is_empty(): return _migration(repo, source)
+	var validated := _migration(repo, source, "", 0, true)
+	if validated.status != "complete": return validated
+	return _result("complete", "Validated exact frozen MARCH candidate", _copy(source))
+
 static func reconcile_candidate(repo: DataRepository, source: GameState, unit: String, previous_fit: Variant) -> Dictionary:
 	if repo == null or source == null: return _failure("Reconciliation requires data and source")
 	var size := int(repo.bal("battle_group_size"))
@@ -73,7 +97,7 @@ static func reconcile_candidate(repo: DataRepository, source: GameState, unit: S
 	# Reuse the same pending/complete validator; it cannot stage personnel twice.
 	return _migration(repo, candidate)
 
-static func _migration(repo: DataRepository, source: GameState, reconciled: String = "", previous_fit: int = 0) -> Dictionary:
+static func _migration(repo: DataRepository, source: GameState, reconciled: String = "", previous_fit: int = 0, march_boundary: bool = false) -> Dictionary:
 	if repo == null or source == null: return _failure("Migration requires data and source state")
 	if source.loaded_save_version < GameState.MIN_SAVE_VERSION or source.loaded_save_version > GameState.SAVE_VERSION:
 		return _failure("Unsupported source save version")
@@ -85,7 +109,7 @@ static func _migration(repo: DataRepository, source: GameState, reconciled: Stri
 	for battle: Dictionary in source.battles:
 		if BattleGroups.saved_size(repo, battle) <= 0:
 			return _failure("Invalid saved battle group size/version")
-	var frozen := _frozen(source)
+	var frozen := _frozen(source) and not march_boundary
 	var current := source.military_migration.has("body_version")
 	var candidate := _copy(source)
 	var requests: Array[Dictionary] = []

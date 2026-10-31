@@ -7,11 +7,13 @@ const LOCAL_LIMIT: int = 67108864
 const INT_MIN: int = -9223372036854775807 - 1
 const INT_MAX: int = 9223372036854775807
 
-static func plan(repo: DataRepository, state: GameState, intents: Array, abs_day: int, substep: int) -> Dictionary:
+static func plan(repo: DataRepository, state: GameState, intents: Array, abs_day: int, substep: int, march_boundary: Dictionary = {}) -> Dictionary:
 	if repo == null or state == null or abs_day < 0 or substep < 0: return _error("Invalid motion source/cursor")
-	var validated := UnitBodies.migrate_candidate(repo, state)
+	var validated := _validate(repo, state, march_boundary)
 	if validated.status != "complete": return _error("Motion requires complete unfrozen bodies: " + validated.reason)
 	if not state.military_migration.has("body_version"): return _error("Motion requires explicitly initialized current bodies")
+	if not march_boundary.is_empty() and (int(march_boundary.abs_day) != abs_day or int(march_boundary.substep) != substep):
+		return _error("Motion cursor disagrees with explicit boundary")
 	var raw_saved: Variant = state.military_migration.get("body_motion", {})
 	var saved := _read_saved(raw_saved)
 	if state.military_migration.has("body_motion") and not _saved_ok(raw_saved): return _error("Invalid saved motion cursor")
@@ -32,6 +34,10 @@ static func plan(repo: DataRepository, state: GameState, intents: Array, abs_day
 			var body := {"unit": unit, "slot": int(row.slot), "radius": radius,
 				"realm": str(state.army_roster[unit].get("kingdom_code", "")),
 				"path_m": [[int(row.x_m), int(row.y_m)]], "budget_m": 0, "hostile": false}
+			if not march_boundary.is_empty():
+				body.enemies = []
+				for other: String in codes:
+					if ArmySystem._body_enemies(repo, state, unit, other): body.enemies.append(other)
 			lookup[_id(body)] = bodies.size()
 			bodies.append(body)
 	var ordered: Array[Dictionary] = []
@@ -116,17 +122,19 @@ static func plan(repo: DataRepository, state: GameState, intents: Array, abs_day
 	blocked.sort_custom(_less)
 	return {"moves": moves, "blocked": blocked, "reasons": reasons,
 		"cursor": {"version": 1, "abs_day": abs_day, "substep": substep,
-			"basis": _hash([state.to_dict(), repo.unit_footprints, attempts, clearance]), "intents": canonical_intents, "priority": next_priority}}
+			"basis": _hash([state.to_dict(), repo.unit_footprints, attempts, clearance, march_boundary, repo.world_table("political", "diplomacy") if not march_boundary.is_empty() else {}]), "intents": canonical_intents, "priority": next_priority}}
 
-static func commit(repo: DataRepository, state: GameState, proposed: Dictionary) -> Dictionary:
+static func commit(repo: DataRepository, state: GameState, proposed: Dictionary, march_boundary: Dictionary = {}) -> Dictionary:
 	if repo == null or state == null or not _keys(proposed, ["moves", "blocked", "reasons", "cursor"]) or not proposed.cursor is Dictionary:
 		return _failure("Invalid plan schema")
 	var cursor: Dictionary = proposed.cursor
 	if not _keys(cursor, ["version", "abs_day", "substep", "basis", "intents", "priority"]) \
 		or not _natural(cursor.version) or int(cursor.version) != 1 or not _natural(cursor.abs_day) or not _natural(cursor.substep) \
 		or not cursor.basis is String or not cursor.intents is Array or not _priority_ok(cursor.priority): return _failure("Invalid plan cursor")
-	var validation := UnitBodies.migrate_candidate(repo, state)
+	var validation := _validate(repo, state, march_boundary)
 	if validation.status != "complete" or not state.military_migration.has("body_version"): return _failure("Commit requires complete unfrozen candidate")
+	if not march_boundary.is_empty() and (int(march_boundary.abs_day) != int(cursor.abs_day) or int(march_boundary.substep) != int(cursor.substep)):
+		return _failure("Motion cursor disagrees with explicit boundary")
 	var raw_saved: Variant = state.military_migration.get("body_motion", {})
 	var saved := _read_saved(raw_saved)
 	if state.military_migration.has("body_motion") and not _saved_ok(raw_saved): return _failure("Invalid saved motion cursor")
@@ -135,7 +143,7 @@ static func commit(repo: DataRepository, state: GameState, proposed: Dictionary)
 		if _older(int(cursor.abs_day), int(cursor.substep), saved): return _failure("Stale plan cursor")
 		if int(cursor.abs_day) == int(saved.abs_day) and int(cursor.substep) == int(saved.substep):
 			return {"status": "complete", "reason": "Already committed"} if receipt == saved.receipt else _failure("Cursor already committed with another plan")
-	var expected := plan(repo, state, cursor.intents, int(cursor.abs_day), int(cursor.substep))
+	var expected := plan(repo, state, cursor.intents, int(cursor.abs_day), int(cursor.substep), march_boundary)
 	if expected.cursor.is_empty() or _hash(expected) != receipt: return _failure("Stale or modified plan")
 	var candidate: GameState = validation.candidate
 	for move: Dictionary in expected.moves:
@@ -150,7 +158,7 @@ static func commit(repo: DataRepository, state: GameState, proposed: Dictionary)
 		saved_priority.append({"unit": identity.unit, "slot": str(int(identity.slot))})
 	candidate.military_migration.body_motion = {"version": "1", "abs_day": str(int(cursor.abs_day)), "substep": str(int(cursor.substep)),
 		"receipt": receipt, "priority": saved_priority}
-	validation = UnitBodies.migrate_candidate(repo, candidate)
+	validation = _validate(repo, candidate, march_boundary)
 	if validation.status != "complete": return _failure("Motion candidate failed final physical validation")
 	# The API's caller owns this isolated candidate; no production dispatcher binds it.
 	state.regiments = candidate.regiments
@@ -172,7 +180,7 @@ static func _clear(index: int, path: Array, bodies: Array[Dictionary]) -> bool:
 static func _friendly_obstacles(index: int, bodies: Array[Dictionary]) -> bool:
 	var own: Dictionary = bodies[index]
 	for other: Dictionary in bodies:
-		if other.realm != own.realm or other.hostile:
+		if (other.unit in own.enemies if own.has("enemies") else other.realm != own.realm) or other.hostile:
 			# Only relevant nearby enemy paths prohibit a friendly local bypass.
 			var reach: float = own.budget_m + other.budget_m + own.radius + other.radius
 			if absf(_difference(own.path_m[0][0], other.path_m[0][0])) <= reach and absf(_difference(own.path_m[0][1], other.path_m[0][1])) <= reach: return false
@@ -381,3 +389,6 @@ static func _error(reason: String) -> Dictionary:
 
 static func _failure(reason: String) -> Dictionary:
 	return {"status": "error", "reason": reason}
+
+static func _validate(repo: DataRepository, state: GameState, boundary: Dictionary) -> Dictionary:
+	return UnitBodies.migrate_candidate(repo, state) if boundary.is_empty() else UnitBodies.validate_march_candidate(repo, state, boundary)
