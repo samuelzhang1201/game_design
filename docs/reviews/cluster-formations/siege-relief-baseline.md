@@ -1,6 +1,6 @@
 # CF-P2-siege-relief investigation checkpoint
 
-- Dispatcher: `01a17398-42c1-7583-8d3f-7b15e877586c`; implementation: `01a19316-ad13-7a22-9480-100381b12a34`; Review: unassigned.
+- Dispatcher: `01a17398-42c1-7583-8d3f-7b15e877586c`; implementation: `01a19316-ad13-7a22-9480-100381b12a34`; Review: `01a19329-d612-71e1-a7ba-028000e2c689` (Sol/medium, created once).
 - Authorization: dispatched bounded siege-relief baseline failure investigation; dispatcher start confirmation received. Dispatcher confirmed cumulative scope registration of this report and `tests/engine/test_siege.gd` on 2026-11-01. No other repository files are owned.
 - Checkout: `/Users/samuelzhang/.codex/worktrees/cluster-siege-relief/game_design`; branch: `codex/cluster-siege-relief`; HEAD: `9e4bbecd83c25c595b8f43229305c7cd9360db2c`.
 - Acceptance: preserve authored relief intent, all original assertions, expected values, fixtures, data and thresholds. Observe actual combat, without forced rout, fake attack or weakened gates. Separate from CF04aR and P1.
@@ -60,6 +60,12 @@ All Godot runs used the shared lock, `CC_FORCE_OFFLINE=1`, timeout wrapper and e
 
 The direct diagnostic commands use `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gut/gut_cmdln.gd`, `-gpre_run_script=res://tests/pre_run.gd -gpost_run_script=res://tests/post_run.gd -gexit`, `tools/run_with_timeout.py 120`, and the stated test/name options. They do not replace the complete final runner gate above.
 
+## PR / fixed-pair handoff
+
+PR: https://github.com/samuelzhang1201/game_design/pull/196. Tested implementation commit: `e3cb2c7fdf4e072361d3d5d82fc7408ee6892c53`; subsequent report-only ownership update changes no frozen runtime/test input. Branch/worktree above are clean after commit. Unique Review is recorded above; implementation owns all possible review fixes, Review only audits/re-audits/merges. Dispatcher is not a third reviewer. No successor is assigned or authorized here.
+
+Review acceptance: inspect actual test diff and preserve 302 original complete assertion statements/order and unchanged setup/data; verify observer does not drop events, bypass actual combat costs, issue an attack or force rout. Retain isolated-helper semantics. Reuse unchanged-input local evidence; require current-HEAD CI harness-checks, gameplay and aggregate all successful before merge. Any failure is returned to the original implementation session. No visual change or formula change is involved.
+
 ## Stop / next
 
-Scope is registered and final local checks above are complete. No running process or queue remains from this step. Next: commit this bounded test/report change, open its own PR with gameplay opt-in, create its one Sol/medium Review, register the fixed-pair handoff, then wait. Review checks all current-HEAD CI before merge; skipped/absent/failed checks are not acceptance. P1 PR #195 is still open at this checkpoint; do not modify or review it. Any baseline gameplay failure from that separate step must await its accepted merge rather than duplicate its implementation. No other checkout or owner files changed. No visual work or broad game run performed.
+Scope is registered and final local checks above are complete. No running process or queue remains from this step. PR #196 and its unique Review exist. Implementation hands this PR to that Review and waits; it resumes only for review findings or required main/conflict synchronization. Review checks all current-HEAD CI before merge; skipped/absent/failed checks are not acceptance. Separate P1 PR #195 was open when inspected; do not modify or review it. Any baseline gameplay failure from that step must await its accepted merge rather than duplicate its implementation. After merge both owners finish; no successor dispatch.
