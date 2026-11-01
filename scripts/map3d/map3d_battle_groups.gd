@@ -83,6 +83,8 @@ static func sample_candidate(ctx: Map3DContext, code: String, committed: Diction
 	var owner: Dictionary = index.owners.get(code, {})
 	var initialized := state.military_migration.has("body_version") or owner.has("body_version") or entry.has("body_groups")
 	if not initialized: return _candidate_result("fallback", code)
+	if owner.is_empty() and not state.military_migration.has("body_version"):
+		return _candidate_result("invalid", code, "Missing current body schema")
 	if not UnitBodies._control_ok(state.military_migration) or not UnitBodies._control_ok(owner) or entry.has("body_reconciliation") \
 		or not UnitBodies._counter_ok(entry, true): return _candidate_result("invalid", code, "Invalid body controls")
 	var size := int(ctx.repo.bal("battle_group_size"))
@@ -248,8 +250,9 @@ static func _candidate_at(ctx: Map3DContext, code: String, sampled: Dictionary, 
 static func _animate_candidate(ctx: Map3DContext, code: String, piece: Dictionary, sample: Dictionary,
 		share: float, blend_s: float, battle: Map3DBattleSignals) -> void:
 	var state := ctx.state()
-	var order := ArmySystem.order_of(ctx.repo, state, code)
-	var stance: Dictionary = ctx.repo.battle_stances.get(BattleSystem.stance_of(state, code), {})
+	var hostile := ctx.fogged(code)
+	var order := "" if hostile else ArmySystem.order_of(ctx.repo, state, code)
+	var stance: Dictionary = {} if hostile else ctx.repo.battle_stances.get(BattleSystem.stance_of(state, code), {})
 	var slices := int(state.day_resolution.get("substep_count", DayResolution.DEFAULT_SUBSTEP_COUNT))
 	var moving := false
 	for i: int in piece["groups"].size():

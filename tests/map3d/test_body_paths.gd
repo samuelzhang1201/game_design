@@ -472,3 +472,48 @@ func test_unequal_budgets_diagonal_ceil_and_waiting_peers() -> void:
 	assert_eq(tail.rows[1].y_m, 10004.0)
 	assert_eq(BodyMotion._segments(sample.rows[0].path_m, 6)[0].t1, 2.0 / 6)
 	assert_eq(sample, before)
+
+func test_present_body_rows_require_current_version_even_at_zero_fit() -> void:
+	for fit: int in [0, 100]:
+		var f := _fixture(fit)
+		f.state.military_migration.erase("body_version")
+		assert_eq(_sample(f).mode, "invalid", "present rows without applicable schema cannot publish")
+		f.state.regiments[f.code].erase("body_groups")
+		assert_eq(_sample(f).mode, "fallback", "truly absent legacy bodies remain ordinary fallback")
+
+func test_hostile_animation_never_reopens_hidden_intent() -> void:
+	var f := _fixture()
+	f.state.foes = {f.code: f.state.regiments[f.code]}
+	f.state.regiments = {}
+	var ctx := SightContext.new(f.repo, f.ctx.meta)
+	ctx.admitted = [ArmySystem.regiment(f.repo, f.code, f.state)]
+	ctx.hostile = true
+	ctx.state_fn = func() -> GameState: return f.state
+	_contexts.append(ctx)
+	f.ctx = ctx
+	var source := FileAccess.get_file_as_string("res://scripts/map3d/map3d_battle_groups.gd").replace("class_name Map3DBattleGroups\n", "")
+	source = source.replace("extends RefCounted", "extends RefCounted\nstatic var intent_reads := 0")
+	source = source.replace("ArmySystem.order_of(ctx.repo, state, code)", "_order_read(ctx, code)")
+	source = source.replace("BattleSystem.stance_of(state, code)", "_stance_read(ctx, code)")
+	source += "\nstatic func _order_read(ctx: Map3DContext, code: String) -> String:\n\tintent_reads += 1\n\treturn ArmySystem.order_of(ctx.repo, ctx.state(), code)\n"
+	source += "\nstatic func _stance_read(ctx: Map3DContext, code: String) -> String:\n\tintent_reads += 1\n\treturn BattleSystem.stance_of(ctx.state(), code)\n"
+	var spy := GDScript.new()
+	spy.source_code = source
+	assert_eq(spy.reload(), OK)
+	var layer := _layer(f)
+	var piece: Dictionary = layer.built_piece(f.code)
+	var observed := _sample(f)
+	var actions: Array = []
+	for order: String in [ArmySystem.ORDER_MARCH, ArmySystem.ORDER_GARRISON]:
+		f.state.foes[f.code].order = order
+		f.state.foes[f.code].stance = "hidden-" + order
+		spy.call("_animate_candidate", ctx, f.code, piece, observed, 1.0, 0.3, Map3DBattleSignals.new())
+		actions.append([piece.action, piece.groups[0].piece.action])
+		layer.refresh()
+		layer.step(0.0)
+		assert_eq([piece.action, piece.groups[0].piece.action], actions[0], "real layer must preserve the observed clip")
+	assert_eq(actions[0], actions[1])
+	assert_eq(spy.get("intent_reads"), 0, "downstream hostile animation cannot query hidden order/stance")
+	ctx.dev = true
+	spy.call("_animate_candidate", ctx, f.code, piece, observed, 1.0, 0.3, Map3DBattleSignals.new())
+	assert_eq(spy.get("intent_reads"), 2, "DEV retains its explicit intent access")
