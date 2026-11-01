@@ -1259,8 +1259,9 @@ func _native_fingerprint() -> String:
 	return context.finish().hex_encode()
 
 func _hash_label(context: HashingContext, label: String) -> void:
-	context.update(label.to_utf8_buffer())
-	context.update(PackedByteArray([0]))
+	var bytes: PackedByteArray = label.to_utf8_buffer()
+	bytes.append(0)
+	context.update(bytes)
 
 func _hash_accessor(context: HashingContext, index: int, label: String) -> void:
 	var accessor: Dictionary = _native_cache.doc.accessors[index]
