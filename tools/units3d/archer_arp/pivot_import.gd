@@ -281,10 +281,26 @@ static func _stage(scene: Node, temporary: Node, state: GLTFState, clips: Dictio
 			if target < 0:
 				return _failure(scene, "Imported track has no source/native mapping")
 			var id: String = str(original.track_get_path(i)) + ":" + str(type)
-			if not present.has(id):
-				for key: int in range(original.track_get_key_count(i)):
-					if not original.track_get_key_value(i, key).is_equal_approx(replacement.track_get_key_value(target, 0)):
+			if not present.has(id) and original.track_get_key_count(i) > 0:
+				var first: Variant = original.track_get_key_value(i, 0)
+				for key: int in range(1, original.track_get_key_count(i)):
+					if original.track_get_key_value(i, key) != first:
 						return _failure(scene, "Cannot pad a missing dynamic source component")
+				var expected: Variant = replacement.track_get_key_value(target, 0)
+				var observed_component := Transform3D.IDENTITY
+				var rest_component := Transform3D.IDENTITY
+				match type:
+					Animation.TYPE_POSITION_3D:
+						observed_component.origin = first
+						rest_component.origin = expected
+					Animation.TYPE_ROTATION_3D:
+						observed_component.basis = Basis(first)
+						rest_component.basis = Basis(expected)
+					Animation.TYPE_SCALE_3D:
+						observed_component.basis = Basis.IDENTITY.scaled(first)
+						rest_component.basis = Basis.IDENTITY.scaled(expected)
+				if not _close(observed_component, rest_component):
+					return _failure(scene, "Static native component disagrees with rest")
 		replacements[name] = replacement
 	return {"ok": true, "library": library, "replacements": replacements}
 

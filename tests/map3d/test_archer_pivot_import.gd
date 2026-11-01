@@ -425,3 +425,40 @@ func test_nonpivot_animation_in_another_library_keeps_identity_and_every_key() -
 	assert_same(player.get_animation_library("extras"), library)
 	assert_eq(_snapshot(player)["extras/OTHER"], snapshot["extras/OTHER"])
 	scene.free()
+
+
+func test_missing_source_component_requires_constant_native_keys_and_full_rest_agreement() -> void:
+	var path: String = _fixture()
+	var cases: Array[Dictionary] = [
+		{"name": "tiny motion beyond full-origin gate", "value": Vector3(.000009, .000009, .000009), "moving": true, "ok": false},
+		{"name": "motion below gate is still dynamic", "value": Vector3(.0000001, .0000001, .0000001), "moving": true, "ok": false},
+		{"name": "constant outside full-origin rest gate", "value": Vector3(.000009, .000009, .000009), "moving": false, "ok": false},
+		{"name": "constant within rest tolerance", "value": Vector3(.0000001, .0000001, .0000001), "moving": false, "ok": true}]
+	for case: Dictionary in cases:
+		var scene: Node = _import(path)
+		var player: AnimationPlayer = _player(scene)
+		var clip: Animation = player.get_animation("PIVOT_RIGHT")
+		var root_path := NodePath("")
+		for i: int in range(clip.get_track_count()):
+			if str(clip.track_get_path(i)).ends_with(":root"):
+				root_path = clip.track_get_path(i)
+		assert_false(str(root_path).is_empty())
+		var track: int = clip.find_track(root_path, Animation.TYPE_POSITION_3D)
+		if track < 0:
+			track = clip.add_track(Animation.TYPE_POSITION_3D)
+			clip.track_set_path(track, root_path)
+		while clip.track_get_key_count(track) > 0:
+			clip.track_remove_key(track, 0)
+		clip.track_insert_key(track, 0.0, Vector3.ZERO if case.moving else case.value)
+		clip.track_insert_key(track, 1.0, case.value)
+		var before: Dictionary = _snapshot(player)
+		var hierarchy: Array = _hierarchy(scene)
+		var result: Dictionary = _run(scene, path)
+		assert_eq(result.ok, case.ok, case.name)
+		assert_eq(_hierarchy(scene), hierarchy, case.name)
+		if not case.ok:
+			assert_eq(_snapshot(player), before, case.name + " atomic pair/resources")
+		else:
+			for name: String in OLD:
+				assert_eq(_snapshot(player)[name], before[name], case.name + " old native curve")
+		scene.free()

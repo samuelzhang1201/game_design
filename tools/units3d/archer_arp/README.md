@@ -132,7 +132,9 @@ playback. There is no private FPS bake or second optimizer. Source quaternions
 must be unit length within float precision. Unsupported cubic, sparse,
 normalized, non-bone or extension-driven animation data fails closed.
 
-Only absent static components may use the unchanged native rest. Full local
+Only absent components with exactly nonvarying native key values may use the
+unchanged native rest. Staticity is checked separately from full-matrix rest
+consistency at the existing pose tolerance. Full local
 rest matrices, bone names/parents and ancestor transforms must agree with the
 ordinary import; missing dynamic tracks or unmatched imported paths fail.
 Both replacement resources are staged before publishing either. The scene,
