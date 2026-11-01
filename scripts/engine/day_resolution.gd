@@ -155,7 +155,7 @@ static func body_march_incompatibility_reason(tx: Dictionary) -> String:
 	var control: Variant = tx.get("body_march")
 	if not control is Dictionary or not BodyMotion._keys(control, ["version", "abs_day", "next_substep", "substep_count", "last"]):
 		return "Invalid body march control schema"
-	if control.version != "1": return "Unsupported body march version"
+	if not control.version is String or control.version not in ["1", "2"]: return "Unsupported body march version"
 	for field: String in ["abs_day", "next_substep", "substep_count"]:
 		if not BodyMotion._decimal(control[field]): return "Invalid raw body march cursor: " + field
 	var next := int(control.next_substep)
@@ -165,9 +165,11 @@ static func body_march_incompatibility_reason(tx: Dictionary) -> String:
 	var last: Dictionary = control.last
 	if next == 0:
 		if not last.is_empty(): return "Unexpected initial body march receipt"
-	elif not BodyMotion._keys(last, ["substep", "receipt"]) or not BodyMotion._decimal(last.substep) \
+	elif not BodyMotion._keys(last, ["substep", "receipt", "result"] if control.version == "2" else ["substep", "receipt"]) or not BodyMotion._decimal(last.substep) \
 		or int(last.substep) != next - 1 or not last.receipt is String or not BodyMotion._digest(last.receipt):
 		return "Missing or inconsistent body march receipt"
+	if next > 0 and control.version == "2" and (not last.result is String or not BodyMotion._digest(last.result)):
+		return "Invalid locomotion march result digest"
 	if not tx.get("march_entries") is Dictionary or not tx.get("march_budgets") is Dictionary \
 		or not tx.get("marching_codes") is Array or not tx.get("journal") is Dictionary:
 		return "Missing frozen march inputs"

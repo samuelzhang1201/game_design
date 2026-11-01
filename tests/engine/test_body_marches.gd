@@ -804,3 +804,420 @@ func test_pursuit_full_route_keeps_motion_numerical_range_guard() -> void:
 	var before := state.to_dict()
 	_assert_candidate_error(TickEngine.new(f.repo).step_body_march_candidate(state))
 	assert_eq(state.to_dict(), before, "clipping a pursuit intent cannot hide an unsafe full-route projection")
+
+func _loco_api() -> bool:
+	var army: GDScript = load("res://scripts/engine/army_system.gd")
+	var ready := army.has_method("plan_locomotion_march_candidate") and army.has_method("commit_locomotion_march_candidate")
+	assert_true(ready, "explicit v2 march API required")
+	return ready
+
+func _loco_fixture(counts: Array = [100]) -> Dictionary:
+	var f := _fixture(counts)
+	for code: String in f.codes:
+		var piece := MapObjects.army_piece(f.repo, f.state.army_roster[code])
+		var radius := int(f.repo.unit_footprints[piece].radius_m)
+		f.repo.unit_footprints[piece].locomotion_certificate = {"digest": "a".repeat(64),
+			"turn_q": 400000, "contact_um": 100, "radius_m": radius,
+			"clips": ["PIVOT_LEFT", "PIVOT_RIGHT", "MARCH"], "all_turns": true}
+		f.repo.balance["body_locomotion_" + piece + "_turn_q"] = 400000
+		f.repo.balance["body_locomotion_" + piece + "_contact_um"] = 100
+	return f
+
+func _loco_begin(f: Dictionary, budget: int) -> GameState:
+	var before: Dictionary = f.state.to_dict()
+	var result: Dictionary = TickEngine.new(f.repo).call("begin_locomotion_march_candidate", f.state)
+	assert_eq(result.status, "complete", result.reason)
+	assert_eq(f.state.to_dict(), before)
+	if result.candidate == null: return null
+	for code: String in result.candidate.day_resolution.march_budgets:
+		result.candidate.day_resolution.march_budgets[code] = budget
+	return result.candidate
+
+func _loco_plan(f: Dictionary, state: GameState) -> Dictionary:
+	var before := state.to_dict()
+	var result: Dictionary = (load("res://scripts/engine/army_system.gd") as GDScript).call("plan_locomotion_march_candidate", f.repo, state)
+	assert_eq(result.status, "complete", result.reason)
+	assert_eq(state.to_dict(), before)
+	return result.plan
+
+func _loco_commit(f: Dictionary, state: GameState, plan: Dictionary, status: String = "complete") -> Dictionary:
+	var before := state.to_dict()
+	var result: Dictionary = (load("res://scripts/engine/army_system.gd") as GDScript).call("commit_locomotion_march_candidate", f.repo, state, plan)
+	assert_eq(result.status, status, result.reason)
+	assert_eq(state.to_dict(), before)
+	if status == "error": _assert_candidate_error(result)
+	return result
+
+func test_locomotion_march_hand_l_and_atomic_json_retry() -> void:
+	if not _loco_api(): return
+	for budget: int in [80, 100, 200]:
+		var f := _loco_fixture([901])
+		var entry: Dictionary = f.state.regiments[f.code]
+		entry.route_m = [[50003, 50000], [50003, 50004]]
+		entry.dest_x_m = 50003
+		entry.dest_y_m = 50004
+		var state := _loco_begin(f, budget)
+		if state == null: return
+		var p := _loco_plan(f, state)
+		assert_eq(p.version, 2)
+		assert_eq(p.motion.version, 2)
+		assert_eq(p.units[0].used_m, 6 if budget == 80 else 7, "B8: 3+3 moves plus two 100000 pivots fit; full 3+4 cannot")
+		if budget == 100:
+			var ops: Array = p.motion.moves[0].ops
+			assert_eq(ops.map(func(op: Dictionary) -> int: return int(op.t1_q)), [300000, 400000, 800000, 900000, 1000000])
+			assert_eq(ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "pivot", "hold"])
+		var committed := _loco_commit(f, state, p)
+		if committed.candidate == null: return
+		var loaded := _json(committed.candidate)
+		assert_eq(loaded.to_dict(), committed.candidate.to_dict())
+		assert_eq(_loco_commit(f, loaded, JSON.parse_string(JSON.stringify(p))).candidate.to_dict(), committed.candidate.to_dict())
+		assert_eq(committed.candidate.military_cohorts, state.military_cohorts)
+		assert_eq(committed.candidate.rng.to_dict(), state.rng.to_dict())
+		assert_eq(committed.candidate.regiments[f.code].supplies, entry.supplies)
+		for change: String in ["supplies", "order", "policy", "grid"]:
+			var bad := UnitBodies._copy(loaded)
+			var old_turn: Variant = f.repo.balance.get("body_locomotion_" + MapObjects.army_piece(f.repo, f.state.army_roster[f.code]) + "_turn_q")
+			match change:
+				"supplies": bad.regiments[f.code].supplies -= 1
+				"order": bad.regiments[f.code].order_id += 1
+				"policy": f.repo.balance["body_locomotion_" + MapObjects.army_piece(f.repo, f.state.army_roster[f.code]) + "_turn_q"] += 1
+				"grid": f.grid.closed[0] = 1
+			_loco_commit(f, bad, p, "error")
+			f.repo.balance["body_locomotion_" + MapObjects.army_piece(f.repo, f.state.army_roster[f.code]) + "_turn_q"] = old_turn
+			f.grid.closed[0] = 0
+
+func test_locomotion_march_long_leg_lost_pivot_time_never_returns() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture()
+	for body: Dictionary in f.state.regiments[f.code].body_groups: body.facing_deg = 90
+	var state := _loco_begin(f, 100)
+	if state == null: return
+	for slice: int in 10:
+		var p := _loco_plan(f, state)
+		assert_eq(p.units[0].step_budget_m, 10, "no catchup allowance on last slice")
+		assert_eq(p.units[0].used_m, 8, "two quarter-turns cost 200000 of the same million time units")
+		state = _loco_commit(f, state, p).candidate
+		if state == null: return
+		state = _json(state)
+		assert_eq(state.regiments[f.code].x_m, 50000 + (slice + 1) * 8)
+		assert_eq(state.regiments[f.code].body_groups[0].facing_deg, 90)
+	assert_eq(state.day_resolution.march_entries[f.code].day_walked_m, 80)
+	assert_eq(state.day_resolution.march_entries[f.code].route_m, [[60000, 50000]])
+	var done: Dictionary = TickEngine.new(f.repo).call("step_locomotion_march_candidate", state)
+	assert_eq(done.status, "complete")
+	assert_eq(done.plan, {})
+	assert_eq(done.candidate.to_dict(), state.to_dict())
+
+func test_locomotion_march_unsupported_and_frozen_v1_not_converted() -> void:
+	if not _loco_api(): return
+	var f := _fixture([100])
+	var before: Dictionary = f.state.to_dict()
+	_assert_candidate_error(TickEngine.new(f.repo).call("begin_locomotion_march_candidate", f.state))
+	assert_eq(f.state.to_dict(), before, "no installed policy is an explicit unsupported result")
+	f = _loco_fixture()
+	var state := _begin(f, 100)
+	before = state.to_dict()
+	var engine := TickEngine.new(f.repo)
+	assert_eq(engine.call("begin_locomotion_march_candidate", state).status, "deferred")
+	_assert_candidate_error(engine.call("step_locomotion_march_candidate", state))
+	assert_eq(state.to_dict(), before)
+	assert_eq(engine.step_body_march_candidate(_json(state)).status, "complete", "frozen v1 remains resumable")
+	state = _loco_begin(f, 100)
+	if state == null: return
+	before = state.to_dict()
+	_assert_candidate_error(engine.step_body_march_candidate(state))
+	assert_eq(state.to_dict(), before)
+
+func test_locomotion_march_running_payment_and_bad_receipts_are_atomic() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([1000])
+	_runner(f)
+	f.repo.balance.army_run_speed_permille = 2000
+	for body: Dictionary in f.state.regiments[f.code].body_groups: body.facing_deg = 90
+	var state := _loco_begin(f, 1000)
+	if state == null: return
+	var p := _loco_plan(f, state)
+	assert_eq(p.units[0].step_budget_m, 200)
+	assert_eq(p.units[0].used_m, 160)
+	var result := _loco_commit(f, state, p)
+	if result.candidate == null: return
+	assert_eq(result.candidate.regiments[f.code].supplies, 990, "one running increment, base meal untouched")
+	assert_eq(result.candidate.regiments[f.code].run_supply_rem, 0)
+	assert_eq(_loco_commit(f, _json(result.candidate), p).candidate.to_dict(), result.candidate.to_dict())
+	for change: String in ["op", "basis", "version", "budget", "extra", "skip"]:
+		var bad := p.duplicate(true)
+		match change:
+			"op": bad.motion.moves[0].ops[0].t1_q += 1
+			"basis": bad.basis = "b".repeat(64)
+			"version": bad.version = 1
+			"budget": bad.units[0].step_budget_m += 1
+			"extra": bad.extra = true
+			"skip": bad.substep += 1
+		_loco_commit(f, state, bad, "error")
+	for change: String in ["inner_version", "outer_version", "missing_inner", "heading", "fraction", "result"]:
+		var bad := _json(result.candidate)
+		match change:
+			"inner_version": bad.military_migration.body_motion.version = "1"
+			"outer_version": bad.day_resolution.body_march.version = "1"
+			"missing_inner": bad.military_migration.erase("body_motion")
+			"heading": bad.regiments[f.code].body_groups[0].facing_deg += 1
+			"fraction": bad.military_migration.body_motion.plan.moves[0].ops[0].t1_q += 0.1
+			"result": bad.day_resolution.body_march.last.result = "b".repeat(64)
+		_loco_commit(f, _json(bad), p, "error")
+	var before := state.to_dict()
+	f.grid.closed[50 * f.grid.cols + 50] = 1
+	_assert_candidate_error(TickEngine.new(f.repo).call("step_locomotion_march_candidate", state))
+	assert_eq(state.to_dict(), before, "whole source terrain rejection cannot spend running supplies")
+
+func test_locomotion_march_stationary_zero_and_pursuit_credit_actual_metres() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([100, 0, 1])
+	f.state.regiments[f.codes[2]].order = ArmySystem.ORDER_GARRISON
+	_pursuit(f, 30)
+	var state := _loco_begin(f, 1000)
+	if state == null: return
+	var p := _loco_plan(f, state)
+	assert_eq(p.motion.moves.size(), 2, "one live body plus stationary peer; zero fit fabricates none")
+	assert_eq(p.units[0].used_m, 30)
+	var result := _loco_commit(f, state, p)
+	if result.candidate == null: return
+	assert_eq(BattleTaskSystem.current(result.candidate, f.code).pursuit.route_m, 30)
+	assert_eq(BattleTaskSystem.current(result.candidate, f.code).status, "bounded")
+	assert_eq(result.candidate.regiments[f.code].x_m, 50030)
+	var stationary: Dictionary = p.motion.moves.filter(func(m: Dictionary) -> bool: return m.unit == f.codes[2])[0]
+	assert_eq(stationary.budget_m, 0)
+	assert_eq(stationary.used_m, 0)
+	assert_eq(stationary.ops.size(), 1)
+	assert_eq(stationary.ops[0].kind, "hold")
+	assert_eq(stationary.ops[0].t1_q, 1000000)
+	var next := _loco_plan(f, _json(result.candidate))
+	assert_eq(next.units[0].used_m, 0, "bounded task cannot earn pivot or hold distance")
+	f = _loco_fixture([100])
+	state = _loco_begin(f, 0)
+	if state == null: return
+	p = _loco_plan(f, state)
+	assert_eq(p.motion.moves[0].used_m, 0)
+	assert_eq(p.motion.moves[0].ops[0].kind, "hold")
+	_loco_commit(f, state, p)
+
+func test_locomotion_march_switch_requires_closed_day_and_preserves_old_receipt() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([1])
+	var engine := TickEngine.new(f.repo)
+	var state := _begin(f, 100)
+	if state == null: return
+	for slice: int in 10:
+		state = engine.step_body_march_candidate(state).candidate
+		if state == null: return
+	var before := state.to_dict()
+	assert_eq(engine.call("begin_locomotion_march_candidate", _json(state)).status, "deferred", "completed candidate day remains frozen")
+	assert_eq(state.to_dict(), before)
+	state.day_resolution = {}
+	state.day += 1
+	var old_motion: Dictionary = state.military_migration.body_motion.duplicate(true)
+	var result: Dictionary = engine.call("begin_locomotion_march_candidate", _json(state))
+	assert_eq(result.status, "complete", result.reason)
+	if result.candidate == null: return
+	assert_eq(result.candidate.military_migration.body_motion, old_motion, "no conversion or reset of v1 receipt on begin")
+	assert_eq(result.candidate.day_resolution.body_march.version, "2")
+	var step: Dictionary = engine.call("step_locomotion_march_candidate", result.candidate)
+	assert_eq(step.status, "complete", step.reason)
+	if step.candidate == null: return
+	assert_eq(step.candidate.military_migration.body_motion.version, "2")
+	assert_eq(step.candidate.regiments[f.code].supplies, state.regiments[f.code].supplies)
+
+func test_locomotion_march_successor_rejects_modified_committed_source() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([1])
+	var state := _loco_begin(f, 100)
+	if state == null: return
+	var result := _loco_commit(f, state, _loco_plan(f, state))
+	if result.candidate == null: return
+	for change: String in ["payment", "outer_receipt", "outer_result", "inner_basis", "frozen_route", "rng"]:
+		var bad := _json(result.candidate)
+		match change:
+			"payment": bad.regiments[f.code].supplies -= 1
+			"outer_receipt": bad.day_resolution.body_march.last.receipt = "b".repeat(64)
+			"outer_result": bad.day_resolution.body_march.last.result = "b".repeat(64)
+			"inner_basis":
+				bad.military_migration.body_motion.plan.cursor.basis.source = "b".repeat(64)
+				bad.military_migration.body_motion.receipt = BodyMotion._hash(bad.military_migration.body_motion.plan)
+			"frozen_route": bad.day_resolution.march_entries[f.code].route_m = [[60001, 50000]]
+			"rng": bad.rng.randi_range(0, 100)
+		var before := bad.to_dict()
+		var rejected: Dictionary = TickEngine.new(f.repo).call("step_locomotion_march_candidate", bad)
+		assert_eq(rejected.status, "error", change + " cannot become a new valid slice basis")
+		if rejected.status == "error": _assert_candidate_error(rejected)
+		assert_eq(bad.to_dict(), before, change)
+
+func test_locomotion_march_rotating_pursuit_bound_keeps_received_time_budget() -> void:
+	if not _loco_api(): return
+	for limit: int in [1, 30]:
+		var f := _loco_fixture([100])
+		f.state.regiments[f.code].body_groups[0].facing_deg = 90
+		_pursuit(f, limit)
+		var state := _loco_begin(f, 1000)
+		if state == null: return
+		var p := _loco_plan(f, state)
+		assert_eq(p.units[0].step_budget_m, 100, "pursuit clips geometry, not the already received slice capacity")
+		assert_eq(p.units[0].used_m, limit, "B100 fits both 100000 pivots plus 10000 or 300000 movement time")
+		var result := _loco_commit(f, state, p)
+		if result.candidate == null: return
+		assert_eq(result.candidate.regiments[f.code].x_m, 50000 + limit)
+		assert_eq(result.plan.arrivals, [], "a pursuit boundary is not destination arrival")
+		assert_eq(BattleTaskSystem.current(result.candidate, f.code).pursuit.route_m, limit)
+		assert_eq(BattleTaskSystem.current(result.candidate, f.code).status, "bounded")
+
+func test_locomotion_march_live_withdrawal_preserves_charge_runup() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([100, 100])
+	_set_route(f, 0, [45000, 60000], [55000, 60000])
+	_set_route(f, 1, [55000, 60000], [45000, 60000])
+	var foreign: String = f.codes[1]
+	f.state.foes[foreign] = f.state.regiments[foreign]
+	f.state.regiments.erase(foreign)
+	f.state.army_roster[foreign].kingdom_code = f.repo.resolve_realm("raider_realm")
+	var battle := {"id": 1, "att": [f.code], "def": [foreign], "body_version": 1,
+		"group_size_version": 2, "group_size_men": 100, "groups": {}, "group_facing": {}, "group_anchor_m": {}}
+	for code: String in f.codes:
+		var entry := UnitBodies._entry(f.state, code)
+		battle.groups[code] = entry.body_groups
+		entry.erase("body_groups")
+	f.state.battles = [battle]
+	f.state.regiments[f.code].charge = {"phase": "approach", "target": foreign, "runup_m": 17,
+		"origin_x_m": 45000, "origin_y_m": 60000, "x_m": 45000, "y_m": 60000, "impact_day": -1}
+	f.state.regiments[f.code].battle_retreat = true
+	_set_battle_retreat(f)
+	var state := _loco_begin(f, 1000)
+	if state == null: return
+	var p := _loco_plan(f, state)
+	assert_true(p.units[0].used_m > 0, "authorized battle-owned withdrawal uses timed motion")
+	var result := _loco_commit(f, state, p)
+	if result.candidate == null: return
+	assert_eq(result.candidate.regiments[f.code].charge, state.regiments[f.code].charge, "march pivot/translation cannot mint battle charge runup")
+	assert_eq(result.candidate.military_cohorts, state.military_cohorts)
+	assert_eq(result.candidate.rng.to_dict(), state.rng.to_dict())
+	assert_eq(result.candidate.battles[0].groups[f.code][0].slot, state.battles[0].groups[f.code][0].slot)
+	assert_eq(result.candidate.battles[0].groups[f.code][0].count, 100)
+	assert_false(result.candidate.regiments[f.code].has("body_groups"), "sole battle ownership remains sole")
+	assert_eq(_loco_commit(f, _json(result.candidate), p).candidate.to_dict(), result.candidate.to_dict())
+
+func test_locomotion_march_blocked_running_hold_pays_once() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([1000, 1000])
+	_runner(f)
+	f.repo.balance.army_run_speed_permille = 2000
+	var entry: Dictionary = f.state.regiments[f.code]
+	entry.x_m = 30000
+	entry.dest_x_m = 40000
+	var wall: Dictionary = f.state.regiments[f.codes[1]]
+	wall.order = ArmySystem.ORDER_GARRISON
+	var ra := int(f.repo.unit_footprints[MapObjects.army_piece(f.repo, f.state.army_roster[f.code])].radius_m)
+	var rb := int(f.repo.unit_footprints[MapObjects.army_piece(f.repo, f.state.army_roster[f.codes[1]])].radius_m)
+	for i: int in 10:
+		entry.body_groups[i].x_m = 30000 + i * (4 * maxi(ra, rb) + 100)
+		wall.body_groups[i].x_m = entry.body_groups[i].x_m + ra + rb
+		wall.body_groups[i].y_m = entry.body_groups[i].y_m
+	var state := _loco_begin(f, 1000)
+	if state == null: return
+	var p := _loco_plan(f, state)
+	assert_eq(p.units[0].used_m, 0)
+	assert_eq(p.units[0].step_budget_m, 200)
+	assert_eq(p.motion.moves.size(), 20)
+	for move: Dictionary in p.motion.moves:
+		assert_eq(move.ops.size(), 1)
+		assert_eq(move.ops[0].kind, "hold")
+		assert_eq(move.ops[0].t1_q, 1000000)
+	var result := _loco_commit(f, state, p)
+	if result.candidate == null: return
+	assert_eq(result.candidate.regiments[f.code].supplies, 990)
+	assert_eq(result.candidate.regiments[f.code].run_supply_rem, 0)
+	assert_eq(result.candidate.military_cohorts, state.military_cohorts)
+	assert_eq(_loco_commit(f, _json(result.candidate), p).candidate.to_dict(), result.candidate.to_dict())
+
+func test_locomotion_march_oblique_prefix_advances_anchor_with_bodies_and_json() -> void:
+	if not _loco_api(): return
+	for destination: Array in [[60000, 53333], [40000, 53333], [60000, 46667], [40000, 46667]]:
+		var f := _loco_fixture([100])
+		var entry: Dictionary = f.state.regiments[f.code]
+		entry.route_m = [destination]
+		entry.dest_x_m = destination[0]
+		entry.dest_y_m = destination[1]
+		var state := _loco_begin(f, 1000)
+		if state == null: return
+		for slice: int in 3:
+			var p := _loco_plan(f, state)
+			assert_eq(_loco_plan(f, _json(state)), p)
+			var result := _loco_commit(f, state, p)
+			if result.candidate == null: return
+			state = _json(result.candidate)
+			var body: Dictionary = state.regiments[f.code].body_groups[0]
+			assert_eq([state.regiments[f.code].x_m, state.regiments[f.code].y_m], [body.x_m, body.y_m], "single body's certified rounded prefix is actual anchor progress")
+			assert_true(p.units[0].used_m > 0)
+			assert_eq(state.day_resolution.march_entries[f.code].route_m, [destination])
+			assert_eq(result.plan.arrivals, [])
+			if destination == [60000, 53333]:
+				assert_eq([body.x_m, body.y_m], [50000 + 90 * (slice + 1), 50000 + 30 * (slice + 1)], "rounded 90,30 costs95; both heading pivots fit B100")
+
+func test_locomotion_march_oblique_prefix_reaches_real_destination_once() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([100])
+	f.state.regiments[f.code].route_m = [[50100, 50033]]
+	f.state.regiments[f.code].dest_x_m = 50100
+	f.state.regiments[f.code].dest_y_m = 50033
+	var state := _loco_begin(f, 1000)
+	if state == null: return
+	for slice: int in 2:
+		var result := _loco_commit(f, state, _loco_plan(f, state))
+		if result.candidate == null: return
+		state = _json(result.candidate)
+		assert_eq(result.plan.arrivals, [f.code] if slice == 1 else [])
+	assert_eq([state.regiments[f.code].x_m, state.regiments[f.code].y_m], [50100, 50033])
+	assert_eq([state.regiments[f.code].body_groups[0].x_m, state.regiments[f.code].body_groups[0].y_m], [50100, 50033])
+	assert_eq(state.regiments[f.code].order, ArmySystem.ORDER_GARRISON)
+	assert_eq(state.day_resolution.journal.arrivals, [f.code])
+
+func test_locomotion_march_rounded_projection_requires_exact_prefix_and_rejoin() -> void:
+	var path: Array = [[0, 0], [6, 1]]
+	assert_eq(ArmySystem._body_route_prefix(path, [[0, 0], [3, 0]]), [[0, 0]], "v1 exact line is unchanged")
+	assert_eq(ArmySystem._body_route_prefix(path, [[0, 0], [3, 0]], true), [[0, 0], [3, 0]], "3,0 is exactly trunc((6,1)*4/7), including nested slice rounding")
+	assert_eq(ArmySystem._body_route_prefix(path, [[0, 0], [3, 1]], true), [[0, 0]], "no integer rounding parameter produces3,1; proximity grants no progress")
+	assert_eq(ArmySystem._body_route_prefix(path, [[0, 0], [0, 5], [3, 5]], true), [[0, 0]], "unrejoined side legs earn none")
+	assert_eq(ArmySystem._body_route_prefix(path, [[0, 0], [0, 5], [3, 5], [3, 0]], true), [[0, 0], [3, 0]])
+	assert_eq(ArmySystem._body_route_prefix([[0, 0], [-6, -1]], [[0, 0], [-3, 0]], true), [[0, 0], [-3, 0]])
+	assert_eq(ArmySystem._body_route_prefix([[0, 0], [-6, -1]], [[0, 0], [-3, -1]], true), [[0, 0]])
+	var full: Array = [[0, 0], [0, 0], [6, 1], [6, 1], [10, 2]]
+	assert_eq(ArmySystem._body_remaining(full, [[0, 0], [3, 0]], true), [[6, 1], [6, 1], [10, 2]])
+	assert_eq(ArmySystem._body_remaining(full, [[0, 0], [6, 1], [9, 1]], true), [[10, 2]])
+	assert_eq(ArmySystem._body_remaining([[0, 0], [6, 1], [0, 0]], [[0, 0]], true), [[6, 1], [0, 0]], "standing on a later loop endpoint is not travel")
+
+func test_locomotion_march_oblique_duplicate_waypoints_stay_ordered() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([100])
+	f.state.regiments[f.code].route_m = [[50000, 50000], [50100, 50033], [50100, 50033], [50200, 50066]]
+	f.state.regiments[f.code].dest_x_m = 50200
+	f.state.regiments[f.code].dest_y_m = 50066
+	var state := _loco_begin(f, 1000)
+	if state == null: return
+	for slice: int in 3:
+		var result := _loco_commit(f, state, _loco_plan(f, state))
+		if result.candidate == null: return
+		state = _json(result.candidate)
+		if slice == 0: assert_eq(state.day_resolution.march_entries[f.code].route_m, [[50100, 50033], [50100, 50033], [50200, 50066]])
+		if slice == 1: assert_eq(state.day_resolution.march_entries[f.code].route_m, [[50200, 50066]])
+		assert_eq(result.plan.arrivals, [f.code] if slice == 2 else [])
+	assert_eq([state.regiments[f.code].x_m, state.regiments[f.code].y_m], [50200, 50066])
+	assert_eq(state.day_resolution.journal.arrivals, [f.code])
+
+func test_locomotion_march_friendly_side_legs_rejoin_without_sideways_anchor_credit() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([100, 100])
+	_set_route(f, 0, [45000, 60000], [55000, 60000])
+	_set_route(f, 1, [55000, 60000], [45000, 60000])
+	var state := _loco_begin(f, 500000)
+	if state == null: return
+	var p := _loco_plan(f, state)
+	assert_true(p.motion.moves.any(func(m: Dictionary) -> bool: return m.ops.any(func(op: Dictionary) -> bool: return op.a[1] != 60000 or op.b[1] != 60000)), "real v2 planner selected a friendly detour")
+	for row: Dictionary in p.units:
+		for point: Array in row.anchor_path_m: assert_eq(point[1], 60000)
+	_loco_commit(f, state, p)

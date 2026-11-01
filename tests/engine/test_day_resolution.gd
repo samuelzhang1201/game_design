@@ -189,3 +189,31 @@ func test_camp_pack_deadline_survives_blocked_json_resume() -> void:
 	assert_eq(TickEngine.new(repo).resolve_day(restored)["status"], "complete")
 	assert_eq(int(restored.regiments[code]["camp_state"]["pack_start_day"]), start_day)
 	assert_eq(int(restored.regiments[code]["camp_state"]["move_not_before_day"]), move_day)
+
+func test_candidate_march_v2_has_distinct_closed_receipt_protocol() -> void:
+	var tx := DayResolution.begin(1, false, 1)
+	tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+	tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
+	tx.march_entries = {}
+	tx.march_budgets = {}
+	tx.marching_codes = []
+	tx.body_march = {"version": "2", "abs_day": "1", "next_substep": "0", "substep_count": "10", "last": {}}
+	assert_eq(DayResolution.body_march_incompatibility_reason(tx), "", "known v2 initial boundary")
+	assert_false(DayResolution.incompatibility_reason(tx).is_empty(), "ordinary consumer never resumes a candidate")
+	tx.substep_index = 1
+	tx.body_march.next_substep = "1"
+	tx.body_march.last = {"substep": "0", "receipt": "a".repeat(64), "result": "b".repeat(64)}
+	assert_eq(DayResolution.body_march_incompatibility_reason(tx), "")
+	for change: String in ["missing_result", "raw_result", "mixed_v1", "future", "unknown"]:
+		var bad := tx.duplicate(true)
+		match change:
+			"missing_result": bad.body_march.last.erase("result")
+			"raw_result": bad.body_march.last.result = 0
+			"mixed_v1": bad.body_march.version = "1"
+			"future": bad.body_march.version = "3"
+			"unknown": bad.body_march.last.extra = "value"
+		assert_false(DayResolution.body_march_incompatibility_reason(bad).is_empty(), change)
+	var legacy := tx.duplicate(true)
+	legacy.body_march.version = "1"
+	legacy.body_march.last.erase("result")
+	assert_eq(DayResolution.body_march_incompatibility_reason(legacy), "", "valid v1 receipt remains valid")

@@ -98,3 +98,53 @@ float X/Y/yaw with next-interval boundary selection. It reads no repository,
 state, admission, orders or clock. It never mutates or saves presentation values.
 V1 APIs, production callers, frozen march protocols, art and rendering stay
 separate; this API does not activate v2 or resolve PR201's acceptance boundary.
+
+## Explicit v2 march integration
+
+`ArmySystem.plan_locomotion_march_candidate` / `commit_locomotion_march_candidate`
+and `TickEngine.begin_locomotion_march_candidate` /
+`step_locomotion_march_candidate` are separate opt-in consumers of the accepted
+integer locomotion timeline. Ordinary callers and v1 entrances retain their
+protocol. Begin never converts an existing frozen day, including an exhausted
+candidate day; the owning caller must first reach a closed day boundary.
+A prior day's valid v1 receipt survives v2 begin unchanged. No policy is installed
+by this integration: every land arm requires the explicit matching repository
+policy/certificate, or the detached transaction returns an unsupported error.
+
+The v2 outer plan retains the closed march-plan fields with integer `version:2`;
+its `motion` is the complete accepted BodyMotion v2 plan. The outer control retains
+`version,abs_day,next_substep,substep_count,last`, with string `version:"2"`.
+Its initial `last` is empty; thereafter it is exactly
+`{substep:String,receipt:String,result:String}`. Receipt hashes the complete outer
+plan. Result hashes the final whole state and march context with only this result
+field omitted, binding rows, inner receipt, routes, payment, tasks and journal for
+same-plan retry and successor admission after direct or whole-JSON restore.
+An identical retry returns a detached no-op; changed state/context or receipt
+rejects before payment or becoming a new slice basis. A v2 frozen day admits
+no outside state mutation after its first committed slice. Inner
+and outer protocols must match after every committed slice. The ordinary day
+consumer refuses both candidate protocols and unknown/mixed controls fail closed.
+
+V2 uses the existing daily integer remainder partition, gait/run payment and
+simultaneous reservation path. The requested slice is clipped through BodyMotion's
+integer prefix/timeline checks to an affordable route prefix, retaining the full
+received route separately. V2 progress is checked against each body's actual
+received rounded slice path, not exact collinearity with an uncut distant leg.
+A bounded integer inverse proves that a rejoined point is an exact canonical
+rounded prefix; no geometric tolerance grants progress to side legs. Remaining
+waypoints follow their original order, including duplicate zero-length legs.
+Pursuit clips only that geometry; it retains the
+received slice capacity so turning cannot strand a body at its final metre.
+Translation, all pivots and the final hold share one Q;
+there is no final-slice catchup or carry of unused pivot/hold time. Running pays
+its existing slice charge once, even for a blocked hold; failure publishes none
+of the staged cost. Distance, pursuit and anchor progress count only actual
+translation, never pivot time or stationary holds. All required stationary peers
+participate, while zero personnel invents no body. Body paths, anchor, remaining
+route, supply, pursuit, receipts and cursor publish on one detached candidate.
+
+The completed transaction remains frozen without eating the base meal, advancing
+the calendar or settling the unit. This integration changes no production
+activation, placement, battle, renderer, installed art, save version or save file.
+Test-injected policy/certificates provide numerical coverage only; full arm/contact,
+real-window and final live-world acceptance remain separate.
