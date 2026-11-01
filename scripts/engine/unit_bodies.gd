@@ -703,9 +703,23 @@ static func _placement_shape(value: Dictionary, template: Dictionary) -> bool:
 static func _placement_origin(repo: DataRepository, actual: GameState, raw: Dictionary, boundary: Dictionary) -> Dictionary:
 	var image := actual.to_dict()
 	if not _placement_shape(raw, image) or raw.version != GameState.SAVE_VERSION: return _failure("Invalid completion origin save shape")
-	# Metadata cannot change personnel; reject raw origin drift before legacy roster consumers.
-	for field: String in ["army_roster", "military_rosters", "military_cohorts"]:
-		if _placement_json(raw[field]) != _placement_json(image[field]): return _failure("Completion origin changes immutable roster/personnel: " + field)
+	# Reject drift in every frozen probe input before decoding or calling legacy consumers.
+	for field: String in ["army_roster", "military_rosters", "military_cohorts", "day_resolution", "foes", "battles", "tick", "day"]:
+		if _placement_json(raw[field]) != _placement_json(image[field]): return _failure("Completion origin changes frozen input: " + field)
+	var saved_controls: Dictionary = raw.military_migration.duplicate(true)
+	var actual_controls: Dictionary = image.military_migration.duplicate(true)
+	saved_controls.erase("body_placement")
+	actual_controls.erase("body_placement")
+	if _placement_json(saved_controls) != _placement_json(actual_controls): return _failure("Completion origin changes frozen military controls")
+	if not BodyMotion._keys(raw.regiments, image.regiments.keys()): return _failure("Completion origin changes regiment membership")
+	for code: String in raw.regiments:
+		if not raw.regiments[code] is Dictionary: return _failure("Invalid completion regiment")
+		var old: Dictionary = raw.regiments[code].duplicate(true)
+		var current: Dictionary = image.regiments[code].duplicate(true)
+		if old.has("camp_town") and not old.camp_town is String: return _failure("Invalid completion camp town")
+		old.erase("camp_town")
+		current.erase("camp_town")
+		if _placement_json(old) != _placement_json(current): return _failure("Completion origin changes frozen regiment: " + code)
 	if not _placement_shape(raw.rng, actual.rng.to_dict()): return _failure("Invalid completion RNG shape")
 	for field: String in ["seed", "state"]:
 		if not raw.rng[field].is_valid_int() or str(int(raw.rng[field])) != raw.rng[field]: return _failure("Invalid completion RNG integer")

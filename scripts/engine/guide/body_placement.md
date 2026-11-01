@@ -57,8 +57,10 @@ control has string fields `{version:"2",sequence,operation_id,receipt,completion
 one complete original save image and the linear list of closed placement plans.
 Contract: `docs/reviews/cluster-formations/placement-v2-completion-contract.md`.
 
-Admission requires the raw origin's roster/personnel tables to match the admitted
-endpoint before legacy roster consumers, since metadata cannot change them.
+Before decoding or legacy consumers, admission compares all frozen probe inputs
+with the admitted endpoint: rosters/personnel, the entire day, foes, battles,
+calendar, military controls except placement, and regiments except `camp_town`.
+The camp field must be a string and the prior placement control closed v1.
 It checks raw numeric/schema validity before lossless private rehydrate,
 then validates the origin through the original v2 MARCH predicate. Every prefix
 recomputes the actual metadata rules and entire preceding-state placement basis;

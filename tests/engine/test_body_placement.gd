@@ -1228,3 +1228,46 @@ func test_v2_completion_proof_rejects_nested_origin_rosters_before_consumers() -
 				assert_eq(source.rng.to_dict(), before.rng)
 		var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(endpoint.to_dict())), false)
 		assert_eq(UnitBodies.validate_placement_candidate(f.repo, restored, f.boundary).status, "complete", "legal origin survives both provenance branches")
+
+func test_v2_completion_proof_rejects_raw_frozen_inputs_before_consumers() -> void:
+	for imported: bool in [false, true]:
+		var f := _completion_fixture(imported)
+		if f.is_empty(): continue
+		var committed := _completion_operation(f)
+		if committed.candidate == null: continue
+		var endpoint: GameState = committed.candidate
+		assert_eq(UnitBodies.validate_placement_candidate(f.repo, endpoint, f.boundary).status, "complete")
+		var changes: Array[Dictionary] = []
+		for value: Variant in [null, 1, [], {}, "prepare"]:
+			changes.append({"path": ["day_resolution", "phase"], "value": value})
+		for path: Array in [["day_resolution", "body_march"], ["day_resolution", "pending_decision"],
+			["military_migration", "body_motion"],
+			["military_migration", "body_version"], ["regiments", f.code],
+			["regiments", f.code, "body_groups"], ["regiments", f.code, "camp_state"],
+			["regiments", f.code, "camp_town"], ["tick"], ["day"]]:
+			changes.append({"path": path, "value": []})
+		changes.append({"path": ["day_resolution", "marching_codes"], "value": {}})
+		changes.append({"path": ["foes"], "value": {"unexpected": null}})
+		changes.append({"path": ["battles"], "value": [null]})
+		for change: Dictionary in changes:
+			var bad := UnitBodies._copy(endpoint)
+			var proof := UnitBodies._placement_proof(bad.military_migration.body_placement.completion_json)
+			var parent: Dictionary = proof.origin
+			for index: int in range(change.path.size() - 1): parent = parent[change.path[index]]
+			assert_ne(UnitBodies._placement_json(parent.get(change.path[-1])), UnitBodies._placement_json(change.value), "negative case must change origin")
+			parent[change.path[-1]] = change.value
+			_completion_set_proof(bad, proof)
+			var frozen: String = bad.military_migration.body_placement.completion_json
+			for source: GameState in [bad, GameState.from_dict(JSON.parse_string(JSON.stringify(bad.to_dict())), false)]:
+				assert_eq(source.military_migration.body_placement.completion_json, frozen)
+				assert_eq(source.day_resolution, endpoint.day_resolution, "actual frozen day remains valid")
+				var before := source.to_dict()
+				var result := UnitBodies.validate_placement_candidate(f.repo, source, f.boundary)
+				assert_eq(result.get("status"), "error", str(change))
+				assert_eq(result.size(), 5)
+				assert_null(result.get("candidate"))
+				assert_false(str(result.get("reason", "")).is_empty())
+				assert_eq(source.to_dict(), before)
+				assert_eq(source.rng.to_dict(), before.rng)
+		var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(endpoint.to_dict())), false)
+		assert_eq(UnitBodies.validate_placement_candidate(f.repo, restored, f.boundary).status, "complete")
