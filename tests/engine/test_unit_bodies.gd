@@ -944,3 +944,41 @@ func test_v2_completion_proof_raw_envelope_and_numeric_leaves() -> void:
 	assert_eq(BodyMotion._hash({"b": 2, "a": 1}), "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777")
 	for raw: String in ["", "null", "[]", "{}", "{bad", "{\"version\":1,\"origin\":{},\"plans\":[]}"]:
 		assert_eq(UnitBodies._placement_proof(raw), {})
+
+func test_march_rejects_malformed_present_placement_before_version_read() -> void:
+	for version: int in [1, 2]:
+		var f := _fixture(100)
+		var state: GameState = f.state
+		var tx := DayResolution.begin(state.day, false, state.absolute_day(), 10)
+		tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+		tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
+		tx.march_entries = {}
+		tx.march_budgets = {}
+		tx.marching_codes = []
+		tx.body_march = {"version": str(version), "abs_day": str(state.absolute_day()), "next_substep": "0", "substep_count": "10", "last": {}}
+		state.day_resolution = tx
+		var boundary := {"version": version, "abs_day": state.absolute_day(), "substep": 0}
+		assert_eq(DayResolution.body_march_incompatibility_reason(tx), "")
+		assert_false(state.military_migration.has("body_placement"))
+		assert_eq(UnitBodies.validate_march_candidate(f.repo, state, boundary).status, "complete", "absence remains supported")
+		var valid := {"version": "1", "sequence": "0", "operation_id": "placement:existing", "receipt": "a".repeat(64)}
+		state.military_migration.body_placement = valid
+		assert_eq(UnitBodies.validate_march_candidate(f.repo, state, boundary).status, "complete", "valid v1 control remains supported")
+		for raw: Variant in [null, 1, 2.5, true, [], [valid], {}, {"version": "3"}]:
+			var bad := UnitBodies._copy(state)
+			bad.military_migration.body_placement = raw
+			for source: GameState in [bad, _json(bad)]:
+				assert_true(source.military_migration.has("body_placement"))
+				assert_false(UnitBodies._placement_control_ok(source.military_migration.body_placement), "load must not turn corruption into a supported control")
+				var before := source.to_dict()
+				var result := UnitBodies.validate_march_candidate(f.repo, source, boundary)
+				assert_eq(result.get("status"), "error", "v%d raw=%s" % [version, str(raw)])
+				assert_eq(result.size(), 5)
+				assert_false(str(result.get("reason", "")).is_empty())
+				assert_eq(source.to_dict(), before)
+				assert_eq(source.rng.to_dict(), before.rng)
+		state.military_migration.body_placement = {"version": "2", "sequence": "0", "operation_id": "placement:existing",
+			"receipt": "a".repeat(64), "completion_json": "{}"}
+		var before := state.to_dict()
+		assert_eq(UnitBodies.validate_march_candidate(f.repo, state, boundary).status, "error", "v2 completion still requires placement consumer")
+		assert_eq(state.to_dict(), before)

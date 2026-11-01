@@ -51,6 +51,8 @@ static func validate_march_candidate(repo: DataRepository, source: GameState, bo
 	if int(boundary.version) not in [1, 2]: return _failure("Unsupported march boundary")
 	var error := DayResolution.body_march_incompatibility_reason(source.day_resolution)
 	if not error.is_empty(): return _failure(error)
+	if source.military_migration.has("body_placement") and not _placement_control_ok(source.military_migration.body_placement):
+		return _failure("Invalid saved placement control")
 	if source.military_migration.get("body_placement", {}).get("version") == "2":
 		return _failure("Completion proof requires its placement consumer")
 	var control: Dictionary = source.day_resolution.body_march
