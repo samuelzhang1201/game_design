@@ -121,7 +121,15 @@ Closed request (no unknown keys):
  unit:String, host:String, previous_fit:null|String}
 ```
 
-`operation_id` is nonempty, caller-stable for this one outer transaction;
+`operation_id` must start with the literal `placement:` and have a nonempty
+suffix, caller-stable for this one outer transaction. Apply this validation to
+both requests and saved controls, including exact retries. This mandatory prefix
+cannot match `GameState._is_encoded_int` or `_is_encoded_float`: from_dict
+decodes the entire military_migration tree through `_decode_values` when
+import_main_v7 is present, so arbitrary IDs such as `i42` or
+`f3ff0000000000000` would change type on reload. Such unprefixed IDs error;
+`placement:i42` and `placement:f3ff0000000000000` remain literal IDs. No loader
+change or alternate ID normalization is authorized;
 `sequence` is a canonical nonnegative decimal int64 string. Wrapper Variant
 arguments must themselves be such strings (numeric/bool inputs error).
 Operations are exactly `initialize`, `legacy_missing`, `recruit`, `settle`,
@@ -403,7 +411,12 @@ named scenarios in test_body_placement.gd:
   numeric-string confusion, unknown keys/version, stale/skipped sequence, wrong
   boundary and forged receipt. Exact original-plan direct/JSON retries return
   unchanged detached candidate with no law/cost/slot/personnel duplication;
-  convenience retry errors as specified. Mutate output and prove no alias.
+  convenience retry errors as specified. Include a valid import_main_v7
+  migration record and prove successful placement control with IDs
+  `placement:i42` and `placement:f3ff0000000000000` survives to_dict -> JSON ->
+  from_dict unchanged and exact commit retry remains a no-op. Reject empty
+  suffix, missing prefix, `i42` and `f3ff0000000000000` in both raw requests and
+  saved controls before planning/retry. Mutate output and prove no alias.
 - `test_saved_boundaries`: ordinary frozen day/round with valid legacy rows
   defers preserving payload; malformed frozen controls error before deferral.
   Completed CF04a candidate at exact receipt allows metadata-only leave/camp;
