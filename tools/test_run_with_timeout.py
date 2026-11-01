@@ -78,14 +78,21 @@ class DeadlineTests(unittest.TestCase):
                 root = Path(directory)
                 (root / "tools").symlink_to(RUNNER.parent)
                 godot = root / "godot"
-                # Emit with a shell builtin so Python startup cannot consume the log fixture's deadline.
+                # Check the fresh executable before measuring its timed log-producing invocation.
                 phase_arg = "--import" if phase == "import" else "-s"
                 godot.write_text(
                     "#!/bin/sh\n"
+                    "if [ \"${1:-}\" = --fixture-ready ]; then printf ready; exit 0; fi\n"
                     f"case \" $* \" in\n  *' {phase_arg} '*)\n"
                     "    printf 'stalled phase\\n'\n    exec sleep 60 ;;\nesac\n"
                 )
                 godot.chmod(0o755)
+                ready = subprocess.run(
+                    [str(godot), "--fixture-ready"],
+                    capture_output=True, text=True, timeout=10,
+                )
+                self.assertEqual(ready.returncode, 0)
+                self.assertEqual(ready.stdout, "ready")
                 result = subprocess.run(
                     ["sh", str(RUNNER.parent.parent / "run_tests.sh"), "--fast"],
                     cwd=root, env={**os.environ, "GODOT": str(godot), "TEST_TIMEOUT_SECONDS": "1"},
