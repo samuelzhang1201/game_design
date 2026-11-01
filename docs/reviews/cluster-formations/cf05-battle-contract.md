@@ -142,6 +142,27 @@ refresh as a repair. Once all writers are accepted, deterministic providers
 produce one world move. Until then the assembled driver is not registered.
 No provider may silently substitute hold for an unimplemented writer.
 
+Complete is an intentionally frozen isolated-day result, not resumable tomorrow:
+begin still defers and ordinary resolve_day rejects the marker. Actual next-day
+continuation is a required separately registered **activation predecessor**,
+after accepted CF06 and the other P4 daily writers. Its bounded proposed paths
+are `scripts/engine/tick_engine.gd`, `scripts/engine/day_resolution.gd`,
+`scripts/engine/body_battle.gd`, `scripts/engine/guide/body_marches.md`,
+`tests/engine/test_body_battle_day_continuation.gd`,
+`tests/engine/test_body_battle_day_continuation.gd.uid`, `tests/categories.json`.
+It must integrate the real full-day phase consumer: run earlier phases once
+before tactical work and require their actual ordered completion evidence, then
+resume all remaining SIEGES through CALENDAR/COMPLETE once, preserve the day-30
+monthly settlement, and begin tomorrow only after that actual completion.
+Register its exact final API/acceptance before product work; it cannot clear a
+candidate transaction and call begin, replay skipped phases, or treat this
+harness as a complete campaign day. A harness result lacking earlier-phase
+evidence is not eligible; missing earlier phases cannot be backfilled after
+tactical work. Its required future test is
+`test_two_real_days_and_month_end_json_retry`: direct/JSON restore at every
+phase, food/settlement/calendar/RNG receipts exactly once, rejection keeps live
+state/file unchanged. This contract starts neither that step nor activation.
+
 ## Closed raw controls, plan and replay
 
 All new dictionaries below reject unknown/missing keys. Raw numbers must be
@@ -159,7 +180,7 @@ New `day_resolution.body_battle` is exactly:
 ```text
 {version:"1",abs_day:String,sequence:String,next_substep:String,
  substep_count:String,stage:"move"|"contact"|"round"|"advance"|"complete",
- battle_ids:[String],battle_index:String}
+ battle_ids:[String],battle_index:String,processed_units:[String]}
 ```
 
 Day phase is FIXED_TACTICAL_SUBSTEPS. Existing `battle_step`, `battle_ids`,
@@ -168,9 +189,13 @@ DayResolution fields; the new battle_ids/index must agree with them, not form an
 independent queue. IDs are canonical positive decimal strings, sorted once after
 contact/merge. `next_substep` agrees with the existing substep index; count agrees
 with frozen count, initially stage move and index zero. Sequence is the next
-outer operation number, zero if no prior outer receipt, otherwise its sequence+1;
-it never resets on a new candidate day. Final stage
-complete has index=count, no current decision/round, and retains the day.
+outer operation number, zero if no prior outer receipt before an operation,
+otherwise its sequence+1. Begin itself consumes the next number and publishes
+the created day with the following number; it never resets on a new day. Final stage
+complete has next_substep=substep_count, empty queues and battle_index=0,
+no current decision/round, and retains the day. processed_units is a sorted
+unique array of actual unit codes processed this day, initially empty; it is
+not cleared between slices or when a unit exits a field.
 Ordinary `incompatibility_reason` rejects this marker before any mutation, just
 as it rejects body_march. Both markers together are corruption. No daily phase
 or substep order is relabeled. The explicit consumer executes the movement work
@@ -187,23 +212,41 @@ round and sequence equal to the next outer operation number.
 Raw validation always precedes deciding that a valid operation is deferred.
 
 Exact transitions: move requires battle_step empty/no decision and publishes
-contact with the same substep. Contacts closes the timeline, performs lawful
-start/join/merge, freezes sorted live canonical IDs, sets battle_step=fighting,
-battle_index=0 and stage=round; substep_battle_ids contains only new starts.
+contact with the same substep. Contacts closes the timeline and performs lawful
+start/join/merge **before** freezing the next queue. Canonicalize every existing
+processed_battle_ids through battle_aliases, de-duplicate/sort, and mark a live
+survivor processed if any merged source was processed, its last_resolved_day is
+today, or any current member belongs to processed_units. A merged or reinforced
+field containing an already processed unit waits until tomorrow as a whole,
+consistent with existing max-last-resolved-day merge semantics; it cannot grant
+that unit a second round by entering a fresh ID. Record such survivor IDs in
+processed_battle_ids even if the round was under an absorbed/deleted source.
+
+The frozen queue is sorted unique canonical **live, unprocessed** IDs only;
+processed_battle_ids and the queue are disjoint at publication, index=0. Mirror
+that queue/index into the v4 fields and set battle_step=fighting, stage=round.
+substep_battle_ids contains only canonical new starts still in that queue; no
+pending decision may name an excluded/deleted field. An empty queue goes to
+advance with an empty fighting queue/index0, a valid v4 boundary. There is no
+intermediate published all-live queue and no repair by skipping after admission.
+
 At round, an unacknowledged new encounter uses the existing decision token and
 blocks; acknowledgement consumes only that token and preserves the queue.
-round_ready operates only on battle_ids[battle_index]. CF06 settlement records
-that ID once in processed_battle_ids and increments the shared/mirrored index.
-Already processed IDs are skipped without another round; index==queue size
-sets advance. Advance resolves valid exit/terminal requests, clears both queues,
-resets battle_step/index/substep_battle_ids and increments substep once, then
-sets move or complete at count. It neither pays base food nor runs tomorrow.
+round_ready operates only on battle_ids[battle_index]. CF06 settlement appends
+that ID once to processed_battle_ids, unions its frozen att/def unit codes into
+processed_units, and increments the shared/mirrored index atomically. Completed
+IDs remain the queue prefix until advance: for every queue position j,
+`(battle_ids[j] in processed_battle_ids) == (j < battle_index)` must already hold
+on every published state. Index==queue size sets advance. Advance resolves valid
+exit/terminal requests, clears both queues, resets battle_step/index/new-start
+IDs and increments substep once, then sets move or complete at count. Day-level
+processed IDs/units survive. It neither pays base food nor runs tomorrow.
 Every other stage/request combination defers unchanged, after raw validation.
 
 Requests are one of these exact tagged shapes (no free-form state patches):
 
 ```text
-{kind:"move"} | {kind:"contacts"} | {kind:"advance"}
+{kind:"begin"} | {kind:"move"} | {kind:"contacts"} | {kind:"advance"}
 {kind:"enter",unit:String,battle_id:String,side:"att"|"def"}
 {kind:"merge",first_id:String,second_id:String}
 {kind:"withdraw",unit:String,battle_id:String,reason:String}
@@ -216,14 +259,20 @@ Discovery chooses new field ID/sides using existing stable rules and received
 intent, then atomically transfers both founders; enter only joins an existing
 canonical field. Client-supplied side never overrides `_side_for`/hostility.
 End/cancel/withdraw reasons are nonempty; request is not military authorization.
-Step generates these requests; tests may call them explicitly at legal stages.
+Begin internally plans/commits kind begin at the safe boundary through the
+same outer receipt/result publication rules; it changes no movement/personnel/
+cost/RNG. Its convenience result still returns empty plan, and repeating begin
+on the now frozen day defers. Acknowledgement and future CF06 publications must
+also seal the same outer endpoint proof; no successful publisher may leave the
+previous result digest on changed state. Step generates the other requests;
+tests may call them explicitly at legal stages.
 Only delivered task cancellation changes execution; a queued cancel stays queued.
 
 Plan is exactly:
 
 ```text
 {version:1,request:Dictionary,boundary:Dictionary,
- basis:{source:String,result:String},motion:Dictionary,contacts:Array}
+ basis:{source:String},motion:Dictionary,contacts:Array}
 ```
 
 Only move has nonempty motion: the full TIME v2 plan, unchanged move/op schema,
@@ -234,13 +283,60 @@ body poses, proposed arbitrary GameState or generic patch grammar is added.
 Commit replans request from the original source, compares the whole canonical
 plan and applies only its independently computed result to a private clone.
 
-New explicit TIME entrances reuse the single timing/reservation core, extend
-its boundary validation to this tagged battle protocol and preserve version-2
-operation semantics. Old MARCH entrances still reject a battle boundary. Saved
-`military_migration.body_motion` retains its exact v2 control/plan shape; only
-the new boundary variant is added and validated by the battle entrance. No v1
-receipt acquires v2 timing; no duplicate tactical motion receipt is invented.
-The foundation admission runs for source, reconstructed starts and final world.
+New explicit TIME entrances reuse the single timing/reservation core and the
+v2 move/op schema, with **battle-specific hash projections** below. They do not
+reuse `_loco_result_hash` unchanged: accepted ordinary TIME/MARCH hashing and
+closed boundaries remain unchanged. Only the new battle entrances admit this
+boundary variant; saved body_motion keeps its v2 control/plan shape and dispatches
+validation by its explicit saved boundary kind, never by guessed current phase.
+No v1 receipt acquires v2 timing and no duplicate motion authority is invented.
+Foundation admission validates source, reconstructed starts and final world.
+
+For this battle entrance let C be the exact existing `_loco_context` array
+(footprints, all balance, per-arm policies, original move boundary, diplomacy,
+actual terrain dimensions/closed/water pixels). Let P(S) be exactly
+`{body_version:S.military_migration.body_version, units:[...]}`, with units sorted
+by code for every non-naval unit, including zero-fit/stationary peers. Each unit
+record is exactly `{unit,owner_id,group_next_slot,rows}`: owner is zero or its
+sole live battle ID, rows are the full canonical saved authoritative rows in
+saved order, not a presentation subset. Every pose/path/facing/count/home/role
+and identity is retained. A missing/ambiguous owner or invalid row errors.
+
+Inner basis.source is H([cost-staged source.to_dict(), canonical intents,
+original move boundary, C]); it binds the **previous** outer receipt and full
+prepublication state, so it contains no reference to the result being built.
+Inner basis.result is H([P(expected physical endpoint), C]). This projection
+intentionally excludes day stage/sequence/queues, anchors/route accounting,
+supply/run-up/task settlement, RNG and all receipt controls; these are bound
+without omission by the outer source/result hashes below. Pure inner physical
+validation therefore cannot certify a complete battle transaction. In particular
+ordinary `_loco_result_hash` (which only erases body_motion) is not valid here.
+
+Publication order is fixed: (1) copy source and stage existing running cost;
+(2) construct timed operations, compute inner source and physical result hashes,
+validate/commit inner rows on that private staged clone, then store its full
+plan/hash in body_motion; (3) settle anchors/actual route and run-up/cost metadata,
+set stage contact and next sequence, set outer control version/consumed sequence
+and retain prior closed cursor; (4) form the complete outer plan (source basis
+only), including that finished inner plan, and store H(outer plan) as outer
+receipt; (5) hash the full resulting save with only outer result blanked, store
+that endpoint digest as outer result; (6) validate both layers and publish once.
+No step references a not-yet-computed outer receipt from inner result, and no private intermediate is a public source.
+
+A latest move retry is admitted only through BodyBattle.commit_candidate with
+the original outer plan/boundary: validate actual contact-stage raw controls,
+expected just-consumed sequence, H(outer plan)==saved outer receipt,
+saved outer result==current outer result projection, full saved
+inner plan equality/hash and H([P(current rows),C])==inner basis.result. Then
+return a detached no-op without restaging costs or replanning from moved rows.
+The inner battle commit only runs inside step (2) against its staged move source;
+it does not separately publish/retry an outer contact endpoint. Closure accepts
+the contact endpoint only after its saved outer result and inner physical proof
+pass, checks original inner boundary names the immediately consumed move, and
+uses the original C/boundary for sweep reconstruction with current raw-contact
+admission. It never relabels the saved move boundary to contact. Changed stage,
+sequence, queue, costs, RNG, inner plan/hash or outer receipt/result rejects
+before close/retry. Ordinary TIME/MARCH admission is not widened by this rule.
 
 Before contact processing can retire any row, explicitly close the just-finished
 movement at Q. New `BodyMotion.close_battle_locomotion_candidate(repo:
@@ -265,34 +361,51 @@ JSON; no saved shadow poses, movement replay or additional slice budget exists.
 
 One outer receipt control persists across safe lifecycle and candidate day
 operations at `military_migration.body_battle`, exactly
-`{version:"1",sequence:String,receipt:String,closed_motion:Dictionary}`.
+`{version:"1",sequence:String,receipt:String,result:String,closed_motion:Dictionary}`.
 closed_motion is empty before a timeline is closed, otherwise exactly
 `{version:"2",abs_day:String,substep:String,receipt:String,priority:Array}`.
 Priority uses TIME's canonical saved `{unit:String,slot:String}` identities.
 This is the last completed timeline digest/ordering cursor, not a second plan.
 Absence means no prior operation;
-present empty/null/future controls error. It stores no poses, costs or plan.
-While the current timeline is active, the previous closed cursor may remain, but must be strictly older than it.
+present empty/null/future controls error. It stores no poses, costs or plan;
+result is the outer endpoint digest, not a second state. Every subsequent public transition validates that endpoint
+digest before planning its own changes.
+While the current timeline is active, the previous closed cursor may remain,
+but must be strictly older than it.
 A safe-boundary operation uses the same monotonically increasing sequence and
 receipt authority; it does not manufacture a day transaction.
 
-Outer source digest binds the complete raw canonical save, request/boundary,
-footprints, all relevant balance/policy/certificate/diplomacy/received law and
-party records, and actual terrain pixels/bounds. Result digest binds expected
-endpoint save and that same context, replacing only
-`military_migration.body_battle.receipt` with the empty string to break its
-self-reference; it retains version, sequence, stage, queue, people, costs, RNG,
-inner motion plan and all other state. It cannot omit all day/round state.
-The outer receipt is SHA256 of the whole plan. Every successful transition
-records its consumed sequence/receipt in that control and increments the day
-next sequence if present, including transitions with no motion. Same latest plan
-retry first validates the actual endpoint using its derived current boundary;
-the proposed boundary must name the just-consumed sequence, not be relabeled
-as current. It validates raw state/context and result digest, then returns
-a detached no-op before payment/planning. Changed state, terrain, radius, law, parties,
-policy or certificate invalidates even a retry. Older/skipped/conflicting plans
-error. Convenience step reads current stage; it never reconstructs a past plan.
-There is no durable intermediate state between inner and outer publication.
+Outer context K is exactly C without its boundary element: footprints, all
+balance, policies/certificate digests, diplomacy and actual terrain dimensions/
+closed/water pixels. It is recomputable from repo/terrain alone; received laws
+and parties are retained in the full save, not removed into a boundary-dependent
+context. Outer basis.source is H([full pre-cost source.to_dict(), request,
+boundary, K]). Outer plan intentionally has no basis.result: placing an endpoint
+hash in the same plan whose full receipt that endpoint must bind creates a
+cycle. Its receipt is still H(the whole canonical outer plan), without excluded
+plan fields. After receipt is known, outer control.result is
+H([full endpoint save with only military_migration.body_battle.result="", K]).
+The endpoint projection retains the actual new outer receipt and sequence,
+inner motion plan, stage/queue/processed units, people, costs, RNG, anchor/route/
+task/run-up settlement and every other field excluded by P. No new receipt is
+fed back into the inner result or the plan's source hash. The stored endpoint
+digest is one verification scalar, not another motion/state authority.
+
+Every successful transition records its consumed sequence/receipt/result and
+increments the day next sequence if present, including no-motion operations.
+Before another public transition or closure, validate the current stored result
+against that exact endpoint projection/K. Latest original-plan retry additionally
+requires H(proposed outer plan)==saved receipt, the consumed boundary/sequence,
+and full inner plan equality/physical-result proof where motion is present;
+then return a detached no-op without payment or replanning from moved rows.
+Because the stored endpoint digest includes receipt, changing that receipt alone
+also fails closure admission. Changed state, terrain, radius, law, parties,
+policy or certificate invalidates both next-transition admission and retry.
+Older/skipped/conflicting plans error. Convenience step reads current stage;
+it never reconstructs a past plan. No durable intermediate state exists between
+inner and outer publication. A helper's closure clone is private staging only:
+its old outer result is intentionally invalid until the enclosing contact
+transaction records a fresh full-plan receipt and endpoint result together.
 
 GameState must preserve both new raw controls and candidate round envelope from
 both import provenance branches, before `_whole`/`_decode_values`. Only their
@@ -723,6 +836,12 @@ Pure document checks here do not execute these future game tests.
   retired plan; original movement retry is stale. JSON before/after closure gives
   identical next priority/budget; early closure, changed endpoint/policy/grid or
   unknown descriptor field rejects atomically. No supply or RNG change.
+  Also require `test_move_contact_retry_close_successor`: commit move→contact,
+  direct/JSON original outer-plan retry is an exact no-op; legitimate closure
+  validates the battle-specific projection; next slice uses retained priority
+  once. Independently mutate stage, either sequence, queue, paid cost, RNG,
+  inner result/plan/hash or outer receipt/result; each retry and close rejects
+  with source unchanged. Ordinary TIME/MARCH projection tests remain unchanged.
 - B-CONTACT `test_body_battle_contact.gd::test_real_radius_surface_edge`:
   infantry927+cavalry804 → separation1731 tangent, upper melee edge1831 with
   current C100; 1831 contact, 1832 zero; 1730 rejects overlap. Test last counts
@@ -774,6 +893,17 @@ Pure document checks here do not execute these future game tests.
   budget errors with exact input hash unchanged. Ready contact100/fit1000 freezes
   engaged100, leaves900 unengaged; no damage or RNG yet. Round absent CF06 stays
   blocked. No unit resolves twice through aliases/merged already-processed IDs.
+
+- B-ROUND `test_body_battle_motion.gd::test_second_slice_queue_is_admissible`:
+  slice0 field8 settles and stays live, processed=[8]; slice1 adds field9.
+  Before publication queue must be [9], index0, processed=[8], not [8,9].
+  Every direct/JSON boundary passes the real DayResolution cursor predicate;
+  field8 never produces another round/draw/cost. Alias 12→8 is deduplicated
+  before filtering. Merge new9 into already processed8 marks survivor8 processed
+  and queue empty; a reverse survivor choice canonicalizes processed to its ID.
+  A processed unit leaving8 and entering a new field10 excludes that whole field
+  until tomorrow via processed_units; unrelated fresh field11 remains eligible.
+  Tampering queue/index/processed membership or daily unit barrier is rejected.
 
 CF06 required executable follow-through (its contract assigns exact test files):
 fit1000/engaged100 uses100 outgoing melee, other900 contribute0; engaged0 gives0
