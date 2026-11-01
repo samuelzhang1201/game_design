@@ -2,6 +2,7 @@
 over the cavalry piece.
 
     python3 tools/units3d/cavalry_rig/install.py [SRC.glb]
+    python3 tools/units3d/cavalry_rig/install.py --pivots BASE_INSTALLED.glb PIVOT_EXPORT.glb
 
 SRC defaults to the main checkout's assets/3D/units/cavalry/model_wip/rig/cavalry_rigged.glb (git-ignored,
 exported from cavalry_rig_work.blend). Writes assets/3D/units/cavalry/cavalry.glb with:
@@ -14,8 +15,12 @@ exported from cavalry_rig_work.blend). Writes assets/3D/units/cavalry/cavalry.gl
     cavalry_cavalry_atlas{,_n,_mr}.jpg the scene's material points at.
 Then: Godot's import. The scene (scenes/models/units/cavalry.tscn) and the .import carry over.
 """
+import copy
 import io
+import math
+import struct
 import sys
+from itertools import pairwise
 from pathlib import Path
 
 from PIL import Image
@@ -30,6 +35,76 @@ OUT = ROOT / "assets/3D/units/cavalry/cavalry.glb"
 QUALITY = 92
 BONES = {"Head": "head_h", "R_Head": "head"}
 PREFIX = "cavalry_"
+
+
+def install_pivots(base: Path, source: Path) -> None:
+    """Append only the two new animations; retain the original BIN bytes and all old resources."""
+    j, binary = read_glb(base)
+    incoming, data = read_glb(source)
+    assert {a["name"] for a in j["animations"]} == {"ATTACK", "DEFEND", "GARRISON", "MARCH", "STANDBY"}
+    names = {n["name"]: i for i, n in enumerate(j["nodes"])}
+    joints = set(j["skins"][0]["joints"])
+    expected = {(c["target"]["node"], c["target"]["path"]) for c in next(a for a in j["animations"] if a["name"] == "MARCH")["channels"]}
+    out = bytearray(binary)
+    copied: dict[int, int] = {}
+
+    def accessor(index: int) -> int:
+        if index in copied:
+            return copied[index]
+        a = copy.deepcopy(incoming["accessors"][index])
+        assert a["componentType"] == 5126 and a["type"] in ("SCALAR", "VEC3", "VEC4") and "sparse" not in a
+        view = incoming["bufferViews"][a["bufferView"]]
+        width = {"SCALAR": 1, "VEC3": 3, "VEC4": 4}[a["type"]]
+        assert view.get("buffer", 0) == 0 and view.get("byteStride", width * 4) == width * 4
+        start = view.get("byteOffset", 0) + a.get("byteOffset", 0)
+        size = a["count"] * width * 4
+        assert a["count"] >= 2 and start >= 0 and start + size <= len(data)
+        chunk = data[start:start + size]
+        assert all(math.isfinite(v[0]) for v in struct.iter_unpack("<f", chunk))
+        if a["type"] == "SCALAR":
+            times = [v[0] for v in struct.iter_unpack("<f", chunk)]
+            assert times[0] >= 0 and all(x < y for x, y in pairwise(times))
+        out.extend(b"\0" * (-len(out) % 4))
+        a["bufferView"] = len(j["bufferViews"])
+        a.pop("byteOffset", None)
+        j["bufferViews"].append({"buffer": 0, "byteOffset": len(out), "byteLength": size})
+        out.extend(chunk)
+        copied[index] = len(j["accessors"])
+        j["accessors"].append(a)
+        return copied[index]
+
+    for name in ("PIVOT_LEFT", "PIVOT_RIGHT"):
+        matches = [a for a in incoming["animations"] if a["name"] == PREFIX + name]
+        assert len(matches) == 1, name
+        animation = copy.deepcopy(matches[0])
+        animation["name"] = name
+        channels = set()
+        for channel in animation["channels"]:
+            target = channel["target"]
+            source_name = incoming["nodes"][target["node"]]["name"]
+            target["node"] = names[BONES.get(source_name, source_name)]
+            assert target["node"] in joints and target["path"] in ("translation", "rotation", "scale")
+            sampler = animation["samplers"][channel["sampler"]]
+            times = incoming["accessors"][sampler["input"]]
+            values = incoming["accessors"][sampler["output"]]
+            assert times["type"] == "SCALAR" and times["count"] == values["count"]
+            assert values["type"] == ("VEC4" if target["path"] == "rotation" else "VEC3")
+            channels.add((target["node"], target["path"]))
+        assert channels and channels <= expected and len(channels) == len(animation["channels"])
+        for sampler in animation["samplers"]:
+            assert sampler.get("interpolation", "LINEAR") in ("LINEAR", "STEP")
+            sampler["input"] = accessor(sampler["input"])
+            sampler["output"] = accessor(sampler["output"])
+        j["animations"].append(animation)
+    assert out[:len(binary)] == binary
+    j["buffers"][0]["byteLength"] = len(out)
+    temporary = OUT.with_suffix(".glb.tmp")
+    try:
+        write_glb(temporary, j, bytes(out))
+        temporary.replace(OUT)
+    finally:
+        temporary.unlink(missing_ok=True)
+    print(f"{OUT}: appended PIVOT_LEFT/PIVOT_RIGHT; original {len(binary)} BIN bytes retained")
 
 
 def main() -> None:
@@ -69,4 +144,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if sys.argv[1:2] == ["--pivots"]:
+        assert len(sys.argv) == 4, "--pivots BASE_INSTALLED.glb PIVOT_EXPORT.glb"
+        install_pivots(Path(sys.argv[2]), Path(sys.argv[3]))
+    else:
+        main()
