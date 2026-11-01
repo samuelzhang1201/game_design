@@ -53,7 +53,45 @@ const HALF: int = 180000000
 
 static func sample(rest: Dictionary, authored_pose: Dictionary,
 		operation: Dictionary, contacts: Dictionary) -> Dictionary:
-	var error: String = _validate(rest, authored_pose, operation, contacts)
+	return _solve(rest, authored_pose, operation, contacts, false)
+
+## Native variable-geometry mode: res://scripts/map3d/guide/infantry_pivot.md.
+## transition has exactly {entry_pose,exit_pose}, complete native absolute locals.
+## Contact rotations are proper polar frames; actual affine stretch/shear is retained.
+static func sample_transition(rest: Dictionary, authored_pose: Dictionary,
+		operation: Dictionary, contacts: Dictionary, transition: Dictionary) -> Dictionary:
+	if not _keys(transition, ["entry_pose", "exit_pose"]) \
+			or not transition.entry_pose is Dictionary or not transition.exit_pose is Dictionary:
+		return _failure("invalid transition schema")
+	# Solve the actual endpoints too: a phase-zero bypass would hide a C0 jump.
+	for endpoint: int in [0, 1]:
+		var reference: Dictionary = transition.entry_pose if endpoint == 0 else transition.exit_pose
+		var op: Dictionary = operation.duplicate(true)
+		if not _keys(op, ["duration_q", "phase", "yaw0_udeg", "turn_udeg", "current_yaw_udeg",
+				"march_entry_phase", "march_exit_phase"]) \
+				or not op.yaw0_udeg is int or not op.turn_udeg is int:
+			return _failure("invalid operation schema/type")
+		op.phase = float(endpoint)
+		op.current_yaw_udeg = fposmod(float(op.yaw0_udeg) + float(op.turn_udeg) * endpoint, float(REV))
+		var result: Dictionary = _solve(rest, reference, op, contacts, true)
+		if not result.ok:
+			return result
+		for name: String in reference:
+			if not _near(result.pose[name], reference[name]):
+				return _failure("incompatible native endpoint: " + name)
+	var result: Dictionary = _solve(rest, authored_pose, operation, contacts, true)
+	if not result.ok:
+		return result
+	if operation.phase == 0.0 or operation.phase == 1.0:
+		var reference: Dictionary = transition.entry_pose if operation.phase == 0.0 else transition.exit_pose
+		for name: String in reference:
+			if not _near(authored_pose[name], reference[name]):
+				return _failure("current reference disagrees with native endpoint: " + name)
+	return result
+
+static func _solve(rest: Dictionary, authored_pose: Dictionary, operation: Dictionary,
+		contacts: Dictionary, native: bool) -> Dictionary:
+	var error: String = _validate(rest, authored_pose, operation, contacts, native)
 	if not error.is_empty():
 		return _failure(error)
 	var rest_pose: Dictionary = {}
@@ -61,6 +99,7 @@ static func sample(rest: Dictionary, authored_pose: Dictionary,
 		rest_pose[bone.name] = bone.local
 	var bind_globals: Dictionary = _globals(rest.bones, rest_pose)
 	var authored: Dictionary = _globals(rest.bones, authored_pose)
+	var geometry: Dictionary = authored if native else bind_globals
 	var desired: Dictionary = {}
 	var diagnostics: Dictionary = {}
 	var inverse_yaw: Transform3D = Transform3D(Basis(Vector3.UP,
@@ -73,17 +112,21 @@ static func sample(rest: Dictionary, authored_pose: Dictionary,
 				interval = candidate
 				break
 		var share: float = (operation.phase - interval.t0) / (interval.t1 - interval.t0)
-		var feet: Dictionary = _feet(bind_globals[leg.ankle], bind_globals[leg.toe], bind,
+		var feet: Dictionary = _native_feet(geometry[leg.ankle], geometry[leg.toe], bind,
+			interval, share, inverse_yaw) if native else _feet(bind_globals[leg.ankle], bind_globals[leg.toe], bind,
 			interval, share, inverse_yaw)
 		if not _affine(feet.ankle) or not _affine(feet.toe) \
-				or not _rigid(feet.sole_target) or not _rigid(feet.toe_target):
+				or not _affine(feet.sole_target) or not _affine(feet.toe_target):
 			return _failure("invalid contact targets: " + leg.hip)
 		var ankle: Transform3D = feet.ankle
 		var hip: Transform3D = authored[leg.hip]
-		var upper: float = bind_globals[leg.hip].origin.distance_to(bind_globals[leg.knee].origin)
-		var lower: float = bind_globals[leg.knee].origin.distance_to(bind_globals[leg.ankle].origin)
+		var upper: float = geometry[leg.hip].origin.distance_to(geometry[leg.knee].origin)
+		var lower: float = geometry[leg.knee].origin.distance_to(geometry[leg.ankle].origin)
+		if native:
+			upper = _length64(geometry[leg.knee].origin - geometry[leg.hip].origin)
+			lower = _length64(geometry[leg.ankle].origin - geometry[leg.knee].origin)
 		var delta: Vector3 = ankle.origin - hip.origin
-		var distance: float = delta.length()
+		var distance: float = _length64(delta) if native else delta.length()
 		if not is_finite(distance) or distance <= 0.0 or distance > upper + lower \
 				or distance < absf(upper - lower):
 			return _failure("unreachable target: " + leg.hip)
@@ -101,15 +144,27 @@ static func sample(rest: Dictionary, authored_pose: Dictionary,
 			return _failure("invalid knee geometry: " + leg.hip)
 		var plane: Vector3 = Vector3.ZERO
 		if height_squared > 0.0:
-			plane = _knee_plane(bind_globals[leg.ankle].origin - bind_globals[leg.hip].origin,
-				direction, leg.pole)
+			if native:
+				var axis: Vector3 = geometry[leg.ankle].origin - geometry[leg.hip].origin
+				if axis.length_squared() == 0.0:
+					return _failure("undefined authored knee axis: " + leg.hip)
+				var source_bend: Vector3 = geometry[leg.knee].origin - geometry[leg.hip].origin
+				source_bend -= axis * source_bend.dot(axis) / axis.length_squared()
+				plane = _knee_plane(axis, direction, source_bend)
+			else:
+				plane = _knee_plane(bind_globals[leg.ankle].origin - bind_globals[leg.hip].origin,
+					direction, leg.pole)
 			if plane == Vector3.ZERO:
 				return _failure("undefined knee reference plane: " + leg.hip)
 		var knee_point: Vector3 = hip.origin + direction * along + plane * sqrt(height_squared)
-		desired[leg.hip] = Transform3D(_orient(bind_globals[leg.hip], authored[leg.hip],
+		desired[leg.hip] = Transform3D(_orient_native(authored[leg.hip],
+			geometry[leg.knee].origin - geometry[leg.hip].origin, knee_point - hip.origin) if native else
+			_orient(bind_globals[leg.hip], authored[leg.hip],
 			bind_globals[leg.knee].origin - bind_globals[leg.hip].origin,
 			knee_point - hip.origin), hip.origin)
-		desired[leg.knee] = Transform3D(_orient(bind_globals[leg.knee], authored[leg.knee],
+		desired[leg.knee] = Transform3D(_orient_native(authored[leg.knee],
+			geometry[leg.ankle].origin - geometry[leg.knee].origin, ankle.origin - knee_point) if native else
+			_orient(bind_globals[leg.knee], authored[leg.knee],
 			bind_globals[leg.ankle].origin - bind_globals[leg.knee].origin,
 			ankle.origin - knee_point), knee_point)
 		if desired[leg.hip].basis.determinant() <= 0.0 or desired[leg.knee].basis.determinant() <= 0.0:
@@ -140,8 +195,8 @@ static func sample(rest: Dictionary, authored_pose: Dictionary,
 		var toe_error: float = toe.origin.distance_to(d.target_toe.origin)
 		var upper: float = globals[leg.hip].origin.distance_to(globals[leg.knee].origin)
 		var lower: float = globals[leg.knee].origin.distance_to(globals[leg.ankle].origin)
-		var toe_length: float = bind_globals[leg.ankle].origin.distance_to(bind_globals[leg.toe].origin)
-		if not _rigid(sole) or not _rigid(toe) or not _near(sole, d.target_sole) \
+		var toe_length: float = geometry[leg.ankle].origin.distance_to(geometry[leg.toe].origin)
+		if (not native and (not _rigid(sole) or not _rigid(toe))) or not _near(sole, d.target_sole) \
 				or not _near(toe, d.target_toe) or not is_finite(sole_error) or not is_finite(toe_error) \
 				or absf(upper - d.upper_length) > EPS or absf(lower - d.lower_length) > EPS \
 				or absf(globals[leg.ankle].origin.distance_to(globals[leg.toe].origin) - toe_length) > EPS:
@@ -154,7 +209,8 @@ static func sample(rest: Dictionary, authored_pose: Dictionary,
 		d.lower_length = lower
 	return {"ok": true, "reason": "", "pose": pose, "contacts": diagnostics}
 
-static func _validate(rest: Dictionary, pose: Dictionary, op: Dictionary, contacts: Dictionary) -> String:
+static func _validate(rest: Dictionary, pose: Dictionary, op: Dictionary, contacts: Dictionary,
+		native: bool = false) -> String:
 	if not _keys(rest, ["bones", "legs"]) or not rest.bones is Array or not rest.legs is Array \
 			or rest.legs.size() != 2 or rest.bones.is_empty():
 		return "invalid rest schema"
@@ -200,6 +256,10 @@ static func _validate(rest: Dictionary, pose: Dictionary, op: Dictionary, contac
 			var length: float = bind_globals[pair[0]].origin.distance_to(bind_globals[pair[1]].origin)
 			if not is_finite(length) or length <= 0.0:
 				return "invalid rest joint length"
+			if native:
+				length = authored_globals[pair[0]].origin.distance_to(authored_globals[pair[1]].origin)
+				if not is_finite(length) or length <= 0.0:
+					return "invalid authored joint length"
 		if not leg.followers is Dictionary:
 			return "invalid follower schema"
 		for name: Variant in leg.followers:
@@ -260,13 +320,16 @@ static func _validate(rest: Dictionary, pose: Dictionary, op: Dictionary, contac
 				return "invalid contact interval"
 			if item.kind != "swing" and item.point_from != item.point_to:
 				return "moving stance anchor"
-			var first: Dictionary = _feet(bind_globals[leg.ankle], bind_globals[leg.toe],
+			var first: Dictionary = _native_feet(authored_globals[leg.ankle], authored_globals[leg.toe],
+				raw, item, 0.0, Transform3D.IDENTITY) if native else _feet(bind_globals[leg.ankle], bind_globals[leg.toe],
 				raw, item, 0.0, Transform3D.IDENTITY)
-			var last: Dictionary = _feet(bind_globals[leg.ankle], bind_globals[leg.toe],
+			var last: Dictionary = _native_feet(authored_globals[leg.ankle], authored_globals[leg.toe],
+				raw, item, 1.0, Transform3D.IDENTITY) if native else _feet(bind_globals[leg.ankle], bind_globals[leg.toe],
 				raw, item, 1.0, Transform3D.IDENTITY)
 			for targets: Dictionary in [first, last]:
 				if not _affine(targets.ankle) or not _affine(targets.toe) \
-						or not _rigid(targets.sole_target) or not _rigid(targets.toe_target):
+						or not _affine(targets.sole_target) or not _affine(targets.toe_target) \
+						or (not native and (not _rigid(targets.sole_target) or not _rigid(targets.toe_target))):
 					return "invalid endpoint contact targets"
 			if not previous.is_empty() and (not _near(previous.sole_target, first.sole_target) \
 					or not _near(previous.toe_target, first.toe_target)):
@@ -293,6 +356,55 @@ static func _feet(ankle_rest: Transform3D, toe_rest: Transform3D, bind: Dictiona
 		toe.origin = ankle.origin + offset
 	return {"ankle": ankle, "toe": toe, "sole_target": ankle * bind.sole_bind,
 		"toe_target": toe * bind.toe_bind}
+
+# Vector3.length rounds to real_t before the near-straight triangle subtraction.
+static func _length64(vector: Vector3) -> float:
+	var x: float = vector.x
+	var y: float = vector.y
+	var z: float = vector.z
+	return sqrt(x * x + y * y + z * z)
+
+# Newton polar decomposition retains shear separately from the proper contact rotation.
+static func _polar(basis: Basis) -> Basis:
+	var value: Basis = basis
+	for i: int in range(24):
+		if not value.is_finite() or value.determinant() <= 0.0:
+			break
+		var inverse: Basis = value.inverse().transposed()
+		value = Basis((value.x + inverse.x) * 0.5, (value.y + inverse.y) * 0.5, (value.z + inverse.z) * 0.5)
+		if _rotation(value):
+			return value
+	return Basis(Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
+
+static func _native_feet(ankle_source: Transform3D, toe_source: Transform3D, bind: Dictionary,
+		interval: Dictionary, share: float, inverse_yaw: Transform3D) -> Dictionary:
+	var sole_rotation: Basis = _polar((ankle_source * bind.sole_bind).basis)
+	var toe_rotation: Basis = _polar((toe_source * bind.toe_bind).basis)
+	var sole_delta: Basis = inverse_yaw.basis * interval.sole_from.slerp(interval.sole_to, share) * sole_rotation.transposed()
+	var toe_delta: Basis = inverse_yaw.basis * interval.toe_from.slerp(interval.toe_to, share) * toe_rotation.transposed()
+	var ankle: Transform3D = Transform3D(sole_delta * ankle_source.basis, Vector3.ZERO)
+	var toe: Transform3D = Transform3D(toe_delta * toe_source.basis, Vector3.ZERO)
+	var point: Vector3 = inverse_yaw * interval.point_from.lerp(interval.point_to, share)
+	var offset: Vector3 = sole_delta * (toe_source.origin - ankle_source.origin)
+	if interval.kind == "toe_stance":
+		toe.origin = point - toe.basis * bind.toe_bind.origin
+		ankle.origin = toe.origin - offset
+	else:
+		ankle.origin = point - ankle.basis * bind.sole_bind.origin
+		toe.origin = ankle.origin + offset
+	return {"ankle": ankle, "toe": toe, "sole_target": ankle * bind.sole_bind,
+		"toe_target": toe * bind.toe_bind}
+
+static func _orient_native(authored: Transform3D, source_segment: Vector3, target_segment: Vector3) -> Basis:
+	var source: Vector3 = source_segment.normalized()
+	var target: Vector3 = target_segment.normalized()
+	var cosine: float = source.dot(target)
+	if 1.0 + cosine <= EPS:
+		return Basis(Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
+	var cross: Vector3 = source.cross(target)
+	var aim: Basis = Basis.IDENTITY if cross.length_squared() == 0.0 else \
+		Basis(cross.normalized(), atan2(cross.length(), cosine))
+	return aim * authored.basis
 
 static func _rotation(value: Variant) -> bool:
 	return value is Basis and _rigid(Transform3D(value, Vector3.ZERO))

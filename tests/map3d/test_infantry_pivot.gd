@@ -688,3 +688,589 @@ func test_new_goal_types_and_impossible_toe_support_are_atomic() -> void:
 	f.contacts.legs.l0.intervals[0] = _interval("toe_stance", 0.0, 1.0,
 		Transform3D(Basis.IDENTITY, Vector3(100, 0, 0)), Transform3D(Basis.IDENTITY, Vector3(100, 0, 0)))
 	_reject(f, "unreachable toe anchor")
+
+func test_transition_changing_authored_lengths_reconstructs_native_endpoint() -> void:
+	var solver: RefCounted = Pivot.new()
+	assert_true(solver.has_method("sample_transition"), "explicit native geometry API is required")
+	if not solver.has_method("sample_transition"):
+		return
+	var f: Dictionary = _fixture()
+	f.pose.l1.origin *= 1.1
+	f.pose.l2.origin *= 0.9
+	f.pose.l3.origin *= 1.4
+	_set_phase(f, 0.0)
+	var globals: Dictionary = _globals(f.rest, f.pose)
+	for leg: Dictionary in f.rest.legs:
+		var anchor: Transform3D = globals[leg.ankle]
+		f.contacts.legs[leg.hip].intervals = [_interval("swing", 0.0, 1.0, anchor, anchor)]
+		f.contacts.legs[leg.hip].intervals[0].sole_to = Basis(Vector3.UP, deg_to_rad(-90.0))
+		f.contacts.legs[leg.hip].intervals[0].toe_to = Basis(Vector3.UP, deg_to_rad(-90.0))
+		f.contacts.legs[leg.hip].intervals[0].point_to = Basis(Vector3.UP, deg_to_rad(-90.0)) * anchor.origin
+	var transition: Dictionary = {"entry_pose": f.pose.duplicate(true), "exit_pose": f.pose.duplicate(true)}
+	var before: PackedByteArray = var_to_bytes([f, transition])
+	var result: Dictionary = solver.call("sample_transition", f.rest, f.pose, f.op, f.contacts, transition)
+	assert_true(result.ok, result.reason)
+	if result.ok:
+		for name: String in f.pose:
+			assert_true(Pivot._near(result.pose[name], f.pose[name]), name)
+		var after: Dictionary = _globals(f.rest, result.pose)
+		assert_almost_eq(after.l2.origin.distance_to(after.l3.origin), 0.28, 0.00001)
+		assert_almost_eq(after.l0.origin.distance_to(after.l1.origin), 1.1, 0.00001)
+	assert_eq(var_to_bytes([f, transition]), before)
+
+# Read the committed GLB directly: no import normalization, AnimationPlayer blend,
+# fixture rewrite, or unmerged clip is allowed to replace the native geometry.
+var _native_cache: Dictionary = {}
+
+func _native_asset() -> Dictionary:
+	if not _native_cache.is_empty():
+		return _native_cache
+	var path: String = "res://assets/3D/units/infantry/infantry.glb"
+	# Source GLB sha256 bb1d80b916be406f91390883034e07d0cf2d7690666951c3216b202393548085.
+	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
+	var size: int = bytes.decode_u32(12)
+	var document: Dictionary = JSON.parse_string(bytes.slice(20, 20 + size).get_string_from_utf8())
+	_native_cache = {"doc": document, "bin": bytes.slice(28 + size), "bones": [], "ids": {}, "keys": []}
+	var root: int = -1
+	for i: int in range(document.nodes.size()):
+		if document.nodes[i].get("name", "") == "inf_rig":
+			root = i
+	_native_order(root, "")
+	for animation: Dictionary in document.animations:
+		if animation.name != "MARCH":
+			continue
+		_native_cache.animation = animation
+		for sampler: Dictionary in animation.samplers:
+			var times: Array = _accessor(int(sampler.input))
+			for time: Array in times:
+				var phase: float = float(time[0]) / float(times[-1][0])
+				if phase < 1.0 and not _native_cache.keys.has(phase):
+					_native_cache.keys.append(phase)
+	_native_cache.keys.sort()
+	assert_eq(_native_fingerprint(), "707356edb648ef36bb57b4cfa9ecd56882405e17313e1b9f0e53b671bf4b90b7", "frozen original rest/mesh/skin/MARCH; additional clips do not change this input")
+	return _native_cache
+
+func _native_order(index: int, parent: String) -> void:
+	var node: Dictionary = _native_cache.doc.nodes[index]
+	var name: String = node.name
+	_native_cache.ids[name] = index
+	_native_cache.bones.append({"name": name, "parent": parent, "local": _node_transform(node)})
+	for child: Variant in node.get("children", []):
+		_native_order(int(child), name)
+
+func _vec(values: Array) -> Vector3:
+	return Vector3(values[0], values[1], values[2])
+
+func _node_transform(node: Dictionary) -> Transform3D:
+	if node.has("matrix"):
+		return _matrix(node.matrix)
+	var q: Array = node.get("rotation", [0.0, 0.0, 0.0, 1.0])
+	var rotation: Basis = Basis(Quaternion(q[0], q[1], q[2], q[3]).normalized())
+	var scale: Vector3 = _vec(node.get("scale", [1.0, 1.0, 1.0]))
+	return Transform3D(rotation * Basis.from_scale(scale), _vec(node.get("translation", [0.0, 0.0, 0.0])))
+
+func _matrix(values: Array) -> Transform3D:
+	return Transform3D(Basis(Vector3(values[0], values[1], values[2]),
+		Vector3(values[4], values[5], values[6]), Vector3(values[8], values[9], values[10])),
+		Vector3(values[12], values[13], values[14]))
+
+func _accessor(index: int) -> Array:
+	var data: Dictionary = _native_cache.doc
+	var accessor: Dictionary = data.accessors[index]
+	var view: Dictionary = data.bufferViews[int(accessor.bufferView)]
+	var sizes: Dictionary = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT4": 16}
+	var components: int = sizes[accessor.type]
+	var width: int = {5126: 4, 5125: 4, 5123: 2, 5121: 1}[int(accessor.componentType)]
+	var start: int = int(view.get("byteOffset", 0)) + int(accessor.get("byteOffset", 0))
+	var stride: int = int(view.get("byteStride", width * components))
+	var bytes: PackedByteArray = _native_cache.bin
+	var result: Array = []
+	for row: int in range(int(accessor.count)):
+		var values: Array = []
+		for column: int in range(components):
+			var offset: int = start + row * stride + column * width
+			match int(accessor.componentType):
+				5126: values.append(bytes.decode_float(offset))
+				5125: values.append(bytes.decode_u32(offset))
+				5123: values.append(bytes.decode_u16(offset))
+				5121: values.append(bytes[offset])
+		result.append(values)
+	return result
+
+func _native_pose(phase: float) -> Dictionary:
+	var asset: Dictionary = _native_asset()
+	var nodes: Array = asset.doc.nodes.duplicate(true)
+	for channel: Dictionary in asset.animation.channels:
+		var sampler: Dictionary = asset.animation.samplers[int(channel.sampler)]
+		assert_eq(sampler.get("interpolation", "LINEAR"), "LINEAR")
+		var times: Array = _accessor(int(sampler.input))
+		var values: Array = _accessor(int(sampler.output))
+		var time: float = phase * float(times[-1][0])
+		var key: int = 0
+		while key + 2 < times.size() and time >= float(times[key + 1][0]):
+			key += 1
+		var share: float = (time - float(times[key][0])) / (float(times[key + 1][0]) - float(times[key][0]))
+		var a: Array = values[key]
+		var b: Array = values[key + 1]
+		var value: Array = []
+		if channel.target.path == "rotation":
+			var q: Quaternion = Quaternion(a[0], a[1], a[2], a[3]).normalized().slerp(
+				Quaternion(b[0], b[1], b[2], b[3]).normalized(), share)
+			value = [q.x, q.y, q.z, q.w]
+		else:
+			for i: int in range(a.size()):
+				value.append(lerpf(float(a[i]), float(b[i]), share))
+		nodes[int(channel.target.node)][channel.target.path] = value
+	var result: Dictionary = {}
+	for name: String in asset.ids:
+		result[name] = _node_transform(nodes[asset.ids[name]])
+	return result
+
+func _march_fixture(entry: float, exit: float, turn: int = 2000000) -> Dictionary:
+	var asset: Dictionary = _native_asset()
+	var f: Dictionary = {"rest": {"bones": asset.bones.duplicate(true), "legs": []},
+		"pose": _native_pose(entry), "op": {"duration_q": 200000, "phase": 0.0,
+		"yaw0_udeg": 359000000, "turn_udeg": turn, "current_yaw_udeg": 359000000.0,
+		"march_entry_phase": entry, "march_exit_phase": exit},
+		"contacts": {"march_entry_phase": entry, "march_exit_phase": exit, "legs": {}}}
+	f.transition = {"entry_pose": f.pose.duplicate(true), "exit_pose": _native_pose(exit)}
+	var poses: Array[Dictionary] = []
+	for pose: Dictionary in [f.transition.entry_pose, f.transition.exit_pose]:
+		poses.append(_globals(f.rest, pose))
+	var bind_pose: Dictionary = {}
+	for bone: Dictionary in f.rest.bones:
+		bind_pose[bone.name] = bone.local
+	var bind: Dictionary = _globals(f.rest, bind_pose)
+	var exit_yaw: Basis = Basis(Vector3.UP, -deg_to_rad(float(turn) / 1000000.0))
+	for side: String in [".l", ".r"]:
+		var hip: String = "thigh_twist" + side
+		var ankle: String = "foot" + side
+		var toe: String = "toes_01" + side
+		var leg: Dictionary = {"hip": hip, "knee": "leg_stretch" + side, "ankle": ankle, "toe": toe,
+			"pole": Vector3(-0.150626324, 0.442476592, -0.884039692) if side == ".l" else
+				Vector3(0.088675654, -0.441207958, -0.893012971),
+			"min_knee_rad": 0.0, "max_knee_rad": PI,
+			"followers": {"thigh_stretch" + side: "hip", "leg_twist" + side: "knee"}}
+		f.rest.legs.append(leg)
+		var sole_bind: Transform3D = bind[ankle].affine_inverse() * Transform3D(Basis.IDENTITY, bind[ankle].origin)
+		var toe_bind: Transform3D = bind[toe].affine_inverse() * Transform3D(Basis.IDENTITY, bind[toe].origin)
+		var a: Transform3D = poses[0][ankle] * sole_bind
+		var b: Transform3D = poses[1][ankle] * sole_bind
+		f.contacts.legs[hip] = {"sole_bind": sole_bind, "toe_bind": toe_bind, "intervals": [{
+			"t0": 0.0, "t1": 1.0, "kind": "swing", "point_from": a.origin,
+			"point_to": exit_yaw * b.origin, "sole_from": _proper(a.basis),
+			"sole_to": exit_yaw * _proper(b.basis),
+			"toe_from": _proper((poses[0][toe] * toe_bind).basis),
+			"toe_to": exit_yaw * _proper((poses[1][toe] * toe_bind).basis)}]}
+	return f
+
+# Independent test-side polar iteration; endpoint checks compare full matrices/skin,
+# not merely these orientation goals or the helper's contact diagnostics.
+func _proper(basis: Basis) -> Basis:
+	var b: Basis = basis
+	for i: int in range(12):
+		var inverse: Basis = b.inverse().transposed()
+		b = Basis((b.x + inverse.x) * 0.5, (b.y + inverse.y) * 0.5, (b.z + inverse.z) * 0.5)
+	return b.orthonormalized()
+
+func _transition(f: Dictionary) -> Dictionary:
+	return Pivot.sample_transition(f.rest, f.pose, f.op, f.contacts, f.transition)
+
+func _assert_native_pose(f: Dictionary, result: Dictionary, reference: Dictionary) -> void:
+	assert_true(result.ok, result.reason)
+	if not result.ok:
+		return
+	for name: String in reference:
+		assert_true(Pivot._near(result.pose[name], reference[name]), "native local: " + name)
+
+func test_transition_native_optimized_failure_and_all_skin_vertices_at_both_endpoints() -> void:
+	# Original native-helper-input sha256 e1bf40ccbe4dcd2d14c8e5ca44acf9b5fbba3accb8b28d80f01fb2e95fdca18d.
+	var phase: float = 0.8928571428571428
+	var f: Dictionary = _march_fixture(phase, phase)
+	# Recreate original phase-zero stance inputs exactly from the installed asset.
+	for leg: Dictionary in f.rest.legs:
+		var interval: Dictionary = f.contacts.legs[leg.hip].intervals[0]
+		interval.kind = "stance"
+		interval.point_to = interval.point_from
+		interval.sole_to = interval.sole_from
+		interval.toe_to = interval.toe_from
+	var legacy: Dictionary = _sample(f)
+	assert_true(legacy.ok, legacy.reason)
+	if legacy.ok:
+		var original: Dictionary = _globals(f.rest, f.pose)
+		var old: Dictionary = _globals(f.rest, legacy.pose)
+		assert_almost_eq(old["toes_01.l"].origin.distance_to(original["toes_01.l"].origin), 0.00759866275, 0.000002)
+	# Exit contacts must account for committed yaw to remain compatible native endpoints.
+	f = _march_fixture(phase, phase)
+	var mesh: Dictionary = _native_mesh()
+	for endpoint: float in [0.0, 1.0]:
+		_set_phase(f, endpoint)
+		var result: Dictionary = _transition(f)
+		_assert_native_pose(f, result, f.pose)
+		if result.ok:
+			var before: Dictionary = _globals(f.rest, f.pose)
+			var after: Dictionary = _globals(f.rest, result.pose)
+			var maximum: float = 0.0
+			for i: int in range(mesh.positions.size()):
+				maximum = maxf(maximum, _skin(mesh, i, before).distance_to(_skin(mesh, i, after)))
+			assert_lt(maximum, 0.00001, "all 20880 actual rigid/mixed-weight vertices; old max 0.0179955408m")
+
+func _native_mesh() -> Dictionary:
+	var asset: Dictionary = _native_asset()
+	var skin: Dictionary = asset.doc.skins[0]
+	var attributes: Dictionary = asset.doc.meshes[0].primitives[0].attributes
+	var matrices: Array = _accessor(int(skin.inverseBindMatrices))
+	var names: Array[String] = []
+	var inverse: Array[Transform3D] = []
+	for i: int in range(skin.joints.size()):
+		names.append(asset.doc.nodes[int(skin.joints[i])].name)
+		inverse.append(_matrix(matrices[i]))
+	return {"positions": _accessor(int(attributes.POSITION)), "joints": _accessor(int(attributes.JOINTS_0)),
+		"weights": _accessor(int(attributes.WEIGHTS_0)), "names": names, "inverse": inverse}
+
+func _skin(mesh: Dictionary, index: int, globals: Dictionary) -> Vector3:
+	var result: Vector3 = Vector3.ZERO
+	for influence: int in range(4):
+		var joint: int = int(mesh.joints[index][influence])
+		result += (globals[mesh.names[joint]] * mesh.inverse[joint] * _vec(mesh.positions[index])) * float(mesh.weights[index][influence])
+	return result
+
+func test_transition_all_original_march_keys_and_adversarial_interpolation_endpoints() -> void:
+	var phases: Array = _native_asset().keys.duplicate()
+	phases.append_array([0.000001, 0.137, 0.37, 0.499999, 0.500001, 0.81, 0.8928571428571428, 0.999999])
+	for phase: float in phases:
+		var f: Dictionary = _march_fixture(phase, fposmod(phase + 0.137, 1.0))
+		for endpoint: float in [0.0, 1.0]:
+			_set_phase(f, endpoint)
+			f.pose = f.transition.entry_pose if endpoint == 0.0 else f.transition.exit_pose
+			_assert_native_pose(f, _transition(f), f.pose)
+
+func _connect_endpoints(f: Dictionary, exit_pose: Dictionary) -> void:
+	f.transition = {"entry_pose": f.pose.duplicate(true), "exit_pose": exit_pose.duplicate(true)}
+	var a: Dictionary = _globals(f.rest, f.pose)
+	var b: Dictionary = _globals(f.rest, exit_pose)
+	var yaw: Basis = Basis(Vector3.UP, -deg_to_rad(float(f.op.turn_udeg) / 1000000.0))
+	for leg: Dictionary in f.rest.legs:
+		var bind: Dictionary = f.contacts.legs[leg.hip]
+		var sole0: Transform3D = a[leg.ankle] * bind.sole_bind
+		var sole1: Transform3D = b[leg.ankle] * bind.sole_bind
+		bind.intervals = [{"t0": 0.0, "t1": 1.0, "kind": "swing", "point_from": sole0.origin,
+			"point_to": yaw * sole1.origin, "sole_from": _proper(sole0.basis),
+			"sole_to": yaw * _proper(sole1.basis),
+			"toe_from": _proper((a[leg.toe] * bind.toe_bind).basis),
+			"toe_to": yaw * _proper((b[leg.toe] * bind.toe_bind).basis)}]
+
+func _reference_at(f: Dictionary, phase: float) -> void:
+	_set_phase(f, phase)
+	f.pose = {}
+	for name: String in f.transition.entry_pose:
+		var a: Transform3D = f.transition.entry_pose[name]
+		var b: Transform3D = f.transition.exit_pose[name]
+		var ra: Basis = _proper(a.basis)
+		var rb: Basis = _proper(b.basis)
+		var ca: Basis = ra.transposed() * a.basis
+		var cb: Basis = rb.transposed() * b.basis
+		var residual: Basis = Basis(ca.x.lerp(cb.x, phase), ca.y.lerp(cb.y, phase), ca.z.lerp(cb.z, phase))
+		f.pose[name] = Transform3D(ra.slerp(rb, phase) * residual, a.origin.lerp(b.origin, phase))
+
+func test_transition_affine_sibling_geometry_followers_and_changing_native_locals() -> void:
+	var f: Dictionary = _fixture()
+	var bind: Dictionary = _globals(f.rest, f.pose)
+	for bone: Dictionary in f.rest.bones:
+		if bone.name not in ["body", "gear"]:
+			bone.parent = "body"
+			bone.local = bind[bone.name]
+			f.pose[bone.name] = bone.local
+	# Real native parenting has sibling deform joints; complete affine factors vary.
+	f.pose.body = Transform3D(Basis(Vector3(1.1, 0, 0), Vector3(0.12, 0.9, 0), Vector3(0, 0.08, 1.2)), Vector3(0, 0.1, 0))
+	f.pose.l1.origin += Vector3(0, 0.08, 0.12)
+	f.pose.l3.origin += Vector3(0, 0.03, 0.09)
+	f.pose.l0.basis = Basis(Vector3(1.02, 0, 0), Vector3(0.04, 0.97, 0), Vector3(0, 0.03, 1.01))
+	f.rest.bones.append({"name": "twist", "parent": "body", "local": Transform3D(Basis.IDENTITY, Vector3(-0.2, 1, 0.3))})
+	f.pose.twist = Transform3D(Basis(Vector3.UP, 0.3), Vector3(-0.2, 1, 0.3))
+	f.rest.legs[0].followers.twist = "knee"
+	var exit_pose: Dictionary = f.pose.duplicate(true)
+	exit_pose.l1.origin += Vector3(0, 0.03, 0.04)
+	exit_pose.l3.origin.z += 0.06
+	exit_pose.gear.origin.x += 0.2
+	_connect_endpoints(f, exit_pose)
+	for phase: float in [0.0, 0.000001, 0.137, 0.5, 0.823, 0.999999, 1.0]:
+		_reference_at(f, phase)
+		var before: PackedByteArray = var_to_bytes(f)
+		var result: Dictionary = _transition(f)
+		assert_true(result.ok, result.reason)
+		if not result.ok:
+			continue
+		var source: Dictionary = _globals(f.rest, f.pose)
+		var after: Dictionary = _globals(f.rest, result.pose)
+		for leg: Dictionary in f.rest.legs:
+			for pair: Array in [[leg.hip, leg.knee], [leg.knee, leg.ankle], [leg.ankle, leg.toe]]:
+				assert_almost_eq(after[pair[0]].origin.distance_to(after[pair[1]].origin),
+					source[pair[0]].origin.distance_to(source[pair[1]].origin), 0.00001)
+			for name: String in [leg.hip, leg.knee, leg.ankle, leg.toe]:
+				var gram_before: Basis = source[name].basis.transposed() * source[name].basis
+				var gram_after: Basis = after[name].basis.transposed() * after[name].basis
+				assert_true(Pivot._near(Transform3D(gram_before, Vector3.ZERO), Transform3D(gram_after, Vector3.ZERO)), "preserved affine stretch/shear " + name)
+		assert_true(Pivot._near(after.twist, after.l1 * source.l1.affine_inverse() * source.twist))
+		assert_eq(result.pose.body, f.pose.body)
+		assert_eq(result.pose.gear, f.pose.gear)
+		assert_eq(var_to_bytes(f), before)
+		if phase == 0.0 or phase == 1.0:
+			_assert_native_pose(f, result, f.pose)
+
+func _reject_transition(f: Dictionary, label: String) -> void:
+	var before: PackedByteArray = var_to_bytes(f)
+	var result: Dictionary = _transition(f)
+	assert_false(result.ok, label)
+	assert_ne(result.reason, "", label)
+	assert_eq(result.pose, {}, label)
+	assert_eq(result.contacts, {}, label)
+	assert_eq(var_to_bytes(f), before, label)
+
+func test_transition_malformed_unknown_nonfinite_and_incompatible_endpoints_reject_atomically() -> void:
+	var mutations: Array[Callable] = [
+		func(f: Dictionary) -> void: f.transition.extra = 1,
+		func(f: Dictionary) -> void: f.transition.erase("exit_pose"),
+		func(f: Dictionary) -> void: f.transition.entry_pose = null,
+		func(f: Dictionary) -> void: f.transition.exit_pose = [],
+		func(f: Dictionary) -> void: f.transition.entry_pose.unknown_bone = Transform3D.IDENTITY,
+		func(f: Dictionary) -> void: f.transition.exit_pose.erase("l2"),
+		func(f: Dictionary) -> void: f.transition.exit_pose.l3 = Vector3.ZERO,
+		func(f: Dictionary) -> void: f.transition.exit_pose.l2.origin.y = NAN,
+		func(f: Dictionary) -> void: f.transition.exit_pose.l2.basis = Basis.from_scale(Vector3(1, 0, 1)),
+		func(f: Dictionary) -> void: f.pose.l2.basis.x *= -1.0,
+		func(f: Dictionary) -> void: f.pose.l1.origin = Vector3.ZERO,
+		func(f: Dictionary) -> void: f.pose.l3.origin = Vector3.ZERO,
+		func(f: Dictionary) -> void: f.pose.l2.origin = -f.pose.l1.origin,
+		func(f: Dictionary) -> void: f.op.phase = 0,
+		func(f: Dictionary) -> void: f.op.turn_udeg = 0,
+		func(f: Dictionary) -> void: f.op.yaw0_udeg = null,
+		func(f: Dictionary) -> void: f.op.current_yaw_udeg += 1.0,
+		func(f: Dictionary) -> void: f.contacts.march_entry_phase = 0.1,
+		func(f: Dictionary) -> void: f.contacts.legs.l0.sole_bind.basis.x *= 2.0,
+		func(f: Dictionary) -> void: f.contacts.legs.l0.intervals[0].point_to.y -= 10.0,
+		func(f: Dictionary) -> void: f.contacts.legs.l0.intervals[0].toe_to = Basis(Vector3.UP, 0.7),
+		func(f: Dictionary) -> void: f.transition.exit_pose.l2.origin.x += 0.1,
+		func(f: Dictionary) -> void: f.rest.legs[0].max_knee_rad = 0.01]
+	for i: int in range(mutations.size()):
+		var f: Dictionary = _fixture()
+		_connect_endpoints(f, f.pose)
+		mutations[i].call(f)
+		_reject_transition(f, "native boundary mutation " + str(i))
+	var f: Dictionary = _fixture()
+	_connect_endpoints(f, f.pose)
+	_set_phase(f, 0.0)
+	f.pose.gear.origin.x += 0.1
+	_reject_transition(f, "current endpoint reference mismatch")
+
+func test_transition_near_straight_native_bend_and_singular_source_chart() -> void:
+	for bend: float in [0.001, -0.001, 0.00001, -0.00001]:
+		var f: Dictionary = _fixture()
+		f.pose.l1.origin = Vector3(0, -0.8, bend)
+		f.pose.l2.origin = Vector3(0, -0.8, -bend)
+		f.op.turn_udeg = 1
+		_connect_endpoints(f, f.pose)
+		_set_phase(f, 0.0)
+		_assert_native_pose(f, _transition(f), f.pose)
+	# A fully folded source hip/ankle axis cannot define a transported bend chart.
+	var f: Dictionary = _fixture()
+	f.pose.l2.origin = -f.pose.l1.origin
+	_connect_endpoints(f, f.pose)
+	_reject_transition(f, "zero native hip-ankle reference axis")
+
+func test_transition_native_dense_skin_orientation_continuity_and_partition_invariance() -> void:
+	var mesh: Dictionary = _native_mesh()
+	var vertices: Array[int] = []
+	var found: Dictionary = {}
+	for i: int in range(mesh.positions.size()):
+		for slot: int in range(4):
+			var name: String = mesh.names[int(mesh.joints[i][slot])]
+			var weight: float = float(mesh.weights[i][slot])
+			if weight <= 0.0 or not (name.begins_with("foot") or name.begins_with("toes") or name.begins_with("leg")):
+				continue
+			var key: String = name + ("rigid" if weight == 1.0 else "mixed")
+			if not found.has(key):
+				vertices.append(i)
+				found[key] = true
+	assert_gt(vertices.size(), 10, "representative actual rigid and mixed weights")
+	for turn: int in [2000000, -2000000]:
+		var f: Dictionary = _march_fixture(0.8928571428571428, 0.81, turn)
+		var previous: Dictionary = {}
+		for i: int in range(101):
+			_reference_at(f, float(i) / 100.0)
+			var before: PackedByteArray = var_to_bytes(f)
+			var result: Dictionary = _transition(f)
+			assert_true(result.ok, result.reason + " phase " + str(f.op.phase))
+			if not result.ok:
+				continue
+			var globals: Dictionary = _globals(f.rest, result.pose)
+			if not previous.is_empty():
+				for index: int in vertices:
+					assert_lt(_skin(mesh, index, globals).distance_to(_skin(mesh, index, previous)), 0.005, "dense actual skin continuity")
+				for leg: Dictionary in f.rest.legs:
+					for name: String in [leg.hip, leg.knee, leg.ankle, leg.toe]:
+						assert_lt(_proper(globals[name].basis).get_rotation_quaternion().angle_to(_proper(previous[name].basis).get_rotation_quaternion()), 0.05, "dense orientation continuity")
+			previous = globals
+			assert_eq(var_to_bytes(f), before)
+		for endpoint: float in [0.0, 1.0]:
+			_reference_at(f, endpoint)
+			var exact: Dictionary = _transition(f)
+			_reference_at(f, 0.000001 if endpoint == 0.0 else 0.999999)
+			var near: Dictionary = _transition(f)
+			assert_true(near.ok, near.reason)
+			if exact.ok and near.ok:
+				var a: Dictionary = _globals(f.rest, exact.pose)
+				var b: Dictionary = _globals(f.rest, near.pose)
+				for index: int in vertices:
+					assert_lt(_skin(mesh, index, a).distance_to(_skin(mesh, index, b)), 0.00001, "native boundary skin C0")
+		_reference_at(f, 0.5)
+		var reference: Dictionary = _transition(f)
+		for fps: int in [1, 30, 60, 144]:
+			for i: int in range(fps + 1):
+				_reference_at(f, float(i) * 0.5 / fps)
+				_transition(f)
+			assert_eq(_transition(f), reference)
+		var snapshot: PackedByteArray = var_to_bytes(f)
+		var detached: Dictionary = _transition(f)
+		if detached.ok:
+			detached.pose["inf_rig"].origin.x += 99.0
+		assert_eq(var_to_bytes(f), snapshot)
+		assert_eq(_transition(f), reference, "pause unchanged")
+
+func test_transition_signs_nearzero_wrap_and_180_tie() -> void:
+	for turn: int in [1, -1, 2000000, -2000000, 90000000, -90000000, 179999999, -179999999, 180000000]:
+		var f: Dictionary = _fixture()
+		f.op.yaw0_udeg = 359000000
+		f.op.turn_udeg = turn
+		_connect_endpoints(f, f.pose)
+		for phase: float in [0.0, 0.000001, 0.137, 0.5, 0.823, 0.999999, 1.0]:
+			_set_phase(f, phase)
+			var result: Dictionary = _transition(f)
+			assert_true(result.ok, result.reason)
+			if phase == 0.0 or phase == 1.0:
+				_assert_native_pose(f, result, f.pose)
+
+func test_transition_stance_toe_stance_and_interval_boundary_preserve_physical_frames() -> void:
+	for kind: String in ["stance", "toe_stance"]:
+		var f: Dictionary = _fixture()
+		f.op.turn_udeg = 2000000
+		var source: Dictionary = _globals(f.rest, f.pose)
+		var globals: Dictionary = {}
+		var yaw: Transform3D = Transform3D(Basis(Vector3.UP, deg_to_rad(2.0)), Vector3.ZERO)
+		var exit_pose: Dictionary = f.pose.duplicate(true)
+		for bone: Dictionary in f.rest.bones:
+			var parent: Transform3D = Transform3D.IDENTITY if bone.parent.is_empty() else globals[bone.parent]
+			if bone.name not in ["body", "gear"]:
+				exit_pose[bone.name] = parent.affine_inverse() * yaw * source[bone.name]
+			globals[bone.name] = parent * exit_pose[bone.name]
+		_connect_endpoints(f, exit_pose)
+		for leg: Dictionary in f.rest.legs:
+			var interval: Dictionary = f.contacts.legs[leg.hip].intervals[0]
+			interval.kind = kind
+			if kind == "toe_stance":
+				interval.point_from = (source[leg.toe] * f.contacts.legs[leg.hip].toe_bind).origin
+			interval.point_to = interval.point_from
+			interval.sole_to = interval.sole_from
+			interval.toe_to = interval.toe_from
+			var first: Dictionary = interval.duplicate(true)
+			var second: Dictionary = interval.duplicate(true)
+			first.t1 = 0.4
+			second.t0 = 0.4
+			f.contacts.legs[leg.hip].intervals = [first, second]
+		var previous: Dictionary = {}
+		for phase: float in [0.0, 0.1, 0.399999, 0.4, 0.400001, 0.8, 1.0]:
+			_reference_at(f, phase)
+			var result: Dictionary = _transition(f)
+			assert_true(result.ok, result.reason)
+			if not result.ok:
+				continue
+			var undo: Transform3D = Transform3D(Basis(Vector3.UP, -deg_to_rad(2.0 * phase)), Vector3.ZERO)
+			for leg: Dictionary in f.rest.legs:
+				var frame: Transform3D = result.contacts[leg.hip].sole if kind == "stance" else result.contacts[leg.hip].toe
+				var expected: Vector3 = f.contacts.legs[leg.hip].intervals[0].point_from
+				assert_almost_eq(undo * frame.origin, expected, Vector3.ONE * 0.00001)
+				assert_true(Pivot._near(Transform3D((undo * frame).basis, Vector3.ZERO), Transform3D.IDENTITY))
+			if phase > 0.399999 and phase <= 0.400001 and not previous.is_empty():
+				for name: String in result.pose:
+					assert_true(Pivot._near(result.pose[name], previous[name]), "interval C0 local " + name)
+			previous = result.pose
+		f.contacts.legs.l0.intervals[1].point_from.x += 0.01
+		f.contacts.legs.l0.intervals[1].point_to.x += 0.01
+		_reject_transition(f, "discontinuous physical contact interval")
+
+func test_transition_native_exit_toe_translation_is_geometry_not_an_incompatible_goal() -> void:
+	var f: Dictionary = _fixture()
+	var exit_pose: Dictionary = f.pose.duplicate(true)
+	exit_pose.l3.origin.z += 0.1
+	_connect_endpoints(f, exit_pose)
+	_set_phase(f, 1.0)
+	f.pose = exit_pose
+	_assert_native_pose(f, _transition(f), exit_pose)
+
+# Freeze numerical inputs by content, allowing the later authorized clip step to
+# append pivots without changing original MARCH, binds, mesh or skin weights.
+func _native_fingerprint() -> String:
+	var document: Dictionary = _native_cache.doc
+	var context: HashingContext = HashingContext.new()
+	context.start(HashingContext.HASH_SHA256)
+	var parents: Dictionary = {}
+	var indices: Dictionary = {}
+	for i: int in range(document.nodes.size()):
+		indices[document.nodes[i].name] = i
+		for child: Variant in document.nodes[i].get("children", []):
+			parents[int(child)] = i
+	var names: Array = indices.keys()
+	names.sort()
+	for name: String in names:
+		var index: int = indices[name]
+		var node: Dictionary = document.nodes[index]
+		_hash_label(context, name)
+		_hash_label(context, document.nodes[parents[index]].name if parents.has(index) else "")
+		var fields: Array = ["matrix"] if node.has("matrix") else ["translation", "rotation", "scale"]
+		var defaults: Dictionary = {"translation": [0, 0, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1]}
+		for field: String in fields:
+			_hash_label(context, field)
+			context.update(PackedFloat32Array(node.get(field, defaults.get(field))).to_byte_array())
+	for skin: Dictionary in document.skins:
+		for joint: Variant in skin.joints:
+			_hash_label(context, document.nodes[int(joint)].name)
+		_hash_accessor(context, int(skin.inverseBindMatrices), "inverseBindMatrices")
+	for mesh: Dictionary in document.meshes:
+		for primitive: Dictionary in mesh.primitives:
+			var attributes: Array = primitive.attributes.keys()
+			attributes.sort()
+			for name: String in attributes:
+				_hash_accessor(context, int(primitive.attributes[name]), name)
+			if primitive.has("indices"):
+				_hash_accessor(context, int(primitive.indices), "indices")
+	var channels: Dictionary = {}
+	for channel: Dictionary in _native_cache.animation.channels:
+		channels[document.nodes[int(channel.target.node)].name + "|" + channel.target.path] = channel
+	var targets: Array = channels.keys()
+	targets.sort()
+	for target: String in targets:
+		var channel: Dictionary = channels[target]
+		var sampler: Dictionary = _native_cache.animation.samplers[int(channel.sampler)]
+		_hash_label(context, document.nodes[int(channel.target.node)].name)
+		_hash_label(context, channel.target.path)
+		_hash_label(context, sampler.get("interpolation", "LINEAR"))
+		_hash_accessor(context, int(sampler.input), "time")
+		_hash_accessor(context, int(sampler.output), "value")
+	return context.finish().hex_encode()
+
+func _hash_label(context: HashingContext, label: String) -> void:
+	var bytes: PackedByteArray = label.to_utf8_buffer()
+	bytes.append(0)
+	context.update(bytes)
+
+func _hash_accessor(context: HashingContext, index: int, label: String) -> void:
+	var accessor: Dictionary = _native_cache.doc.accessors[index]
+	var view: Dictionary = _native_cache.doc.bufferViews[int(accessor.bufferView)]
+	var components: int = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT4": 16}[accessor.type]
+	var width: int = {5126: 4, 5125: 4, 5123: 2, 5121: 1}[int(accessor.componentType)] * components
+	var start: int = int(view.get("byteOffset", 0)) + int(accessor.get("byteOffset", 0))
+	var stride: int = int(view.get("byteStride", width))
+	_hash_label(context, "%s|%d|%s|%d" % [label, int(accessor.componentType), accessor.type, int(accessor.count)])
+	var bytes: PackedByteArray = _native_cache.bin
+	for i: int in range(int(accessor.count)):
+		context.update(bytes.slice(start + i * stride, start + i * stride + width))
