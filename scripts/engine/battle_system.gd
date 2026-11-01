@@ -804,6 +804,11 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 				var bite := ArmySystem.day_bite(ArmySystem.supply_use(repo, reg, state), state.day)
 				costs.append({"code": code, "supplies": _attack_supply(repo, bite), "reason": String(action["reason"])})
 	if not engaging and not b.has("pending_round"):
+		if not left.is_empty():
+			events.append({"kind": "withdrawal", "battle_id": int(b["id"]), "day": today,
+				"att": (b["att"] as Array).duplicate(), "def": (b["def"] as Array).duplicate(),
+				"town": String(b["town"]), "place_x_m": int(b["place_x_m"]),
+				"place_y_m": int(b["place_y_m"]), "left": left.duplicate(true)})
 		b["last_resolved_day"] = today
 		return {"ended": false}
 	var att: Array = b["att"]
