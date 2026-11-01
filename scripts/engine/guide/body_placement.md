@@ -35,7 +35,10 @@ Version and sequence are canonical decimal strings; operation IDs require
 `placement:` with a nonempty suffix to survive imported-save deep decoding.
 Only the latest exact original-plan retry is a no-op. Convenience retries return
 `retry_requires_original_plan`; they never reconstruct a plan or pay twice.
-Malformed, stale, unsupported or tampered inputs fail closed.
+Malformed, stale, unsupported or tampered inputs fail closed. Raw boundaries
+and frozen protocols are checked before recruitment reconciliation can defer.
+Personnel cohort references must be unique and owned by their roster's unit
+before any placement count is computed.
 
 This candidate API does not activate ordinary boot/load, personnel/cost,
 courier/arrival, battle or rendering dispatch. The full twelve formation gates,

@@ -524,6 +524,9 @@ static func _placement_stage(repo: DataRepository, source: GameState, request: D
 	if not _placement_request_ok(request): return _placement_result("error", "Invalid raw placement request")
 	for code: Variant in source.army_roster:
 		if not code is String or not source.army_roster[code] is Dictionary: return _placement_result("error", "Invalid raw placement roster")
+		if not UnitBodies._naval(source, code):
+			var personnel_error := UnitBodies._placement_personnel_error(source, code)
+			if not personnel_error.is_empty(): return _placement_result("error", personnel_error)
 	if request.operation in ["recruit", "settle", "leave", "take_seat"] and (UnitBodies._entry(source, request.unit).is_empty() or UnitBodies._naval(source, request.unit)):
 		return _placement_result("error", "Unknown or non-land placement unit")
 	if request.operation == "refill" and not repo.burgs.has(request.unit): return _placement_result("error", "Unknown placement town")
@@ -537,6 +540,8 @@ static func _placement_stage(repo: DataRepository, source: GameState, request: D
 		if UnitBodies._naval(source, code): continue
 		if not source.army_roster.has(code) or not source.military_rosters.get(code) is Dictionary or not source.military_rosters[code].get("cohort_ids") is Array:
 			return _placement_result("error", "Placement requires actual roster/personnel provenance: " + code)
+	var boundary_error := UnitBodies._placement_boundary_error(source, boundary)
+	if not boundary_error.is_empty(): return _placement_result("error", boundary_error)
 	var input := source
 	if request.operation == "recruit" and not UnitBodies._entry(source, request.unit).has("body_reconciliation"):
 		var reconciled := UnitBodies.reconcile_candidate(repo, source, request.unit, int(request.previous_fit))

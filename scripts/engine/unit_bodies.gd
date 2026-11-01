@@ -566,6 +566,9 @@ static func validate_placement_candidate(repo: DataRepository, source: GameState
 	for raw: Variant in source.army_roster:
 		if not raw is String or not source.army_roster[raw] is Dictionary: return _failure("Invalid raw placement roster")
 		var code: String = raw
+		if not _naval(source, code):
+			var personnel_error := _placement_personnel_error(source, code)
+			if not personnel_error.is_empty(): return _failure(personnel_error)
 		if source.military_migration.has("body_version") and not _naval(source, code) and _entry(source, code).is_empty():
 			return _failure("Current roster unit missing required entry: " + code)
 	var owners := _owners(source)
@@ -576,19 +579,9 @@ static func validate_placement_candidate(repo: DataRepository, source: GameState
 			if not _whole(_entry(source, code).get(field)): return _failure("Invalid raw placement anchor: " + code)
 	if source.military_migration.has("body_placement") and not _placement_control_ok(source.military_migration.body_placement):
 		return _failure("Invalid saved placement control")
-	var keys: Array = ["version", "kind", "abs_day", "receipt"] if boundary.get("kind") == "march_complete" else ["version", "kind", "abs_day"]
-	if not BodyMotion._keys(boundary, keys) or not _whole(boundary.get("version")) or int(boundary.version) != 1 \
-		or boundary.get("kind") not in ["safe", "march_complete"] or not BodyMotion._decimal(boundary.get("abs_day")):
-		return _failure("Invalid raw placement boundary")
-	if int(boundary.abs_day) != source.absolute_day(): return _failure("Placement boundary day mismatch")
-	if boundary.kind == "safe":
-		if not source.day_resolution.is_empty():
-			var error := DayResolution.body_march_incompatibility_reason(source.day_resolution) if source.day_resolution.has("body_march") else DayResolution.incompatibility_reason(source.day_resolution)
-			if not error.is_empty(): return _failure(error)
-		return _migration(repo, source)
-	if not boundary.receipt is String or not BodyMotion._digest(boundary.receipt): return _failure("Invalid placement march receipt")
-	var error := DayResolution.body_march_incompatibility_reason(source.day_resolution)
+	var error := _placement_boundary_error(source, boundary)
 	if not error.is_empty(): return _failure(error)
+	if boundary.kind == "safe": return _migration(repo, source)
 	var control: Dictionary = source.day_resolution.body_march
 	var validated := validate_march_candidate(repo, source, {"version": 1, "abs_day": int(boundary.abs_day), "substep": maxi(0, int(control.next_substep) - 1)})
 	if validated.status != "complete": return validated
@@ -598,6 +591,31 @@ static func validate_placement_candidate(repo: DataRepository, source: GameState
 	error = ArmySystem._body_source_error(repo, source)
 	if not error.is_empty(): return _failure(error)
 	return _result("complete", "Validated completed MARCH without changing frozen payload", _copy(source))
+
+static func _placement_personnel_error(source: GameState, unit: String) -> String:
+	var roster: Variant = source.military_rosters.get(unit)
+	if not roster is Dictionary or not roster.get("cohort_ids") is Array:
+		return "Placement requires a staged personnel roster: " + unit
+	var seen := {}
+	for id: Variant in roster.cohort_ids:
+		if not id is String or seen.has(id): return "Duplicate or invalid placement cohort reference: " + unit
+		seen[id] = true
+		var cohort: Variant = source.military_cohorts.get(id)
+		if not cohort is Dictionary or cohort.get("unit_code") != unit:
+			return "Inconsistent placement cohort owner: " + unit
+	return ""
+
+static func _placement_boundary_error(source: GameState, boundary: Dictionary) -> String:
+	var keys: Array = ["version", "kind", "abs_day", "receipt"] if boundary.get("kind") == "march_complete" else ["version", "kind", "abs_day"]
+	if not BodyMotion._keys(boundary, keys) or not _whole(boundary.get("version")) or int(boundary.version) != 1 \
+		or boundary.get("kind") not in ["safe", "march_complete"] or not BodyMotion._decimal(boundary.get("abs_day")):
+		return "Invalid raw placement boundary"
+	if int(boundary.abs_day) != source.absolute_day(): return "Placement boundary day mismatch"
+	if boundary.kind == "safe":
+		if source.day_resolution.is_empty(): return ""
+		return DayResolution.body_march_incompatibility_reason(source.day_resolution) if source.day_resolution.has("body_march") else DayResolution.incompatibility_reason(source.day_resolution)
+	if not boundary.receipt is String or not BodyMotion._digest(boundary.receipt): return "Invalid placement march receipt"
+	return DayResolution.body_march_incompatibility_reason(source.day_resolution)
 
 static func _placement_id_ok(value: Variant) -> bool:
 	return value is String and value.begins_with("placement:") and value.length() > "placement:".length()

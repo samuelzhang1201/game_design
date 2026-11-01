@@ -711,3 +711,87 @@ func test_initialize_missing_staged_entry_requires_actual_provenance() -> void:
 		assert_eq(result.candidate.military_cohorts, people)
 	f.state.military_migration.body_version = 1
 	_call(f, _request(), "error")
+
+func test_review_r1_recruit_validates_raw_boundary_before_frozen_deferral() -> void:
+	var f := _fixture(900)
+	var initial := _call(f, _request())
+	if initial.candidate == null: return
+	f.state = initial.candidate
+	assert_false(Personnel.move(f.repo, f.state, f.code, "fit", "wounded", 1).has("error"))
+	var request := _request("recruit", f.code, "1")
+	request.previous_fit = "900"
+	var planned := ArmyGround.plan_body_placement_candidate(f.repo, f.state, request, _boundary(f.state))
+	assert_eq(planned.status, "complete", planned.reason)
+	if planned.status != "complete": return
+	var api: GDScript = load("res://scripts/engine/army_ground.gd")
+	for change: Dictionary in [{}, {"tx": {"protocol_version": true}}, {"tx": {"protocol_version": 99}},
+		{"boundary": {"version": true}}, {"boundary": {"extra": 1}}, {"boundary": {"abs_day": 1.5}}]:
+		var frozen := UnitBodies._copy(f.state)
+		frozen.day_resolution = DayResolution.begin(frozen.day, false, frozen.absolute_day())
+		frozen.day_resolution.merge(change.get("tx", {}), true)
+		var boundary := _boundary(frozen)
+		boundary.merge(change.get("boundary", {}), true)
+		var proposed: Dictionary = planned.plan.duplicate(true)
+		proposed.boundary = boundary.duplicate(true)
+		var before := frozen.to_dict()
+		for method: String in ["plan_body_placement_candidate", "body_placement_candidate", "commit_body_placement_candidate"]:
+			var result: Dictionary = api.call(method, f.repo, frozen,
+				proposed if method == "commit_body_placement_candidate" else request, boundary)
+			assert_eq(result.status, "deferred" if change.is_empty() else "error", method + str(change))
+			assert_null(result.candidate)
+			assert_eq(result.plan, {})
+			assert_eq(result.error, "" if change.is_empty() else result.reason)
+			assert_eq(frozen.to_dict(), before, "frozen payload, nested rows, personnel and RNG stay exact")
+
+func test_review_r2_staged_personnel_references_are_unique_and_owned() -> void:
+	for operation: String in ["initialize", "recruit"]:
+		for issue: String in ["duplicate", "owner"]:
+			var f := _fixture(1)
+			if operation == "recruit":
+				var initial := _call(f, _request())
+				if initial.candidate == null: continue
+				f.state = initial.candidate
+			else:
+				var px := ArmySystem.metres_to_pack(f.repo, Vector2i(50000, 50000))
+				f.state.army_roster[f.code].x = px.x
+				f.state.army_roster[f.code].y = px.y
+				f.state.regiments = {}
+			_corrupt_personnel_reference(f.state, f.code, issue)
+			var request := _request(operation, f.code if operation == "recruit" else "", "1" if operation == "recruit" else "0")
+			if operation == "recruit": request.previous_fit = "1"
+			_call(f, request, "error")
+	var repo := SuiteData.repo()
+	var original := SuiteData.campaign(repo, 319)
+	var host: Dictionary = repo.raid_hosts[0]
+	var units := EnemyAi.host_units(repo, original, host)
+	var source := UnitBodies._copy(original)
+	source.regiments = {}
+	source.foes = {}
+	source.ai_hosts = {}
+	source.battles = []
+	source.town_seat = {}
+	source.army_roster = {}
+	source.military_rosters = {}
+	for code: String in units:
+		source.regiments[code] = UnitBodies._entry(original, code).duplicate(true)
+		source.army_roster[code] = original.army_roster[code].duplicate(true)
+		source.military_rosters[code] = original.military_rosters[code].duplicate(true)
+	for key: String in ["body_version", "body_placement", "body_motion"]: source.military_migration.erase(key)
+	var code: String = units[0]
+	assert_false(Personnel.replace(repo, source, code, 1).has("error"))
+	for issue: String in ["duplicate", "owner"]:
+		var invalid := UnitBodies._copy(source)
+		_corrupt_personnel_reference(invalid, code, issue)
+		var before := invalid.to_dict()
+		var result := EnemyAi.spawn_body_candidate(repo, invalid, host.host_code, "placement:bad-host-reference", "0")
+		assert_eq(result.status, "error", issue)
+		assert_null(result.candidate)
+		assert_eq(invalid.to_dict(), before)
+
+func _corrupt_personnel_reference(state: GameState, code: String, issue: String) -> void:
+	for id: String in state.military_rosters[code].cohort_ids.duplicate():
+		if int(state.military_cohorts[id].fit) <= 0: continue
+		if issue == "duplicate": state.military_rosters[code].cohort_ids.append(id)
+		else: state.military_cohorts[id].unit_code = "unknown-reference-owner"
+		return
+	fail_test("fixture requires a real active fit cohort")
