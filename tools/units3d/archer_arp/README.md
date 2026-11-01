@@ -113,3 +113,46 @@ so a fresh import and the scene's existing material overrides use the same UVs.
 The proposed gear has 8,130 / 13,310 / 17,863 triangles (bow / arrow / quiver),
 39,303 together; the body remains 94,096 triangles. Acceptance evidence and
 source hashes are in `docs/reviews/archer-gear-lod/`.
+
+## Isolated pivot import provider (unwired)
+
+`pivot_import.gd` supplies an `EditorScenePostImport` callback for an eventual
+archer clip delivery. No committed `.import` points at it. Only the original
+clip owner attaches it after this provider is accepted; this does not deliver
+or certify pivot art or change runtime animation routing.
+
+The callback reads the same embedded-buffer GLB. Neither pivot name means a
+no-op; one missing name, duplicate targets, malformed data or unsupported
+channels reject the entire pair. Both clips must already exist in the native
+player's default library. Native `GLTFDocument` conversion with animation
+creation disabled supplies bone paths and rest transforms. Original FLOAT
+LINEAR/STEP translation, rotation and scale keys then populate new native
+Animations directly, retaining nonuniform source times, duration and one-shot
+playback. There is no private FPS bake or second optimizer. Source quaternions
+must be unit length within float precision. Unsupported cubic, sparse,
+normalized, non-bone or extension-driven animation data fails closed.
+
+Only absent components with exactly nonvarying native key values may use the
+unchanged native rest. Staticity is checked separately from full-matrix rest
+consistency at the existing pose tolerance. Full local
+rest matrices, bone names/parents and ancestor transforms must agree with the
+ordinary import; missing dynamic tracks or unmatched imported paths fail.
+Both replacement resources are staged before publishing either. The scene,
+meshes, skins, binds, materials, equipment, player/libraries and every other
+Animation resource remain in place. Temporary conversion nodes are freed on
+success and validation failure. Input work is bounded: 64 MiB GLB, 1,024 nodes
+and channels per clip, 4,096 keys per accessor, one million total pivot keys,
+and positive duration up to 60 seconds. These are importer validation limits,
+not gameplay settings.
+
+`tests/map3d/test_archer_pivot_import.gd` generates a small independent skinned
+GLB. It exercises the same static provider entry used by the callback under
+ordinary GUT (the editor-only base cannot be instantiated there), and invokes
+a real headless editor import in an isolated temporary project to verify the
+callback itself. The parent test runner owns the shared Godot lock; editor
+children execute serially inside it. Fixtures require no unmerged archer art.
+The checks cover exact source times, full native affine poses/contact points,
+old animation identity/curves, static padding, atomic rejection and temporary
+node cleanup. Run the file through `run_tests.sh` under the project shared
+lock. Numeric import checks do not replace the clip owner's real-window,
+continuous contact/envelope, parameter certificate or activation gates.
