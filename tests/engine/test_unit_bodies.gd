@@ -903,3 +903,24 @@ func test_placement_control_raw_validation_and_frozen_preservation() -> void:
 	assert_eq(f.state.to_dict(), frozen)
 	f.state.military_migration.body_placement.sequence = true
 	assert_eq(UnitBodies.validate_placement_candidate(f.repo, f.state, boundary).status, "error", "bad control precedes frozen deferral")
+
+func test_explicit_v2_march_boundary_validates_exact_version_without_conversion() -> void:
+	var f := _fixture()
+	var tx := DayResolution.begin(f.state.day, false, f.state.absolute_day())
+	tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+	tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
+	tx.march_entries = {f.code: f.state.regiments[f.code].duplicate(true)}
+	tx.march_budgets = {f.code: 70}
+	tx.marching_codes = [f.code]
+	tx.body_march = {"version": "2", "abs_day": str(f.state.absolute_day()), "next_substep": "0", "substep_count": "10", "last": {}}
+	f.state.day_resolution = tx
+	var boundary := {"version": 2, "abs_day": f.state.absolute_day(), "substep": 0}
+	var before: Dictionary = f.state.to_dict()
+	var result := UnitBodies.validate_march_candidate(f.repo, f.state, boundary)
+	assert_eq(result.status, "complete", result.reason)
+	if result.candidate != null: assert_eq(result.candidate.to_dict(), before)
+	for version: Variant in [1, 3, true, "2", 2.1]:
+		var bad := boundary.duplicate(true)
+		bad.version = version
+		assert_eq(UnitBodies.validate_march_candidate(f.repo, f.state, bad).status, "error")
+	assert_eq(f.state.to_dict(), before)

@@ -48,10 +48,11 @@ static func validate_march_candidate(repo: DataRepository, source: GameState, bo
 	if not BodyMotion._keys(boundary, ["version", "abs_day", "substep"]): return _failure("Invalid march boundary schema")
 	for key: String in ["version", "abs_day", "substep"]:
 		if not BodyMotion._natural(boundary[key]): return _failure("Invalid raw march boundary")
-	if int(boundary.version) != 1: return _failure("Unsupported march boundary")
+	if int(boundary.version) not in [1, 2]: return _failure("Unsupported march boundary")
 	var error := DayResolution.body_march_incompatibility_reason(source.day_resolution)
 	if not error.is_empty(): return _failure(error)
 	var control: Dictionary = source.day_resolution.body_march
+	if str(int(boundary.version)) != control.version: return _failure("Mixed march boundary protocol")
 	if int(boundary.abs_day) != source.absolute_day() or int(boundary.abs_day) != int(control.abs_day) \
 		or (int(boundary.substep) != int(control.next_substep) and int(boundary.substep) != int(control.next_substep) - 1):
 		return _failure("March boundary disagrees with saved cursor")

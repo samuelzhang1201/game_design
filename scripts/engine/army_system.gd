@@ -2270,12 +2270,13 @@ static func _body_result(status: String, reason: String, candidate: GameState = 
 
 static func _body_boundary(state: GameState) -> Dictionary:
 	var control: Dictionary = state.day_resolution.body_march
-	return {"version": 1, "abs_day": int(control.abs_day), "substep": int(control.next_substep)}
+	return {"version": int(control.version), "abs_day": int(control.abs_day), "substep": int(control.next_substep)}
 
-static func _body_source_error(repo: DataRepository, state: GameState) -> String:
+static func _body_source_error(repo: DataRepository, state: GameState, version: int = 1) -> String:
 	if repo == null or state == null: return "Missing candidate march source"
 	var error := DayResolution.body_march_incompatibility_reason(state.day_resolution)
 	if not error.is_empty(): return error
+	if state.day_resolution.body_march.version != str(version): return "Wrong explicit march consumer protocol"
 	var validated := UnitBodies.validate_march_candidate(repo, state, _body_boundary(state))
 	if validated.status != "complete": return validated.reason
 	var tx := state.day_resolution
@@ -2283,13 +2284,19 @@ static func _body_source_error(repo: DataRepository, state: GameState) -> String
 	var control: Dictionary = tx.body_march
 	var raw: Variant = state.military_migration.get("body_motion")
 	if state.military_migration.has("body_motion"):
-		if not BodyMotion._saved_ok(raw): return "Invalid inner motion receipt"
+		if not (BodyMotion._saved_ok(raw) if version == 1 else BodyMotion._loco_saved_source_ok(repo, state, raw, _body_boundary(state))): return "Invalid inner motion receipt"
+		if int(control.next_substep) > 0 and raw.version != str(version): return "Mixed inner/outer motion protocol"
 		if int(raw.abs_day) > int(control.abs_day): return "Future inner motion receipt"
 		if int(control.next_substep) > 0 and int(raw.abs_day) != int(control.abs_day): return "Inner motion day disagrees with outer march cursor"
 		if int(raw.abs_day) == int(control.abs_day):
 			if int(control.next_substep) == 0 or int(raw.substep) != int(control.next_substep) - 1:
 				return "Inner motion receipt disagrees with outer march cursor"
 	elif int(control.next_substep) > 0: return "Missing inner motion receipt"
+	if version == 2:
+		for code: String in state.regiments.keys() + state.foes.keys():
+			if is_naval(repo, state, code): continue
+			var piece := MapObjects.army_piece(repo, state.army_roster[code])
+			if BodyMotion._loco_policy(repo, piece).is_empty(): return "Unsupported locomotion policy/certificate: " + piece
 	var seen := {}
 	for code: Variant in tx.marching_codes:
 		if not code is String or seen.has(code) or not tx.march_entries.has(code): return "Invalid frozen march membership"
@@ -2302,7 +2309,11 @@ static func _body_source_error(repo: DataRepository, state: GameState) -> String
 		if not _body_entry_ok(tx.march_entries[code]): return "Invalid raw frozen route: " + code
 	for code: String in state.regiments.keys() + state.foes.keys():
 		if not _body_entry_ok(_entry_of(state, code)): return "Invalid raw current route: " + code
-	return _body_terrain_error(repo, state, [])
+	error = _body_terrain_error(repo, state, [])
+	if not error.is_empty(): return error
+	if version == 2 and int(control.next_substep) > 0 and control.last.result != _body_basis(repo, state, MarchPath.of_pack(repo), true):
+		return "Stale locomotion march state/context"
+	return ""
 
 static func _body_entry_ok(entry: Dictionary) -> bool:
 	if not entry.get("order") is String or entry.order not in [ORDER_MARCH, ORDER_GARRISON, ORDER_STANDBY]: return false
@@ -2346,13 +2357,21 @@ static func _body_entry_ok(entry: Dictionary) -> bool:
 				if not BodyMotion._integer(coordinate) or int(coordinate) < -2147483648 or int(coordinate) > 2147483647: return false
 	return true
 
-static func _body_basis(repo: DataRepository, state: GameState, grid: MarchPath) -> String:
-	return BodyMotion._hash([state.to_dict(), _body_boundary(state), repo.balance, repo.unit_footprints,
+static func _body_basis(repo: DataRepository, state: GameState, grid: MarchPath, result: bool = false) -> String:
+	var saved := state.to_dict()
+	if result: saved.day_resolution.body_march.last.erase("result")
+	return BodyMotion._hash([saved, _body_boundary(state), repo.balance, repo.unit_footprints,
 		repo.army_speed, repo.army_ground_speed, repo.noble_quality, repo.commanders, repo.battle_behaviors, repo.law_effects, repo.army_height_supply, repo.world_table("military", "unit_types"), repo.world_table("political", "diplomacy"),
 		grid.cols, grid.rows, grid.cell_m, Array(grid.closed), Array(grid.water), grid.water_open])
 
 static func plan_body_march_candidate(repo: DataRepository, source: GameState) -> Dictionary:
-	var error := _body_source_error(repo, source)
+	return _plan_body_march(repo, source, 1)
+
+static func plan_locomotion_march_candidate(repo: DataRepository, source: GameState) -> Dictionary:
+	return _plan_body_march(repo, source, 2)
+
+static func _plan_body_march(repo: DataRepository, source: GameState, version: int) -> Dictionary:
+	var error := _body_source_error(repo, source, version)
 	if not error.is_empty(): return _body_result("error", error)
 	var boundary := _body_boundary(source)
 	var tx := source.day_resolution
@@ -2362,13 +2381,19 @@ static func plan_body_march_candidate(repo: DataRepository, source: GameState) -
 	return _body_result("complete", "Planned one simultaneous body march slice", null, staged.plan)
 
 static func commit_body_march_candidate(repo: DataRepository, source: GameState, proposed: Dictionary) -> Dictionary:
-	var error := _body_source_error(repo, source)
+	return _commit_body_march(repo, source, proposed, 1)
+
+static func commit_locomotion_march_candidate(repo: DataRepository, source: GameState, proposed: Dictionary) -> Dictionary:
+	return _commit_body_march(repo, source, proposed, 2)
+
+static func _commit_body_march(repo: DataRepository, source: GameState, proposed: Dictionary, version: int) -> Dictionary:
+	var error := _body_source_error(repo, source, version)
 	if not error.is_empty(): return _body_result("error", error)
 	if not BodyMotion._keys(proposed, ["version", "abs_day", "substep", "basis", "motion", "units", "arrivals"]):
 		return _body_result("error", "Invalid march plan schema")
 	for field: String in ["version", "abs_day", "substep"]:
 		if not BodyMotion._natural(proposed[field]): return _body_result("error", "Invalid raw march plan cursor")
-	if int(proposed.version) != 1 or not proposed.basis is String or not proposed.motion is Dictionary \
+	if int(proposed.version) != version or not proposed.basis is String or not proposed.motion is Dictionary \
 		or not proposed.units is Array or not proposed.arrivals is Array: return _body_result("error", "Invalid march plan")
 	var control: Dictionary = source.day_resolution.body_march
 	var receipt := BodyMotion._hash(proposed)
@@ -2383,8 +2408,10 @@ static func commit_body_march_candidate(repo: DataRepository, source: GameState,
 	if staged.has("error"): return _body_result("error", staged.error)
 	if BodyMotion._hash(staged.plan) != receipt: return _body_result("error", "Stale or modified march plan")
 	var candidate: GameState = staged.candidate
-	var committed := BodyMotion.commit(repo, candidate, staged.plan.motion, _body_boundary(source))
+	var committed := BodyMotion.commit(repo, candidate, staged.plan.motion, _body_boundary(source)) if version == 1 \
+		else BodyMotion.commit_locomotion_candidate(repo, candidate, staged.plan.motion, _body_boundary(source))
 	if committed.status != "complete": return _body_result("error", committed.reason)
+	if version == 2: candidate = committed.candidate
 	# BodyMotion owns only rows. Publish metadata without replacing those new rows.
 	for row: Dictionary in staged.plan.units:
 		var entry := _entry_of(candidate, row.unit)
@@ -2399,7 +2426,9 @@ static func commit_body_march_candidate(repo: DataRepository, source: GameState,
 	candidate.day_resolution.body_march.next_substep = str(next)
 	candidate.day_resolution.body_march.last = {"substep": str(int(proposed.substep)), "receipt": receipt}
 	candidate.day_resolution.journal.arrivals.append_array(staged.plan.arrivals)
-	error = _body_source_error(repo, candidate)
+	if version == 2:
+		candidate.day_resolution.body_march.last.result = _body_basis(repo, candidate, MarchPath.of_pack(repo), true)
+	error = _body_source_error(repo, candidate, version)
 	if not error.is_empty(): return _body_result("error", "Final march validation: " + error)
 	if candidate.military_cohorts != source.military_cohorts or candidate.rng.to_dict() != source.rng.to_dict():
 		return _body_result("error", "March changed personnel or RNG")
@@ -2440,14 +2469,14 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 			UnitGait.refresh(repo, candidate, code, current)
 			@warning_ignore("integer_division")
 			step = budget / count + (1 if slice < budget % count else 0)
-			if slice == count - 1: step = maxi(step, budget - int(saved.get("day_walked_m", 0)))
+			if int(boundary.version) == 1 and slice == count - 1: step = maxi(step, budget - int(saved.get("day_walked_m", 0)))
 			if step > 0 and UnitGait.pays_run(repo, candidate, code, current, count): step = UnitGait.run_step_m(repo, step)
 			var walked := BattleTaskSystem.pursuit_walk(repo, candidate, code, current, Vector2i(here[0], here[1]), _path_of(saved), step)
 			if bool(walked.limited):
 				path = [here]
 				for point: Vector2i in walked.passed: path.append([point.x, point.y])
 				path.append([walked.at.x, walked.at.y])
-				step = mini(step, BodyMotion._length(path))
+				if int(boundary.version) == 1: step = mini(step, BodyMotion._length(path))
 				if not String(walked.pursuit_reason).is_empty():
 					pursuit_limits[code] = {"at": path.back(), "reason": walked.pursuit_reason}
 		if step < 0 or step > BodyMotion.LOCAL_LIMIT: return {"error": "Unsafe slice budget"}
@@ -2457,12 +2486,19 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 				var x: int = int(point[0]) + int(body.x_m) - int(here[0])
 				var y: int = int(point[1]) + int(body.y_m) - int(here[1])
 				translated.append([x, y])
+			if int(boundary.version) == 2:
+				translated = _body_locomotion_slice(repo, candidate, code, body, translated, step)
+				if translated.is_empty(): return {"error": "Unsafe locomotion slice prefix"}
 			intents.append({"unit": code, "slot": int(body.slot), "path_m": translated, "budget_m": step, "hostile": false})
 		units.append({"unit": code, "anchor_path_m": [here], "used_m": 0, "step_budget_m": step,
 			"entry_after": {}, "saved_entry_after": saved})
-	var motion := BodyMotion.plan(repo, candidate, intents, int(boundary.abs_day), slice, boundary)
+	var motion := BodyMotion.plan(repo, candidate, intents, int(boundary.abs_day), slice, boundary) if int(boundary.version) == 1 \
+		else BodyMotion.plan_locomotion_candidate(repo, candidate, intents, int(boundary.abs_day), slice, boundary)
 	if motion.cursor.is_empty(): return {"error": str(motion.reasons.get("error", "Motion refused candidate"))}
-	var terrain := _body_terrain_error(repo, candidate, motion.moves)
+	var paths: Array = motion.moves if int(boundary.version) == 1 else []
+	if int(boundary.version) == 2:
+		for move: Dictionary in motion.moves: paths.append({"unit": move.unit, "slot": move.slot, "path_m": BodyMotion._loco_path(move)})
+	var terrain := _body_terrain_error(repo, candidate, paths)
 	if not terrain.is_empty(): return {"error": terrain}
 	var arrivals: Array[String] = []
 	# Keep the cost-staged basis intact until BodyMotion.commit has validated it.
@@ -2477,7 +2513,7 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 		for move: Dictionary in motion.moves:
 			if move.unit != code: continue
 			row.used_m = maxi(int(row.used_m), int(move.used_m))
-			var prefix := _body_route_prefix(path, move.path_m)
+			var prefix := _body_route_prefix(path, move.path_m if int(boundary.version) == 1 else BodyMotion._loco_path(move))
 			var length := BodyMotion._length(prefix)
 			if length < minimum:
 				minimum = length
@@ -2521,9 +2557,31 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 		row.saved_entry_after = saved.duplicate(true)
 		var anchor_error := _body_path_terrain(MarchPath.of_pack(repo), common, 0)
 		if not anchor_error.is_empty(): return {"error": anchor_error}
-	var plan := {"version": 1, "abs_day": int(boundary.abs_day), "substep": slice,
+	var plan := {"version": int(boundary.version), "abs_day": int(boundary.abs_day), "substep": slice,
 		"basis": _body_basis(repo, source, MarchPath.of_pack(repo)), "motion": motion, "units": units, "arrivals": arrivals}
 	return {"candidate": candidate, "plan": plan, "tasks": after.unit_tasks}
+
+## Clip only the requested slice; the full received route remains frozen separately.
+static func _body_locomotion_slice(repo: DataRepository, state: GameState, code: String, row: Dictionary, path: Array, budget: int) -> Array:
+	var piece := MapObjects.army_piece(repo, state.army_roster[code])
+	var policy := BodyMotion._loco_policy(repo, piece)
+	if policy.is_empty(): return []
+	var body := {"unit": code, "slot": int(row.slot), "start": path[0], "budget_m": budget,
+		"start_yaw_udeg": int(row.facing_deg) * BodyMotion.LOCOMOTION_Q, "final_facing_deg": int(row.facing_deg)}
+	var low := 0
+	var high := mini(budget, BodyMotion._length(path))
+	var selected: Array = [path[0].duplicate()]
+	while low <= high:
+		@warning_ignore("integer_division")
+		var middle: int = low + (high - low) / 2
+		var prefix := BodyMotion._loco_prefix(path, middle)
+		var timed := BodyMotion._loco_timeline(body, prefix, int(policy.turn_q))
+		if timed.is_empty(): return []
+		if int(timed.used_m) == BodyMotion._length(prefix):
+			selected = prefix
+			low = middle + 1
+		else: high = middle - 1
+	return selected
 
 ## Match actual rejoined points to ordered requested legs; a side leg alone earns no anchor progress.
 static func _body_route_prefix(path: Array, travelled: Array) -> Array:

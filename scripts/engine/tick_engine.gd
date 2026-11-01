@@ -837,10 +837,18 @@ func _drift_toward(r: TickReport, m: Dictionary, metric: String, baseline: float
 
 ## Opt-in march-only harness. The production phase machine never dispatches here.
 func begin_body_march_candidate(source: GameState) -> Dictionary:
+	return _begin_body_march_candidate(source, 1)
+
+func begin_locomotion_march_candidate(source: GameState) -> Dictionary:
+	return _begin_body_march_candidate(source, 2)
+
+func _begin_body_march_candidate(source: GameState, version: int) -> Dictionary:
 	if source == null: return ArmySystem._body_result("error", "Missing candidate source")
 	if not source.day_resolution.is_empty():
 		if source.day_resolution.has("body_march"):
-			var error := ArmySystem._body_source_error(data, source)
+			var control: Variant = source.day_resolution.body_march
+			var saved_version := 2 if control is Dictionary and control.get("version") == "2" else 1
+			var error := ArmySystem._body_source_error(data, source, saved_version)
 			if not error.is_empty(): return ArmySystem._body_result("error", error)
 		return ArmySystem._body_result("deferred", "Resume the existing day through step")
 	if not source.military_migration.has("body_version"): return ArmySystem._body_result("error", "Explicit current body initialization required")
@@ -875,9 +883,9 @@ func begin_body_march_candidate(source: GameState) -> Dictionary:
 			tx.march_entries[code] = saved
 			tx.march_budgets[code] = budget
 			tx.marching_codes.append(code)
-	tx.body_march = {"version": "1", "abs_day": str(candidate.absolute_day()), "next_substep": "0", "substep_count": str(count), "last": {}}
+	tx.body_march = {"version": str(version), "abs_day": str(candidate.absolute_day()), "next_substep": "0", "substep_count": str(count), "last": {}}
 	candidate.day_resolution = tx
-	var error := ArmySystem._body_source_error(data, candidate)
+	var error := ArmySystem._body_source_error(data, candidate, version)
 	if not error.is_empty(): return ArmySystem._body_result("error", error)
 	return ArmySystem._body_result("complete", "Began detached candidate march day", candidate)
 
@@ -886,3 +894,9 @@ func step_body_march_candidate(source: GameState) -> Dictionary:
 	if planned.status != "complete": return planned
 	if planned.plan.is_empty(): return ArmySystem._body_result("complete", planned.reason, UnitBodies._copy(source))
 	return ArmySystem.commit_body_march_candidate(data, source, planned.plan)
+
+func step_locomotion_march_candidate(source: GameState) -> Dictionary:
+	var planned := ArmySystem.plan_locomotion_march_candidate(data, source)
+	if planned.status != "complete": return planned
+	if planned.plan.is_empty(): return ArmySystem._body_result("complete", planned.reason, UnitBodies._copy(source))
+	return ArmySystem.commit_locomotion_march_candidate(data, source, planned.plan)
