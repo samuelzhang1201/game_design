@@ -152,10 +152,12 @@ eligible melee and direct-fire personnel before the factor clamps. A component
 with zero eligible personnel returns zero power before clamps. Defence and
 organization retain their own personnel/evidence path. Do not replace defence
 with outgoing attack power or make exposed rearranging bodies invulnerable.
-Exact component allocation/rounding when mixed equipment meets partial rows is
-an **unresolved contract decision**, not permission to invent a formula. The
-original implementation/unique Review pair must resolve it against the approved
-spec before D-POWER registration; no product step may silently choose one.
+Exact mixed-arm allocation and partial-row rounding are defined in
+[CF06 physical power §1–2](cf06-power-contract.md): proportional crew numerators,
+disjoint physical melee/fire unions, one existing rounding chain per arm, then
+quality/category factors once. This document-only prerequisite requires its
+unique Review's accepted merge before D-POWER registration; no product owner or
+implementation is created by the clarification.
 
 For each specific receiving unit, incoming exposure derives only from opponents
 that can actually lawfully damage that target: melee contact or actual firing.
@@ -165,10 +167,12 @@ withdrawal/pursuit or ranged/shock/melee classification, existing context scale,
 actual target exposure, then authored event exposure. Existing shock counts only
 actual mounted impacting personnel against that opponent, once; earned charge
 is consumed only after complete settlement. Existing side/rear sources cannot
-also become a second cluster bonus. The exact weighting of simultaneous mixed
-melee/fire incoming threats must be resolved with the component allocation
-above before D-POWER; this document does not claim the old ranged-only formula
-already implements the approved physical rule.
+also become a second cluster bonus. The exact simultaneous melee/fire weighting
+is specified in
+[CF06 physical power §3](cf06-power-contract.md): target-specific lawful source
+unions, existing crew-weighted ranged share and fit weighting, zero for no
+actual threat, then existing context/event order. The old ranged-only helper
+does not already implement this candidate rule.
 
 Unchanged downstream arithmetic is explicit:
 
@@ -333,8 +337,9 @@ no DataRepository.load_all, shared fixture rewrite or weakened old assertion.
    eff280. Tier rate125 × exposure400 /1000 gives50. Group fit[100,300] at
    rate50 loses20 allocated[5,15]; wounded share600 gives12 wounds allocated
    [3,9], dead[2,6]. Zero rate loses0 yet morale50 plus delta-5 becomes45 once.
-   A mixed-equipment expected case is mandatory after the unresolved exact
-   allocation decision is accepted; do not invent its expected value now.
+   Mixed-equipment partial-row, guard/rounding and simultaneous incoming
+   expected cases are [physical power P1–P7](cf06-power-contract.md); these
+   additive future tests do not count as implemented or passing here.
 6. Pending save immediately before/after draw and at failed commit; direct/JSON
    retry yields identical pending bytes/canonical hash, RNG, actions, contexts,
    costs, charge and body_round receipt. Inject a personnel-origin failure and
@@ -369,15 +374,16 @@ listed `.gd.uid`; no implicit fixture or plan ownership.
   `tests/engine/test_body_direct_fire.gd.uid`, `tests/categories.json`.
   Acceptance is cases3–4 plus both-field party symmetry; preserve the explicit
   production reach blocker. No change to data/battle/balance.csv is authorized.
-- **D-POWER**, after D-FIRE and explicit original-pair resolution of mixed
-  allocation/incoming weighting: separate outgoing personnel from defence,
+- **D-POWER**, after D-FIRE and accepted unique-Review merge of
+  [CF06-POWER-CONTRACT](cf06-power-contract.md): separate outgoing personnel
+  from defence,
   exact target contexts and frozen rate derivation only. Own
   `scripts/engine/battle_strength.gd`, `scripts/engine/battle_system.gd`,
   `scripts/engine/battle_ranged.gd`, `scripts/engine/guide/battle_groups.md`,
   `scripts/engine/guide/battle_ranged.md`,
   `tests/engine/test_body_damage_strength.gd`,
   `tests/engine/test_body_damage_strength.gd.uid`, `tests/categories.json`.
-  Acceptance is cases1,5 and accepted mixed hand calculation, zero before clamp,
+  Acceptance is cases1,5 and physical power P1–P7, zero before clamp,
   no reserve output and no duplicate flank/charge factors.
 - **D-RECONCILE**, after D-POWER+B-BOUNDARY+B-END: explicit validated frozen-round
   body loss reconciliation only. Proposed API
