@@ -216,6 +216,69 @@ static func along_candidate(sampled: Dictionary, share: float) -> Dictionary:
 		row.y_m = y
 	return out
 
+static func _candidate_key(ctx: Map3DContext, samples: Dictionary, committed: Dictionary) -> Array:
+	var key: Array = [ctx.dev]
+	samples.clear()
+	for reg: Dictionary in ctx.regiments():
+		var code := String(reg["regiment_code"])
+		var sampled := sample_candidate(ctx, code, committed)
+		samples[code] = sampled
+		var fallback: Array = [ctx.to_world(ArmySystem.position_of(ctx.repo, ctx.state(), reg)),
+			ArmySystem.fit_count(ctx.repo, ctx.state(), code)] if sampled.mode == "fallback" else []
+		key.append([sampled.key, reg.get("is_naval", "0"), MapObjects.army_piece(ctx.repo, reg), fallback])
+	key.append(ctx.ghosts())
+	return key
+
+static func _candidate_at(ctx: Map3DContext, code: String, sampled: Dictionary, history: Dictionary) -> Dictionary:
+	var receipt := String(sampled.cursor.get("receipt", ""))
+	var share := ctx.day_share() if sampled.moving and not receipt.is_empty() and ctx.day_fn.is_valid() else 1.0
+	var old: Dictionary = history.get(code, {})
+	if old.get("receipt", "") == receipt:
+		share = maxf(share, float(old.get("share", 0.0)))
+	elif not old.is_empty() and not receipt.is_empty():
+		for row: Dictionary in sampled.rows:
+			if old.endpoints.has(row.slot) and row.path_m[0] != old.endpoints[row.slot]:
+				return _candidate_result("invalid", code, "Discontinuous committed body path")
+	var endpoints := {}
+	for row: Dictionary in sampled.rows: endpoints[row.slot] = [row.x_m, row.y_m]
+	history[code] = {"receipt": receipt, "share": share, "endpoints": endpoints}
+	return along_candidate(sampled, share)
+
+
+static func _animate_candidate(ctx: Map3DContext, code: String, piece: Dictionary, sample: Dictionary,
+		share: float, blend_s: float, battle: Map3DBattleSignals) -> void:
+	var state := ctx.state()
+	var order := ArmySystem.order_of(ctx.repo, state, code)
+	var stance: Dictionary = ctx.repo.battle_stances.get(BattleSystem.stance_of(state, code), {})
+	var slices := int(state.day_resolution.get("substep_count", DayResolution.DEFAULT_SUBSTEP_COUNT))
+	var moving := false
+	for i: int in piece["groups"].size():
+		var child: Dictionary = piece["groups"][i]["piece"]
+		var row: Dictionary = sample.rows[i]
+		var speed := 0.0
+		for segment: Dictionary in BodyMotion._segments(row.path_m, int(row.budget_m)):
+			if share < segment.t0 or share >= segment.t1: continue
+			var dx := BodyMotion._difference(int(segment.b[0]), int(segment.a[0]))
+			var dy := BodyMotion._difference(int(segment.b[1]), int(segment.a[1]))
+			speed = sqrt(dx * dx + dy * dy) / (segment.t1 - segment.t0)
+			break
+		moving = moving or speed > 0.0
+		var action := battle.action_for(code, Map3DUnitRig.action_for(speed > 0.0, order, stance))
+		var identity := code + ":" + str(row.slot)
+		if child.get("action", "") != action:
+			child["action"] = action
+			Map3DUnitRig.play(child["anims"], action, blend_s, identity)
+		var world_speed := speed * float(ctx.meta["m_per_px"]) / float(ArmySystem.metres_per_pack_px(ctx.repo)) \
+			* slices * ctx.clock_speed() / ctx.repo.bal("time_day_seconds")
+		var stature := float(child.get("statures", [1.0])[0])
+		var rate := Map3DUnitRig.gait_rate(world_speed, (child["node"] as Node3D).global_basis.get_scale().x,
+			float(child["clip_s"]), float(child["stride_m"]) * stature, 0.0, INF)
+		for anim: AnimationPlayer in child["anims"]:
+			anim.speed_scale = 0.0 if ctx.clock_speed() == 0 else (rate if speed > 0.0 else 1.0)
+	piece["candidate_moving"] = moving and ctx.clock_speed() > 0
+	piece["action"] = Map3DUnitRig.action_for(piece["candidate_moving"], order, stance)
+
+
 static func build(repo: DataRepository, reg: Dictionary, sampled: Dictionary) -> Dictionary:
 	var piece := {"node": Node3D.new(), "layout": "physical_groups", "groups": [], "anims": [],
 		"figures": 0, "height_m": 0.0, "extent": Vector2.ZERO, "half_w_m": 0.0,
@@ -324,6 +387,16 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 	piece["ground"] = root.position
 	Map3DUnits.show_piece(piece, not (piece["groups"] as Array).is_empty())
 	return box
+
+static func _geometry(ctx: Map3DContext, pieces: Dictionary, candidate: bool, committed: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	for code: String in pieces:
+		var piece: Dictionary = pieces[code]
+		if piece.get("layout", "") == "physical_groups" and (piece["node"] as Node3D).visible \
+				and (sample_candidate(ctx, code, committed)["mode"] == "bodies" if candidate
+				else sample(ctx, code)["mode"] == "groups"):
+			out[code] = evidence(piece)
+	return out
 
 static func evidence(piece: Dictionary) -> Array:
 	var out: Array = []

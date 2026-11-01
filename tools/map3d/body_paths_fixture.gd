@@ -311,9 +311,16 @@ func _bench() -> void:
 	for stop: String in ["near", "mid", "far"]:
 		_frame_camera(stop)
 		for i: int in _bench_settings.WARM: await process_frame
+		# Built-in monitors can lag one second; expire loading/capture/reframe samples.
+		await create_timer(1.1).timeout
 		var frame_ms: Array = []
 		var cpu_ms: Array = []
 		var gpu_ms: Array = []
+		var process_ms: Array = []
+		var render_cpu_ms: Array = []
+		var setup_cpu_ms: Array = []
+		var draw_calls := 0
+		var primitives := 0
 		var previous := Time.get_ticks_usec()
 		for i: int in _bench_settings.FRAMES:
 			if OS.get_cmdline_user_args().has("--pan"): rig.pan_by(Vector2(_bench_settings.PAN_PX if i % (_bench_settings.PAN_PERIOD * 2) < _bench_settings.PAN_PERIOD else -_bench_settings.PAN_PX, 0))
@@ -321,12 +328,18 @@ func _bench() -> void:
 			var now := Time.get_ticks_usec()
 			frame_ms.append(float(now - previous) / 1000.0)
 			previous = now
-			cpu_ms.append(Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0 + RenderingServer.get_frame_setup_time_cpu()
-				+ RenderingServer.viewport_get_measured_render_time_cpu(_view.viewport().get_viewport_rid())
+			process_ms.append(Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+			setup_cpu_ms.append(RenderingServer.get_frame_setup_time_cpu())
+			render_cpu_ms.append(RenderingServer.viewport_get_measured_render_time_cpu(_view.viewport().get_viewport_rid())
 				+ RenderingServer.viewport_get_measured_render_time_cpu(root.get_viewport_rid()))
+			cpu_ms.append(float(process_ms.back()) + float(setup_cpu_ms.back()) + float(render_cpu_ms.back()))
+			draw_calls = maxi(draw_calls, RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
+			primitives = maxi(primitives, RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME))
 			gpu_ms.append(RenderingServer.viewport_get_measured_render_time_gpu(_view.viewport().get_viewport_rid()))
 		var stats := _stats(frame_ms)
-		rows.append({"zoom": stop, "frame": stats, "cpu": _stats(cpu_ms), "gpu": _stats(gpu_ms), "budget_ms": float(tier.bench_budget_ms)})
+		rows.append({"zoom": stop, "frame": stats, "cpu": _stats(cpu_ms), "process_cpu": _stats(process_ms), "render_cpu": _stats(render_cpu_ms),
+			"setup_cpu": _stats(setup_cpu_ms), "gpu": _stats(gpu_ms), "draw_calls": draw_calls, "primitives": primitives,
+			"budget_ms": float(tier.bench_budget_ms)})
 		print("CF04c bench ", rows.back())
 	FileAccess.open(_out.path_join("bench.json"), FileAccess.WRITE).store_string(JSON.stringify(rows, "\t"))
 

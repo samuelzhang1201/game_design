@@ -85,20 +85,6 @@ func set_candidate_bodies(enabled: bool, committed: Dictionary = {}) -> void:
 	_roster_was = []
 	refresh()
 
-func _candidate_at(code: String, sampled: Dictionary) -> Dictionary:
-	var receipt := String(sampled.cursor.get("receipt", ""))
-	var share := ctx.day_share() if sampled.moving and not receipt.is_empty() and ctx.day_fn.is_valid() else 1.0
-	var old: Dictionary = _candidate_history.get(code, {})
-	if old.get("receipt", "") == receipt:
-		share = maxf(share, float(old.get("share", 0.0)))
-	elif not old.is_empty() and not receipt.is_empty():
-		for row: Dictionary in sampled.rows:
-			if old.endpoints.has(row.slot) and row.path_m[0] != old.endpoints[row.slot]:
-				return BattleGroupsView._candidate_result("invalid", code, "Discontinuous committed body path")
-	var endpoints := {}
-	for row: Dictionary in sampled.rows: endpoints[row.slot] = [row.x_m, row.y_m]
-	_candidate_history[code] = {"receipt": receipt, "share": share, "endpoints": endpoints}
-	return BattleGroupsView.along_candidate(sampled, share)
 
 
 func apply_snapshot(snapshot: Dictionary) -> void:
@@ -168,17 +154,7 @@ func refresh() -> void:
 ## What the drawn set reads: the state, its day, its regiments (orders, stances, fronts), foes, sightings, DEV MODE.
 func _roster_key() -> Array:
 	var st := ctx.state()
-	if _candidate_bodies:
-		var key: Array = [ctx.dev]
-		_candidate_samples.clear()
-		for reg: Dictionary in ctx.regiments():
-			var code := String(reg["regiment_code"])
-			var sampled := BattleGroupsView.sample_candidate(ctx, code, _candidate_committed)
-			_candidate_samples[code] = sampled
-			var fallback: Array = [_target_xz(reg), ArmySystem.fit_count(ctx.repo, st, code)] if sampled.mode == "fallback" else []
-			key.append([sampled.key, reg.get("is_naval", "0"), MapObjects.army_piece(ctx.repo, reg), fallback])
-		key.append(ctx.ghosts())
-		return key
+	if _candidate_bodies: return BattleGroupsView._candidate_key(ctx, _candidate_samples, _candidate_committed)
 	# Native hashes detect same-day edits without repeating public admission once per unit per frame.
 	return [st, st.absolute_day(), st.regiments.hash(), st.foes.hash(), st.sightings.hash(),
 		st.army_roster.hash(), st.military_rosters.hash(), st.military_cohorts.hash(), st.battles.hash(),
@@ -223,7 +199,7 @@ func _target_xz(reg: Dictionary) -> Vector2:
 func _place(code: String, piece: Dictionary) -> void:
 	if piece.get("layout", "") == "physical_groups":
 		if piece.get("candidate_bodies", false):
-			var sampled := _candidate_at(code, _candidate_samples.get(code, piece["candidate_sample"]))
+			var sampled := BattleGroupsView._candidate_at(ctx, code, _candidate_samples.get(code, piece["candidate_sample"]), _candidate_history)
 			if sampled.mode == "invalid":
 				piece["candidate_error"] = sampled.error
 				Map3DUnits.show_piece(piece, false)
@@ -471,37 +447,8 @@ func _sync_action(code: String) -> void:
 
 func _sync_candidate_action(code: String) -> void:
 	var piece: Dictionary = _pieces[code]
-	var sample: Dictionary = _candidate_samples.get(code, piece["candidate_sample"])
-	var share := float(_candidate_history.get(code, {}).get("share", 1.0))
-	var state := ctx.state()
-	var order := ArmySystem.order_of(ctx.repo, state, code)
-	var stance: Dictionary = ctx.repo.battle_stances.get(BattleSystem.stance_of(state, code), {})
-	var slices := int(state.day_resolution.get("substep_count", DayResolution.DEFAULT_SUBSTEP_COUNT))
-	var moving := false
-	for i: int in piece["groups"].size():
-		var child: Dictionary = piece["groups"][i]["piece"]
-		var row: Dictionary = sample.rows[i]
-		var speed := 0.0
-		for segment: Dictionary in BodyMotion._segments(row.path_m, int(row.budget_m)):
-			if share < segment.t0 or share >= segment.t1: continue
-			var dx := BodyMotion._difference(int(segment.b[0]), int(segment.a[0]))
-			var dy := BodyMotion._difference(int(segment.b[1]), int(segment.a[1]))
-			speed = sqrt(dx * dx + dy * dy) / (segment.t1 - segment.t0)
-			break
-		moving = moving or speed > 0.0
-		var action := _battle.action_for(code, Map3DUnitRig.action_for(speed > 0.0, order, stance))
-		var identity := code + ":" + str(row.slot)
-		if child.get("action", "") != action:
-			child["action"] = action
-			Map3DUnitRig.play(child["anims"], action, blend_s, identity)
-		var world_speed := speed * float(ctx.meta["m_per_px"]) / float(ArmySystem.metres_per_pack_px(ctx.repo)) 			* slices * ctx.clock_speed() / ctx.repo.bal("time_day_seconds")
-		var stature := float(child.get("statures", [1.0])[0])
-		var rate := Map3DUnitRig.gait_rate(world_speed, (child["node"] as Node3D).global_basis.get_scale().x,
-			float(child["clip_s"]), float(child["stride_m"]) * stature, 0.0, INF)
-		for anim: AnimationPlayer in child["anims"]:
-			anim.speed_scale = 0.0 if ctx.clock_speed() == 0 else (rate if speed > 0.0 else 1.0)
-	piece["candidate_moving"] = moving and ctx.clock_speed() > 0
-	piece["action"] = Map3DUnitRig.action_for(piece["candidate_moving"], order, stance)
+	BattleGroupsView._animate_candidate(ctx, code, piece, _candidate_samples.get(code, piece["candidate_sample"]),
+		float(_candidate_history.get(code, {}).get("share", 1.0)), blend_s, _battle)
 
 
 ## The fans: one for each crown unit with a piece that is marching with men
@@ -549,12 +496,4 @@ func _sync_battle_signals() -> void:
 
 
 ## Actual instantiated group nodes for the developer capture, visible real units only.
-func group_geometry() -> Dictionary:
-	var out: Dictionary = {}
-	for code: String in _pieces:
-		var piece: Dictionary = _pieces[code]
-		if piece.get("layout", "") == "physical_groups" and (piece["node"] as Node3D).visible \
-				and (BattleGroupsView.sample_candidate(ctx, code, _candidate_committed)["mode"] == "bodies" if _candidate_bodies
-				else BattleGroupsView.sample(ctx, code)["mode"] == "groups"):
-			out[code] = BattleGroupsView.evidence(piece)
-	return out
+func group_geometry() -> Dictionary: return BattleGroupsView._geometry(ctx, _pieces, _candidate_bodies, _candidate_committed)
