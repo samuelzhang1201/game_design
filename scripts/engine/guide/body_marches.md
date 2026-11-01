@@ -52,6 +52,8 @@ Saved v2 controls must match the current endpoint rows at both plan and commit
 admission, including successor cursors; rehashing claimed headings cannot skip
 the initial pivot or replace the row's actual facing.
 Only complete affordable waypoint prefixes execute; unused time is a hold.
+Each move's budget and start match its recorded intent. Unrequested peers have
+zero budget, and a row with no translation has exactly one full-slice hold.
 Move cost is ceil-Euclidean metres and time is ceiling(cost × precision / budget).
 Pivots consume that same time budget. They never create route or payment credit.
 
@@ -76,7 +78,8 @@ return a detached no-op, including after JSON load; changed controls/state rejec
 `GameState.from_dict` canonicalizes only integral JSON numbers in the v2 control
 in both provenance branches. Fractions and numeric-looking strings remain raw,
 so legacy rounding/value decoding cannot launder them into a valid receipt.
-Retries recheck certified pivot durations and the full sweep, independently
+Every v2 source admission, including successor cursors, rechecks the bound
+policy, certified pivot durations and full terrain/relative sweep, independently
 validating original start circles before using the sweep's t=0 exception.
 V1 loading is unchanged; a frozen v1 boundary cannot acquire v2 timing.
 

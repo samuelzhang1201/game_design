@@ -422,8 +422,13 @@ func test_locomotion_json_control_both_loader_branches_and_forged_pivot() -> voi
 		var bad := UnitBodies._copy(state)
 		bad.military_migration.body_motion.plan = forged.duplicate(true)
 		bad.military_migration.body_motion.receipt = BodyMotion._hash(forged)
+		bad = _json(bad)
 		var before := bad.to_dict()
 		assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, bad, forged).status, "error", "rehashing a forged pivot cannot bypass certified timing")
+		var successor := BodyMotion.plan_locomotion_candidate(f.repo, bad, [], 70, 1)
+		assert_true(successor.cursor.is_empty(), "successor validates the saved certified timing and sweep")
+		if successor.has("version"):
+			assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, bad, successor).status, "error", "successor cannot replace a forged old control")
 		assert_eq(bad.to_dict(), before)
 
 func test_locomotion_saved_heading_binds_row_on_retry_and_successor() -> void:
@@ -482,6 +487,90 @@ func test_locomotion_saved_heading_binds_row_on_retry_and_successor() -> void:
 			assert_true(BodyMotion.plan_locomotion_candidate(f.repo, bad, [], 70, 1).cursor.is_empty(), "successor cannot admit a bad saved heading")
 			assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, bad, next).status, "error")
 			assert_eq(bad.to_dict(), before, "all failures preserve complete source and RNG")
+
+func test_locomotion_saved_sweep_cannot_be_bypassed_by_successor() -> void:
+	if not _loco_ready(): return
+	for imported: bool in [false, true]:
+		var f := _loco_fixture([[100, 200], [200, 100]])
+		if imported: f.state.military_migration.import_main_v7 = {}
+		else: f.state.military_migration.erase("import_main_v7")
+		var p := _loco_plan(f, [_intent(f, 0, [300, 200], 400), _intent(f, 1, [200, 300], 400)])
+		assert_eq(p.moves[0].end, [300, 200])
+		assert_eq(p.moves[1].end, [200, 300])
+		var result := BodyMotion.commit_locomotion_candidate(f.repo, f.state, p)
+		assert_eq(result.status, "complete", str(result))
+		if not result.has("candidate"): continue
+		var state: GameState = result.candidate
+		var forged := p.duplicate(true)
+		var move: Dictionary = forged.moves[0]
+		assert_eq(move.ops[0].kind, "move")
+		assert_eq(move.ops[0].t1_q, 500000)
+		move.ops[0].t0_q = 100000
+		move.ops[0].t1_q = 600000
+		move.ops[1].t0_q = 600000
+		move.ops.push_front({"kind": "hold", "t0_q": 0, "t1_q": 100000,
+			"a": [100, 200], "b": [100, 200], "yaw0_udeg": 0, "turn_udeg": 0})
+		# All move/pivot durations and geometry remain unchanged; both now hit (200,200) at350000.
+		assert_true(BodyMotion._loco_plan_ok(forged))
+		assert_eq(_loco_test_position(forged.moves[0], 350000), Vector2(200, 200))
+		assert_eq(_loco_test_position(forged.moves[1], 350000), Vector2(200, 200))
+		state.military_migration.body_motion.plan = forged.duplicate(true)
+		state.military_migration.body_motion.receipt = BodyMotion._hash(forged)
+		state = _json(state)
+		var before := state.to_dict()
+		assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, state, forged).status, "error")
+		var successor := BodyMotion.plan_locomotion_candidate(f.repo, state, [], 70, 1)
+		assert_true(successor.cursor.is_empty(), "successor validates the saved continuous sweep")
+		if successor.has("version"):
+			assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, state, successor).status, "error")
+		assert_eq(state.to_dict(), before)
+
+func test_locomotion_saved_plan_links_requests_and_stationary_rows() -> void:
+	if not _loco_ready(): return
+	var f := _loco_fixture()
+	var p := _loco_plan(f, [_intent(f, 0, [103, 104], 10)])
+	var result := BodyMotion.commit_locomotion_candidate(f.repo, f.state, p)
+	assert_eq(result.status, "complete")
+	if not result.has("candidate"): return
+	var state: GameState = result.candidate
+	var faster := p.duplicate(true)
+	var move: Dictionary = faster.moves[0]
+	move.budget_m = 20
+	move.ops[1].t1_q = 309034
+	move.ops[2].t0_q = 309034
+	move.ops[2].t1_q = 368068
+	move.ops[3].t0_q = 368068
+	assert_true(BodyMotion._loco_move_ok(move), "speed is internally consistent but exceeds the recorded request budget")
+	var wrong_start := p.duplicate(true)
+	wrong_start.cursor.intents[0].path_m[0][0] += 1
+	var unrequested := p.duplicate(true)
+	unrequested.cursor.intents = []
+	for forged: Dictionary in [faster, wrong_start, unrequested]:
+		assert_false(BodyMotion._loco_plan_ok(forged), "full plan must link movements to their requests")
+		var bad := UnitBodies._copy(state)
+		bad.military_migration.body_motion.plan = forged.duplicate(true)
+		bad.military_migration.body_motion.receipt = BodyMotion._hash(forged)
+		bad = _json(bad)
+		var before := bad.to_dict()
+		assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, bad, forged).status, "error")
+		assert_true(BodyMotion.plan_locomotion_candidate(f.repo, bad, [], 70, 1).cursor.is_empty())
+		assert_eq(bad.to_dict(), before)
+	var stationary: Dictionary = p.moves[0].duplicate(true)
+	stationary.end = stationary.start.duplicate()
+	stationary.used_m = 0
+	stationary.ops = [
+		{"kind": "pivot", "t0_q": 0, "t1_q": 100000, "a": [100, 100], "b": [100, 100], "yaw0_udeg": 0, "turn_udeg": 90000000},
+		{"kind": "pivot", "t0_q": 100000, "t1_q": 200000, "a": [100, 100], "b": [100, 100], "yaw0_udeg": 90000000, "turn_udeg": -90000000},
+		{"kind": "hold", "t0_q": 200000, "t1_q": 1000000, "a": [100, 100], "b": [100, 100], "yaw0_udeg": 0, "turn_udeg": 0}]
+	assert_false(BodyMotion._loco_move_ok(stationary), "an entirely stationary row has one full-slice hold")
+	stationary.budget_m = 0
+	stationary.ops = [{"kind": "hold", "t0_q": 0, "t1_q": 1000000,
+		"a": [100, 100], "b": [100, 100], "yaw0_udeg": 0, "turn_udeg": 0}]
+	var no_budget := p.duplicate(true)
+	no_budget.moves[0] = stationary
+	no_budget.cursor.intents[0].budget_m = 0
+	no_budget.cursor.priority = []
+	assert_false(BodyMotion._loco_plan_ok(no_budget), "a saved zero-budget request cannot ask for translation")
 
 func _fixture(points: Array) -> Dictionary:
 	var repo := SuiteData.repo()
