@@ -38,3 +38,63 @@ After any committed slice, including a completed day, the inner receipt must
 name today's preceding slice. Only the initial cursor may retain an older day's
 priority. The frozen journal must already contain an arrivals array; malformed
 journals fail before planning or payment and are never repaired in place.
+
+## Isolated locomotion timeline (`BodyMotion`, candidate v2)
+
+`plan_locomotion_candidate` constructs stop–pivot–move operations before any
+reservation. Its closed v2 plan is `{version,cursor,policy_digest,moves,reasons}`;
+cursor is `{abs_day,substep,basis,intents,priority,boundary}`. Every body, including
+unrequested stationary peers, has a complete integer partition of the slice.
+Time precision is `BodyMotion.LOCOMOTION_Q`, angles are integer microdegrees,
+shortest 180-degree ties turn positively, and a final pivot restores row facing.
+The first yaw and final facing both come from that same authoritative row.
+Saved v2 controls must match the current endpoint rows at both plan and commit
+admission, including successor cursors; rehashing claimed headings cannot skip
+the initial pivot or replace the row's actual facing.
+Only complete affordable waypoint prefixes execute; unused time is a hold.
+Each move's budget and start match its recorded intent. Unrequested peers have
+zero budget, and a row with no translation has exactly one full-slice hold.
+Move cost is ceil-Euclidean metres and time is ceiling(cost × precision / budget).
+Pivots consume that same time budget. They never create route or payment credit.
+
+Heading is proved by refining integer fixed-point intervals: Machin's identity
+bounds pi, a reduced alternating atan series bounds the angle, and both interval
+ends must round to the same microdegree. Base-2^15 temporary limbs prevent int64
+product overflow. No platform atan2, floating heading or generated table is saved.
+Rows/operations reject numbers outside JSON's exact integer range. Local deltas
+and products are checked before authoritative arithmetic.
+
+The basis has two SHA256 digests: `source` binds the exact precommit save, canonical
+intents, requested cursor and context; `result` binds the expected endpoint save and context with
+the self-referential `body_motion` control omitted. Context binds footprints,
+balance, certificates, terrain and diplomacy. This permits changed-state retry
+rejection without saving a second state or motion authority. Commit replans and
+compares the entire plan, then returns a detached candidate, leaving its source
+unchanged. The sole saved v2 control has exactly
+`{version:"2",abs_day:String,substep:String,receipt,priority,plan}`. Control integers
+are canonical decimal strings; the embedded plan retains integral JSON numbers.
+Its hash, cursor, priority and actual endpoint rows must agree. Identical retries
+return a detached no-op, including after JSON load; changed controls/state reject.
+`GameState.from_dict` canonicalizes only integral JSON numbers in the v2 control
+in both provenance branches. Fractions and numeric-looking strings remain raw,
+so legacy rounding/value decoding cannot launder them into a valid receipt.
+Every v2 source admission, including successor cursors, rechecks the bound
+policy, certified pivot durations and full terrain/relative sweep, independently
+validating original start circles before using the sweep's t=0 exception.
+V1 loading is unchanged; a frozen v1 boundary cannot acquire v2 timing.
+
+Policy is unsupported unless both per-arm `body_locomotion_<arm>_turn_q` and
+`body_locomotion_<arm>_contact_um` rows match an explicit footprint
+`locomotion_certificate={digest,turn_q,contact_um,radius_m,clips,all_turns}`.
+This candidate accepts a certificate supplied by its caller's repository; it
+does not load, create or certify one. Test-injected certificates are fixtures,
+never installed arm support. Actual certification/installation remains separate.
+All timed operations, including stationary pivots and tails, share one continuous
+sweep. Translated measured circles and stationary circles must fit the land grid.
+
+`sample_locomotion_candidate({version:2,moves},time_q)` accepts a copied admitted
+subset only, validates all rows before returning any, and interpolates transient
+float X/Y/yaw with next-interval boundary selection. It reads no repository,
+state, admission, orders or clock. It never mutates or saves presentation values.
+V1 APIs, production callers, frozen march protocols, art and rendering stay
+separate; this API does not activate v2 or resolve PR201's acceptance boundary.
