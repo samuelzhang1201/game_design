@@ -9,6 +9,7 @@ func test_candidate_placement_api_exists() -> void:
 	assert_true((load("res://scripts/engine/unit_bodies.gd") as GDScript).has_method("validate_placement_candidate"))
 
 const SuiteData := preload("res://tests/suite_data.gd")
+var _completion_marches: Dictionary = {}
 
 func test_production_input_foundation_probe() -> void:
 	var repo := SuiteData.repo()
@@ -24,6 +25,9 @@ const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func after_each() -> void:
 	MarchPath.forget()
+
+func after_all() -> void:
+	_completion_marches.clear()
 
 func _available() -> bool:
 	return (load("res://scripts/engine/army_ground.gd") as GDScript).has_method("body_placement_candidate")
@@ -884,6 +888,23 @@ func _completion_fixture(imported: bool = false, previous_sequence: String = "0"
 	f.state.law_in_force[LawSystem.TOWN_PREFIX + town] = {law: {"value": f.repo.laws[law]["default"], "decree_id": 17}}
 	f.state.law_in_force.erase(LawSystem.UNIT_PREFIX + f.code)
 	ArmySystem.forget_grids()
+	f.town = town
+	f.law = law
+	var tables := {}
+	for property: Dictionary in f.repo.get_property_list():
+		if int(property.usage) & PROPERTY_USAGE_SCRIPT_VARIABLE: tables[property.name] = f.repo.get(property.name)
+	var input := {"source": f.state.to_dict(), "tables": tables,
+		"grid": [f.grid.cols, f.grid.rows, f.grid.cell_m, f.grid.closed, f.grid.water, f.grid.water_open, f.grid._snap]}.duplicate(true)
+	var key := str([imported, previous_sequence, town_offset_m])
+	# Cache only real completed fixture marches; every tested placement entrance still runs.
+	if _completion_marches.has(key) and _completion_marches[key].input == input:
+		var cached: Dictionary = _completion_marches[key]
+		f.repo = SuiteData._copy(cached.repo)
+		MarchPath.use(f.repo, f.grid)
+		f.state = UnitBodies._copy(cached.state)
+		f.incomplete = UnitBodies._copy(cached.incomplete)
+		f.boundary = cached.boundary.duplicate(true)
+		return f
 	var begun := TickEngine.new(f.repo).begin_locomotion_march_candidate(f.state)
 	assert_eq(begun.status, "complete", begun.reason)
 	if begun.candidate == null: return {}
@@ -895,8 +916,8 @@ func _completion_fixture(imported: bool = false, previous_sequence: String = "0"
 		if step.candidate == null: return {}
 		f.state = step.candidate
 	f.boundary = {"version": 2, "kind": "march_complete", "abs_day": str(f.state.absolute_day()), "receipt": f.state.day_resolution.body_march.last.receipt}
-	f.town = town
-	f.law = law
+	_completion_marches[key] = {"input": input, "repo": SuiteData._copy(f.repo), "state": UnitBodies._copy(f.state),
+		"incomplete": UnitBodies._copy(f.incomplete), "boundary": f.boundary.duplicate(true)}
 	return f
 
 func _completion_operation(f: Dictionary, operation: String = "leave", sequence: String = "1") -> Dictionary:
@@ -918,6 +939,45 @@ func _completion_reject(f: Dictionary, source: GameState, boundary: Dictionary =
 
 func _completion_set_proof(source: GameState, proof: Dictionary) -> void:
 	source.military_migration.body_placement.completion_json = UnitBodies._placement_json(proof)
+
+func test_completion_fixture_cache_matches_cold_march_and_is_detached() -> void:
+	_completion_marches.clear()
+	SuiteData.campaign(SuiteData.repo(), 319)
+	for imported: bool in [false, true]:
+		var cold := _completion_fixture(imported)
+		var first := _completion_fixture(imported)
+		var cached := _completion_fixture(imported)
+		assert_eq(UnitBodies._placement_json(cached.state.to_dict()), UnitBodies._placement_json(cold.state.to_dict()))
+		assert_eq(cached.incomplete.to_dict(), cold.incomplete.to_dict())
+		assert_eq(cached.boundary, cold.boundary)
+		assert_false(is_same(first.state, cached.state))
+		assert_false(is_same(first.state.rng, cached.state.rng))
+		assert_false(is_same(first.repo, cached.repo))
+		assert_false(is_same(first.grid, cached.grid))
+		var before: Dictionary = cold.state.to_dict()
+		var tables_before := SuiteData._copy(cold.repo)
+		var expected := _completion_operation(cold)
+		var actual := _completion_operation(cached)
+		assert_eq(UnitBodies._placement_json(actual.candidate.to_dict()), UnitBodies._placement_json(expected.candidate.to_dict()))
+		assert_eq(actual.plan, expected.plan)
+		first.state.regiments[first.code].body_groups.clear()
+		first.state.military_rosters[first.code].cohort_ids.clear()
+		first.incomplete.day_resolution.clear()
+		first.boundary.clear()
+		first.repo.balance.body_locomotion_infantry_turn_q += 1
+		first.grid.closed[0] = 1
+		actual.candidate.military_migration.body_placement.completion_json = "corrupt"
+		actual.plan.effects.entries.clear()
+		var restored := _completion_fixture(imported)
+		assert_eq(restored.state.to_dict(), before)
+		assert_eq(restored.incomplete.to_dict(), cold.incomplete.to_dict())
+		assert_eq(restored.boundary, cold.boundary)
+		for property: Dictionary in tables_before.get_property_list():
+			if int(property.usage) & PROPERTY_USAGE_SCRIPT_VARIABLE:
+				assert_eq(restored.repo.get(property.name), tables_before.get(property.name), str(property.name))
+		assert_eq(restored.grid.closed, cold.grid.closed)
+		assert_eq(cached.state.to_dict(), before)
+		assert_eq(UnitBodies.validate_placement_candidate(cold.repo, expected.candidate, cold.boundary).status, "complete")
 
 func test_v2_completion_proof_first_commit_and_full_endpoint() -> void:
 	var f := _completion_fixture()
