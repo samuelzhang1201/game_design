@@ -29,6 +29,44 @@ func after_each() -> void:
 func after_all() -> void:
 	_completion_marches.clear()
 
+func _assert_eq_lazy(actual: Variant, expected: Variant, context: String = "") -> void:
+	# GUT eagerly formats large equal saves; retain its exact comparison and failure path.
+	if (actual is Dictionary or actual is Array) and typeof(actual) == typeof(expected) and actual == expected:
+		assert_true(true, context)
+	else:
+		assert_eq(actual, expected, context)
+
+func test_lazy_equality_preserves_gut_pass_fail_and_assert_counts() -> void:
+	var saved := {"nested": [{"proof": "x".repeat(65536), "count": 2}], "rows": {}}
+	for i: int in 128: saved.rows[str(i)] = {"values": [i, i + 1]}
+	var changed := saved.duplicate(true)
+	changed.nested[0].proof = "x".repeat(65535) + "y"
+	var numeric := saved.duplicate(true)
+	numeric.nested[0].count = 2.0
+	var missing := saved.duplicate(true)
+	missing.rows.erase("127")
+	var reordered := {"rows": saved.rows.duplicate(true), "nested": saved.nested.duplicate(true)}
+	var original := GutTest.new()
+	var lazy: GutTest = get_script().new()
+	for pair: Array in [[saved, saved.duplicate(true)], [saved, changed], [saved, numeric],
+		[saved, missing], [saved, reordered], [[1, 2], [1, 2]], [[1, 2], [2, 1]],
+		["same", "same"], ["same", &"same"], ["same", "different"], [{}, []], [1, "1"], [null, null],
+		["|__missing__gut__compare__value__|", "|__missing__gut__compare__value__|"]]:
+		var previous: int = original.get_assert_count()
+		var failures: int = original.get_fail_count()
+		original.assert_eq(pair[0], pair[1], "same complete values")
+		lazy.call("_assert_eq_lazy", pair[0], pair[1], "same complete values")
+		assert_eq(original.get_assert_count() - previous, 1)
+		assert_eq(lazy.get_assert_count(), original.get_assert_count())
+		assert_eq(lazy.get_pass_count(), original.get_pass_count())
+		assert_eq(lazy.get_fail_count(), original.get_fail_count())
+		if original.get_fail_count() > failures:
+			assert_eq(lazy._fail_pass_text.back(), original._fail_pass_text.back())
+	assert_gt(original.get_pass_count(), 0)
+	assert_gt(original.get_fail_count(), 0)
+	original.free()
+	lazy.free()
+
 func _available() -> bool:
 	return (load("res://scripts/engine/army_ground.gd") as GDScript).has_method("body_placement_candidate")
 
@@ -83,7 +121,7 @@ func _call(f: Dictionary, request: Dictionary, status: String = "complete") -> D
 	var result: Dictionary = (load("res://scripts/engine/army_ground.gd") as GDScript).call("body_placement_candidate", f.repo, f.state, request, _boundary(f.state))
 	assert_eq(result.status, status, result.reason)
 	assert_eq(result.size(), 5)
-	assert_eq(f.state.to_dict(), before)
+	_assert_eq_lazy(f.state.to_dict(), before)
 	assert_eq(f.state.rng.to_dict(), before.rng)
 	if status != "complete":
 		assert_null(result.candidate)
@@ -121,7 +159,7 @@ func test_plan_raw_stale_atomic_json() -> void:
 	var planned: Dictionary = (load("res://scripts/engine/army_ground.gd") as GDScript).call("plan_body_placement_candidate", f.repo, f.state, _request(), _boundary(f.state))
 	assert_eq(planned.status, "complete", planned.reason)
 	assert_null(planned.candidate)
-	assert_eq(f.state.to_dict(), before)
+	_assert_eq_lazy(f.state.to_dict(), before)
 	if planned.status != "complete": return
 	var wire: Dictionary = JSON.parse_string(JSON.stringify(planned.plan))
 	var committed: Dictionary = (load("res://scripts/engine/army_ground.gd") as GDScript).call("commit_body_placement_candidate", f.repo, f.state, wire, _boundary(f.state))
@@ -130,17 +168,17 @@ func test_plan_raw_stale_atomic_json() -> void:
 	var accepted: GameState = committed.candidate
 	var retried: Dictionary = (load("res://scripts/engine/army_ground.gd") as GDScript).call("commit_body_placement_candidate", f.repo, accepted, wire, _boundary(accepted))
 	assert_eq(retried.status, "complete", retried.reason)
-	assert_eq(retried.candidate.to_dict(), accepted.to_dict())
+	_assert_eq_lazy(retried.candidate.to_dict(), accepted.to_dict())
 	var accepted_before := accepted.to_dict()
 	retried.candidate.regiments[f.code].body_groups[0].path_m[0][0] += 1
-	assert_eq(accepted.to_dict(), accepted_before, "retry is detached down to nested paths")
+	_assert_eq_lazy(accepted.to_dict(), accepted_before, "retry is detached down to nested paths")
 	var body: Dictionary = UnitBodies.rows(f.repo, accepted, f.code)[0]
 	var cell: int = (int(body.y_m) / f.grid.cell_m) * f.grid.cols + int(body.x_m) / f.grid.cell_m
 	f.grid.water[cell] = 1
 	var invalid_terrain := ArmyGround.commit_body_placement_candidate(f.repo, accepted, wire, _boundary(accepted))
 	assert_eq(invalid_terrain.status, "error", "an exact retry still validates the current physical world")
 	assert_null(invalid_terrain.candidate)
-	assert_eq(accepted.to_dict(), accepted_before)
+	_assert_eq_lazy(accepted.to_dict(), accepted_before)
 	f.grid.water[cell] = 0
 	f.repo.balance.army_march_grid_px = 0
 	var missing_grid := ArmyGround.commit_body_placement_candidate(f.repo, accepted, wire, _boundary(accepted))
@@ -179,7 +217,7 @@ func test_production_inputs_and_dispatch() -> void:
 		var error := ArmySystem._body_path_terrain(grid, [[int(entry.x_m), int(entry.y_m)]], 0)
 		if not error.is_empty(): print("CF04b original anchor: ", code, " ", entry.x_m, ",", entry.y_m, " ", error)
 	var result: Dictionary = (load("res://scripts/engine/army_split.gd") as GDScript).call("initialize_bodies_candidate", repo, state, "placement:production", "0")
-	assert_eq(state.to_dict(), before)
+	_assert_eq_lazy(state.to_dict(), before)
 	assert_eq(result.status, "complete", result.reason)
 	if result.candidate == null:
 		print("CF04b production input failure: ", result.reason)
@@ -320,7 +358,7 @@ func test_recruit_split_and_host_once() -> void:
 	var before: Dictionary = growth.candidate.to_dict()
 	var spawned: Dictionary = (load("res://scripts/engine/enemy_ai.gd") as GDScript).call("spawn_body_candidate", f.repo, growth.candidate, host.host_code, "placement:host", "3")
 	assert_eq(spawned.status, "error", "local roster does not contain this real host")
-	assert_eq(growth.candidate.to_dict(), before)
+	_assert_eq_lazy(growth.candidate.to_dict(), before)
 
 func test_existing_pose_is_authority() -> void:
 	if not _available(): return
@@ -369,8 +407,8 @@ func test_saved_boundaries() -> void:
 	var frozen: Dictionary = state.day_resolution.duplicate(true)
 	var result: Dictionary = (load("res://scripts/engine/army_ground.gd") as GDScript).call("body_placement_candidate", f.repo, state, _request("leave", f.code, "1"), boundary)
 	assert_eq(result.status, "complete", result.reason)
-	if result.candidate != null: assert_eq(result.candidate.day_resolution, frozen)
-	assert_eq(state.day_resolution, frozen)
+	if result.candidate != null: _assert_eq_lazy(result.candidate.day_resolution, frozen)
+	_assert_eq_lazy(state.day_resolution, frozen)
 	boundary.receipt = "b".repeat(64)
 	assert_eq((load("res://scripts/engine/army_ground.gd") as GDScript).call("body_placement_candidate", f.repo, state, _request("leave", f.code, "1"), boundary).status, "error")
 
@@ -467,7 +505,7 @@ func test_stale_basis_and_closed_plan_matrix() -> void:
 		var before := state.to_dict()
 		var result := ArmyGround.commit_body_placement_candidate(repo, state, planned.plan, _boundary(state))
 		assert_eq(result.status, "error", field)
-		assert_eq(state.to_dict(), before)
+		_assert_eq_lazy(state.to_dict(), before)
 		f.grid.closed[0] = 0
 		repo.unit_footprints.infantry.radius_m = old_radius
 		repo.world_schema.assign(old_schema)
@@ -482,7 +520,7 @@ func test_stale_basis_and_closed_plan_matrix() -> void:
 			"boolean": plan.placements[0].slot = true
 			"boundary": plan.boundary.extra = true
 		assert_eq(ArmyGround.commit_body_placement_candidate(f.repo, f.state, plan, _boundary(f.state)).status, "error", field)
-	assert_eq(f.state.to_dict(), frozen)
+	_assert_eq_lazy(f.state.to_dict(), frozen)
 
 func test_real_march_then_seat_has_no_extra_cost_or_move() -> void:
 	if not _available(): return
@@ -545,7 +583,7 @@ func _seat_march_case(diagonal: bool) -> void:
 	else: assert_eq(result.candidate.town_seat.get(town), f.code)
 	assert_eq(result.candidate.regiments[f.code].supplies, paid)
 	assert_eq(UnitBodies.rows(f.repo, result.candidate, f.code), rows)
-	assert_eq(result.candidate.day_resolution, payload)
+	_assert_eq_lazy(result.candidate.day_resolution, payload)
 
 func test_actual_host_membership_first_circle_and_once() -> void:
 	if not _available(): return
@@ -573,7 +611,7 @@ func test_actual_host_membership_first_circle_and_once() -> void:
 	var before := source.to_dict()
 	var result := EnemyAi.spawn_body_candidate(repo, source, host.host_code, "placement:first-host", "0")
 	assert_eq(result.status, "complete", result.reason)
-	assert_eq(source.to_dict(), before)
+	_assert_eq_lazy(source.to_dict(), before)
 	if result.candidate == null: return
 	assert_eq(result.candidate.ai_hosts[host.host_code].mode, EnemyAi.MODE_ASSEMBLE)
 	assert_eq(result.candidate.military_cohorts, source.military_cohorts)
@@ -587,7 +625,7 @@ func test_actual_host_membership_first_circle_and_once() -> void:
 	assert_eq(second.status, "error", second.reason)
 	var retry := ArmyGround.commit_body_placement_candidate(repo, result.candidate, result.plan, _boundary(source))
 	assert_eq(retry.status, "complete", retry.reason)
-	assert_eq(retry.candidate.to_dict(), result.candidate.to_dict())
+	_assert_eq_lazy(retry.candidate.to_dict(), result.candidate.to_dict())
 	# First poses for a staged unspawned host may share its saved assembly anchor.
 	var unplaced := UnitBodies._copy(source)
 	var start := ArmySystem.pack_to_metres(repo, Vector2(float(host.start_x), float(host.start_y)))
@@ -617,7 +655,7 @@ func test_actual_host_membership_first_circle_and_once() -> void:
 		var waiting := EnemyAi.spawn_body_candidate(repo, staged, host.host_code, "placement:needs-motion", "1")
 		assert_eq(waiting.status, "deferred", waiting.reason)
 		assert_true(waiting.reason.begins_with("requires_motion"))
-		assert_eq(staged.to_dict(), before_transfer)
+		_assert_eq_lazy(staged.to_dict(), before_transfer)
 	var grid := MarchPath.of_pack(repo)
 	var pristine_closed := grid.closed.duplicate()
 	var sealed := MarchPath.new()
@@ -631,7 +669,7 @@ func test_actual_host_membership_first_circle_and_once() -> void:
 	var blocked := EnemyAi.spawn_body_candidate(repo, source, host.host_code, "placement:first-host", "0")
 	assert_eq(blocked.status, "deferred", blocked.reason)
 	assert_true(blocked.reason.begins_with("space_unavailable"))
-	assert_eq(source.to_dict(), before)
+	_assert_eq_lazy(source.to_dict(), before)
 	assert_true(grid.closed == pristine_closed, "SuiteData's shared terrain must remain pristine for later scripts")
 
 func test_battle_reservations_and_duplicate_owner() -> void:
@@ -667,9 +705,9 @@ func test_source_file_and_detached_plan_do_not_alias() -> void:
 	if result.candidate != null:
 		var candidate_before: Dictionary = result.candidate.to_dict()
 		result.plan.effects.entries[f.code].body_groups[0].path_m[0][0] += 100
-		assert_eq(result.candidate.to_dict(), candidate_before)
+		_assert_eq_lazy(result.candidate.to_dict(), candidate_before)
 		result.candidate.regiments[f.code].body_groups[0].path_m[0][0] += 100
-		assert_eq(f.state.to_dict(), before)
+		_assert_eq_lazy(f.state.to_dict(), before)
 	assert_eq(FileAccess.get_file_as_bytes(path), bytes)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
@@ -690,7 +728,7 @@ func test_closed_requests_boundaries_and_sequence_overflow() -> void:
 		var before: Dictionary = f.state.to_dict()
 		var result := ArmyGround.body_placement_candidate(f.repo, f.state, _request(), boundary)
 		assert_eq(result.status, "error", str(change))
-		assert_eq(f.state.to_dict(), before)
+		_assert_eq_lazy(f.state.to_dict(), before)
 	var first := _call(f, _request())
 	if first.candidate == null: return
 	f.state = first.candidate
@@ -745,7 +783,7 @@ func test_review_r1_recruit_validates_raw_boundary_before_frozen_deferral() -> v
 			assert_null(result.candidate)
 			assert_eq(result.plan, {})
 			assert_eq(result.error, "" if change.is_empty() else result.reason)
-			assert_eq(frozen.to_dict(), before, "frozen payload, nested rows, personnel and RNG stay exact")
+			_assert_eq_lazy(frozen.to_dict(), before, "frozen payload, nested rows, personnel and RNG stay exact")
 
 func test_review_r2_staged_personnel_references_are_unique_and_owned() -> void:
 	for operation: String in ["initialize", "recruit"]:
@@ -790,7 +828,7 @@ func test_review_r2_staged_personnel_references_are_unique_and_owned() -> void:
 		var result := EnemyAi.spawn_body_candidate(repo, invalid, host.host_code, "placement:bad-host-reference", "0")
 		assert_eq(result.status, "error", issue)
 		assert_null(result.candidate)
-		assert_eq(invalid.to_dict(), before)
+		_assert_eq_lazy(invalid.to_dict(), before)
 
 func _corrupt_personnel_reference(state: GameState, code: String, issue: String) -> void:
 	for id: String in state.military_rosters[code].cohort_ids.duplicate():
@@ -831,20 +869,20 @@ func test_v2_completed_metadata_preserves_receipts() -> void:
 	var request := _request("leave", f.code, "1")
 	var planned := ArmyGround.plan_body_placement_candidate(f.repo, state, request, boundary)
 	assert_eq(planned.status, "complete", planned.reason)
-	assert_eq(state.to_dict(), before)
+	_assert_eq_lazy(state.to_dict(), before)
 	if planned.status != "complete": return
 	var committed := ArmyGround.commit_body_placement_candidate(f.repo, state, planned.plan, boundary)
 	assert_eq(committed.status, "complete", committed.reason)
 	if committed.candidate == null: return
-	assert_eq(committed.candidate.day_resolution, state.day_resolution)
-	assert_eq(committed.candidate.military_migration.body_motion, state.military_migration.body_motion)
+	_assert_eq_lazy(committed.candidate.day_resolution, state.day_resolution)
+	_assert_eq_lazy(committed.candidate.military_migration.body_motion, state.military_migration.body_motion)
 	assert_eq(UnitBodies.rows(f.repo, committed.candidate, f.code), UnitBodies.rows(f.repo, state, f.code))
 	assert_eq(committed.candidate.rng.to_dict(), state.rng.to_dict())
 	assert_eq(committed.candidate.regiments[f.code].supplies, state.regiments[f.code].supplies)
 	for saved: GameState in [committed.candidate, GameState.from_dict(JSON.parse_string(JSON.stringify(committed.candidate.to_dict())))]:
 		var retry := ArmyGround.commit_body_placement_candidate(f.repo, saved, planned.plan, boundary)
 		assert_eq(retry.status, "complete", retry.reason)
-		if retry.candidate != null: assert_eq(retry.candidate.to_dict(), saved.to_dict())
+		if retry.candidate != null: _assert_eq_lazy(retry.candidate.to_dict(), saved.to_dict())
 
 func _completion_fixture(imported: bool = false, previous_sequence: String = "0", town_offset_m: int = 0) -> Dictionary:
 	var f := _fixture(100)
@@ -926,7 +964,7 @@ func _completion_operation(f: Dictionary, operation: String = "leave", sequence:
 	var before: Dictionary = f.state.to_dict()
 	var result := ArmyGround.body_placement_candidate(f.repo, f.state, request, f.boundary)
 	assert_eq(result.status, "complete", result.reason)
-	assert_eq(f.state.to_dict(), before)
+	_assert_eq_lazy(f.state.to_dict(), before)
 	return result
 
 func _completion_reject(f: Dictionary, source: GameState, boundary: Dictionary = {}) -> void:
@@ -935,7 +973,7 @@ func _completion_reject(f: Dictionary, source: GameState, boundary: Dictionary =
 	var result := UnitBodies.validate_placement_candidate(f.repo, source, wire)
 	assert_eq(result.status, "error", result.reason)
 	assert_null(result.candidate)
-	assert_eq(source.to_dict(), before)
+	_assert_eq_lazy(source.to_dict(), before)
 
 func _completion_set_proof(source: GameState, proof: Dictionary) -> void:
 	source.military_migration.body_placement.completion_json = UnitBodies._placement_json(proof)
@@ -948,7 +986,7 @@ func test_completion_fixture_cache_matches_cold_march_and_is_detached() -> void:
 		var first := _completion_fixture(imported)
 		var cached := _completion_fixture(imported)
 		assert_eq(UnitBodies._placement_json(cached.state.to_dict()), UnitBodies._placement_json(cold.state.to_dict()))
-		assert_eq(cached.incomplete.to_dict(), cold.incomplete.to_dict())
+		_assert_eq_lazy(cached.incomplete.to_dict(), cold.incomplete.to_dict())
 		assert_eq(cached.boundary, cold.boundary)
 		assert_false(is_same(first.state, cached.state))
 		assert_false(is_same(first.state.rng, cached.state.rng))
@@ -969,14 +1007,14 @@ func test_completion_fixture_cache_matches_cold_march_and_is_detached() -> void:
 		actual.candidate.military_migration.body_placement.completion_json = "corrupt"
 		actual.plan.effects.entries.clear()
 		var restored := _completion_fixture(imported)
-		assert_eq(restored.state.to_dict(), before)
-		assert_eq(restored.incomplete.to_dict(), cold.incomplete.to_dict())
+		_assert_eq_lazy(restored.state.to_dict(), before)
+		_assert_eq_lazy(restored.incomplete.to_dict(), cold.incomplete.to_dict())
 		assert_eq(restored.boundary, cold.boundary)
 		for property: Dictionary in tables_before.get_property_list():
 			if int(property.usage) & PROPERTY_USAGE_SCRIPT_VARIABLE:
-				assert_eq(restored.repo.get(property.name), tables_before.get(property.name), str(property.name))
+				_assert_eq_lazy(restored.repo.get(property.name), tables_before.get(property.name), str(property.name))
 		assert_eq(restored.grid.closed, cold.grid.closed)
-		assert_eq(cached.state.to_dict(), before)
+		_assert_eq_lazy(cached.state.to_dict(), before)
 		assert_eq(UnitBodies.validate_placement_candidate(cold.repo, expected.candidate, cold.boundary).status, "complete")
 
 func test_v2_completion_proof_first_commit_and_full_endpoint() -> void:
@@ -1005,8 +1043,8 @@ func test_v2_completion_proof_first_commit_and_full_endpoint() -> void:
 	expected.law_in_force[LawSystem.UNIT_PREFIX + f.code] = f.state.law_in_force[LawSystem.TOWN_PREFIX + f.town].duplicate(true)
 	expected.military_migration.body_placement = endpoint.military_migration.body_placement.duplicate(true)
 	assert_eq(UnitBodies._placement_json(endpoint.to_dict()), UnitBodies._placement_json(expected.to_dict()))
-	assert_eq(endpoint.day_resolution, f.state.day_resolution)
-	assert_eq(endpoint.military_migration.body_motion, f.state.military_migration.body_motion)
+	_assert_eq_lazy(endpoint.day_resolution, f.state.day_resolution)
+	_assert_eq_lazy(endpoint.military_migration.body_motion, f.state.military_migration.body_motion)
 	assert_eq(endpoint.rng.to_dict(), f.state.rng.to_dict())
 	assert_eq(UnitBodies.validate_placement_candidate(f.repo, endpoint, f.boundary).status, "complete")
 
@@ -1019,8 +1057,8 @@ func test_v2_completion_proof_latest_retry_direct_and_whole_json() -> void:
 		var before := source.to_dict()
 		var retry := ArmyGround.commit_body_placement_candidate(f.repo, source, JSON.parse_string(JSON.stringify(result.plan)), f.boundary)
 		assert_eq(retry.status, "complete", retry.reason)
-		if retry.candidate != null: assert_eq(retry.candidate.to_dict(), before)
-		assert_eq(source.to_dict(), before)
+		if retry.candidate != null: _assert_eq_lazy(retry.candidate.to_dict(), before)
+		_assert_eq_lazy(source.to_dict(), before)
 		var convenience := ArmyGround.body_placement_candidate(f.repo, source, result.plan.request, f.boundary)
 		assert_eq(convenience.status, "error")
 		assert_eq(convenience.reason, "retry_requires_original_plan")
@@ -1044,7 +1082,7 @@ func test_v2_completion_proof_multiple_metadata_operations_and_law_once() -> voi
 		assert_eq(proof.plans.size(), i + 1)
 		assert_eq(UnitBodies._placement_json(proof.origin), UnitBodies._placement_json(origin.to_dict()))
 		assert_eq(f.state.law_in_force[LawSystem.UNIT_PREFIX + f.code][f.law].decree_id, 17)
-		assert_eq(f.state.day_resolution, origin.day_resolution)
+		_assert_eq_lazy(f.state.day_resolution, origin.day_resolution)
 		assert_eq(f.state.military_events, origin.military_events)
 		assert_eq(f.state.metrics, origin.metrics)
 		assert_eq(f.state.rng.to_dict(), origin.rng.to_dict())
@@ -1067,7 +1105,7 @@ func test_v2_completion_proof_canonical_string_both_provenance_branches() -> voi
 		assert_eq(UnitBodies.validate_placement_candidate(f.repo, loaded, f.boundary).status, "complete")
 		var retry := ArmyGround.commit_body_placement_candidate(f.repo, loaded, JSON.parse_string(JSON.stringify(result.plan)), f.boundary)
 		assert_eq(retry.status, "complete", retry.reason)
-		if retry.candidate != null: assert_eq(retry.candidate.to_dict(), loaded.to_dict())
+		if retry.candidate != null: _assert_eq_lazy(retry.candidate.to_dict(), loaded.to_dict())
 		var text: String = loaded.military_migration.body_placement.completion_json
 		for raw: String in [text.insert(1, " "), text.insert(text.length() - 1, ',"version":1'), text.left(text.length() - 2) + "1e0}", "{broken", "null"]:
 			var bad := UnitBodies._copy(loaded)
@@ -1203,7 +1241,7 @@ func test_v2_completion_proof_strict_march_consumers_and_new_day_refusal() -> vo
 	assert_eq(BodyMotion.plan_locomotion_candidate(f.repo, source, [], source.absolute_day(), int(boundary.substep), boundary).cursor, {})
 	var inner: Dictionary = source.military_migration.body_motion.plan
 	assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, source, inner, inner.cursor.boundary).status, "error")
-	assert_eq(source.to_dict(), before)
+	_assert_eq_lazy(source.to_dict(), before)
 	var bad := UnitBodies._copy(source)
 	bad.day_resolution = {}
 	assert_eq(UnitBodies.validate_placement_candidate(f.repo, bad, _boundary(bad)).status, "error")
@@ -1236,7 +1274,7 @@ func test_v2_completion_proof_v1_and_safe_controls_unchanged() -> void:
 	f.state.regiments[f.code].erase("body_groups")
 	_completion_reject(f, f.state)
 	assert_false(f.state.regiments[f.code].has("body_groups"), "no missing-row initialization")
-	assert_eq(f.state.day_resolution, GameState._decode_values(before.day_resolution))
+	_assert_eq_lazy(f.state.day_resolution, GameState._decode_values(before.day_resolution))
 
 func test_v2_completion_travel_refuses_without_publication_and_raw_precedes_deferral() -> void:
 	var f := _completion_fixture(false, "0", 200)
@@ -1246,7 +1284,7 @@ func test_v2_completion_travel_refuses_without_publication_and_raw_precedes_defe
 	assert_eq(result.status, "deferred", result.reason)
 	assert_true(result.reason.begins_with("requires_motion"))
 	assert_null(result.candidate)
-	assert_eq(f.state.to_dict(), before)
+	_assert_eq_lazy(f.state.to_dict(), before)
 	var bad: GameState = UnitBodies._copy(f.incomplete)
 	bad.military_migration.body_motion = {"version": "3"}
 	_completion_reject(f, bad)
@@ -1284,7 +1322,7 @@ func test_v2_completion_proof_rejects_nested_origin_rosters_before_consumers() -
 				assert_eq(result.size(), 5)
 				assert_null(result.get("candidate"))
 				assert_false(str(result.get("reason", "")).is_empty())
-				assert_eq(source.to_dict(), before)
+				_assert_eq_lazy(source.to_dict(), before)
 				assert_eq(source.rng.to_dict(), before.rng)
 		var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(endpoint.to_dict())), false)
 		assert_eq(UnitBodies.validate_placement_candidate(f.repo, restored, f.boundary).status, "complete", "legal origin survives both provenance branches")
@@ -1320,14 +1358,14 @@ func test_v2_completion_proof_rejects_raw_frozen_inputs_before_consumers() -> vo
 			var frozen: String = bad.military_migration.body_placement.completion_json
 			for source: GameState in [bad, GameState.from_dict(JSON.parse_string(JSON.stringify(bad.to_dict())), false)]:
 				assert_eq(source.military_migration.body_placement.completion_json, frozen)
-				assert_eq(source.day_resolution, endpoint.day_resolution, "actual frozen day remains valid")
+				_assert_eq_lazy(source.day_resolution, endpoint.day_resolution, "actual frozen day remains valid")
 				var before := source.to_dict()
 				var result := UnitBodies.validate_placement_candidate(f.repo, source, f.boundary)
 				assert_eq(result.get("status"), "error", str(change))
 				assert_eq(result.size(), 5)
 				assert_null(result.get("candidate"))
 				assert_false(str(result.get("reason", "")).is_empty())
-				assert_eq(source.to_dict(), before)
+				_assert_eq_lazy(source.to_dict(), before)
 				assert_eq(source.rng.to_dict(), before.rng)
 		var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(endpoint.to_dict())), false)
 		assert_eq(UnitBodies.validate_placement_candidate(f.repo, restored, f.boundary).status, "complete")
