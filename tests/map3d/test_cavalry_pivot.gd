@@ -874,3 +874,125 @@ func test_offset_heads_keep_connections_and_contacts_under_affine_parents_and_na
 		fixture.native[bone.name] = bone.bind
 	_freeze_bind_globals(fixture.rest.bones)
 	_assert_offset_head_twists(fixture)
+
+
+func test_committed_offset_half_turn_preserves_baseline_native037_at_endpoints_and_feasible_interior() -> void:
+	# Same integer commitments as the external royal failure, using only this
+	# committed 53-bone cavalry fixture in its documented source frame.
+	var fixture: Dictionary = _native_case()
+	var rest: Dictionary = fixture.rest
+	var native: Dictionary = fixture.native
+	var globals: Dictionary = _globals(rest, native)
+	var middle: Transform3D = Transform3D(Basis(rest.turn_axis, PI / 2.0), Vector3.ZERO)
+	var end: Transform3D = Transform3D(Basis(rest.turn_axis, PI), Vector3.ZERO)
+	var contacts: Dictionary = {}
+	for hoof: String in rest.chains:
+		contacts[hoof] = {"offset": Transform3D.IDENTITY, "segments": [
+			_segment(0.0, 0.5, globals[hoof], middle * globals[hoof]),
+			_segment(0.5, 1.0, middle * globals[hoof], end * globals[hoof])]}
+	var pose: Dictionary = _pose(native)
+	var before: Dictionary = {"rest": rest, "pose": pose, "contacts": contacts}.duplicate(true)
+	for headings: Array in [[76000012, 256000012], [256000012, 76000012]]:
+		for phase: float in [0.0, 0.5, 1.0]:
+			var op: Dictionary = {"start_heading": float(headings[0]) / 1000000.0,
+				"end_heading": float(headings[1]) / 1000000.0,
+				"turn_degrees": 180.0, "duration": 12.0, "phase": phase,
+				"entry_phase": 0.37, "exit_phase": 0.37}
+			var op_before: Dictionary = op.duplicate(true)
+			var result: Dictionary = _sample(rest, pose, op, contacts)
+			assert_true(result.ok, str(headings) + " phase=" + str(phase) + " " + str(result.diagnostics))
+			if result.ok:
+				_assert_native_affines_and_nonlimbs(rest, native, result)
+				if phase == 0.0 or phase == 1.0:
+					assert_eq(result.locals, native)
+				var actual: Dictionary = _globals(rest, result.locals)
+				var turn: Transform3D = Transform3D(Basis(rest.turn_axis, deg_to_rad(180.0 * phase)), Vector3.ZERO)
+				for hoof: String in rest.chains:
+					var want: Transform3D = globals[hoof] if phase == 0.0 else (middle * globals[hoof] if phase == 0.5 else end * globals[hoof])
+					var got: Transform3D = turn * actual[hoof]
+					assert_almost_eq(got.origin.distance_to(want.origin), 0.0, 0.00001)
+					for axis: int in 3:
+						assert_almost_eq(got.basis[axis].distance_to(want.basis[axis]), 0.0, 0.00001)
+			assert_eq(op, op_before)
+			var bad: Dictionary = op.duplicate(true)
+			bad.turn_degrees = -180.0
+			_assert_rejected(rest, pose, bad, contacts, "operation_domain")
+			bad.turn_degrees = 179.999999
+			_assert_rejected(rest, pose, bad, contacts, "signed_shortest_turn")
+	assert_eq({"rest": rest, "pose": pose, "contacts": contacts}, before)
+
+
+func test_positive_half_turn_all_integer_microdegree_residue_classes_accept() -> void:
+	var solver: Script = load(HELPER_PATH)
+	var boundaries: Array[int] = [0, 180000000, 360000000]
+	# 15625udeg = 1/64 degree: within fixed start AND end binary binades,
+	# this translates both rounded endpoints by an even number of ulps.
+	# Conversion residuals and their difference repeat; the roundoff bound
+	# cannot shrink as both headings increase. Test every residue per interval,
+	# or every integer in shorter intervals, covering all 360000000 starts.
+	for exponent: int in range(-20, 9):
+		var boundary: int = ceili(pow(2.0, exponent) * 1000000.0)
+		if boundary < 360000000:
+			boundaries.append(boundary)
+			boundaries.append((boundary + 180000000) % 360000000)
+	boundaries.sort()
+	var op: Dictionary = _operation(180.0, 0.5)
+	var checked: int = 0
+	for i: int in range(boundaries.size() - 1):
+		for start: int in range(boundaries[i], mini(boundaries[i + 1], boundaries[i] + 15625)):
+			op.start_heading = float(start) / 1000000.0
+			op.end_heading = float((start + 180000000) % 360000000) / 1000000.0
+			var reason: String = solver._validate_operation(op)
+			if reason != "":
+				assert_eq(reason, "", "Legal +180 tie rejected at integer start_udeg=" + str(start))
+				return
+			checked += 1
+	assert_eq(checked, 500000, "All residue representatives of the complete +180 starting-heading domain")
+
+
+func test_integer_microdegree_binade_wrap_nearzero_and_neartie_boundaries_keep_signed_commitments() -> void:
+	var solver: Script = load(HELPER_PATH)
+	for turn: int in [-179999999, -1, 0, 1, 179999999, 180000000]:
+		var starts: Dictionary = {0: true, 1: true, 999999: true, 1000000: true,
+			76000011: true, 76000012: true, 76000013: true, 256000012: true,
+			179999999: true, 180000000: true, 180000001: true, 359999999: true}
+		for exponent: int in range(-20, 9):
+			var boundary: int = ceili(pow(2.0, exponent) * 1000000.0)
+			for offset: int in [-1, 0, 1]:
+				# Boundaries of both independently converted operands, plus wrap.
+				starts[(boundary + offset + 360000000) % 360000000] = true
+				starts[(boundary - turn + offset + 720000000) % 360000000] = true
+		for start: int in starts:
+			var op: Dictionary = _operation(float(turn) / 1000000.0, 0.5)
+			op.start_heading = float(start) / 1000000.0
+			op.end_heading = float((start + turn + 360000000) % 360000000) / 1000000.0
+			var before: Dictionary = op.duplicate(true)
+			assert_eq(solver._validate_operation(op), "", str([start, turn]))
+			assert_eq(op, before, "Retain exact committed direction and parameters")
+			for wrong: float in [-180.0, -op.turn_degrees, 180.0, op.turn_degrees + 0.000001]:
+				if wrong == op.turn_degrees:
+					continue
+				var bad: Dictionary = op.duplicate(true)
+				bad.turn_degrees = wrong
+				assert_ne(solver._validate_operation(bad), "", "Reject wrong signed/mismatching/nonshortest commitment " + str(bad))
+	# True near-ties retain their own sign at the public atomic seam too.
+	var fixture: Dictionary = _native_case()
+	for row: Array in [[76000012, 256000011, 179999999], [76000012, 256000013, -179999999],
+		[256000012, 76000011, 179999999], [256000012, 76000013, -179999999]]:
+		var angle: float = float(row[2]) / 1000000.0
+		var contacts: Dictionary = _contacts(fixture.rest, fixture.native, angle)
+		for phase: float in [0.0, 1.0]:
+			var op: Dictionary = _operation(angle, phase)
+			op.start_heading = float(row[0]) / 1000000.0
+			op.end_heading = float(row[1]) / 1000000.0
+			var before: Dictionary = op.duplicate(true)
+			var result: Dictionary = _sample(fixture.rest, _pose(fixture.native), op, contacts)
+			assert_true(result.ok, str(row) + " " + str(result.diagnostics))
+			if result.ok:
+				assert_eq(result.locals, fixture.native)
+			assert_eq(op, before)
+			var bad: Dictionary = op.duplicate(true)
+			bad.turn_degrees = -angle
+			_assert_rejected(fixture.rest, _pose(fixture.native), bad, contacts, "signed_shortest_turn")
+			bad.turn_degrees = 180.0
+			_assert_rejected(fixture.rest, _pose(fixture.native), bad, contacts, "signed_shortest_turn")
