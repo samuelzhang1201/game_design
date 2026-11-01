@@ -1190,3 +1190,41 @@ func test_v2_completion_travel_refuses_without_publication_and_raw_precedes_defe
 	var bad: GameState = UnitBodies._copy(f.incomplete)
 	bad.military_migration.body_motion = {"version": "3"}
 	_completion_reject(f, bad)
+
+func test_v2_completion_proof_rejects_nested_origin_rosters_before_consumers() -> void:
+	for imported: bool in [false, true]:
+		var f := _completion_fixture(imported)
+		if f.is_empty(): continue
+		var committed := _completion_operation(f)
+		if committed.candidate == null: continue
+		var endpoint: GameState = committed.candidate
+		assert_eq(UnitBodies.validate_placement_candidate(f.repo, endpoint, f.boundary).status, "complete")
+		var cohort: String = endpoint.military_rosters[f.code].cohort_ids[0]
+		var changes: Array[Dictionary] = []
+		for table: String in ["army_roster", "military_rosters", "military_cohorts"]:
+			for value: Variant in [null, 1, [], {}]:
+				changes.append({"table": table, "key": cohort if table == "military_cohorts" else f.code, "field": "", "value": value})
+		for value: Variant in [null, 1, {}, [null], [cohort, cohort], ["missing-cohort"]]:
+			changes.append({"table": "military_rosters", "key": f.code, "field": "cohort_ids", "value": value})
+		changes.append({"table": "military_cohorts", "key": cohort, "field": "unit_code", "value": "other-unit"})
+		changes.append({"table": "army_roster", "key": f.code, "field": "infantry", "value": []})
+		for change: Dictionary in changes:
+			var bad := UnitBodies._copy(endpoint)
+			var proof := UnitBodies._placement_proof(bad.military_migration.body_placement.completion_json)
+			if change.field == "": proof.origin[change.table][change.key] = change.value
+			else: proof.origin[change.table][change.key][change.field] = change.value
+			_completion_set_proof(bad, proof)
+			var frozen: String = bad.military_migration.body_placement.completion_json
+			for source: GameState in [bad, GameState.from_dict(JSON.parse_string(JSON.stringify(bad.to_dict())), false)]:
+				assert_eq(source.military_migration.body_placement.completion_json, frozen, "outer save codecs must preserve malformed nested proof")
+				assert_eq(UnitBodies._placement_personnel_error(source, f.code), "", "actual endpoint roster remains valid; only origin is corrupted")
+				var before := source.to_dict()
+				var result := UnitBodies.validate_placement_candidate(f.repo, source, f.boundary)
+				assert_eq(result.get("status"), "error", str(change))
+				assert_eq(result.size(), 5)
+				assert_null(result.get("candidate"))
+				assert_false(str(result.get("reason", "")).is_empty())
+				assert_eq(source.to_dict(), before)
+				assert_eq(source.rng.to_dict(), before.rng)
+		var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(endpoint.to_dict())), false)
+		assert_eq(UnitBodies.validate_placement_candidate(f.repo, restored, f.boundary).status, "complete", "legal origin survives both provenance branches")

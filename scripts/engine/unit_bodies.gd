@@ -701,7 +701,11 @@ static func _placement_shape(value: Dictionary, template: Dictionary) -> bool:
 
 ## Check the unnormalized body image, then require a lossless whole-save rehydrate.
 static func _placement_origin(repo: DataRepository, actual: GameState, raw: Dictionary, boundary: Dictionary) -> Dictionary:
-	if not _placement_shape(raw, actual.to_dict()) or raw.version != GameState.SAVE_VERSION: return _failure("Invalid completion origin save shape")
+	var image := actual.to_dict()
+	if not _placement_shape(raw, image) or raw.version != GameState.SAVE_VERSION: return _failure("Invalid completion origin save shape")
+	# Metadata cannot change personnel; reject raw origin drift before legacy roster consumers.
+	for field: String in ["army_roster", "military_rosters", "military_cohorts"]:
+		if _placement_json(raw[field]) != _placement_json(image[field]): return _failure("Completion origin changes immutable roster/personnel: " + field)
 	if not _placement_shape(raw.rng, actual.rng.to_dict()): return _failure("Invalid completion RNG shape")
 	for field: String in ["seed", "state"]:
 		if not raw.rng[field].is_valid_int() or str(int(raw.rng[field])) != raw.rng[field]: return _failure("Invalid completion RNG integer")

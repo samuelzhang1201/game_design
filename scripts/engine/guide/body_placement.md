@@ -57,7 +57,9 @@ control has string fields `{version:"2",sequence,operation_id,receipt,completion
 one complete original save image and the linear list of closed placement plans.
 Contract: `docs/reviews/cluster-formations/placement-v2-completion-contract.md`.
 
-Admission checks raw numeric/schema validity before lossless private rehydrate,
+Admission requires the raw origin's roster/personnel tables to match the admitted
+endpoint before legacy roster consumers, since metadata cannot change them.
+It checks raw numeric/schema validity before lossless private rehydrate,
 then validates the origin through the original v2 MARCH predicate. Every prefix
 recomputes the actual metadata rules and entire preceding-state placement basis;
 its receipt is published only after computing that plan. The final whole-save
