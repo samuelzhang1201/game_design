@@ -453,7 +453,7 @@ static func _whole(value: Variant) -> bool:
 
 static func _control_ok(record: Dictionary) -> bool:
 	# Global/battle records cannot own a unit's reconciliation descriptor.
-	return not record.has("body_reconciliation") and (not record.has("body_version") \
+	return (not record.has("body_placement") or _placement_control_ok(record.body_placement)) and not record.has("body_reconciliation") and (not record.has("body_version") \
 		or (_whole(record.body_version) and int(record.body_version) == 1))
 
 static func _counter_ok(entry: Dictionary, required: bool) -> bool:
@@ -559,3 +559,50 @@ static func _failure(reason: String) -> Dictionary:
 	var result := _result("error", reason)
 	result.error = reason
 	return result
+
+## Placement validates raw controls before migration or frozen deferral.
+static func validate_placement_candidate(repo: DataRepository, source: GameState, boundary: Dictionary) -> Dictionary:
+	if repo == null or source == null: return _failure("Placement requires data and source")
+	for raw: Variant in source.army_roster:
+		if not raw is String or not source.army_roster[raw] is Dictionary: return _failure("Invalid raw placement roster")
+		var code: String = raw
+		if source.military_migration.has("body_version") and not _naval(source, code) and _entry(source, code).is_empty():
+			return _failure("Current roster unit missing required entry: " + code)
+	var owners := _owners(source)
+	if not owners.error.is_empty(): return _failure(owners.error)
+	for code: String in owners.codes:
+		if _naval(source, code): continue
+		for field: String in ["x_m", "y_m"]:
+			if not _whole(_entry(source, code).get(field)): return _failure("Invalid raw placement anchor: " + code)
+	if source.military_migration.has("body_placement") and not _placement_control_ok(source.military_migration.body_placement):
+		return _failure("Invalid saved placement control")
+	var keys: Array = ["version", "kind", "abs_day", "receipt"] if boundary.get("kind") == "march_complete" else ["version", "kind", "abs_day"]
+	if not BodyMotion._keys(boundary, keys) or not _whole(boundary.get("version")) or int(boundary.version) != 1 \
+		or boundary.get("kind") not in ["safe", "march_complete"] or not BodyMotion._decimal(boundary.get("abs_day")):
+		return _failure("Invalid raw placement boundary")
+	if int(boundary.abs_day) != source.absolute_day(): return _failure("Placement boundary day mismatch")
+	if boundary.kind == "safe":
+		if not source.day_resolution.is_empty():
+			var error := DayResolution.body_march_incompatibility_reason(source.day_resolution) if source.day_resolution.has("body_march") else DayResolution.incompatibility_reason(source.day_resolution)
+			if not error.is_empty(): return _failure(error)
+		return _migration(repo, source)
+	if not boundary.receipt is String or not BodyMotion._digest(boundary.receipt): return _failure("Invalid placement march receipt")
+	var error := DayResolution.body_march_incompatibility_reason(source.day_resolution)
+	if not error.is_empty(): return _failure(error)
+	var control: Dictionary = source.day_resolution.body_march
+	var validated := validate_march_candidate(repo, source, {"version": 1, "abs_day": int(boundary.abs_day), "substep": maxi(0, int(control.next_substep) - 1)})
+	if validated.status != "complete": return validated
+	if int(control.next_substep) != int(control.substep_count) or int(control.next_substep) <= 0:
+		return _result("deferred", "frozen_transaction: MARCH is not complete")
+	if control.last.receipt != boundary.receipt: return _failure("Placement march receipt mismatch")
+	error = ArmySystem._body_source_error(repo, source)
+	if not error.is_empty(): return _failure(error)
+	return _result("complete", "Validated completed MARCH without changing frozen payload", _copy(source))
+
+static func _placement_id_ok(value: Variant) -> bool:
+	return value is String and value.begins_with("placement:") and value.length() > "placement:".length()
+
+static func _placement_control_ok(value: Variant) -> bool:
+	return value is Dictionary and BodyMotion._keys(value, ["version", "sequence", "operation_id", "receipt"]) \
+		and value.version is String and value.version == "1" and BodyMotion._decimal(value.sequence) \
+		and _placement_id_ok(value.operation_id) and value.receipt is String and BodyMotion._digest(value.receipt)

@@ -72,4 +72,4 @@ Departure requires `MilitaryCommanders.eligible_for_unit` for the current appoin
 
 - **Gait choice**: Every substep rechecks the live commander. After withdrawal/pursuit/battle joining, a crown march into an `ArmyTasks.known_town` runs for `key_point` / `town_clear` plus town code while a positive sight/spy unit record within `ghost_keep_days` remains in its reach. Arrival/re-aim/lost evidence stops it. No hidden foe truth; existing camp/food gates apply.
 
-March APIs: `scripts/engine/guide/body_marches.md`.
+APIs: `body_marches.md`, `body_placement.md`.

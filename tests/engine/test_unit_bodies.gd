@@ -880,3 +880,26 @@ func test_explicit_march_boundary_retains_frozen_payload_and_physical_validation
 	assert_eq(f.state.day_resolution, tx, "never delete the day transaction")
 	battle.groups[f.code][0].facing_deg = true
 	assert_eq(UnitBodies.validate_march_candidate(f.repo, f.state, boundary).status, "error", "pending round still validates raw rows before deferral")
+
+func test_placement_control_raw_validation_and_frozen_preservation() -> void:
+	var f := _fixture(100)
+	var boundary := {"version": 1, "kind": "safe", "abs_day": str(f.state.absolute_day())}
+	var valid := {"version": "1", "sequence": "0", "operation_id": "placement:i42", "receipt": "a".repeat(64)}
+	f.state.military_migration.body_placement = valid.duplicate(true)
+	assert_eq(UnitBodies.validate_placement_candidate(f.repo, f.state, boundary).status, "complete")
+	for field: String in ["version", "sequence", "operation_id", "receipt", "unknown"]:
+		for raw: Variant in [null, true, 1.5, 1, "i42", "f3ff0000000000000", "placement:", ""]:
+			f.state.military_migration.body_placement = valid.duplicate(true)
+			f.state.military_migration.body_placement[field] = raw
+			var before: Dictionary = f.state.to_dict()
+			assert_eq(UnitBodies.validate_placement_candidate(f.repo, f.state, boundary).status, "error", field + str(raw))
+			assert_eq(f.state.to_dict(), before)
+			var loaded := _json(f.state)
+			assert_eq(UnitBodies.validate_placement_candidate(f.repo, loaded, boundary).status, "error", "JSON must not repair " + field)
+	f.state.military_migration.body_placement = valid.duplicate(true)
+	f.state.day_resolution = DayResolution.begin(f.state.day, false, f.state.absolute_day())
+	var frozen: Dictionary = f.state.to_dict()
+	assert_eq(UnitBodies.validate_placement_candidate(f.repo, f.state, boundary).status, "deferred")
+	assert_eq(f.state.to_dict(), frozen)
+	f.state.military_migration.body_placement.sequence = true
+	assert_eq(UnitBodies.validate_placement_candidate(f.repo, f.state, boundary).status, "error", "bad control precedes frozen deferral")
