@@ -45,10 +45,6 @@ static func _bone(bones: Array, name: String) -> Dictionary:
 	return {}
 
 
-static func _parent(bones: Array, name: String) -> String:
-	return _bone(bones, name).parent
-
-
 static func _fk(bones: Array, locals: Dictionary) -> Dictionary:
 	var globals: Dictionary = {}
 	for bone: Dictionary in bones:
@@ -192,9 +188,12 @@ static func _limits(rest: Dictionary, chain: Dictionary, locals: Dictionary) -> 
 		var bind_rotation: Dictionary = _polar(_bone(rest.bones, name).bind.basis)
 		if not native_rotation.ok or not bind_rotation.ok or _rotation_vector(native_rotation.rotation * bind_rotation.rotation.transposed(), rest.turn_axis).length() > chain.rotation_limits[i] + EPS:
 			return false
+	var heads: Array[Vector3] = []
+	for i: int in chain.bones.size():
+		heads.append(globals[i] * _bone(rest.bones, chain.bones[i]).head)
 	for i: int in chain.bend_limits.size():
-		var a: Vector3 = globals[i + 1].origin - globals[i].origin
-		var b: Vector3 = globals[i + 2].origin - globals[i + 1].origin
+		var a: Vector3 = heads[i + 1] - heads[i]
+		var b: Vector3 = heads[i + 2] - heads[i + 1]
 		var cross: Vector3 = a.cross(b)
 		var angle: float = atan2(cross.length(), a.dot(b))
 		if cross.dot(chain.bend_normals[i]) < 0.0:
@@ -204,12 +203,35 @@ static func _limits(rest: Dictionary, chain: Dictionary, locals: Dictionary) -> 
 	return true
 
 
-static func _residual(value: Transform3D, target: Transform3D) -> Array[float]:
+static func _head_errors(rest: Dictionary, chain: Dictionary, native: Dictionary, locals: Dictionary, globals: Array[Transform3D], frame: Transform3D) -> Array[Vector3]:
+	var local_errors: Array[Vector3] = []
+	var world_errors: Array[Vector3] = []
+	for i: int in chain.bones.size():
+		var bone: Dictionary = _bone(rest.bones, chain.bones[i])
+		var anchor: Vector3 = native[bone.name] * bone.head if i == 0 else _bone(rest.bones, chain.bones[i - 1]).tail
+		local_errors.append(locals[bone.name] * bone.head - anchor)
+		var parent: Transform3D = frame if i == 0 else globals[i - 1]
+		world_errors.append(globals[i] * bone.head - parent * anchor)
+	local_errors.append_array(world_errors)
+	return local_errors
+
+
+static func _heads_closed(errors: Array[Vector3]) -> bool:
+	for error: Vector3 in errors:
+		if not error.is_finite() or error.length() > EPS:
+			return false
+	return true
+
+
+static func _residual(value: Transform3D, target: Transform3D, heads: Array[Vector3]) -> Array[float]:
 	var p: Vector3 = value.origin - target.origin
 	var x: Vector3 = value.basis.x - target.basis.x
 	var y: Vector3 = value.basis.y - target.basis.y
 	var z: Vector3 = value.basis.z - target.basis.z
-	return [p.x, p.y, p.z, x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z]
+	var values: Array[float] = [p.x, p.y, p.z, x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z]
+	for error: Vector3 in heads:
+		values.append_array([error.x, error.y, error.z])
+	return values
 
 
 static func _norm_squared(values: Array) -> float:
@@ -219,9 +241,9 @@ static func _norm_squared(values: Array) -> float:
 	return out
 
 
-static func _jacobian(globals: Array[Transform3D], frame: Transform3D, turn: Transform3D, offset: Transform3D) -> Array:
+static func _jacobian(rest: Dictionary, chain: Dictionary, locals: Dictionary, globals: Array[Transform3D], frame: Transform3D, turn: Transform3D, offset: Transform3D, heads: Array[Vector3]) -> Array:
 	var rows: Array = []
-	for _row: int in 12:
+	for _row: int in 12 + 6 * globals.size():
 		rows.append([])
 	var end: Transform3D = turn * globals[-1] * offset
 	for i: int in globals.size():
@@ -235,7 +257,18 @@ static func _jacobian(globals: Array[Transform3D], frame: Transform3D, turn: Tra
 			var y: Vector3 = parent.basis * axis.cross(inverse * end.basis.y)
 			var z: Vector3 = parent.basis * axis.cross(inverse * end.basis.z)
 			var column: Array[float] = [p.x, p.y, p.z, x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z]
-			for row: int in 12:
+			var native_parent: Transform3D = frame if i == 0 else globals[i - 1]
+			var world_column: Array[float] = []
+			for j: int in globals.size():
+				var bone: Dictionary = _bone(rest.bones, chain.bones[j])
+				var local: Vector3 = axis.cross(locals[bone.name].basis * bone.head) if i == j else Vector3.ZERO
+				var world: Vector3 = native_parent.basis * local
+				if j > i:
+					world = native_parent.basis * axis.cross(native_parent.basis.inverse() * heads[globals.size() + j])
+				column.append_array([local.x, local.y, local.z])
+				world_column.append_array([world.x, world.y, world.z])
+			column.append_array(world_column)
+			for row: int in rows.size():
 				rows[row].append(column[row])
 	return rows
 
@@ -288,33 +321,37 @@ static func _solve(rest: Dictionary, chain: Dictionary, native: Dictionary, targ
 		var observed: Transform3D = turn * globals[-1] * offset
 		if not _finite(observed) or not _affine(observed):
 			return {"ok": false, "reason": "contact_affine", "iterations": attempts}
-		if _close(observed, target):
+		var heads: Array[Vector3] = _head_errors(rest, chain, native, locals, globals, frame)
+		if _close(observed, target) and _heads_closed(heads):
 			return {"ok": true, "locals": locals, "iterations": iteration}
 		attempts = iteration + 1
-		var residual: Array[float] = _residual(observed, target)
+		var residual: Array[float] = _residual(observed, target, heads)
 		var score: float = _norm_squared(residual)
-		var jacobian: Array = _jacobian(globals, frame, turn, offset)
+		var jacobian: Array = _jacobian(rest, chain, locals, globals, frame, turn, offset, heads)
 		if jacobian.is_empty():
 			return {"ok": false, "reason": "singular_joint_frame", "iterations": attempts}
+		# Solve in joint coordinates: at most 15 unknowns, including all head constraints.
 		var system: Array = []
-		for i: int in 12:
+		var right: Array[float] = []
+		for i: int in jacobian[0].size():
 			var row: Array[float] = []
-			for j: int in 12:
+			var gradient: float = 0.0
+			for k: int in residual.size():
+				gradient -= jacobian[k][i] * residual[k]
+			right.append(gradient)
+			for j: int in jacobian[0].size():
 				var value: float = damping if i == j else 0.0
-				for k: int in jacobian[i].size():
-					value += jacobian[i][k] * jacobian[j][k]
+				for k: int in residual.size():
+					value += jacobian[k][i] * jacobian[k][j]
 				row.append(value)
 			system.append(row)
-		var dual: Array[float] = _linear_solve(system, residual)
-		if dual.is_empty():
+		var delta: Array[float] = _linear_solve(system, right)
+		if delta.is_empty():
 			return {"ok": false, "reason": "numerical_system", "iterations": iteration}
 		var steps: Array[Vector3] = []
 		var largest: float = 0.0
 		for i: int in chain.bones.size():
-			var vector: Vector3 = Vector3.ZERO
-			for axis: int in 3:
-				for row: int in 12:
-					vector[axis] -= jacobian[row][3 * i + axis] * dual[row]
+			var vector: Vector3 = Vector3(delta[3 * i], delta[3 * i + 1], delta[3 * i + 2])
 			steps.append(vector)
 			largest = maxf(largest, vector.length())
 		var fraction: float = minf(1.0, 0.35 / largest) if largest > 0.0 else 1.0
@@ -331,7 +368,8 @@ static func _solve(rest: Dictionary, chain: Dictionary, native: Dictionary, targ
 				candidate[name] = local
 			var proposed: Array[Transform3D] = _chain_fk(chain.bones, candidate, frame)
 			var proposed_contact: Transform3D = turn * proposed[-1] * offset
-			if _finite(proposed) and _finite(proposed_contact) and _affine(proposed_contact) and _norm_squared(_residual(proposed_contact, target)) < score and _limits(rest, chain, candidate):
+			var proposed_heads: Array[Vector3] = _head_errors(rest, chain, native, candidate, proposed, frame)
+			if _finite(proposed) and _finite(proposed_contact) and _affine(proposed_contact) and _norm_squared(_residual(proposed_contact, target, proposed_heads)) < score and _limits(rest, chain, candidate):
 				locals = candidate
 				corrections = candidate_corrections
 				globals = proposed

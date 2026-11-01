@@ -655,3 +655,104 @@ func test_swing_C1_preserves_declared_nonparallel_angular_derivatives_in_full_co
 			var expected: Vector3 = omega.cross(orientation[axis])
 			assert_almost_eq(left.distance_to(expected), 0.0, 0.01, hoof + " full affine exit tangent")
 			assert_almost_eq(right.distance_to(expected), 0.0, 0.01, hoof + " full affine entry tangent")
+
+
+func _offset_head_case(all_limbs: bool = false) -> Dictionary:
+	var fixture: Dictionary = _synthetic_case()
+	var limb_names: Array = []
+	for chain: Dictionary in fixture.rest.chains.values():
+		limb_names.append_array(chain.bones)
+	for bone: Dictionary in fixture.rest.bones:
+		if bone.name == "FrontForearm.L" or (all_limbs and bone.name in limb_names):
+			bone.head = Vector3(0.1, 0, 0)
+			bone.bind.origin -= bone.bind.basis * bone.head
+		fixture.native[bone.name] = bone.bind
+	_freeze_bind_globals(fixture.rest.bones)
+	return fixture
+
+
+func _assert_first_heads_anchored(rest: Dictionary, native: Dictionary, solved: Dictionary) -> void:
+	var before: Dictionary = _globals(rest, native)
+	var after: Dictionary = _globals(rest, solved)
+	for chain: Dictionary in rest.chains.values():
+		var name: String = chain.bones[0]
+		for bone: Dictionary in rest.bones:
+			if bone.name == name:
+				assert_almost_eq((after[name] * bone.head).distance_to(before[name] * bone.head), 0.0, 0.00001, name + " native attachment")
+
+
+func test_review_R1_nonzero_head_keeps_full_anatomical_connectivity_and_native_origins() -> void:
+	# Review reproduced ok=true with a 0.0167493317m Forearm head/tail gap.
+	var fixture: Dictionary = _offset_head_case()
+	var rest: Dictionary = fixture.rest
+	var native: Dictionary = fixture.native
+	var before: Dictionary = fixture.duplicate(true)
+	for angle: float in [90.0, -90.0]:
+		var contacts: Dictionary = _contacts(rest, native, angle)
+		for phase: float in [0.0, 0.5, 1.0]:
+			var result: Dictionary = _sample(rest, _pose(native), _operation(angle, phase), contacts)
+			assert_true(result.ok, "Legal offset-head contact must solve: " + str(result.diagnostics))
+			if not result.ok:
+				continue
+			_assert_native_affines_and_nonlimbs(rest, native, result)
+			_assert_first_heads_anchored(rest, native, result.locals)
+			if phase == 0.0 or phase == 1.0:
+				assert_eq(result.locals, native)
+	assert_eq(fixture, before)
+
+
+func _assert_offset_head_twists(fixture: Dictionary) -> void:
+	var rest: Dictionary = fixture.rest
+	var native: Dictionary = fixture.native
+	var legal: Dictionary = native.duplicate(true)
+	for chain: Dictionary in rest.chains.values():
+		for i: int in chain.bones.size():
+			var name: String = chain.bones[i]
+			# Rotation about native basis*head fixes the actual head while
+			# retaining local origin and full local affine metric.
+			var head: Vector3 = Vector3.ZERO
+			for bone: Dictionary in rest.bones:
+				if bone.name == name:
+					head = bone.head
+			var axis: Vector3 = (native[name].basis * head).normalized()
+			legal[name].basis = Basis(axis, 0.07 if i % 2 == 0 else -0.11) * native[name].basis
+	var first: Dictionary = _globals(rest, native)
+	var middle: Dictionary = _globals(rest, legal)
+	var end_turn: Transform3D = Transform3D(Basis(Vector3.UP, PI / 2), Vector3.ZERO)
+	var mid_turn: Transform3D = Transform3D(Basis(Vector3.UP, PI / 4), Vector3.ZERO)
+	var contacts: Dictionary = {}
+	for hoof: String in rest.chains:
+		contacts[hoof] = {"offset": Transform3D.IDENTITY, "segments": [
+			_segment(0.0, 0.5, first[hoof], mid_turn * middle[hoof]),
+			_segment(0.5, 1.0, mid_turn * middle[hoof], end_turn * first[hoof])]}
+	var result: Dictionary = _sample(rest, _pose(native), _operation(90.0, 0.5), contacts)
+	assert_true(result.ok, "Explicit feasible offset-head target must solve: " + str(result.diagnostics))
+	if result.ok:
+		_assert_native_affines_and_nonlimbs(rest, native, result)
+		_assert_first_heads_anchored(rest, native, result.locals)
+
+		var actual: Dictionary = _globals(rest, result.locals)
+		for hoof: String in rest.chains:
+			var target: Transform3D = mid_turn * middle[hoof]
+			var observed: Transform3D = mid_turn * actual[hoof]
+			assert_almost_eq(observed.origin.distance_to(target.origin), 0.0, 0.00001, hoof + " offset-head contact")
+			for axis: int in 3:
+				assert_almost_eq(observed.basis[axis].distance_to(target.basis[axis]), 0.0, 0.00001, hoof + " offset-head orientation")
+
+
+func test_all18_offset_heads_solve_known_legal_twists_without_disconnecting_body_attachments() -> void:
+	_assert_offset_head_twists(_offset_head_case(true))
+
+
+func test_offset_heads_keep_connections_and_contacts_under_affine_parents_and_native_shear() -> void:
+	var fixture: Dictionary = _offset_head_case(true)
+	for bone: Dictionary in fixture.rest.bones:
+		if bone.name in ["Chest", "Pelvis"]:
+			bone.bind.basis = Basis(Vector3(1.6, 0.1, 0), Vector3(0.25, 0.8, 0.1), Vector3(0, 0, 1.3))
+		if bone.name == "FrontForearm.L":
+			bone.bind.origin += bone.bind.basis * bone.head
+			bone.bind.basis = Basis(Vector3(1.15, 0.05, 0), Vector3(0.05, 0.9, 0.04), Vector3(0, 0.04, 1.25))
+			bone.bind.origin -= bone.bind.basis * bone.head
+		fixture.native[bone.name] = bone.bind
+	_freeze_bind_globals(fixture.rest.bones)
+	_assert_offset_head_twists(fixture)

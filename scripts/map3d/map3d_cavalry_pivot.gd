@@ -76,7 +76,9 @@ static func sample(rest: Variant, authored_pose: Variant, operation: Variant, co
 		if not curve.ok:
 			return _reject(hoof + ":" + curve.reason)
 		var chain: Dictionary = rest.chains[hoof]
-		var parent: String = _Math._parent(rest.bones, chain.bones[0])
+		var first: Dictionary = _Math._bone(rest.bones, chain.bones[0])
+		var attachment: Vector3 = globals[first.name] * first.head
+		var parent: String = first.parent
 		var solved: Dictionary = _Math._solve(rest, chain, locals, curve.value, globals[parent], turn, contact.offset)
 		if not solved.ok:
 			return _reject(hoof + ":" + solved.reason, {"iterations": iterations + solved.iterations})
@@ -84,8 +86,13 @@ static func sample(rest: Variant, authored_pose: Variant, operation: Variant, co
 		for name: String in chain.bones:
 			locals[name] = solved.locals[name]
 		globals = _Math._fk(rest.bones, locals)
+		if (globals[first.name] * first.head).distance_to(attachment) > _Math.EPS:
+			return _reject(hoof + ":attachment_residual", {"iterations": iterations})
 		if not _Math._close(turn * globals[hoof] * contact.offset, curve.value):
 			return _reject(hoof + ":contact_residual", {"iterations": iterations})
+	reason = _validate_pose(rest, locals)
+	if reason != "":
+		return _reject("solved:" + reason, {"iterations": iterations})
 	# Compatible endpoints must keep every bit of their native skin matrices.
 	if operation.phase == 0.0 or operation.phase == 1.0:
 		if locals != authored_pose.locals:
@@ -191,7 +198,8 @@ static func _validate_pose(rest: Dictionary, pose: Variant) -> String:
 	for bone: Dictionary in rest.bones:
 		if not pose.has(bone.name) or not _Math._affine(pose[bone.name]):
 			return "pose_affine"
-	for global: Transform3D in _Math._fk(rest.bones, pose).values():
+	var globals: Dictionary = _Math._fk(rest.bones, pose)
+	for global: Transform3D in globals.values():
 		if not _Math._finite(global) or not _Math._affine(global):
 			return "pose_global_affine"
 	for hoof: String in _HOOVES:
@@ -199,7 +207,9 @@ static func _validate_pose(rest: Dictionary, pose: Variant) -> String:
 		for i: int in range(1, chain.bones.size()):
 			var bone: Dictionary = _Math._bone(rest.bones, chain.bones[i])
 			var parent: Dictionary = _Math._bone(rest.bones, chain.bones[i - 1])
-			if (pose[bone.name] * bone.head).distance_to(parent.tail) > _Math.EPS:
+			var head: Vector3 = globals[bone.name] * bone.head
+			var tail: Vector3 = globals[parent.name] * parent.tail
+			if not head.is_finite() or not tail.is_finite() or (pose[bone.name] * bone.head).distance_to(parent.tail) > _Math.EPS or head.distance_to(tail) > _Math.EPS:
 				return "native_anatomical_connectivity"
 	return ""
 
