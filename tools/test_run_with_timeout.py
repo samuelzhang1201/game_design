@@ -66,18 +66,33 @@ class DeadlineTests(unittest.TestCase):
             with self.subTest(seconds=seconds):
                 self.assertEqual(self.run_command("pass", seconds).returncode, 2)
 
+    def test_deadline_before_first_output_does_not_invent_output(self):
+        result = self.run_command("import time; time.sleep(60); print('late output', flush=True)")
+        self.assertEqual(result.returncode, 124)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("timed out after 1s", result.stderr)
+
     def test_shell_runner_bounds_import_and_test_and_preserves_log(self):
         for phase in ["import", "tests"]:
             with self.subTest(phase=phase), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 (root / "tools").symlink_to(RUNNER.parent)
                 godot = root / "godot"
+                # Check the fresh executable before measuring its timed log-producing invocation.
+                phase_arg = "--import" if phase == "import" else "-s"
                 godot.write_text(
-                    f"#!{sys.executable}\nimport sys,time\n"
-                    f"if ('--import' in sys.argv) == {phase == 'import'}:\n"
-                    "    print('stalled phase', flush=True)\n    time.sleep(60)\n"
+                    "#!/bin/sh\n"
+                    "if [ \"${1:-}\" = --fixture-ready ]; then printf ready; exit 0; fi\n"
+                    f"case \" $* \" in\n  *' {phase_arg} '*)\n"
+                    "    printf 'stalled phase\\n'\n    exec sleep 60 ;;\nesac\n"
                 )
                 godot.chmod(0o755)
+                ready = subprocess.run(
+                    [str(godot), "--fixture-ready"],
+                    capture_output=True, text=True, timeout=10,
+                )
+                self.assertEqual(ready.returncode, 0)
+                self.assertEqual(ready.stdout, "ready")
                 result = subprocess.run(
                     ["sh", str(RUNNER.parent.parent / "run_tests.sh"), "--fast"],
                     cwd=root, env={**os.environ, "GODOT": str(godot), "TEST_TIMEOUT_SECONDS": "1"},
@@ -90,6 +105,7 @@ class DeadlineTests(unittest.TestCase):
                     self.assertIsNotNone(match)
                     log = Path(match.group(1))
                     try:
+                        self.assertIn("stalled phase", log.read_text())
                         self.assertIn("timed out", log.read_text())
                     finally:
                         log.unlink(missing_ok=True)
