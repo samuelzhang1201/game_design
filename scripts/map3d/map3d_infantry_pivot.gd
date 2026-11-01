@@ -11,6 +11,8 @@ extends RefCounted
 ## followers maps lower-limb deform/twist bone names to hip|knee|ankle|toe.
 ## Each follows solved_segment * inverse(authored_segment) * authored_follower.
 ## Primary segment orientation retains authored twist and the rest stretch factor.
+## Hip/knee orientation rejects near-antiparallel authored->solved segment axes
+## (1+dot<=EPS); no arbitrary half-turn orientation is returned in that chart.
 ## operation: {duration_q,phase,yaw0_udeg,turn_udeg,current_yaw_udeg,
 ## march_entry_phase,march_exit_phase}; ints for duration/yaw0/turn, floats otherwise.
 ## contacts: {march_entry_phase,march_exit_phase,legs:{hip:{sole_bind,toe_bind,
@@ -106,10 +108,12 @@ static func sample(rest: Dictionary, authored_pose: Dictionary,
 		var knee_point: Vector3 = hip.origin + direction * along + plane * sqrt(height_squared)
 		desired[leg.hip] = Transform3D(_orient(bind_globals[leg.hip], authored[leg.hip],
 			bind_globals[leg.knee].origin - bind_globals[leg.hip].origin,
-			knee_point - hip.origin, leg.pole), hip.origin)
+			knee_point - hip.origin), hip.origin)
 		desired[leg.knee] = Transform3D(_orient(bind_globals[leg.knee], authored[leg.knee],
 			bind_globals[leg.ankle].origin - bind_globals[leg.knee].origin,
-			ankle.origin - knee_point, leg.pole), knee_point)
+			ankle.origin - knee_point), knee_point)
+		if desired[leg.hip].basis.determinant() <= 0.0 or desired[leg.knee].basis.determinant() <= 0.0:
+			return _failure("undefined segment orientation: " + leg.hip)
 		desired[leg.ankle] = ankle
 		desired[leg.toe] = feet.toe
 		for follower: String in leg.followers:
@@ -348,29 +352,18 @@ static func _knee_plane(rest_axis: Vector3, direction: Vector3, pole: Vector3) -
 		return Vector3.ZERO
 	return plane.normalized()
 
-static func _orientation_plane(direction: Vector3, pole: Vector3) -> Vector3:
-	var projected: Vector3 = pole.normalized() - direction * pole.normalized().dot(direction)
-	if projected.length_squared() <= EPS * EPS:
-		var axis: Vector3 = Vector3.RIGHT
-		for candidate: Vector3 in [Vector3.UP, Vector3.BACK]:
-			if absf(candidate.dot(direction)) < absf(axis.dot(direction)):
-				axis = candidate
-		projected = axis - direction * axis.dot(direction)
-	return projected.normalized()
-
 static func _orient(rest: Transform3D, authored: Transform3D, rest_segment: Vector3,
-		target_segment: Vector3, pole: Vector3) -> Basis:
+		target_segment: Vector3) -> Basis:
 	var rotation: Basis = authored.basis.orthonormalized() * rest.basis.orthonormalized().transposed()
-	return _aim(rotation * rest.basis, rotation * rest_segment, target_segment, pole)
-
-static func _aim(basis: Basis, source_direction: Vector3, direction: Vector3, pole: Vector3) -> Basis:
-	var source: Vector3 = source_direction.normalized()
-	var target: Vector3 = direction.normalized()
+	var source: Vector3 = (rotation * rest_segment).normalized()
+	var target: Vector3 = target_segment.normalized()
+	var cosine: float = source.dot(target)
+	if 1.0 + cosine <= EPS:
+		return Basis(Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
 	var cross: Vector3 = source.cross(target)
-	var dot: float = source.dot(target)
-	if cross.length_squared() <= EPS * EPS:
-		return Basis(_orientation_plane(source, pole), PI) * basis if dot < 0.0 else basis
-	return Basis(cross.normalized(), atan2(cross.length(), dot)) * basis
+	var aim: Basis = Basis.IDENTITY if cross.length_squared() == 0.0 else \
+		Basis(cross.normalized(), atan2(cross.length(), cosine))
+	return aim * rotation * rest.basis
 
 static func _failure(reason: String) -> Dictionary:
 	return {"ok": false, "reason": reason, "pose": {}, "contacts": {}}

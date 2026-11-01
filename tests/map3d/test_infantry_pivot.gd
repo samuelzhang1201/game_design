@@ -396,16 +396,39 @@ func test_nested_malformed_inputs_are_atomic() -> void:
 			f.contacts.legs.l0.sole_bind.origin.y = INF
 		_reject(f, "nonfinite")
 
-func test_antiparallel_authored_axis_uses_deterministic_half_turn() -> void:
-	var f: Dictionary = _fixture()
-	f.pose.l0.basis = Basis(Vector3.RIGHT, PI)
-	_set_phase(f, 0.0)
-	var result: Dictionary = _sample(f)
-	assert_true(result.ok, result.reason)
-	if result.ok:
-		var global: Dictionary = _globals(f.rest, result.pose)
-		assert_almost_eq(global.l1.origin, Vector3(-0.2, 0.8, 0.6), Vector3.ONE * 0.00001)
-		assert_eq(_sample(f), result)
+func test_near_antiparallel_authored_axes_reject_atomically() -> void:
+	for bone: String in ["l0", "l1"]:
+		for offset: float in [-0.004, -0.00002, 0.0, 0.00002, 0.004]:
+			var f: Dictionary = _fixture()
+			_set_phase(f, 0.0)
+			f.pose[bone].basis = Basis(Vector3.RIGHT, PI + offset)
+			_reject(f, "orientation chart " + bone + str(offset))
+
+func test_orientation_chart_outside_both_boundaries_preserves_full_basis() -> void:
+	for bone: String in ["l0", "l1"]:
+		for sign_value: float in [-1.0, 1.0]:
+			var previous: Dictionary = {}
+			for offset: float in [0.005, 0.00502]:
+				var f: Dictionary = _fixture()
+				_set_phase(f, 0.0)
+				f.pose[bone].basis = Basis(Vector3.RIGHT, PI + sign_value * offset)
+				var before: PackedByteArray = var_to_bytes(f)
+				var result: Dictionary = _sample(f)
+				assert_true(result.ok, result.reason)
+				assert_eq(var_to_bytes(f), before)
+				if not result.ok:
+					continue
+				var after: Dictionary = _globals(f.rest, result.pose)
+				_check_segment_axes(f.rest, after)
+				assert_eq(result.pose.body, f.pose.body)
+				assert_eq(result.pose.gear, f.pose.gear)
+				assert_almost_eq(after.l1.origin, Vector3(-0.2, 0.8, 0.6), Vector3.ONE * 0.00001)
+				for name: String in ["l0", "l1"]:
+					for axis: int in range(3):
+						assert_almost_eq(after[name].basis[axis], Basis.IDENTITY[axis], Vector3.ONE * 0.0001)
+						if not previous.is_empty():
+							assert_almost_eq(after[name].basis[axis], previous[name].basis[axis], Vector3.ONE * 0.0001)
+				previous = after
 
 func test_contact_phase_binding_accepts_arbitrary_entry_exit_and_duration() -> void:
 	for phases: Vector2 in [Vector2(0, 0), Vector2(0.9999, 0.137), Vector2(0.21, 0.9999)]:
