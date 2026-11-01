@@ -32,6 +32,10 @@ extends RefCounted
 ## Current yaw must match wrap(yaw0 + turn*phase) within 1e-6 udeg.
 ## Adjacent derived sole/toe target frames must match; no gap/overlap/teleport.
 ## Bend limits are radians (0 straight); no reach clamping or borrowed authored stretch.
+## pole defines a REST bend reference, transported by the shortest rest-axis->goal-axis
+## rotation. Bent knees reject zero rest hip->ankle axes, reference pole projection
+## <=EPS, or near-antipodal axes (1+dot<=EPS). Straight knees need no bend plane.
+## These leg-reference domains are distinct from committed body yaw/turn angles.
 ## Rest lengths are reconstructed even when authored landmark distances differ.
 ## Success: {ok:true,reason:"",pose,contacts:{hip:{kind,sole,toe,target_sole,
 ## target_toe,knee_rad,upper_length,lower_length,sole_error,toe_error}}}.
@@ -93,8 +97,13 @@ static func sample(rest: Dictionary, authored_pose: Dictionary,
 		var height_squared: float = upper * upper - along * along
 		if not is_finite(height_squared) or height_squared < 0.0:
 			return _failure("invalid knee geometry: " + leg.hip)
-		var knee_point: Vector3 = hip.origin + direction * along \
-			+ _plane(direction, leg.pole) * sqrt(height_squared)
+		var plane: Vector3 = Vector3.ZERO
+		if height_squared > 0.0:
+			plane = _knee_plane(bind_globals[leg.ankle].origin - bind_globals[leg.hip].origin,
+				direction, leg.pole)
+			if plane == Vector3.ZERO:
+				return _failure("undefined knee reference plane: " + leg.hip)
+		var knee_point: Vector3 = hip.origin + direction * along + plane * sqrt(height_squared)
 		desired[leg.hip] = Transform3D(_orient(bind_globals[leg.hip], authored[leg.hip],
 			bind_globals[leg.knee].origin - bind_globals[leg.hip].origin,
 			knee_point - hip.origin, leg.pole), hip.origin)
@@ -320,7 +329,26 @@ static func _globals(bones: Array, pose: Dictionary) -> Dictionary:
 		result[bone.name] = pose[bone.name] if bone.parent.is_empty() else result[bone.parent] * pose[bone.name]
 	return result
 
-static func _plane(direction: Vector3, pole: Vector3) -> Vector3:
+static func _knee_plane(rest_axis: Vector3, direction: Vector3, pole: Vector3) -> Vector3:
+	var rest_length: float = rest_axis.length()
+	if not is_finite(rest_length) or rest_length <= 0.0:
+		return Vector3.ZERO
+	var reference: Vector3 = rest_axis / rest_length
+	var pole_unit: Vector3 = pole.normalized()
+	var bend: Vector3 = pole_unit - reference * pole_unit.dot(reference)
+	var cosine: float = reference.dot(direction)
+	if bend.length_squared() <= EPS * EPS or 1.0 + cosine <= EPS:
+		return Vector3.ZERO
+	# Transport the bind bend; projecting against the moving axis would flip its sign.
+	var cross: Vector3 = reference.cross(direction)
+	var rotation: Basis = Basis(Quaternion(cross.x, cross.y, cross.z, 1.0 + cosine).normalized())
+	var plane: Vector3 = rotation * bend.normalized()
+	plane -= direction * plane.dot(direction)
+	if not plane.is_finite() or plane.length_squared() <= EPS * EPS:
+		return Vector3.ZERO
+	return plane.normalized()
+
+static func _orientation_plane(direction: Vector3, pole: Vector3) -> Vector3:
 	var projected: Vector3 = pole.normalized() - direction * pole.normalized().dot(direction)
 	if projected.length_squared() <= EPS * EPS:
 		var axis: Vector3 = Vector3.RIGHT
@@ -341,7 +369,7 @@ static func _aim(basis: Basis, source_direction: Vector3, direction: Vector3, po
 	var cross: Vector3 = source.cross(target)
 	var dot: float = source.dot(target)
 	if cross.length_squared() <= EPS * EPS:
-		return Basis(_plane(source, pole), PI) * basis if dot < 0.0 else basis
+		return Basis(_orientation_plane(source, pole), PI) * basis if dot < 0.0 else basis
 	return Basis(cross.normalized(), atan2(cross.length(), dot)) * basis
 
 static func _failure(reason: String) -> Dictionary:

@@ -216,17 +216,94 @@ func test_exact_schema_raw_types_nonfinite_and_invalid_ranges() -> void:
 	f.pose.l0.origin = Vector3(NAN, 0, 0)
 	_reject(f, "nonfinite")
 
-func test_parallel_pole_selects_deterministic_knee_plane() -> void:
+func test_parallel_bent_knee_pole_rejects_atomically() -> void:
 	var f: Dictionary = _fixture()
 	f.rest.legs[0].pole = Vector3.DOWN
 	f.pose.l0.basis = Basis(Vector3.RIGHT, PI)
 	_set_phase(f, 0.0)
+	_reject(f, "ambiguous bent knee plane")
+
+func test_invalid_reference_pole_rejects_entire_reviewer_crossing() -> void:
+	var f: Dictionary = _fixture()
+	f.op.turn_udeg = 1
+	f.rest.legs[0].pole = Vector3.DOWN
+	f.contacts.legs.l0.intervals = [_interval("swing", 0.0, 1.0,
+		Transform3D(Basis.IDENTITY, Vector3(-0.201, 0, 0)),
+		Transform3D(Basis.IDENTITY, Vector3(-0.199, 0, 0)))]
+	for phase: float in [0.49, 0.491, 0.493, 0.5, 0.507, 0.509, 0.51]:
+		_set_phase(f, phase)
+		_reject(f, "undefined rest reference plane at " + str(phase))
+
+func test_valid_reference_plane_stays_continuous_across_current_pole_alignment() -> void:
+	var f: Dictionary = _fixture()
+	f.op.turn_udeg = 1
+	f.contacts.legs.l0.intervals = [_interval("swing", 0.0, 1.0,
+		Transform3D(Basis.IDENTITY, Vector3(-0.2, 1.599, 1.6)),
+		Transform3D(Basis.IDENTITY, Vector3(-0.2, 1.601, 1.6)))]
+	var previous: Vector3 = Vector3.ZERO
+	var had_previous: bool = false
+	for phase: float in [0.49, 0.491, 0.493, 0.5, 0.507, 0.509, 0.51]:
+		_set_phase(f, phase)
+		var before: PackedByteArray = var_to_bytes(f)
+		var result: Dictionary = _sample(f)
+		assert_true(result.ok, result.reason)
+		if not result.ok:
+			continue
+		var global: Dictionary = _globals(f.rest, result.pose)
+		var knee: Vector3 = global.l1.origin
+		if had_previous:
+			assert_lt(knee.distance_to(previous), 0.001, "continuous foot goals must not flip the knee")
+		if phase == 0.5:
+			assert_almost_eq(knee, Vector3(-0.2, 2.2, 0.8), Vector3.ONE * 0.00001)
+		previous = knee
+		had_previous = true
+		_check_segment_axes(f.rest, global)
+		assert_eq(result.pose.body, f.pose.body)
+		assert_eq(var_to_bytes(f), before)
+
+func test_reference_pole_projection_brackets_both_eps_boundaries() -> void:
+	for x: float in [-0.00002, -0.000005, 0.0, 0.000005, 0.00002]:
+		var f: Dictionary = _fixture()
+		f.rest.legs[0].pole = Vector3(x, -1, 0)
+		_set_phase(f, 0.0)
+		if absf(x) < 0.00001:
+			_reject(f, "degenerate reference pole " + str(x))
+		else:
+			var result: Dictionary = _sample(f)
+			assert_true(result.ok, result.reason)
+			if result.ok:
+				_check_segment_axes(f.rest, _globals(f.rest, result.pose))
+
+func test_bent_knee_antipodal_reference_axis_domain_rejects_atomically() -> void:
+	for x: float in [-0.0016, 0.0, 0.0016]:
+		var f: Dictionary = _fixture()
+		_set_phase(f, 0.0)
+		var target: Transform3D = Transform3D(Basis.IDENTITY, Vector3(-0.2 + x, 3.2, 0))
+		f.contacts.legs.l0.intervals = [_interval("swing", 0.0, 1.0, target, target)]
+		_reject(f, "antipodal rest-axis domain")
+	for x: float in [-0.016, 0.016]:
+		var f: Dictionary = _fixture()
+		_set_phase(f, 0.0)
+		var target: Transform3D = Transform3D(Basis.IDENTITY, Vector3(-0.2 + x, 3.2, 0))
+		f.contacts.legs.l0.intervals = [_interval("swing", 0.0, 1.0, target, target)]
+		var result: Dictionary = _sample(f)
+		assert_true(result.ok, result.reason)
+		if result.ok:
+			_check_segment_axes(f.rest, _globals(f.rest, result.pose))
+
+func test_parallel_pole_is_irrelevant_for_fully_extended_knee() -> void:
+	var f: Dictionary = _fixture()
+	f.rest.legs[0].pole = Vector3.DOWN
+	_set_phase(f, 0.0)
+	var target: Transform3D = Transform3D(Basis.IDENTITY, Vector3(-0.2, -0.4, 0))
+	f.contacts.legs.l0.intervals = [_interval("stance", 0.0, 1.0, target, target)]
 	var result: Dictionary = _sample(f)
 	assert_true(result.ok, result.reason)
 	if result.ok:
-		assert_eq(_sample(f), result)
 		var global: Dictionary = _globals(f.rest, result.pose)
-		assert_almost_eq(global.l1.origin, Vector3(0.4, 0.8, 0), Vector3.ONE * 0.00001)
+		assert_almost_eq(global.l1.origin, Vector3(-0.2, 0.6, 0), Vector3.ONE * 0.00001)
+		assert_almost_eq(result.contacts.l0.knee_rad, 0.0, 0.00001)
+		_check_segment_axes(f.rest, global)
 
 func test_stateless_detached_result_and_fps_delta_partition_invariance() -> void:
 	var f: Dictionary = _fixture()
