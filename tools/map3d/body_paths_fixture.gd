@@ -213,7 +213,7 @@ func _stage() -> bool:
 		for i: int in counts.size():
 			var point := _centre + start + homes[i]
 			entry.body_groups.append({"slot": i, "home_slot": i, "count": counts[i], "role": "front",
-				"x_m": point.x, "y_m": point.y, "facing_deg": 90 if index == 0 else 270, "path_m": []})
+				"x_m": point.x, "y_m": point.y, "facing_deg": 90 if index == 2 else (0 if index == 0 else 180), "path_m": []})
 			_targets[JSON.stringify([code, i])] = [_centre.x + target.x + homes[i].x, _centre.y + target.y + homes[i].y]
 	var validated := UnitBodies.migrate_candidate(_repo, _state)
 	if validated.status != "complete":
@@ -228,6 +228,11 @@ func _commit_slice() -> bool:
 		for row: Dictionary in UnitBodies.rows(_repo, _state, code):
 			var path: Array = [[row.x_m, row.y_m]]
 			var target: Array = _targets[JSON.stringify([code, row.slot])]
+			if _case == "turn":
+				# Explicit fixture pose input; the following plan/commit validates its full radius.
+				for saved: Dictionary in _state.regiments[code].body_groups:
+					if saved.slot == row.slot:
+						saved.facing_deg = 90 if row.x_m == target[0] else (0 if target[0] > row.x_m else 180)
 			if _case in ["detour", "turn"] and code == _codes[0]: path.append([target[0], row.y_m])
 			path.append(target)
 			intents.append({"unit": code, "slot": row.slot, "path_m": path, "budget_m": 8000, "hostile": false})
