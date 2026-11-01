@@ -1,8 +1,8 @@
 # Infantry pivot metric adapter
 
 `LOCO-INFANTRY-METRICS`, implementation `01a198dd-e9d0-7df2-852a-5eea882e2ce6`,
-dispatcher `01a17398-42c1-7583-8d3f-7b15e877586c`; unique Review unassigned until
-registered by that dispatcher before formal handoff. Scope is exactly this file,
+dispatcher `01a17398-42c1-7583-8d3f-7b15e877586c`; unique Review `01a198e8-c627-7092-b559-b935496d8a5e`
+registered by that dispatcher for this PR. Scope is exactly this file,
 `tools/units3d/soldier_arp/pivot_metrics.py` and `test_pivot_metrics.py`.
 Dependencies are accepted `CF04c-locomotion-contract`, `LOCO-INFANTRY-TRANSITION`,
 `LOCO-ARCHERS-PIVOT-IMPORT`, `LOCO-INFANTRY-FEASIBILITY-CONTRACT` (#202/207/216/223).
