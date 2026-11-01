@@ -2,6 +2,9 @@ extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
+func after_each() -> void:
+	MarchPath.forget()
+
 func _api() -> GDScript:
 	var path := "res://scripts/engine/body_motion.gd"
 	assert_true(FileAccess.file_exists(path), "CF03 candidate planner exists")
@@ -12,6 +15,416 @@ func test_candidate_api_exists() -> void:
 	if api == null: return
 	assert_true(api.has_method("plan"))
 	assert_true(api.has_method("commit"))
+
+func test_locomotion_candidate_api_exists() -> void:
+	var api := _api()
+	for method: String in ["plan_locomotion_candidate", "commit_locomotion_candidate", "sample_locomotion_candidate"]:
+		assert_true(api.has_method(method), method)
+
+func test_locomotion_integer_heading_bins() -> void:
+	var api := _api()
+	assert_true(api.has_method("_locomotion_heading"))
+	if not api.has_method("_locomotion_heading"): return
+	for item: Array in [[1, 0, 0], [0, 1, 90000000], [-1, 0, 180000000], [0, -1, 270000000],
+		[1, 1, 45000000], [3, 4, 53130102], [3, -4, 306869898], [67108864, 1, 1],
+		[67108864, -1, 359999999], [1, 67108864, 89999999], [67108864, 67108863, 45000000],
+		[38197186, 1, 2], [38197187, 1, 1], [57295779, 57295778, 44999999],
+		[57295780, 57295779, 44999999], [57295781, 57295780, 45000000]]:
+		assert_eq(api.call("_locomotion_heading", item[0], item[1]), item[2], str(item))
+	assert_eq(api.call("_locomotion_heading", 0, 0), -1)
+	assert_eq(api.call("_locomotion_heading", BodyMotion.INT_MIN, 1), -1)
+	assert_eq(BodyMotion._Nat.integer(BodyMotion._Nat.of(BodyMotion.INT_MAX)), BodyMotion.INT_MAX)
+	assert_eq(BodyMotion._Nat.integer([32767, 32767, 32767, 32767, 32767]), -1, "checked limb conversion cannot wrap")
+	var grid := MarchPath.new()
+	grid.cols = 4294967296
+	grid.rows = 4294967296
+	assert_false(BodyMotion._loco_grid_ok(grid), "grid shape products cannot wrap to an empty valid grid")
+
+func _loco_fixture(points: Array = [[100, 100]]) -> Dictionary:
+	var f := _fixture(points)
+	var piece := MapObjects.army_piece(f.repo, f.state.army_roster[f.code])
+	# An explicit test certificate is not installed arm support or art acceptance.
+	f.repo.unit_footprints[piece].locomotion_certificate = {"digest": "a".repeat(64),
+		"turn_q": 400000, "contact_um": 100, "radius_m": 10,
+		"clips": ["PIVOT_LEFT", "PIVOT_RIGHT", "MARCH"], "all_turns": true}
+	f.repo.balance["body_locomotion_" + piece + "_turn_q"] = 400000
+	f.repo.balance["body_locomotion_" + piece + "_contact_um"] = 100
+	f.repo.balance.army_march_grid_px = 1
+	var slopes := PackedByteArray()
+	slopes.resize(10000)
+	f.grid = MarchPath.build(f.repo, 100, 100, 10, slopes)
+	MarchPath.use(f.repo, f.grid)
+	return f
+
+func _loco_plan(f: Dictionary, intents: Array, day: int = 70, substep: int = 0) -> Dictionary:
+	var before: Dictionary = f.state.to_dict()
+	var out: Dictionary = _api().call("plan_locomotion_candidate", f.repo, f.state, intents, day, substep)
+	assert_eq(f.state.to_dict(), before, "plan preserves entire source, including RNG")
+	return out
+
+func _loco_ready() -> bool:
+	return _api().has_method("plan_locomotion_candidate")
+
+func test_locomotion_hand_computed_l_shared_time() -> void:
+	if not _loco_ready(): return
+	for budget: int in [10, 8, 20]:
+		var f := _loco_fixture()
+		var intent := _intent(f, 0, [103, 100], budget)
+		intent.path_m.append([103, 104])
+		var p := _loco_plan(f, [intent])
+		assert_eq(p.get("version"), 2, str(p))
+		if not p.has("version"): continue
+		var move: Dictionary = p.moves[0]
+		if budget == 8:
+			assert_ne(move.end, [103, 104], "1075000 quanta cannot fit")
+			assert_eq(move.ops.back().t1_q, 1000000)
+			continue
+		assert_eq(move.used_m, 7)
+		assert_eq(move.end, [103, 104])
+		var endpoints: Array = [300000, 400000, 800000, 900000, 1000000] if budget == 10 else [150000, 250000, 450000, 550000, 1000000]
+		assert_eq(move.ops.map(func(op: Dictionary) -> int: return int(op.t1_q)), endpoints)
+		assert_eq(move.ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "pivot", "hold"])
+		if budget == 10:
+			for example: Array in [[350000, 103.0, 100.0, 45000000.0, "pivot"], [500000, 103.0, 101.0, 90000000.0, "move"], [850000, 103.0, 104.0, 45000000.0, "pivot"]]:
+				var sample: Dictionary = _api().call("sample_locomotion_candidate", {"version": 2, "moves": [move]}, example[0])
+				assert_eq(sample.get("status"), "complete", str(sample))
+				if sample.get("rows", []).is_empty(): continue
+				assert_eq(sample.rows[0].x_m, example[1])
+				assert_eq(sample.rows[0].y_m, example[2])
+				assert_eq(sample.rows[0].yaw_udeg, example[3])
+				assert_eq(sample.rows[0].kind, example[4])
+
+func test_locomotion_commit_json_detached_retry_and_tampering() -> void:
+	if not _loco_ready(): return
+	var f := _loco_fixture()
+	var intent := _intent(f, 0, [103, 104], 10)
+	var p := _loco_plan(f, [intent])
+	assert_eq(p, _loco_plan(f, JSON.parse_string(JSON.stringify([intent]))))
+	var before: Dictionary = f.state.to_dict()
+	var result: Dictionary = _api().call("commit_locomotion_candidate", f.repo, f.state, p)
+	assert_eq(result.get("status"), "complete", str(result))
+	assert_eq(f.state.to_dict(), before, "v2 commit returns detached candidate")
+	if result.get("candidate") == null: return
+	var state: GameState = result.candidate
+	var after := state.to_dict()
+	var conserved := after.duplicate(true)
+	conserved.regiments[f.code].body_groups = before.regiments[f.code].body_groups.duplicate(true)
+	conserved.military_migration = before.military_migration.duplicate(true)
+	assert_eq(conserved, before, "only body poses/path and motion control change; all costs, people, anchors and RNG are conserved")
+	var old_row: Dictionary = f.state.regiments[f.code].body_groups[0].duplicate(true)
+	var new_row: Dictionary = state.regiments[f.code].body_groups[0].duplicate(true)
+	for key: String in ["x_m", "y_m", "facing_deg", "path_m"]:
+		old_row.erase(key)
+		new_row.erase(key)
+	assert_eq(new_row, old_row, "body identity, count, home and role are conserved")
+	assert_eq(state.military_migration.body_motion.version, "2")
+	assert_eq(state.military_migration.body_motion.receipt, BodyMotion._hash(p))
+	for restored: GameState in [state, _json(state)]:
+		var retry: Dictionary = _api().call("commit_locomotion_candidate", f.repo, restored, JSON.parse_string(JSON.stringify(p)))
+		assert_eq(retry.get("status"), "complete", str(retry))
+		if retry.get("candidate") != null:
+			assert_ne(retry.candidate, restored)
+			assert_eq(retry.candidate.to_dict(), after)
+	for field: String in ["duration", "gap", "turn", "tangent", "end", "used", "extra", "version", "basis", "policy", "bool", "null"]:
+		var bad := p.duplicate(true)
+		match field:
+			"duration": bad.moves[0].ops[0].t1_q = 0
+			"gap": bad.moves[0].ops[0].t0_q = 1
+			"turn": bad.moves[0].ops[0].turn_udeg = -180000000
+			"tangent": bad.moves[0].ops[0].yaw0_udeg += 1
+			"end": bad.moves[0].end[0] += 1
+			"used": bad.moves[0].used_m += 1
+			"extra": bad.moves[0].hidden = true
+			"version": bad.version = 3
+			"basis": bad.cursor.basis = "b".repeat(64)
+			"policy": bad.policy_digest = "b".repeat(64)
+			"bool": bad.moves[0].slot = true
+			"null": bad.moves[0].budget_m = null
+		var rejected: Dictionary = _api().call("commit_locomotion_candidate", f.repo, f.state, bad)
+		assert_eq(rejected.get("status"), "error", field)
+		assert_eq(f.state.to_dict(), before)
+		assert_eq(_api().call("commit_locomotion_candidate", f.repo, state, bad).status, "error", "same-cursor tamper: " + field)
+
+func test_locomotion_sampler_is_readonly_and_closed() -> void:
+	if not _loco_ready(): return
+	var f := _loco_fixture()
+	var p := _loco_plan(f, [_intent(f, 0, [103, 100], 10)])
+	var projected := {"version": 2, "moves": p.moves.duplicate(true)}
+	var before := projected.duplicate(true)
+	for t: int in [0, 299999, 300000, 1000000]:
+		var sample: Dictionary = _api().call("sample_locomotion_candidate", projected, t)
+		assert_eq(sample.status, "complete", str(sample))
+		assert_eq(projected, before)
+	for t: int in [-1, 1000001]:
+		var rejected: Dictionary = _api().call("sample_locomotion_candidate", projected, t)
+		assert_eq(rejected.status, "error")
+		assert_eq(rejected.rows, [])
+	var malformed := projected.duplicate(true)
+	malformed.moves[0].ops[0].t1_q = 0
+	assert_eq(_api().call("sample_locomotion_candidate", malformed, 0).status, "error")
+	malformed = projected.duplicate(true)
+	malformed.moves.append(malformed.moves[0].duplicate(true))
+	var duplicate: Dictionary = _api().call("sample_locomotion_candidate", malformed, 0)
+	assert_eq(duplicate.status, "error")
+	assert_eq(duplicate.rows, [], "no partial row publication")
+	assert_eq(_api().call("sample_locomotion_candidate", {"version": 3, "moves": []}, 0).status, "error", "empty arrays still validate version")
+	assert_eq(_api().call("sample_locomotion_candidate", {"version": 2, "moves": []}, 0).rows, [])
+
+func test_locomotion_wrap_ties_stationary_and_duplicate_legs() -> void:
+	if not _loco_ready(): return
+	assert_eq(BodyMotion._loco_turn(359000000, 1000000), 2000000)
+	assert_eq(BodyMotion._loco_turn(1000000, 359000000), -2000000)
+	assert_eq(BodyMotion._loco_turn(0, 180000000), 180000000)
+	assert_eq(BodyMotion._loco_turn(180000000, 0), 180000000)
+	assert_eq(BodyMotion._loco_duration(2000000, 400000, 360000000), 2223)
+	assert_eq(BodyMotion._loco_duration(180000000, 400000, 360000000), 200000)
+	assert_eq(BodyMotion._loco_duration(180000000, BodyMotion.INT_MAX, 360000000), -1)
+	var f := _loco_fixture()
+	var intent := _intent(f, 0, [100, 100], 0)
+	intent.path_m.append([100, 100])
+	var p := _loco_plan(f, [intent])
+	assert_eq(p.moves[0].ops, [{"kind": "hold", "t0_q": 0, "t1_q": 1000000,
+		"a": [100, 100], "b": [100, 100], "yaw0_udeg": 0, "turn_udeg": 0}])
+	var body := {"unit": "test", "slot": 0, "start": [-100, -100], "start_yaw_udeg": 0, "final_facing_deg": 0, "budget_m": 10}
+	var move := BodyMotion._loco_timeline(body, [[-100, -100], [-100, -100], [-97, -96]], 400000)
+	assert_true(BodyMotion._loco_move_ok(move))
+	assert_eq(move.ops[0].turn_udeg, 53130102)
+	assert_eq(move.ops[1].t1_q - move.ops[1].t0_q, 500000)
+
+func test_locomotion_pivot_occupancy_and_unequal_three_way() -> void:
+	if not _loco_ready(): return
+	var a := {"radius": 1, "budget_m": 0}
+	var b := {"radius": 1, "budget_m": 6}
+	var stationary: Array[Dictionary] = [{"a": [0, 0], "b": [0, 0], "t0": 0.3, "t1": 0.4}]
+	var crossing: Array[Dictionary] = [{"a": [-3, 0], "b": [3, 0], "t0": 0.3, "t1": 0.4}]
+	assert_true(BodyMotion._sweep_collision(a, stationary, b, crossing), "stationary pivot occupies its full interval")
+	var tangent: Array[Dictionary] = [{"a": [-3, 2], "b": [3, 2], "t0": 0.3, "t1": 0.4}]
+	assert_false(BodyMotion._sweep_collision(a, stationary, b, tangent), "exact constant-axis tangency remains legal")
+	var f := _loco_fixture([[100, 200], [300, 200], [200, 100]])
+	var intents: Array = [_intent(f, 0, [300, 200], 400), _intent(f, 1, [100, 200], 200), _intent(f, 2, [200, 300], 300)]
+	var p := _loco_plan(f, intents)
+	assert_eq(p.get("version"), 2, str(p))
+	if not p.has("version"): return
+	assert_eq(p.moves.size(), 3)
+	intents.reverse()
+	assert_eq(_loco_plan(f, intents), p)
+	for i: int in p.moves.size():
+		for j: int in range(i + 1, p.moves.size()):
+			for time: int in 101:
+				var pa := _loco_test_position(p.moves[i], time * 10000)
+				var pb := _loco_test_position(p.moves[j], time * 10000)
+				assert_true(pa.distance_to(pb) >= 20.0 - 0.000001)
+
+func _loco_test_position(move: Dictionary, time: int) -> Vector2:
+	for op: Dictionary in move.ops:
+		if time < int(op.t1_q):
+			var ratio := float(time - int(op.t0_q)) / float(int(op.t1_q) - int(op.t0_q))
+			return Vector2(op.a[0], op.a[1]).lerp(Vector2(op.b[0], op.b[1]), ratio)
+	return Vector2(move.end[0], move.end[1])
+
+func test_locomotion_closed_terrain_and_stale_input_retry() -> void:
+	if not _loco_ready(): return
+	var f := _loco_fixture()
+	f.grid.closed[10 * f.grid.cols + 12] = 1
+	var p := _loco_plan(f, [_intent(f, 0, [130, 100], 100)])
+	assert_eq(p.get("version"), 2, str(p))
+	if not p.has("version"): return
+	for move: Dictionary in p.moves:
+		assert_eq(ArmySystem._body_path_terrain(f.grid, BodyMotion._loco_path(move), 10), "")
+	var before: Dictionary = f.state.to_dict()
+	f.grid.closed[10 * f.grid.cols + 12] = 0
+	assert_eq(_api().call("commit_locomotion_candidate", f.repo, f.state, p).status, "error", "terrain is frozen input")
+	assert_eq(f.state.to_dict(), before)
+	p = _loco_plan(f, [_intent(f, 0, [103, 100], 10)])
+	var result: Dictionary = _api().call("commit_locomotion_candidate", f.repo, f.state, p)
+	assert_eq(result.status, "complete", str(result))
+	if result.get("candidate") == null: return
+	var state: GameState = result.candidate
+	for kind: String in ["supplies", "rng", "owner", "pose", "policy"]:
+		var changed := UnitBodies._copy(state)
+		var piece := MapObjects.army_piece(f.repo, state.army_roster[f.code])
+		match kind:
+			"supplies": changed.regiments[f.code].supplies += 1
+			"rng": changed.rng.randi_range(0, 100)
+			"owner": changed.army_roster[f.code].kingdom_code = "fixture:other"
+			"pose": changed.regiments[f.code].body_groups[0].x_m += 1
+			"policy": f.repo.unit_footprints[piece].locomotion_certificate.digest = "b".repeat(64)
+		before = changed.to_dict()
+		assert_eq(_api().call("commit_locomotion_candidate", f.repo, changed, p).status, "error", kind)
+		assert_eq(changed.to_dict(), before)
+		f.repo.unit_footprints[piece].locomotion_certificate.digest = "a".repeat(64)
+
+func test_locomotion_unsupported_and_raw_schema_fail_closed() -> void:
+	if not _loco_ready(): return
+	var f := _loco_fixture()
+	var intent := _intent(f, 0, [103, 100], 10)
+	for value: Variant in [-1, true, null, "10", 0.25, INF, 9007199254740992]:
+		var bad := intent.duplicate(true)
+		bad.budget_m = value
+		assert_true(_loco_plan(f, [bad]).cursor.is_empty(), str(value))
+	assert_true(_loco_plan(f, [intent, intent]).cursor.is_empty())
+	var piece := MapObjects.army_piece(f.repo, f.state.army_roster[f.code])
+	var certificate: Dictionary = f.repo.unit_footprints[piece].locomotion_certificate.duplicate(true)
+	for field: String in ["digest", "radius_m", "turn_q", "clips", "all_turns", "contact_um"]:
+		var bad := certificate.duplicate(true)
+		match field:
+			"digest": bad.digest = "invalid"
+			"radius_m": bad.radius_m -= 1
+			"turn_q": bad.turn_q = BodyMotion.INT_MAX
+			"clips": bad.clips = ["MARCH"]
+			"all_turns": bad.all_turns = false
+			"contact_um": bad.contact_um = 0
+		f.repo.unit_footprints[piece].locomotion_certificate = bad
+		assert_true(_loco_plan(f, [intent]).cursor.is_empty(), field)
+	f.repo.unit_footprints[piece].locomotion_certificate = certificate
+	for field: String in ["clips", "all_turns"]:
+		for value: Variant in [0.25, "true", null, [], {}]:
+			var bad := certificate.duplicate(true)
+			bad[field] = value
+			f.repo.unit_footprints[piece].locomotion_certificate = bad
+			assert_true(_loco_plan(f, [intent]).cursor.is_empty(), field + " " + str(value))
+	f.repo.unit_footprints[piece].locomotion_certificate = certificate
+	var p := _loco_plan(f, [intent])
+	for field: String in ["version", "cursor", "policy_digest", "moves", "reasons"]:
+		var bad := p.duplicate(true)
+		bad.erase(field)
+		assert_eq(_api().call("commit_locomotion_candidate", f.repo, f.state, bad).status, "error")
+	for control: Variant in [{}, null, {"version": "3"}, {"version": 2}]:
+		var changed := UnitBodies._copy(f.state)
+		changed.military_migration.body_motion = control
+		var before := changed.to_dict()
+		assert_eq(_api().call("commit_locomotion_candidate", f.repo, changed, p).status, "error")
+		assert_eq(changed.to_dict(), before)
+
+func test_locomotion_complete_schema_and_loaded_fractional_control() -> void:
+	if not _loco_ready(): return
+	var f := _loco_fixture()
+	var intent := _intent(f, 0, [103, 104], 10)
+	var p := _loco_plan(f, [intent])
+	for layer: String in ["move", "op", "cursor"]:
+		var source: Dictionary = p.moves[0] if layer == "move" else (p.moves[0].ops[0] if layer == "op" else p.cursor)
+		for key: String in source:
+			var bad := p.duplicate(true)
+			var target: Dictionary = bad.moves[0] if layer == "move" else (bad.moves[0].ops[0] if layer == "op" else bad.cursor)
+			target.erase(key)
+			assert_eq(_api().call("commit_locomotion_candidate", f.repo, f.state, bad).status, "error", layer + " missing " + key)
+	for value: Variant in [true, null, 0.1, INF, NAN, "1", 9007199254740992]:
+		for field: String in ["slot", "budget_m", "used_m", "start_yaw_udeg", "final_facing_deg"]:
+			var bad := p.duplicate(true)
+			bad.moves[0][field] = value
+			assert_eq(_api().call("commit_locomotion_candidate", f.repo, f.state, bad).status, "error", field + " " + str(value))
+		for field: String in ["t0_q", "t1_q", "yaw0_udeg", "turn_udeg"]:
+			var bad := p.duplicate(true)
+			bad.moves[0].ops[0][field] = value
+			assert_eq(_api().call("commit_locomotion_candidate", f.repo, f.state, bad).status, "error", field + " " + str(value))
+	var result: Dictionary = _api().call("commit_locomotion_candidate", f.repo, f.state, p)
+	if result.get("candidate") == null:
+		fail_test(str(result))
+		return
+	# Exercise the supported save path without unrelated legacy provenance.
+	var state: GameState = result.candidate
+	state.military_migration.erase("import_main_v7")
+	var raw := state.to_dict()
+	raw.military_migration.body_motion.plan.moves[0].ops[0].t0_q = 0.1
+	var loaded := GameState.from_dict(JSON.parse_string(JSON.stringify(raw)), false)
+	assert_false(BodyMotion._loco_saved_ok(loaded.military_migration.body_motion), "load must not round corrupt timeline fields into a valid receipt")
+	var no_budget := _intent(f, 0, [103, 100], 0)
+	assert_true(_loco_plan(f, [no_budget]).cursor.is_empty(), "zero budget cannot request movement")
+	var future := p.duplicate(true)
+	future.cursor.abs_day += 1
+	assert_eq(_api().call("commit_locomotion_candidate", f.repo, f.state, future).status, "error", "cursor belongs in the source basis")
+
+func test_locomotion_zero_fit_and_missing_current_schema() -> void:
+	if not _loco_ready(): return
+	var f := _loco_fixture([])
+	var p := _loco_plan(f, [])
+	assert_eq(p.get("version"), 2, str(p))
+	assert_eq(p.moves, [])
+	var result: Dictionary = _api().call("commit_locomotion_candidate", f.repo, f.state, p)
+	assert_eq(result.status, "complete", str(result))
+	f.state.military_migration.erase("body_version")
+	assert_true(_loco_plan(f, []).cursor.is_empty(), "zero fit still requires explicit current schema")
+	assert_eq(_api().call("commit_locomotion_candidate", f.repo, f.state, p).status, "error")
+
+func test_locomotion_cannot_convert_frozen_v1_boundary() -> void:
+	if not _loco_ready(): return
+	var f := _loco_fixture()
+	var tx := DayResolution.begin(f.state.day, false, f.state.absolute_day())
+	tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+	tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
+	tx.march_entries = {}
+	tx.march_budgets = {}
+	tx.marching_codes = []
+	tx.body_march = {"version": "1", "abs_day": str(f.state.absolute_day()), "next_substep": "0", "substep_count": "10", "last": {}}
+	f.state.day_resolution = tx
+	var boundary := {"version": 1, "abs_day": f.state.absolute_day(), "substep": 0}
+	var before: Dictionary = f.state.to_dict()
+	var p := BodyMotion.plan_locomotion_candidate(f.repo, f.state, [_intent(f, 0, [103, 100], 10)], int(boundary.abs_day), 0, boundary)
+	assert_true(p.cursor.is_empty(), "a frozen v1 day never acquires v2 timing")
+	assert_eq(f.state.to_dict(), before)
+
+func test_locomotion_hostile_opposing_and_corrupt_owner_counts() -> void:
+	if not _loco_ready(): return
+	var f := _loco_fixture([[100, 100], [300, 100]])
+	var intents := [_intent(f, 0, [300, 100], 400, true), _intent(f, 1, [100, 100], 400, true)]
+	var p := _loco_plan(f, intents)
+	assert_eq(p.get("version"), 2, str(p))
+	if not p.has("version"): return
+	for move: Dictionary in p.moves:
+		for point: Array in BodyMotion._loco_path(move): assert_eq(point[1], 100, "hostile intent cannot grant a friendly sidestep")
+	for kind: String in ["count", "reuse", "duplicate", "version", "missing"]:
+		var changed := UnitBodies._copy(f.state)
+		match kind:
+			"count": changed.regiments[f.code].body_groups[0].count -= 1
+			"reuse": changed.regiments[f.code].group_next_slot = 1
+			"duplicate": changed.regiments[f.code].body_groups[1].slot = 0
+			"version": changed.military_migration.body_version = 2
+			"missing": changed.regiments[f.code].erase("body_groups")
+		var before := changed.to_dict()
+		assert_true(BodyMotion.plan_locomotion_candidate(f.repo, changed, intents, 70, 0).cursor.is_empty(), kind)
+		assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, changed, p).status, "error", kind)
+		assert_eq(changed.to_dict(), before)
+
+func test_locomotion_json_control_both_loader_branches_and_forged_pivot() -> void:
+	if not _loco_ready(): return
+	for imported: bool in [false, true]:
+		var f := _loco_fixture()
+		if imported: f.state.military_migration.import_main_v7 = {}
+		else: f.state.military_migration.erase("import_main_v7")
+		var p := _loco_plan(f, [_intent(f, 0, [103, 104], 10)])
+		var committed := BodyMotion.commit_locomotion_candidate(f.repo, f.state, p)
+		assert_eq(committed.status, "complete", str(committed))
+		if not committed.has("candidate"): continue
+		var state: GameState = committed.candidate
+		var restored := _json(state)
+		assert_true(BodyMotion._loco_saved_ok(restored.military_migration.body_motion))
+		assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, restored, p).status, "complete", "supported JSON provenance branch")
+		for value: Variant in [0.1, "i0", true, null, "0", 9007199254740992]:
+			var raw := state.to_dict()
+			raw.military_migration.body_motion.plan.moves[0].ops[0].t0_q = value
+			var original := JSON.stringify(raw)
+			var bad := GameState.from_dict(JSON.parse_string(original), false)
+			assert_eq(JSON.stringify(raw), original, "loader never changes source JSON")
+			assert_false(BodyMotion._loco_saved_ok(bad.military_migration.body_motion), str(value))
+			var before := bad.to_dict()
+			assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, bad, p).status, "error")
+			assert_eq(bad.to_dict(), before)
+		for field: String in ["abs_day", "substep", "version"]:
+			var raw := state.to_dict()
+			raw.military_migration.body_motion[field] = 2
+			var bad := GameState.from_dict(JSON.parse_string(JSON.stringify(raw)), false)
+			assert_false(BodyMotion._loco_saved_ok(bad.military_migration.body_motion), field)
+		var forged := p.duplicate(true)
+		for i: int in forged.moves[0].ops.size():
+			var op: Dictionary = forged.moves[0].ops[i]
+			if i > 0: op.t0_q += 1
+			if i < forged.moves[0].ops.size() - 1: op.t1_q += 1
+		var bad := UnitBodies._copy(state)
+		bad.military_migration.body_motion.plan = forged.duplicate(true)
+		bad.military_migration.body_motion.receipt = BodyMotion._hash(forged)
+		var before := bad.to_dict()
+		assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, bad, forged).status, "error", "rehashing a forged pivot cannot bypass certified timing")
+		assert_eq(bad.to_dict(), before)
 
 func _fixture(points: Array) -> Dictionary:
 	var repo := SuiteData.repo()

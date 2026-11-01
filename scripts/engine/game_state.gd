@@ -605,6 +605,11 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 		s.military_rosters = _decode_values(d.get("military_rosters", {}))
 		s.military_cohorts = _decode_values(d.get("military_cohorts", {}))
 		s.military_events = _decode_values(d.get("military_events", {}))
+	# V2 timelines are plain JSON: validation must see corrupt numbers/strings
+	# before legacy rounding or the value codec can make them valid again.
+	var raw_motion: Variant = (d.get("military_migration", {}) as Dictionary).get("body_motion")
+	if raw_motion is Dictionary and raw_motion.get("version") is String and raw_motion.version == "2":
+		s.military_migration.body_motion = BodyMotion._canonical(raw_motion)
 	# Normalize integral JSON markers, preserving corrupt raw values for candidate validation.
 	if (d.get("military_migration", {}) as Dictionary).has("body_version"):
 		var marker: Variant = _decode_values(d.military_migration.body_version)
