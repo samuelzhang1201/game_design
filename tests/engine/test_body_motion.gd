@@ -426,6 +426,63 @@ func test_locomotion_json_control_both_loader_branches_and_forged_pivot() -> voi
 		assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, bad, forged).status, "error", "rehashing a forged pivot cannot bypass certified timing")
 		assert_eq(bad.to_dict(), before)
 
+func test_locomotion_saved_heading_binds_row_on_retry_and_successor() -> void:
+	if not _loco_ready(): return
+	for imported: bool in [false, true]:
+		var f := _loco_fixture()
+		if imported: f.state.military_migration.import_main_v7 = {}
+		else: f.state.military_migration.erase("import_main_v7")
+		var p := _loco_plan(f, [_intent(f, 0, [103, 104], 10)])
+		var result := BodyMotion.commit_locomotion_candidate(f.repo, f.state, p)
+		assert_eq(result.status, "complete", str(result))
+		if not result.has("candidate"): continue
+		var state: GameState = result.candidate
+		var next := BodyMotion.plan_locomotion_candidate(f.repo, state, [], 70, 1)
+		assert_eq(next.get("version"), 2)
+		var clean := state.to_dict()
+		var advanced := BodyMotion.commit_locomotion_candidate(f.repo, state, next)
+		assert_eq(advanced.status, "complete", "valid successor remains executable")
+		if advanced.has("candidate"):
+			assert_eq(advanced.candidate.military_migration.body_motion.substep, "1")
+		assert_eq(state.to_dict(), clean, "successor is detached")
+		# Removing the first pivot keeps positions, speeds and remaining turns legal.
+		var skipped := p.duplicate(true)
+		skipped.moves[0].start_yaw_udeg = 53130102
+		skipped.moves[0].ops.pop_front()
+		for op: Dictionary in skipped.moves[0].ops:
+			op.t0_q -= 59034
+			op.t1_q -= 59034
+		skipped.moves[0].ops.back().t1_q = 1000000
+		var rejected := BodyMotion.sample_locomotion_candidate({"version": 2, "moves": skipped.moves}, 0)
+		assert_eq(rejected.status, "error")
+		assert_eq(rejected.rows, [])
+		# Also make both claimed headings agree, while the actual row still faces 0.
+		var wrong_row := p.duplicate(true)
+		var move: Dictionary = wrong_row.moves[0]
+		move.start_yaw_udeg = 90000000
+		move.final_facing_deg = 90
+		move.ops[0].yaw0_udeg = 90000000
+		move.ops[0].turn_udeg = -36869898
+		move.ops[0].t1_q = 40967
+		move.ops[1].t0_q = 40967
+		move.ops[1].t1_q = 540967
+		move.ops[2].t0_q = 540967
+		move.ops[2].t1_q = 581934
+		move.ops[2].turn_udeg = 36869898
+		move.ops[3].t0_q = 581934
+		move.ops[3].yaw0_udeg = 90000000
+		assert_true(BodyMotion._loco_plan_ok(wrong_row), "self-consistent timeline still needs source-row admission")
+		for forged: Dictionary in [skipped, wrong_row]:
+			var bad := UnitBodies._copy(state)
+			bad.military_migration.body_motion.plan = forged.duplicate(true)
+			bad.military_migration.body_motion.receipt = BodyMotion._hash(forged)
+			bad = _json(bad)
+			var before := bad.to_dict()
+			assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, bad, forged).status, "error", "rehashed heading cannot bypass original facing")
+			assert_true(BodyMotion.plan_locomotion_candidate(f.repo, bad, [], 70, 1).cursor.is_empty(), "successor cannot admit a bad saved heading")
+			assert_eq(BodyMotion.commit_locomotion_candidate(f.repo, bad, next).status, "error")
+			assert_eq(bad.to_dict(), before, "all failures preserve complete source and RNG")
+
 func _fixture(points: Array) -> Dictionary:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 319)

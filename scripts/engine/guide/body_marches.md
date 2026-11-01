@@ -47,6 +47,10 @@ cursor is `{abs_day,substep,basis,intents,priority,boundary}`. Every body, inclu
 unrequested stationary peers, has a complete integer partition of the slice.
 Time precision is `BodyMotion.LOCOMOTION_Q`, angles are integer microdegrees,
 shortest 180-degree ties turn positively, and a final pivot restores row facing.
+The first yaw and final facing both come from that same authoritative row.
+Saved v2 controls must match the current endpoint rows at both plan and commit
+admission, including successor cursors; rehashing claimed headings cannot skip
+the initial pivot or replace the row's actual facing.
 Only complete affordable waypoint prefixes execute; unused time is a hold.
 Move cost is ceil-Euclidean metres and time is ceiling(cost × precision / budget).
 Pivots consume that same time budget. They never create route or payment credit.

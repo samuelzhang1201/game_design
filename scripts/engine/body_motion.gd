@@ -707,7 +707,7 @@ static func plan_locomotion_candidate(repo: DataRepository, state: GameState, in
 	if not march_boundary.is_empty() and (int(march_boundary.abs_day) != abs_day or int(march_boundary.substep) != substep): return _error("Locomotion boundary mismatch")
 	var saved: Variant = state.military_migration.get("body_motion")
 	if state.military_migration.has("body_motion"):
-		if not _saved_ok(saved) and not _loco_saved_ok(saved): return _error("Invalid saved locomotion control")
+		if not _loco_saved_source_ok(state, saved): return _error("Invalid saved locomotion control")
 		if _older(abs_day, substep, saved) or (int(saved.abs_day) == abs_day and int(saved.substep) == substep): return _error("Locomotion cursor already committed")
 	var grid := MarchPath.of_pack(repo)
 	if not _loco_grid_ok(grid): return _error("Locomotion requires valid land terrain")
@@ -813,6 +813,7 @@ static func _loco_move_ok(raw: Variant) -> bool:
 	for key: String in ["slot", "start_yaw_udeg", "final_facing_deg", "budget_m", "used_m"]:
 		if not _loco_integer(raw[key]) or raw[key] < 0: return false
 	if raw.start_yaw_udeg >= LOCOMOTION_TURN or raw.final_facing_deg >= 360 or raw.budget_m > LOCAL_LIMIT or raw.used_m > raw.budget_m: return false
+	if int(raw.start_yaw_udeg) != int(raw.final_facing_deg) * LOCOMOTION_Q: return false
 	if not raw.ops is Array or raw.ops.is_empty(): return false
 	var time := 0
 	var here: Array = raw.start
@@ -904,6 +905,9 @@ static func _loco_saved_endpoints(state: GameState, moves: Array) -> bool:
 		if row.is_empty() or [int(row.x_m), int(row.y_m)] != move.end or int(row.facing_deg) != int(move.final_facing_deg) or row.path_m != _loco_path(move): return false
 	return true
 
+static func _loco_saved_source_ok(state: GameState, raw: Variant) -> bool:
+	return _saved_ok(raw) or (_loco_saved_ok(raw) and _loco_saved_endpoints(state, raw.plan.moves))
+
 static func _loco_receipt_geometry_ok(repo: DataRepository, state: GameState, moves: Array, grid: MarchPath, policies: Dictionary, boundary: Dictionary) -> bool:
 	var starts := UnitBodies._copy(state)
 	var bodies: Array[Dictionary] = []
@@ -933,7 +937,7 @@ static func commit_locomotion_candidate(repo: DataRepository, state: GameState, 
 	if validated.status != "complete" or not state.military_migration.has("body_version"): return _failure("Locomotion requires initialized complete bodies")
 	var raw: Variant = state.military_migration.get("body_motion")
 	if state.military_migration.has("body_motion"):
-		if not _saved_ok(raw) and not _loco_saved_ok(raw): return _failure("Invalid saved motion control")
+		if not _loco_saved_source_ok(state, raw): return _failure("Invalid saved motion control")
 		if _older(int(cursor.abs_day), int(cursor.substep), raw): return _failure("Stale locomotion cursor")
 		if int(cursor.abs_day) == int(raw.abs_day) and int(cursor.substep) == int(raw.substep):
 			if raw.version != "2" or raw.receipt != _hash(proposed): return _failure("Cursor already committed with another protocol/receipt")
@@ -947,7 +951,6 @@ static func commit_locomotion_candidate(repo: DataRepository, state: GameState, 
 				if policy.is_empty(): return _failure("Unsupported retry policy")
 				policies[piece] = policy
 			if _hash(policies) != proposed.policy_digest: return _failure("Stale locomotion retry policy")
-			if not _loco_saved_endpoints(state, proposed.moves): return _failure("Stale locomotion retry endpoints")
 			if _loco_result_hash(state, _loco_context(repo, grid, policies, march_boundary)) != cursor.basis.result:
 				return _failure("Stale locomotion retry state")
 			if not _loco_receipt_geometry_ok(repo, state, proposed.moves, grid, policies, march_boundary): return _failure("Invalid saved locomotion timing/sweep")
