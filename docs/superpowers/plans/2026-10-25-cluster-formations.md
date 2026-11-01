@@ -403,9 +403,20 @@ CF14 引入 `ClusterTactics.intents(repo,state,cluster: Dictionary,known: Dictio
 
 本节转录原 CF02 owner 的边界建议；不修改以上 Task CF02–06 的当前批准合同。批准前不能按此执行、重新派工或释放 claims。CF01 (#186 / `068f33ba`) 和 CF08 (#185 / `579146b6`) 已 accepted；N1 为 superseded / unmerged、#178 closed，不是可满足依赖的 accepted 步骤。迁移索引 #184 / `4deeda27` 与 harness #183 / `08beb1f6` 已合并。本次核对仅消费作者报告，不审查 CF02 产品 diff。
 
-提议顺序：CF02 被动基础 → CF03 纯 planner → CF04a 候选 march → CF04b 候选 placement → CF04c 候选 render → CF05 候选 battle → CF06 候选 damage → **PROPOSED-CF-ACTIVATION** → CF07a → CF07b。激活依赖全部前置合并及适用验收，基础不反向依赖激活；不存在 CF03→CF02 回边。`PROPOSED-CF-ACTIVATION` 只是本文占位 ID，未登记、owner 未分配；其他标签也是建议边界，不是新的启动记录。共享文件/guide 必须串行。
+候选阶段的未来排序按下节“候选引擎与显示依赖边界”分支汇合，不再把 CF04c render 当作尚未登记 CF05/CF06 纯引擎工作的统一前置。CF02 被动基础、CF03 planner、CF04a march、CF04b placement 的实际 accepted 合同继续有效；激活依赖全部前置合并及适用验收，基础不反向依赖激活，不存在 CF03→CF02 回边。`PROPOSED-CF-ACTIVATION` 只是占位 ID，未登记、owner 未分配；来源标签不是新的启动记录。共享文件/guide 必须串行。本文其他原合同、暂存验收和历史批准清单不因排序核对而宣告完成。
 
 中间提交保持旧生产完整调用链；新 route 只能由显式候选入口在隔离副本上调用，读取不 materialize。不能自动 read 初始化、局部 live 混用、影子运行状态、全局 feature flag 或永久 fallback。被动序列化可保留明确存在且有效的元数据，不凭空制造 missing pose，也不对未改变的旧运行链全局强加新物理验证。新保存版本发布及生产 lifecycle 接线留至激活。每步须证明普通 march/spawn/battle/damage/render/load 调用链未改，并跑受影响旧回归。
+
+### 候选引擎与显示依赖边界
+
+仅用于未来未登记步骤。源码、接口、共享文件和 readiness 证据见 [candidate-engine-dag-boundary.md](../../reviews/cluster-formations/candidate-engine-dag-boundary.md)，沿用 [#202 locomotion 合同](https://github.com/samuelzhang1201/game_design/pull/202)。不修改任何 active 步骤的 immutable dependencies、acceptance、owner 或 claims。
+
+- **合同先行：**未来 CF05-CONTRACT 可依据 accepted foundation/planner、#194 march、#199 placement、#202 locomotion、#203 TIME 锁定候选 API、预算/冻结边界、确切拥有文件和测试。CF06-CONTRACT 等 CF05-CONTRACT accepted 后锁定接触输出与伤害入口。两者不等待 render/artcert，但合同不是产品启动授权，也不在本文发明完整战斗算法。共享 plan/guide 修改串行。
+- **引擎分支：**LOCO-TIME → LOCO-MARCH 实际 accepted merge（#206 仍待验收）→ 未来 CF05 候选 battle → 未来 CF06 候选 damage。CF05 产品还须其合同、已 accepted placement 和全部合同识别的真实引擎前置；CF06 产品还须其合同和 CF05 实际 accepted merge。合同若发现新增 validator/预算/保存前置，先拆分、登记、合并验收，不能把 MARCH 边界当 battle 边界或复制未合并实现。
+- **显示分支：**#202 → 各兵种 clip 及必要 solver/transition/scene 前置 → 各兵种完整 continuous contact/envelope certificate；各 certificate 与 LOCO-MARCH 汇合到串行 policy 安装；全部五种 policy/certificate、LOCO-MARCH、必要运行时 helper 及 PR201 合法 ownership 解决后才可登记 LOCO-CONSUMER。沿用 #202 的确切 scope 与验收，不以该简图改写已登记步骤。
+- **汇合：**两分支及所有其他 P4 writer/boot/load 前置全部 accepted，才允许有界 **PROPOSED-CF-ACTIVATION** 原子接线，再 CF07a → CF07b。最终在实际 live world 重验所有 writer、道路接敌/defeat、保存确定性、完整兵种连续动作、真实窗口及性能；候选 engine 绿灯不抵这些验收。
+
+纯 engine 测试可按 #203 已有合同在 SuiteData 副本显式注入 policy/certificate；须保留真实生产半径和完整负例，不能把微型 solver fixture 当战役验收。当前 planner 对所有非海军单位（含静止同伴）要求匹配 policy；fixture 注入不证明已安装全域支持。真实 policy/certificate 变更会失效相关 receipt/basis 证据，汇合后重验最终输入。PR201 保持 active/draft、R1 FAILED 和原固定 pair，明确 terminal 授权仍 pending；它不是 accepted dependency，本节不终态或释放其 claims。
 
 ### 原生产验收暂存映射（仅提议）
 
