@@ -189,6 +189,9 @@ static func _validate_operation(op: Dictionary) -> String:
 		expected -= 360.0
 	elif expected <= -180.0:
 		expected += 360.0
+	# Subtraction roundoff can choose either sign at the canonical +180 tie.
+	if op.turn_degrees == 180.0:
+		expected = absf(expected)
 	var roundoff: float = 8.0 * 2.220446049250313e-16 * maxf(1.0, maxf(op.start_heading, op.end_heading))
 	if signf(expected) != signf(op.turn_degrees) or absf(expected - op.turn_degrees) > roundoff:
 		return "signed_shortest_turn"
