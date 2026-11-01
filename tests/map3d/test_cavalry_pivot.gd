@@ -357,10 +357,11 @@ func test_committed_microdegree_headings_keep_native_endpoints_and_interior_cont
 func test_committed_one_microdegree_left_turn_accepts_actual_march037_to081() -> void:
 	var fixture: Dictionary = _native_case()
 	var rest: Dictionary = fixture.rest
-	var entry: Dictionary = fixture.native
 	var samples: Array = JSON.parse_string(MARCH_SAMPLES)
+	var entry: Dictionary = {}
 	var exit_pose: Dictionary = {}
 	for name: String in samples[6].locals:
+		entry[name] = _matrix(samples[5].locals[name])
 		exit_pose[name] = _matrix(samples[6].locals[name])
 	var first: Dictionary = _globals(rest, entry)
 	var last: Dictionary = _globals(rest, exit_pose)
