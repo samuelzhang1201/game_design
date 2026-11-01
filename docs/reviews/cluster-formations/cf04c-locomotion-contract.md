@@ -388,8 +388,11 @@ occurs here. Future imports/editor saves must preserve named binds, ordinary
 scale, skins, gear, all existing clips and source ownership.
 
 Proposed new exact clip names are `PIVOT_LEFT` and `PIVOT_RIGHT` for each model.
-Positive pack yaw selects LEFT after pack/world conversion; certify this mapping
-on real ground rather than relying on a Blender axis label. Each clip contract
+Positive pack turn selects RIGHT; negative selects LEFT. For example, pack
++X -> +Y is +90 degrees, while pack_to_world maps +Y to world +Z and yaw_for
+maps those headings to world yaw -90 -> -180 degrees: the model turns right.
+The reverse turn selects LEFT. Certify this mapping on real ground rather than
+relying on a Blender axis label. Each clip contract
 takes the committed signed turn, duration and normalized operation phase. A
 generic rotated idle or time-scaled 180-degree clip is **not** contact proof for
 arbitrary angles. The per-arm author must supply a contact-preserving parameter
