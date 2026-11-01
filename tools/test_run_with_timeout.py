@@ -66,16 +66,24 @@ class DeadlineTests(unittest.TestCase):
             with self.subTest(seconds=seconds):
                 self.assertEqual(self.run_command("pass", seconds).returncode, 2)
 
+    def test_deadline_before_first_output_does_not_invent_output(self):
+        result = self.run_command("import time; time.sleep(60); print('late output', flush=True)")
+        self.assertEqual(result.returncode, 124)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("timed out after 1s", result.stderr)
+
     def test_shell_runner_bounds_import_and_test_and_preserves_log(self):
         for phase in ["import", "tests"]:
             with self.subTest(phase=phase), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 (root / "tools").symlink_to(RUNNER.parent)
                 godot = root / "godot"
+                # Emit with a shell builtin so Python startup cannot consume the log fixture's deadline.
+                phase_arg = "--import" if phase == "import" else "-s"
                 godot.write_text(
-                    f"#!{sys.executable}\nimport sys,time\n"
-                    f"if ('--import' in sys.argv) == {phase == 'import'}:\n"
-                    "    print('stalled phase', flush=True)\n    time.sleep(60)\n"
+                    "#!/bin/sh\n"
+                    f"case \" $* \" in\n  *' {phase_arg} '*)\n"
+                    "    printf 'stalled phase\\n'\n    exec sleep 60 ;;\nesac\n"
                 )
                 godot.chmod(0o755)
                 result = subprocess.run(
@@ -90,6 +98,7 @@ class DeadlineTests(unittest.TestCase):
                     self.assertIsNotNone(match)
                     log = Path(match.group(1))
                     try:
+                        self.assertIn("stalled phase", log.read_text())
                         self.assertIn("timed out", log.read_text())
                     finally:
                         log.unlink(missing_ok=True)
