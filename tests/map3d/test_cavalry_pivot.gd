@@ -312,6 +312,124 @@ func test_both_turn_signs_nearzero_and_positive180_tie_have_finite_interior_cont
 			_assert_native_affines_and_nonlimbs(rest, fixture.native, result)
 
 
+func test_committed_microdegree_headings_keep_native_endpoints_and_interior_contacts() -> void:
+	var fixture: Dictionary = _native_case()
+	var rest: Dictionary = fixture.rest
+	var native: Dictionary = fixture.native
+	# Integer commitments convert independently: never derive end from start + turn.
+	for committed: Array in [[1000000, 999999, -1], [999999, 1000000, 1],
+		[1, 0, -1], [0, 1, 1], [359999999, 0, 1], [0, 359999999, -1]]:
+		var angle: float = float(committed[2]) / 1000000.0
+		var contacts: Dictionary = _contacts(rest, native, angle)
+		var pose: Dictionary = _pose(native)
+		var before: Dictionary = {"rest": rest, "pose": pose, "contacts": contacts}.duplicate(true)
+		for phase: float in [0.0, 0.5, 1.0]:
+			var op: Dictionary = {"start_heading": float(committed[0]) / 1000000.0,
+				"end_heading": float(committed[1]) / 1000000.0,
+				"turn_degrees": angle, "duration": 4.0, "phase": phase,
+				"entry_phase": 0.37, "exit_phase": 0.37}
+			var op_before: Dictionary = op.duplicate(true)
+			var result: Dictionary = _sample(rest, pose, op, contacts)
+			assert_true(result.ok, str(committed) + " phase=" + str(phase) + " " + str(result.diagnostics))
+			if result.ok:
+				_assert_native_affines_and_nonlimbs(rest, native, result)
+				if phase == 0.0 or phase == 1.0:
+					assert_eq(result.locals, native, "Exact full native endpoint")
+				var globals: Dictionary = _globals(rest, result.locals)
+				var turn: Transform3D = Transform3D(Basis(rest.turn_axis, deg_to_rad(angle * phase)), Vector3.ZERO)
+				for hoof: String in rest.chains:
+					var segment: Dictionary = contacts[hoof].segments[0]
+					# Zero-slope Hermite is its endpoint midpoint at phase .5.
+					var want: Transform3D = segment.from if phase == 0.0 else segment.to
+					if phase == 0.5:
+						want = Transform3D(Basis(rest.turn_axis, deg_to_rad(angle * 0.5)) * segment.from.basis,
+							(segment.from.origin + segment.to.origin) * 0.5)
+					var got: Transform3D = turn * globals[hoof]
+					assert_almost_eq(got.origin.distance_to(want.origin), 0.0, 0.00001, hoof + " contact position")
+					for axis: int in 3:
+						assert_almost_eq(got.basis[axis].distance_to(want.basis[axis]), 0.0, 0.00001, hoof + " contact affine")
+			assert_eq(op, op_before)
+		assert_eq(rest, before.rest)
+		assert_eq(pose, before.pose)
+		assert_eq(contacts, before.contacts)
+
+
+func test_committed_one_microdegree_left_turn_accepts_actual_march037_to081() -> void:
+	var fixture: Dictionary = _native_case()
+	var rest: Dictionary = fixture.rest
+	var samples: Array = JSON.parse_string(MARCH_SAMPLES)
+	var entry: Dictionary = {}
+	var exit_pose: Dictionary = {}
+	for name: String in samples[6].locals:
+		entry[name] = _matrix(samples[5].locals[name])
+		exit_pose[name] = _matrix(samples[6].locals[name])
+	var first: Dictionary = _globals(rest, entry)
+	var last: Dictionary = _globals(rest, exit_pose)
+	var end_turn: Transform3D = Transform3D(Basis(rest.turn_axis, deg_to_rad(-0.000001)), Vector3.ZERO)
+	var mid_turn: Transform3D = Transform3D(Basis(rest.turn_axis, deg_to_rad(-0.0000005)), Vector3.ZERO)
+	var contacts: Dictionary = {}
+	for hoof: String in rest.chains:
+		contacts[hoof] = {"offset": Transform3D.IDENTITY, "segments": [
+			_segment(0.0, 0.5, first[hoof], mid_turn * first[hoof]),
+			_segment(0.5, 1.0, mid_turn * first[hoof], end_turn * last[hoof])]}
+	var before: Dictionary = {"rest": rest, "entry": entry, "exit": exit_pose, "contacts": contacts}.duplicate(true)
+	for phase: float in [0.0, 0.5, 1.0]:
+		var current: Dictionary = exit_pose if phase == 1.0 else entry
+		var pose: Dictionary = {"locals": current, "entry": entry, "exit": exit_pose}
+		var op: Dictionary = {"start_heading": float(1000000) / 1000000.0,
+			"end_heading": float(999999) / 1000000.0, "turn_degrees": float(-1) / 1000000.0,
+			"duration": 4.0, "phase": phase, "entry_phase": 0.37, "exit_phase": 0.81}
+		var inputs: Dictionary = {"pose": pose, "op": op}.duplicate(true)
+		var result: Dictionary = _sample(rest, pose, op, contacts)
+		assert_true(result.ok, "MARCH .37/.81 phase=" + str(phase) + " " + str(result.diagnostics))
+		if result.ok:
+			_assert_native_affines_and_nonlimbs(rest, current, result)
+			if phase == 0.0 or phase == 1.0:
+				assert_eq(result.locals, current)
+			var globals: Dictionary = _globals(rest, result.locals)
+			var turn: Transform3D = Transform3D(Basis(rest.turn_axis, deg_to_rad(-0.000001 * phase)), Vector3.ZERO)
+			for hoof: String in rest.chains:
+				var want: Transform3D = mid_turn * first[hoof] if phase == 0.5 else (first[hoof] if phase == 0.0 else end_turn * last[hoof])
+				var got: Transform3D = turn * globals[hoof]
+				assert_almost_eq(got.origin.distance_to(want.origin), 0.0, 0.00001)
+				for axis: int in 3:
+					assert_almost_eq(got.basis[axis].distance_to(want.basis[axis]), 0.0, 0.00001)
+		assert_eq(pose, inputs.pose)
+		assert_eq(op, inputs.op)
+	assert_eq({"rest": rest, "entry": entry, "exit": exit_pose, "contacts": contacts}, before)
+
+
+func test_microdegree_validation_preserves_wrong_turn_sign_type_and_half_turn_guards() -> void:
+	var solver: Script = load(HELPER_PATH)
+	# Literal shortest turns on both sides of wrap and the positive-180 tie.
+	for row: Array in [[1.0, 0.999999, -0.000001], [0.999999, 1.0, 0.000001],
+		[0.0, 0.000001, 0.000001], [0.000001, 0.0, -0.000001],
+		[359.999999, 0.0, 0.000001], [0.0, 359.999999, -0.000001],
+		[0.0, 180.0, 180.0], [180.0, 0.0, 180.0],
+		[0.0, 179.999999, 179.999999], [0.0, 180.000001, -179.999999]]:
+		var op: Dictionary = _operation(row[2], 0.5)
+		op.start_heading = row[0]
+		op.end_heading = row[1]
+		assert_eq(solver._validate_operation(op), "", str(row))
+		for wrong: float in [-row[2], 0.0, row[2] * 0.9]:
+			var bad: Dictionary = op.duplicate(true)
+			bad.turn_degrees = wrong
+			assert_ne(solver._validate_operation(bad), "", "Reject wrong committed turn " + str(bad))
+	var fixture: Dictionary = _native_case()
+	var contacts: Dictionary = _contacts(fixture.rest, fixture.native, -0.000001)
+	var op: Dictionary = {"start_heading": 1.0, "end_heading": 0.999999,
+		"turn_degrees": -0.000001, "duration": 4.0, "phase": 0.5,
+		"entry_phase": 0.37, "exit_phase": 0.81}
+	for field: String in op:
+		var bad: Dictionary = op.duplicate(true)
+		bad[field] = 1
+		_assert_rejected(fixture.rest, _pose(fixture.native), bad, contacts, "operation_type")
+		for value: float in [NAN, INF, -INF]:
+			bad = op.duplicate(true)
+			bad[field] = value
+			_assert_rejected(fixture.rest, _pose(fixture.native), bad, contacts, "nonfinite_or_raw_type")
+
+
 func test_parent_split_plane_shear_and_native_limb_stretch_are_retained() -> void:
 	var fixture: Dictionary = _synthetic_case()
 	var rest: Dictionary = fixture.rest

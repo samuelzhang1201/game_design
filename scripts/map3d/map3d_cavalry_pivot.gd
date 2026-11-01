@@ -183,9 +183,12 @@ static func _validate_operation(op: Dictionary) -> String:
 			return "operation_type"
 	if op.start_heading < 0.0 or op.start_heading >= 360.0 or op.end_heading < 0.0 or op.end_heading >= 360.0 or op.turn_degrees <= -180.0 or op.turn_degrees > 180.0 or op.duration <= 0.0 or op.phase < 0.0 or op.phase > 1.0 or op.entry_phase < 0.0 or op.entry_phase >= 1.0 or op.exit_phase < 0.0 or op.exit_phase >= 1.0:
 		return "operation_domain"
-	var expected: float = fposmod(op.end_heading - op.start_heading, 360.0)
+	# Preserve small signed differences without a cancelling +360/-360 round trip.
+	var expected: float = op.end_heading - op.start_heading
 	if expected > 180.0:
 		expected -= 360.0
+	elif expected <= -180.0:
+		expected += 360.0
 	var roundoff: float = 8.0 * 2.220446049250313e-16 * maxf(1.0, maxf(op.start_heading, op.end_heading))
 	if signf(expected) != signf(op.turn_degrees) or absf(expected - op.turn_degrees) > roundoff:
 		return "signed_shortest_turn"
