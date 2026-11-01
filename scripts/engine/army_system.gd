@@ -2445,6 +2445,7 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 	var intents: Array = []
 	var units: Array = []
 	var requests := {}
+	var body_requests := {}
 	var pursuit_limits := {}
 	for code: String in codes:
 		var current := _entry_of(candidate, code)
@@ -2489,6 +2490,7 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 			if int(boundary.version) == 2:
 				translated = _body_locomotion_slice(repo, candidate, code, body, translated, step)
 				if translated.is_empty(): return {"error": "Unsafe locomotion slice prefix"}
+			body_requests[BodyMotion._id({"unit": code, "slot": body.slot})] = translated
 			intents.append({"unit": code, "slot": int(body.slot), "path_m": translated, "budget_m": step, "hostile": false})
 		units.append({"unit": code, "anchor_path_m": [here], "used_m": 0, "step_budget_m": step,
 			"entry_after": {}, "saved_entry_after": saved})
@@ -2513,7 +2515,13 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 		for move: Dictionary in motion.moves:
 			if move.unit != code: continue
 			row.used_m = maxi(int(row.used_m), int(move.used_m))
-			var prefix := _body_route_prefix(path, move.path_m if int(boundary.version) == 1 else BodyMotion._loco_path(move))
+			var reference: Array = path
+			if int(boundary.version) == 2:
+				reference = []
+				for point: Array in body_requests[BodyMotion._id(move)]:
+					reference.append([int(path[0][0]) + int(point[0]) - int(move.start[0]),
+						int(path[0][1]) + int(point[1]) - int(move.start[1])])
+			var prefix := _body_route_prefix(reference, move.path_m if int(boundary.version) == 1 else BodyMotion._loco_path(move), int(boundary.version) == 2)
 			var length := BodyMotion._length(prefix)
 			if length < minimum:
 				minimum = length
@@ -2521,7 +2529,7 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 		if common.is_empty(): common = [path[0]]
 		row.anchor_path_m = common
 		var at: Array = common.back()
-		var remaining: Array = _body_remaining(path, common)
+		var remaining: Array = _body_remaining(path, common, int(boundary.version) == 2)
 		var changed: bool = int(current.get("order_id", 0)) != int(saved.get("order_id", 0)) \
 			or current.get("order") != saved.get("order") or current.dest_x_m != saved.dest_x_m or current.dest_y_m != saved.dest_y_m
 		saved.x_m = int(at[0])
@@ -2584,7 +2592,7 @@ static func _body_locomotion_slice(repo: DataRepository, state: GameState, code:
 	return selected
 
 ## Match actual rejoined points to ordered requested legs; a side leg alone earns no anchor progress.
-static func _body_route_prefix(path: Array, travelled: Array) -> Array:
+static func _body_route_prefix(path: Array, travelled: Array, rounded: bool = false) -> Array:
 	var ox: int = int(travelled[0][0]) - int(path[0][0])
 	var oy: int = int(travelled[0][1]) - int(path[0][1])
 	var best: Array = [path[0]]
@@ -2600,7 +2608,9 @@ static func _body_route_prefix(path: Array, travelled: Array) -> Array:
 			if ax == 0 and ay == 0: continue
 			var px: int = int(point[0]) - int(path[i - 1][0])
 			var py: int = int(point[1]) - int(path[i - 1][1])
-			if px * ay != py * ax or px * ax + py * ay < 0 or px * ax + py * ay > ax * ax + ay * ay: continue
+			if rounded:
+				if not _body_rounded_leg_point(path[i - 1], path[i], point): continue
+			elif px * ay != py * ax or px * ax + py * ay < 0 or px * ax + py * ay > ax * ax + ay * ay: continue
 			var prefix: Array = path.slice(0, i)
 			if prefix.back() != point: prefix.append(point)
 			var cost := BodyMotion._length(prefix)
@@ -2610,7 +2620,41 @@ static func _body_route_prefix(path: Array, travelled: Array) -> Array:
 				break
 	return best
 
-static func _body_remaining(path: Array, prefix: Array) -> Array:
+## Exact inverse of the accepted integer prefix rounding, never a distance tolerance.
+static func _body_rounded_leg_point(a: Array, b: Array, point: Array) -> bool:
+	var dx: int = int(b[0]) - int(a[0])
+	var dy: int = int(b[1]) - int(a[1])
+	var axis := 0 if absi(dx) >= absi(dy) else 1
+	var delta: int = int(b[axis]) - int(a[axis])
+	if delta == 0: return point == a
+	var span := absi(delta)
+	var amount: int = (int(point[axis]) - int(a[axis])) * (1 if delta > 0 else -1)
+	if amount < 0 or amount > span: return false
+	var length := BodyMotion._distance_ceil(a, b)
+	@warning_ignore("integer_division")
+	var first: int = (amount * length + span - 1) / span
+	@warning_ignore("integer_division")
+	var last: int = mini(length, ((amount + 1) * length + span - 1) / span - 1)
+	# The dominant axis limits this interval to at most two integer parameters.
+	for distance: int in range(first, last + 1):
+		@warning_ignore("integer_division")
+		var x: int = int(a[0]) + dx * distance / length
+		@warning_ignore("integer_division")
+		var y: int = int(a[1]) + dy * distance / length
+		if point == [x, y]: return true
+	return false
+
+static func _body_remaining(path: Array, prefix: Array, rounded: bool = false) -> Array:
+	if rounded:
+		var next := 1
+		var previous: Array = path[0]
+		for point: Array in prefix.slice(1):
+			while next < path.size() and path[next] == previous: next += 1
+			if next >= path.size() or path[next] != point: return path.slice(next).duplicate(true)
+			previous = point
+			next += 1
+		while next < path.size() and path[next] == prefix.back(): next += 1
+		return path.slice(next).duplicate(true)
 	var index := prefix.size() - 1
 	while index < path.size() and prefix.back() == path[index]: index += 1
 	return path.slice(index).duplicate(true)

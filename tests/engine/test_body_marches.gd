@@ -1134,3 +1134,90 @@ func test_locomotion_march_blocked_running_hold_pays_once() -> void:
 	assert_eq(result.candidate.regiments[f.code].run_supply_rem, 0)
 	assert_eq(result.candidate.military_cohorts, state.military_cohorts)
 	assert_eq(_loco_commit(f, _json(result.candidate), p).candidate.to_dict(), result.candidate.to_dict())
+
+func test_locomotion_march_oblique_prefix_advances_anchor_with_bodies_and_json() -> void:
+	if not _loco_api(): return
+	for destination: Array in [[60000, 53333], [40000, 53333], [60000, 46667], [40000, 46667]]:
+		var f := _loco_fixture([100])
+		var entry: Dictionary = f.state.regiments[f.code]
+		entry.route_m = [destination]
+		entry.dest_x_m = destination[0]
+		entry.dest_y_m = destination[1]
+		var state := _loco_begin(f, 1000)
+		if state == null: return
+		for slice: int in 3:
+			var p := _loco_plan(f, state)
+			assert_eq(_loco_plan(f, _json(state)), p)
+			var result := _loco_commit(f, state, p)
+			if result.candidate == null: return
+			state = _json(result.candidate)
+			var body: Dictionary = state.regiments[f.code].body_groups[0]
+			assert_eq([state.regiments[f.code].x_m, state.regiments[f.code].y_m], [body.x_m, body.y_m], "single body's certified rounded prefix is actual anchor progress")
+			assert_true(p.units[0].used_m > 0)
+			assert_eq(state.day_resolution.march_entries[f.code].route_m, [destination])
+			assert_eq(result.plan.arrivals, [])
+			if destination == [60000, 53333]:
+				assert_eq([body.x_m, body.y_m], [50000 + 90 * (slice + 1), 50000 + 30 * (slice + 1)], "rounded 90,30 costs95; both heading pivots fit B100")
+
+func test_locomotion_march_oblique_prefix_reaches_real_destination_once() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([100])
+	f.state.regiments[f.code].route_m = [[50100, 50033]]
+	f.state.regiments[f.code].dest_x_m = 50100
+	f.state.regiments[f.code].dest_y_m = 50033
+	var state := _loco_begin(f, 1000)
+	if state == null: return
+	for slice: int in 2:
+		var result := _loco_commit(f, state, _loco_plan(f, state))
+		if result.candidate == null: return
+		state = _json(result.candidate)
+		assert_eq(result.plan.arrivals, [f.code] if slice == 1 else [])
+	assert_eq([state.regiments[f.code].x_m, state.regiments[f.code].y_m], [50100, 50033])
+	assert_eq([state.regiments[f.code].body_groups[0].x_m, state.regiments[f.code].body_groups[0].y_m], [50100, 50033])
+	assert_eq(state.regiments[f.code].order, ArmySystem.ORDER_GARRISON)
+	assert_eq(state.day_resolution.journal.arrivals, [f.code])
+
+func test_locomotion_march_rounded_projection_requires_exact_prefix_and_rejoin() -> void:
+	var path: Array = [[0, 0], [6, 1]]
+	assert_eq(ArmySystem._body_route_prefix(path, [[0, 0], [3, 0]]), [[0, 0]], "v1 exact line is unchanged")
+	assert_eq(ArmySystem._body_route_prefix(path, [[0, 0], [3, 0]], true), [[0, 0], [3, 0]], "3,0 is exactly trunc((6,1)*4/7), including nested slice rounding")
+	assert_eq(ArmySystem._body_route_prefix(path, [[0, 0], [3, 1]], true), [[0, 0]], "no integer rounding parameter produces3,1; proximity grants no progress")
+	assert_eq(ArmySystem._body_route_prefix(path, [[0, 0], [0, 5], [3, 5]], true), [[0, 0]], "unrejoined side legs earn none")
+	assert_eq(ArmySystem._body_route_prefix(path, [[0, 0], [0, 5], [3, 5], [3, 0]], true), [[0, 0], [3, 0]])
+	assert_eq(ArmySystem._body_route_prefix([[0, 0], [-6, -1]], [[0, 0], [-3, 0]], true), [[0, 0], [-3, 0]])
+	assert_eq(ArmySystem._body_route_prefix([[0, 0], [-6, -1]], [[0, 0], [-3, -1]], true), [[0, 0]])
+	var full: Array = [[0, 0], [0, 0], [6, 1], [6, 1], [10, 2]]
+	assert_eq(ArmySystem._body_remaining(full, [[0, 0], [3, 0]], true), [[6, 1], [6, 1], [10, 2]])
+	assert_eq(ArmySystem._body_remaining(full, [[0, 0], [6, 1], [9, 1]], true), [[10, 2]])
+	assert_eq(ArmySystem._body_remaining([[0, 0], [6, 1], [0, 0]], [[0, 0]], true), [[6, 1], [0, 0]], "standing on a later loop endpoint is not travel")
+
+func test_locomotion_march_oblique_duplicate_waypoints_stay_ordered() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([100])
+	f.state.regiments[f.code].route_m = [[50000, 50000], [50100, 50033], [50100, 50033], [50200, 50066]]
+	f.state.regiments[f.code].dest_x_m = 50200
+	f.state.regiments[f.code].dest_y_m = 50066
+	var state := _loco_begin(f, 1000)
+	if state == null: return
+	for slice: int in 3:
+		var result := _loco_commit(f, state, _loco_plan(f, state))
+		if result.candidate == null: return
+		state = _json(result.candidate)
+		if slice == 0: assert_eq(state.day_resolution.march_entries[f.code].route_m, [[50100, 50033], [50100, 50033], [50200, 50066]])
+		if slice == 1: assert_eq(state.day_resolution.march_entries[f.code].route_m, [[50200, 50066]])
+		assert_eq(result.plan.arrivals, [f.code] if slice == 2 else [])
+	assert_eq([state.regiments[f.code].x_m, state.regiments[f.code].y_m], [50200, 50066])
+	assert_eq(state.day_resolution.journal.arrivals, [f.code])
+
+func test_locomotion_march_friendly_side_legs_rejoin_without_sideways_anchor_credit() -> void:
+	if not _loco_api(): return
+	var f := _loco_fixture([100, 100])
+	_set_route(f, 0, [45000, 60000], [55000, 60000])
+	_set_route(f, 1, [55000, 60000], [45000, 60000])
+	var state := _loco_begin(f, 500000)
+	if state == null: return
+	var p := _loco_plan(f, state)
+	assert_true(p.motion.moves.any(func(m: Dictionary) -> bool: return m.ops.any(func(op: Dictionary) -> bool: return op.a[1] != 60000 or op.b[1] != 60000)), "real v2 planner selected a friendly detour")
+	for row: Dictionary in p.units:
+		for point: Array in row.anchor_path_m: assert_eq(point[1], 60000)
+	_loco_commit(f, state, p)

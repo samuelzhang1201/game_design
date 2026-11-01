@@ -128,7 +128,12 @@ consumer refuses both candidate protocols and unknown/mixed controls fail closed
 V2 uses the existing daily integer remainder partition, gait/run payment and
 simultaneous reservation path. The requested slice is clipped through BodyMotion's
 integer prefix/timeline checks to an affordable route prefix, retaining the full
-received route separately. Pursuit clips only that geometry; it retains the
+received route separately. V2 progress is checked against each body's actual
+received rounded slice path, not exact collinearity with an uncut distant leg.
+A bounded integer inverse proves that a rejoined point is an exact canonical
+rounded prefix; no geometric tolerance grants progress to side legs. Remaining
+waypoints follow their original order, including duplicate zero-length legs.
+Pursuit clips only that geometry; it retains the
 received slice capacity so turning cannot strand a body at its final metre.
 Translation, all pivots and the final hold share one Q;
 there is no final-slice catchup or carry of unused pivot/hold time. Running pays
