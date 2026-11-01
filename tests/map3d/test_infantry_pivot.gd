@@ -726,7 +726,7 @@ func _native_asset() -> Dictionary:
 	if not _native_cache.is_empty():
 		return _native_cache
 	var path: String = "res://assets/3D/units/infantry/infantry.glb"
-	assert_eq(FileAccess.get_sha256(path), "bb1d80b916be406f91390883034e07d0cf2d7690666951c3216b202393548085")
+	# Source GLB sha256 bb1d80b916be406f91390883034e07d0cf2d7690666951c3216b202393548085.
 	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
 	var size: int = bytes.decode_u32(12)
 	var document: Dictionary = JSON.parse_string(bytes.slice(20, 20 + size).get_string_from_utf8())
@@ -747,6 +747,7 @@ func _native_asset() -> Dictionary:
 				if phase < 1.0 and not _native_cache.keys.has(phase):
 					_native_cache.keys.append(phase)
 	_native_cache.keys.sort()
+	assert_eq(_native_fingerprint(), "707356edb648ef36bb57b4cfa9ecd56882405e17313e1b9f0e53b671bf4b90b7", "frozen original rest/mesh/skin/MARCH; additional clips do not change this input")
 	return _native_cache
 
 func _native_order(index: int, parent: String) -> void:
@@ -1205,3 +1206,70 @@ func test_transition_native_exit_toe_translation_is_geometry_not_an_incompatible
 	_set_phase(f, 1.0)
 	f.pose = exit_pose
 	_assert_native_pose(f, _transition(f), exit_pose)
+
+# Freeze numerical inputs by content, allowing the later authorized clip step to
+# append pivots without changing original MARCH, binds, mesh or skin weights.
+func _native_fingerprint() -> String:
+	var document: Dictionary = _native_cache.doc
+	var context: HashingContext = HashingContext.new()
+	context.start(HashingContext.HASH_SHA256)
+	var parents: Dictionary = {}
+	var indices: Dictionary = {}
+	for i: int in range(document.nodes.size()):
+		indices[document.nodes[i].name] = i
+		for child: Variant in document.nodes[i].get("children", []):
+			parents[int(child)] = i
+	var names: Array = indices.keys()
+	names.sort()
+	for name: String in names:
+		var index: int = indices[name]
+		var node: Dictionary = document.nodes[index]
+		_hash_label(context, name)
+		_hash_label(context, document.nodes[parents[index]].name if parents.has(index) else "")
+		var fields: Array = ["matrix"] if node.has("matrix") else ["translation", "rotation", "scale"]
+		var defaults: Dictionary = {"translation": [0, 0, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1]}
+		for field: String in fields:
+			_hash_label(context, field)
+			context.update(PackedFloat32Array(node.get(field, defaults.get(field))).to_byte_array())
+	for skin: Dictionary in document.skins:
+		for joint: Variant in skin.joints:
+			_hash_label(context, document.nodes[int(joint)].name)
+		_hash_accessor(context, int(skin.inverseBindMatrices), "inverseBindMatrices")
+	for mesh: Dictionary in document.meshes:
+		for primitive: Dictionary in mesh.primitives:
+			var attributes: Array = primitive.attributes.keys()
+			attributes.sort()
+			for name: String in attributes:
+				_hash_accessor(context, int(primitive.attributes[name]), name)
+			if primitive.has("indices"):
+				_hash_accessor(context, int(primitive.indices), "indices")
+	var channels: Dictionary = {}
+	for channel: Dictionary in _native_cache.animation.channels:
+		channels[document.nodes[int(channel.target.node)].name + "|" + channel.target.path] = channel
+	var targets: Array = channels.keys()
+	targets.sort()
+	for target: String in targets:
+		var channel: Dictionary = channels[target]
+		var sampler: Dictionary = _native_cache.animation.samplers[int(channel.sampler)]
+		_hash_label(context, document.nodes[int(channel.target.node)].name)
+		_hash_label(context, channel.target.path)
+		_hash_label(context, sampler.get("interpolation", "LINEAR"))
+		_hash_accessor(context, int(sampler.input), "time")
+		_hash_accessor(context, int(sampler.output), "value")
+	return context.finish().hex_encode()
+
+func _hash_label(context: HashingContext, label: String) -> void:
+	context.update(label.to_utf8_buffer())
+	context.update(PackedByteArray([0]))
+
+func _hash_accessor(context: HashingContext, index: int, label: String) -> void:
+	var accessor: Dictionary = _native_cache.doc.accessors[index]
+	var view: Dictionary = _native_cache.doc.bufferViews[int(accessor.bufferView)]
+	var components: int = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT4": 16}[accessor.type]
+	var width: int = {5126: 4, 5125: 4, 5123: 2, 5121: 1}[int(accessor.componentType)] * components
+	var start: int = int(view.get("byteOffset", 0)) + int(accessor.get("byteOffset", 0))
+	var stride: int = int(view.get("byteStride", width))
+	_hash_label(context, "%s|%d|%s|%d" % [label, int(accessor.componentType), accessor.type, int(accessor.count)])
+	var bytes: PackedByteArray = _native_cache.bin
+	for i: int in range(int(accessor.count)):
+		context.update(bytes.slice(start + i * stride, start + i * stride + width))
