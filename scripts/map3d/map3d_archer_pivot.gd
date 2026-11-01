@@ -19,8 +19,9 @@ extends RefCounted
 ## geodesic rotation from its native rest. Limits are inputs, not installed policy.
 ## Returns {ok,locals,diagnostics}; any failure returns NO partial pose.
 ## This does not plan contacts, sample a clip, or certify a parameter domain.
-## Raw MARCH interpolation with inconsistent anatomical spans is explicitly invalid;
-## unchanged raw endpoints and exact rest spans cannot both be promised for it.
+## Raw leg matrices are pose/twist references; rest anatomy fixes lengths and split
+## placement. Zero-turn sample is the same canonical MARCH pose source used at
+## pivot endpoints. Direct raw clip playback to corrected pivot is not continuous.
 
 const PARTS: Array[String] = ["thigh_twist", "thigh_stretch", "leg_stretch", "leg_twist", "foot", "toes_01"]
 # Arithmetic tolerance only; this is not a contact-policy or certificate threshold.
@@ -38,8 +39,8 @@ static func sample(rest: Variant, authored_pose: Variant, operation: Variant, co
 		return _fail("pose: malformed transforms, missing parent or parent cycle")
 	if not _topology(rest.parents) or not _legs(rest.legs):
 		return _fail("rest: invalid flattened topology or joint/contact definitions")
-	if not _geometry(reference, reference) or not _geometry(source, reference):
-		return _fail("pose: inconsistent anatomical/split spans; raw interpolated MARCH requires a separate transition solution")
+	if not _geometry(reference, reference):
+		return _fail("rest: invalid anatomical spans or split placement")
 	for field: String in ["yaw_rad", "turn_rad", "duration_s", "phase", "march_entry_phase", "march_exit_phase"]:
 		if not _float(operation.get(field)):
 			return _fail("operation: invalid " + field)
@@ -53,20 +54,27 @@ static func sample(rest: Variant, authored_pose: Variant, operation: Variant, co
 	var endpoints: Array[Dictionary] = []
 	for field: String in ["entry_pose", "exit_pose"]:
 		var global: Dictionary = _globals(operation[field], rest.parents)
-		if global.is_empty() or not _geometry(global, reference):
-			return _fail("transition: inconsistent MARCH endpoint geometry")
+		if global.is_empty():
+			return _fail("transition: malformed raw MARCH endpoint")
 		endpoints.append(global)
 	if not _contacts(contacts):
 		return _fail("contact: malformed track, support interval or moving anchor")
-	# Validate complete endpoint poses, not just foot positions: a changed knee can pop too.
+	# Raw foot/toe frames remain authoritative; legs share the canonical physical solve.
 	for i: int in range(2):
 		var expected: Dictionary = operation.entry_pose if i == 0 else operation.exit_pose
+		var world := Transform3D(Basis(Vector3.UP, operation.yaw_rad - operation.turn_rad * i), Vector3.ZERO)
+		for side: String in ["l", "r"]:
+			var target: Dictionary = _target(contacts[side].track, float(i))
+			if target.is_empty() or not _same(target.sole, world * endpoints[i]["foot." + side] * rest.legs[side].sole_in_foot) or not _same(target.toe, world * endpoints[i]["toes_01." + side] * rest.legs[side].toe_in_toes):
+				return _fail("transition: raw MARCH foot/toe frame disagrees with contact endpoint")
 		var endpoint: Dictionary = _solve(rest, reference, endpoints[i], expected, operation, contacts, float(i))
 		if not endpoint.ok:
 			return _fail("transition: " + str(endpoint.diagnostics[0]))
-		for name: String in expected:
-			if not _same(endpoint.locals[name], expected[name]):
-				return _fail("transition: endpoint would change " + name)
+		if operation.phase == float(i):
+			for name: String in expected:
+				if not _same(authored_pose[name], expected[name]):
+					return _fail("transition: sampled raw reference disagrees with MARCH endpoint " + name)
+
 	return _solve(rest, reference, source, authored_pose, operation, contacts, operation.phase)
 
 
@@ -108,6 +116,11 @@ static func _rigid(value: Variant) -> bool:
 
 static func _same(a: Transform3D, b: Transform3D) -> bool:
 	return a.origin.distance_to(b.origin) <= EPS and a.basis.x.distance_to(b.basis.x) <= EPS and a.basis.y.distance_to(b.basis.y) <= EPS and a.basis.z.distance_to(b.basis.z) <= EPS
+
+
+static func _same_affine(a: Basis, b: Basis) -> bool:
+	# The Gram matrix retains scale/shear while ignoring an allowed rigid rotation.
+	return _same(Transform3D(a.transposed() * a, Vector3.ZERO), Transform3D(b.transposed() * b, Vector3.ZERO))
 
 
 static func _globals(locals: Dictionary, parents: Dictionary) -> Dictionary:
@@ -170,12 +183,20 @@ static func _legs(legs: Dictionary) -> bool:
 
 static func _geometry(pose: Dictionary, rest: Dictionary) -> bool:
 	for side: String in ["l", "r"]:
-		for pair: Array in [["thigh_twist", "leg_stretch"], ["leg_stretch", "foot"], ["foot", "toes_01"], ["thigh_twist", "thigh_stretch"], ["leg_stretch", "leg_twist"]]:
+		for pair: Array in [["thigh_twist", "leg_stretch"], ["leg_stretch", "foot"], ["foot", "toes_01"]]:
 			var a: String = pair[0] + "." + side
 			var b: String = pair[1] + "." + side
 			var expected: float = rest[a].origin.distance_to(rest[b].origin)
 			var observed: float = pose[a].origin.distance_to(pose[b].origin)
 			if not is_finite(expected) or not is_finite(observed) or expected <= EPS or absf(observed - expected) > EPS:
+				return false
+		for triple: Array in [["thigh_twist", "thigh_stretch", "leg_stretch"], ["leg_stretch", "leg_twist", "foot"]]:
+			var a: String = triple[0] + "." + side
+			var split: String = triple[1] + "." + side
+			var b: String = triple[2] + "." + side
+			var segment: Vector3 = rest[b].origin - rest[a].origin
+			var fraction: float = (rest[split].origin - rest[a].origin).dot(segment) / segment.length_squared()
+			if not is_finite(fraction) or fraction <= 0.0 or fraction >= 1.0 or rest[split].origin.distance_to(rest[a].origin.lerp(rest[b].origin, fraction)) > EPS or pose[split].origin.distance_to(pose[a].origin.lerp(pose[b].origin, fraction)) > EPS:
 				return false
 	return true
 
@@ -294,40 +315,75 @@ static func _solve(rest: Dictionary, reference: Dictionary, source: Dictionary, 
 		var flexion: float = (knee - hip).angle_to(foot.origin - knee)
 		if flexion < leg.knee_limits.x - EPS or flexion > leg.knee_limits.y + EPS:
 			return _fail("joint_limit: anatomical knee " + side)
-		var old_normal: Vector3 = (old_knee - hip).cross(old_ankle - old_knee)
-		if old_normal.length() <= EPS * EPS:
-			old_normal = (reference["leg_stretch." + side].origin - reference["thigh_twist." + side].origin).cross(reference["foot." + side].origin - reference["leg_stretch." + side].origin)
-		if not old_normal.is_finite() or not is_finite(old_normal.length_squared()):
-			return _fail("knee_plane: nonfinite derived normal " + side)
-		if old_normal.length() <= EPS * EPS or old_normal.cross(old_knee - hip).length() <= EPS * EPS:
-			return _fail("knee_plane: undefined authored/rest bend plane " + side)
+		var old_upper: Vector3 = old_knee - hip
+		var old_lower: Vector3 = old_ankle - old_knee
+		if not old_upper.is_finite() or not old_lower.is_finite() or not is_finite(old_upper.length()) or not is_finite(old_lower.length()) or old_upper.length() <= EPS or old_lower.length() <= EPS:
+			return _fail("pose: undefined raw anatomical direction " + side)
+		var rest_normal: Vector3 = (reference["leg_stretch." + side].origin - reference["thigh_twist." + side].origin).cross(reference["foot." + side].origin - reference["leg_stretch." + side].origin)
+		var body_rotation: Basis = source["root.x"].basis.orthonormalized() * reference["root.x"].basis.orthonormalized().transposed()
+		var old_normal: Vector3 = body_rotation * rest_normal
+		if not old_normal.is_finite() or not is_finite(old_normal.length_squared()) or old_normal.length() <= EPS * EPS:
+			return _fail("knee_plane: undefined physical rest reference " + side)
 		var normal: Vector3 = bend.cross(axis).normalized()
-		# A shared full plane fixes twist even when an individual segment reverses.
-		var upper_rotation: Basis = _frame(knee - hip, normal) * _frame(old_knee - hip, old_normal).inverse()
-		var lower_rotation: Basis = _frame(foot.origin - knee, normal) * _frame(old_ankle - old_knee, old_normal).inverse()
+		# The body reference stays oriented when the raw knee passes through straight.
+		var from_upper: Basis = _frame(old_upper, old_normal)
+		var from_lower: Basis = _frame(old_lower, old_normal)
+		var to_upper: Basis = _frame(knee - hip, normal)
+		var to_lower: Basis = _frame(foot.origin - knee, normal)
+		if not _rigid(from_upper) or not _rigid(from_lower) or not _rigid(to_upper) or not _rigid(to_lower):
+			return _fail("knee_plane: undefined segment reference " + side)
+		var upper_rotation: Basis = to_upper * from_upper.transposed()
+		var lower_rotation: Basis = to_lower * from_lower.transposed()
 		for part: String in ["thigh_twist", "thigh_stretch"]:
 			var old: Transform3D = source[part + "." + side]
-			solved[part + "." + side] = Transform3D(upper_rotation * old.basis, hip + upper_rotation * (old.origin - hip))
+			var fraction: float = 0.0 if part == "thigh_twist" else reference["thigh_twist." + side].origin.distance_to(reference["thigh_stretch." + side].origin) / upper
+			solved[part + "." + side] = Transform3D(upper_rotation * old.basis, hip.lerp(knee, fraction))
 		for part: String in ["leg_stretch", "leg_twist"]:
 			var old: Transform3D = source[part + "." + side]
-			solved[part + "." + side] = Transform3D(lower_rotation * old.basis, knee + lower_rotation * (old.origin - old_knee))
+			var fraction: float = 0.0 if part == "leg_stretch" else reference["leg_stretch." + side].origin.distance_to(reference["leg_twist." + side].origin) / lower
+			solved[part + "." + side] = Transform3D(lower_rotation * old.basis, knee.lerp(foot.origin, fraction))
+
 		solved["foot." + side] = foot
 		solved["toes_01." + side] = toe
 	if not _geometry(solved, reference):
 		return _fail("contact: incompatible foot/toe or split geometry")
 	var locals: Dictionary = authored.duplicate(true)
-	for name: String in source:
-		var parent: String = rest.parents[name]
-		var modified: bool = name.get_slice(".", 0) in PARTS
-		if modified:
-			locals[name] = solved[name] if parent.is_empty() else solved[parent].affine_inverse() * solved[name]
-		if not _transform(locals[name]):
-			return _fail("pose: invalid reconstructed local " + name)
-		if modified:
-			var side: String = name.get_slice(".", 1)
+	var rebuilt: Dictionary = {}
+	var pending: Array = authored.keys()
+	while not pending.is_empty():
+		var advanced: bool = false
+		for name: String in pending.duplicate():
+			var parent: String = rest.parents[name]
+			if not parent.is_empty() and not rebuilt.has(parent):
+				continue
+			var parent_world: Transform3D = Transform3D.IDENTITY if parent.is_empty() else rebuilt[parent]
 			var part: String = name.get_slice(".", 0)
-			var a: Quaternion = (rest.locals[name] as Transform3D).basis.orthonormalized().get_rotation_quaternion()
-			var b: Quaternion = (locals[name] as Transform3D).basis.orthonormalized().get_rotation_quaternion()
-			if a.angle_to(b) > rest.legs[side].rotation_limits[part] + EPS:
-				return _fail("joint_limit: local rotation " + name)
+			var side: String = name.get_slice(".", 1)
+			var modified: bool = part in PARTS and side in ["l", "r"] and name == part + "." + side
+			if modified:
+				var local: Transform3D = parent_world.affine_inverse() * solved[name]
+				if not _transform(local):
+					return _fail("pose: invalid reconstructed local " + name)
+				if part in ["foot", "toes_01"]:
+					if not _same_affine(local.basis, authored[name].basis):
+						return _fail("contact: incompatible native affine " + name)
+				else:
+					var native: Basis = authored[name].basis
+					local.basis = local.basis.orthonormalized() * native.orthonormalized().transposed() * native
+				if not _transform(local) or not _same_affine(local.basis, authored[name].basis):
+					return _fail("pose: incompatible native affine " + name)
+				locals[name] = local
+				var a: Quaternion = (rest.locals[name] as Transform3D).basis.orthonormalized().get_rotation_quaternion()
+				var b: Quaternion = local.basis.orthonormalized().get_rotation_quaternion()
+				if a.angle_to(b) > rest.legs[side].rotation_limits[part] + EPS:
+					return _fail("joint_limit: local rotation " + name)
+			rebuilt[name] = parent_world * locals[name]
+			if not _transform(rebuilt[name]):
+				return _fail("pose: invalid reconstructed global " + name)
+			pending.erase(name)
+			advanced = true
+		if not advanced:
+			return _fail("pose: inconsistent reconstructed parents")
+	if not _geometry(rebuilt, reference):
+		return _fail("pose: reconstructed physical geometry disagrees with rest")
 	return {"ok": true, "locals": locals, "diagnostics": []}
