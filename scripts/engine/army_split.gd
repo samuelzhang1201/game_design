@@ -488,3 +488,9 @@ static func is_whole_count(value: Variant) -> bool:
 	if not (value is int or value is float):
 		return false
 	return is_finite(float(value)) and float(value) >= 0 and float(value) == floor(float(value))
+
+## Already staged opening/split personnel only; never split or debit again.
+static func initialize_bodies_candidate(repo: DataRepository, source: GameState, operation_id: String, sequence: Variant) -> Dictionary:
+	var boundary := {"version": 1, "kind": "safe", "abs_day": str(source.absolute_day())} if source != null else {}
+	return ArmyGround.body_placement_candidate(repo, source, {"version": 1, "operation_id": operation_id,
+		"sequence": sequence, "operation": "initialize", "unit": "", "host": "", "previous_fit": null}, boundary)

@@ -116,3 +116,7 @@ through direct/JSON retry. Changed receipts at that cursor and older cursors
 error. This metadata contains no duplicate poses, personnel or paid-cost ledger.
 CF01 finite animation samples/artillery substitute and later production,
 visual and performance acceptance remain explicit limits.
+
+`UnitBodies.validate_placement_candidate` validates raw placement controls and
+safe/completed-MARCH boundaries without creating a row or removing frozen data.
+Placement transactions and replay: `scripts/engine/guide/body_placement.md`.

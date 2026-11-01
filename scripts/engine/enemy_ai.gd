@@ -1045,3 +1045,9 @@ static func _update_deployment(repo: DataRepository, state: GameState, host: Str
 		mind["assault"] = 0
 		set_mode(state, host, MODE_SIEGE, "leading columns deployed at the town", events)
 		return
+
+## Explicit detached host/body transaction; ordinary spawn remains unchanged.
+static func spawn_body_candidate(repo: DataRepository, source: GameState, host_code: String, operation_id: String, sequence: Variant) -> Dictionary:
+	var boundary := {"version": 1, "kind": "safe", "abs_day": str(source.absolute_day())} if source != null else {}
+	return ArmyGround.body_placement_candidate(repo, source, {"version": 1, "operation_id": operation_id,
+		"sequence": sequence, "operation": "enemy_spawn", "unit": "", "host": host_code, "previous_fit": null}, boundary)
