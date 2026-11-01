@@ -60,7 +60,13 @@ func _run() -> void:
 	if wh.size() != 2 or int(wh[0]) <= 0 or int(wh[1]) <= 0:
 		_fail("Invalid resolution")
 		return
-	root.size = Vector2i(int(wh[0]), int(wh[1]))
+	var requested_size := Vector2i(int(wh[0]), int(wh[1]))
+	if OS.get_cmdline_user_args().has("--bench"):
+		# Cocoa otherwise constrains this tier's native client height to the usable desktop.
+		root.min_size = requested_size
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_size(requested_size)
+	root.size = requested_size
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = int(_arg("--fps", "0"))
 	_speed = int(_arg("--speed", "1"))
