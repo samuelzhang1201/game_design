@@ -834,3 +834,55 @@ func _set_metric(r: TickReport, m: Dictionary, metric: String, value: float, rea
 func _drift_toward(r: TickReport, m: Dictionary, metric: String, baseline: float, rate: float, reason: String) -> void:
 	var delta := clampf(baseline - m[metric], -rate, rate)
 	_apply(r, m, metric, delta, reason)
+
+## Opt-in march-only harness. The production phase machine never dispatches here.
+func begin_body_march_candidate(source: GameState) -> Dictionary:
+	if source == null: return ArmySystem._body_result("error", "Missing candidate source")
+	if not source.day_resolution.is_empty():
+		if source.day_resolution.has("body_march"):
+			var error := ArmySystem._body_source_error(data, source)
+			if not error.is_empty(): return ArmySystem._body_result("error", error)
+		return ArmySystem._body_result("deferred", "Resume the existing day through step")
+	if not source.military_migration.has("body_version"): return ArmySystem._body_result("error", "Explicit current body initialization required")
+	var validated := UnitBodies.migrate_candidate(data, source)
+	if validated.status != "complete": return ArmySystem._body_result("deferred" if validated.status == "deferred" else "error", validated.reason)
+	for code: String in source.regiments.keys() + source.foes.keys():
+		if UnitBodies._entry(source, code).has("body_reconciliation") or not ArmySystem._body_entry_ok(UnitBodies._entry(source, code)):
+			return ArmySystem._body_result("error", "Incomplete or invalid candidate march entry")
+	var terrain := ArmySystem._body_terrain_error(data, source, [])
+	if not terrain.is_empty(): return ArmySystem._body_result("error", terrain)
+	var candidate := UnitBodies._copy(source)
+	var count := int(data.bal("battle_substeps"))
+	if count <= 0: return ArmySystem._body_result("error", "Invalid march slice count")
+	var tx := DayResolution.begin(candidate.day, candidate.day >= Calendar.DAYS_PER_TICK, candidate.absolute_day(), count)
+	tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+	tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
+	tx.march_entries = {}
+	tx.march_budgets = {}
+	tx.marching_codes = []
+	for table: Dictionary in [candidate.regiments, candidate.foes]:
+		var codes: Array = table.keys()
+		codes.sort()
+		for code: String in codes:
+			var entry: Dictionary = table[code]
+			if BattleSystem.may_withdraw(candidate, code): ArmySystem._resume_departure(data, candidate, code, entry)
+			if entry.get("order") != ArmySystem.ORDER_MARCH: continue
+			var budget := ArmySystem.day_walk_budget(data, candidate, code)
+			var saved: Dictionary = entry.duplicate(true)
+			var here := Vector2i(int(saved.x_m), int(saved.y_m))
+			saved.finish_today = budget >= ceili(MarchRoute.length_from(here, ArmySystem._path_of(saved)))
+			saved.day_walked_m = 0
+			tx.march_entries[code] = saved
+			tx.march_budgets[code] = budget
+			tx.marching_codes.append(code)
+	tx.body_march = {"version": "1", "abs_day": str(candidate.absolute_day()), "next_substep": "0", "substep_count": str(count), "last": {}}
+	candidate.day_resolution = tx
+	var error := ArmySystem._body_source_error(data, candidate)
+	if not error.is_empty(): return ArmySystem._body_result("error", error)
+	return ArmySystem._body_result("complete", "Began detached candidate march day", candidate)
+
+func step_body_march_candidate(source: GameState) -> Dictionary:
+	var planned := ArmySystem.plan_body_march_candidate(data, source)
+	if planned.status != "complete": return planned
+	if planned.plan.is_empty(): return ArmySystem._body_result("complete", planned.reason, UnitBodies._copy(source))
+	return ArmySystem.commit_body_march_candidate(data, source, planned.plan)

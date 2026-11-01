@@ -71,3 +71,5 @@ Departure requires `MilitaryCommanders.eligible_for_unit` for the current appoin
 - **Issuing (P6.1c)**: `ARMY_TASK` (the preview's fields + `request_id`, `task_id` for a new revision of the same units) and `ARMY_TASK_CANCEL` pay the cost row once plus a courier fee per unit beyond the king's range (`ArmyTasks.courier_fees`) and save `GameState.army_tasks[id]` (revision snapshots, `return_target`, per-unit status and `received_revision`, reasoned `history`). Each unit has its own courier order (local in range); `ArmyTasks.receive` takes only a newer revision (older = `superseded`), a recall is a revision, a lost courier leaves the unit as it was. A unit acts on `ArmyTasks.acting` only; retry by request id replays.
 
 - **Gait choice**: Every substep rechecks the live commander. After withdrawal/pursuit/battle joining, a crown march into an `ArmyTasks.known_town` runs for `key_point` / `town_clear` plus town code while a positive sight/spy unit record within `ghost_keep_days` remains in its reach. Arrival/re-aim/lost evidence stops it. No hidden foe truth; existing camp/food gates apply.
+
+March APIs: `scripts/engine/guide/body_marches.md`.

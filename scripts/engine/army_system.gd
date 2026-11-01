@@ -2263,3 +2263,381 @@ static func power_of_personnel(repo: DataRepository, people: Dictionary, fit: in
 	for arm: String in repo.world_table("military", "unit_types"):
 		heads += int(people.get(arm, 0))
 	return _power_of_counts(repo, people, heads, fit, training, morale, stance, terrain, works)
+
+## Explicit candidate march transaction. No production dispatcher selects these entries.
+static func _body_result(status: String, reason: String, candidate: GameState = null, plan: Dictionary = {}) -> Dictionary:
+	return {"status": status, "reason": reason, "candidate": candidate, "plan": plan}
+
+static func _body_boundary(state: GameState) -> Dictionary:
+	var control: Dictionary = state.day_resolution.body_march
+	return {"version": 1, "abs_day": int(control.abs_day), "substep": int(control.next_substep)}
+
+static func _body_source_error(repo: DataRepository, state: GameState) -> String:
+	if repo == null or state == null: return "Missing candidate march source"
+	var error := DayResolution.body_march_incompatibility_reason(state.day_resolution)
+	if not error.is_empty(): return error
+	var validated := UnitBodies.validate_march_candidate(repo, state, _body_boundary(state))
+	if validated.status != "complete": return validated.reason
+	var tx := state.day_resolution
+	if int(tx.day) != state.day or int(tx.absolute_day) != state.absolute_day(): return "Candidate march day mismatch"
+	var control: Dictionary = tx.body_march
+	var raw: Variant = state.military_migration.get("body_motion")
+	if state.military_migration.has("body_motion"):
+		if not BodyMotion._saved_ok(raw): return "Invalid inner motion receipt"
+		if int(raw.abs_day) > int(control.abs_day): return "Future inner motion receipt"
+		if int(control.next_substep) > 0 and int(raw.abs_day) != int(control.abs_day): return "Inner motion day disagrees with outer march cursor"
+		if int(raw.abs_day) == int(control.abs_day):
+			if int(control.next_substep) == 0 or int(raw.substep) != int(control.next_substep) - 1:
+				return "Inner motion receipt disagrees with outer march cursor"
+	elif int(control.next_substep) > 0: return "Missing inner motion receipt"
+	var seen := {}
+	for code: Variant in tx.marching_codes:
+		if not code is String or seen.has(code) or not tx.march_entries.has(code): return "Invalid frozen march membership"
+		seen[code] = true
+	if seen.size() != tx.march_entries.size() or seen.size() != tx.march_budgets.size(): return "Inconsistent frozen march inputs"
+	for code: Variant in tx.march_entries:
+		if not code is String or _entry_of(state, code).is_empty() or not tx.march_entries[code] is Dictionary \
+			or not BodyMotion._natural(tx.march_budgets.get(code)) or int(tx.march_budgets[code]) > BodyMotion.LOCAL_LIMIT:
+			return "Invalid frozen march entry/budget"
+		if not _body_entry_ok(tx.march_entries[code]): return "Invalid raw frozen route: " + code
+	for code: String in state.regiments.keys() + state.foes.keys():
+		if not _body_entry_ok(_entry_of(state, code)): return "Invalid raw current route: " + code
+	return _body_terrain_error(repo, state, [])
+
+static func _body_entry_ok(entry: Dictionary) -> bool:
+	if not entry.get("order") is String or entry.order not in [ORDER_MARCH, ORDER_GARRISON, ORDER_STANDBY]: return false
+	for field: String in ["morale", "training"]:
+		if not BodyMotion._natural(entry.get(field)): return false
+	if entry.has("carry_days") and not BodyMotion._integer(entry.carry_days): return false
+	for field: String in ["captured", "battle_retreat"]:
+		if entry.has(field) and not entry[field] is bool: return false
+	if entry.has("disengaging") and (not BodyMotion._natural(entry.disengaging) or int(entry.disengaging) > 1): return false
+	for field: String in ["gait", "camp_state", "departure"]:
+		if entry.has(field) and not entry[field] is Dictionary: return false
+	var gait: Dictionary = entry.get("gait", {})
+	for field: String in ["mode", "until", "reason", "town"]:
+		if gait.has(field) and not gait[field] is String: return false
+	if gait.has("battle_id") and not BodyMotion._natural(gait.battle_id): return false
+	var camp: Dictionary = entry.get("camp_state", {})
+	if camp.has("phase") and camp.phase not in [CampSystem.NONE, CampSystem.PACKING, CampSystem.BUILDING, CampSystem.CAMPED]: return false
+	for field: String in ["move_not_before_day", "pack_start_day"]:
+		if camp.has(field) and not BodyMotion._integer(camp[field]): return false
+	if entry.has("event_march_after") and not BodyMotion._integer(entry.event_march_after): return false
+	if entry.has("departure"):
+		var departure: Dictionary = entry.departure
+		for field: String in ["dest_x_m", "dest_y_m"]:
+			if not BodyMotion._integer(departure.get(field)) or int(departure[field]) < -2147483648 or int(departure[field]) > 2147483647: return false
+		if departure.has("waypoints_m"):
+			if not departure.waypoints_m is Array: return false
+			for point: Variant in departure.waypoints_m:
+				if not point is Array or point.size() != 2: return false
+				for coordinate: Variant in point:
+					if not BodyMotion._integer(coordinate) or int(coordinate) < -2147483648 or int(coordinate) > 2147483647: return false
+	for field: String in ["x_m", "y_m", "dest_x_m", "dest_y_m"]:
+		if not BodyMotion._integer(entry.get(field)) or int(entry[field]) < -2147483648 or int(entry[field]) > 2147483647: return false
+	for field: String in ["order_id", "day_walked_m", "supplies", "run_supply_rem"]:
+		if entry.has(field) and not BodyMotion._natural(entry[field]): return false
+	for field: String in ["route_m", "waypoints_m"]:
+		if not entry.has(field): continue
+		if not entry[field] is Array: return false
+		for point: Variant in entry[field]:
+			if not point is Array or point.size() != 2: return false
+			for coordinate: Variant in point:
+				if not BodyMotion._integer(coordinate) or int(coordinate) < -2147483648 or int(coordinate) > 2147483647: return false
+	return true
+
+static func _body_basis(repo: DataRepository, state: GameState, grid: MarchPath) -> String:
+	return BodyMotion._hash([state.to_dict(), _body_boundary(state), repo.balance, repo.unit_footprints,
+		repo.army_speed, repo.army_ground_speed, repo.noble_quality, repo.commanders, repo.battle_behaviors, repo.law_effects, repo.army_height_supply, repo.world_table("military", "unit_types"), repo.world_table("political", "diplomacy"),
+		grid.cols, grid.rows, grid.cell_m, Array(grid.closed), Array(grid.water), grid.water_open])
+
+static func plan_body_march_candidate(repo: DataRepository, source: GameState) -> Dictionary:
+	var error := _body_source_error(repo, source)
+	if not error.is_empty(): return _body_result("error", error)
+	var boundary := _body_boundary(source)
+	var tx := source.day_resolution
+	if int(boundary.substep) == int(tx.substep_count): return _body_result("complete", "Candidate march day complete")
+	var staged := _body_stage(repo, source)
+	if staged.has("error"): return _body_result("error", staged.error)
+	return _body_result("complete", "Planned one simultaneous body march slice", null, staged.plan)
+
+static func commit_body_march_candidate(repo: DataRepository, source: GameState, proposed: Dictionary) -> Dictionary:
+	var error := _body_source_error(repo, source)
+	if not error.is_empty(): return _body_result("error", error)
+	if not BodyMotion._keys(proposed, ["version", "abs_day", "substep", "basis", "motion", "units", "arrivals"]):
+		return _body_result("error", "Invalid march plan schema")
+	for field: String in ["version", "abs_day", "substep"]:
+		if not BodyMotion._natural(proposed[field]): return _body_result("error", "Invalid raw march plan cursor")
+	if int(proposed.version) != 1 or not proposed.basis is String or not proposed.motion is Dictionary \
+		or not proposed.units is Array or not proposed.arrivals is Array: return _body_result("error", "Invalid march plan")
+	var control: Dictionary = source.day_resolution.body_march
+	var receipt := BodyMotion._hash(proposed)
+	if int(proposed.abs_day) != int(control.abs_day): return _body_result("error", "Wrong march plan day")
+	if not control.last.is_empty() and int(proposed.substep) == int(control.last.substep):
+		if receipt != control.last.receipt or BodyMotion._hash(proposed.motion) != source.military_migration.body_motion.receipt:
+			return _body_result("error", "Cursor already committed with another march plan")
+		return _body_result("complete", "Already committed", UnitBodies._copy(source), proposed.duplicate(true))
+	if int(proposed.substep) != int(control.next_substep) or int(control.next_substep) >= int(control.substep_count):
+		return _body_result("error", "Stale or skipped march cursor")
+	var staged := _body_stage(repo, source)
+	if staged.has("error"): return _body_result("error", staged.error)
+	if BodyMotion._hash(staged.plan) != receipt: return _body_result("error", "Stale or modified march plan")
+	var candidate: GameState = staged.candidate
+	var committed := BodyMotion.commit(repo, candidate, staged.plan.motion, _body_boundary(source))
+	if committed.status != "complete": return _body_result("error", committed.reason)
+	# BodyMotion owns only rows. Publish metadata without replacing those new rows.
+	for row: Dictionary in staged.plan.units:
+		var entry := _entry_of(candidate, row.unit)
+		var bodies: Variant = entry.get("body_groups")
+		entry.clear()
+		entry.merge(row.entry_after.duplicate(true), true)
+		if bodies != null: entry.body_groups = bodies
+		candidate.day_resolution.march_entries[row.unit] = row.saved_entry_after.duplicate(true)
+	candidate.unit_tasks = staged.tasks
+	var next := int(control.next_substep) + 1
+	candidate.day_resolution.substep_index = next
+	candidate.day_resolution.body_march.next_substep = str(next)
+	candidate.day_resolution.body_march.last = {"substep": str(int(proposed.substep)), "receipt": receipt}
+	candidate.day_resolution.journal.arrivals.append_array(staged.plan.arrivals)
+	error = _body_source_error(repo, candidate)
+	if not error.is_empty(): return _body_result("error", "Final march validation: " + error)
+	if candidate.military_cohorts != source.military_cohorts or candidate.rng.to_dict() != source.rng.to_dict():
+		return _body_result("error", "March changed personnel or RNG")
+	return _body_result("complete", "Committed atomic body march slice", candidate, staged.plan)
+
+static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
+	var candidate := UnitBodies._copy(source)
+	var tx := candidate.day_resolution
+	var boundary := _body_boundary(source)
+	var count := int(tx.substep_count)
+	var slice := int(boundary.substep)
+	var codes: Array = tx.march_entries.keys()
+	codes.sort()
+	var intents: Array = []
+	var units: Array = []
+	var requests := {}
+	var pursuit_limits := {}
+	for code: String in codes:
+		var current := _entry_of(candidate, code)
+		var saved: Dictionary = tx.march_entries[code].duplicate(true)
+		var here: Array = [int(current.x_m), int(current.y_m)]
+		var path: Array = [here]
+		for point: Vector2i in _path_of(saved): path.append([point.x, point.y])
+		# Full-route projection shares the real planner's local arithmetic bound.
+		for point: Array in path:
+			if absf(BodyMotion._difference(point[0], here[0])) > BodyMotion.LOCAL_LIMIT or absf(BodyMotion._difference(point[1], here[1])) > BodyMotion.LOCAL_LIMIT:
+				return {"error": "Received route exceeds safe local sweep range"}
+		# A slice limit clips intents, not the received route remaining after movement.
+		requests[code] = path.duplicate(true)
+		var budget := int(tx.march_budgets[code])
+		var step := 0
+		var allowed: bool = saved.get("order") == ORDER_MARCH and not bool(current.get("captured", false)) \
+			and BattleSystem.may_withdraw(candidate, code) and CampSystem.can_march_entry(current, candidate.absolute_day()) \
+			and not is_naval(repo, candidate, code)
+		var task := BattleTaskSystem.current(candidate, code)
+		if task.get("status", "") == "bounded": allowed = false
+		if allowed:
+			UnitGait.refresh(repo, candidate, code, current)
+			@warning_ignore("integer_division")
+			step = budget / count + (1 if slice < budget % count else 0)
+			if slice == count - 1: step = maxi(step, budget - int(saved.get("day_walked_m", 0)))
+			if step > 0 and UnitGait.pays_run(repo, candidate, code, current, count): step = UnitGait.run_step_m(repo, step)
+			var walked := BattleTaskSystem.pursuit_walk(repo, candidate, code, current, Vector2i(here[0], here[1]), _path_of(saved), step)
+			if bool(walked.limited):
+				path = [here]
+				for point: Vector2i in walked.passed: path.append([point.x, point.y])
+				path.append([walked.at.x, walked.at.y])
+				step = mini(step, BodyMotion._length(path))
+				if not String(walked.pursuit_reason).is_empty():
+					pursuit_limits[code] = {"at": path.back(), "reason": walked.pursuit_reason}
+		if step < 0 or step > BodyMotion.LOCAL_LIMIT: return {"error": "Unsafe slice budget"}
+		for body: Dictionary in UnitBodies.rows(repo, candidate, code):
+			var translated: Array = []
+			for point: Array in path:
+				var x: int = int(point[0]) + int(body.x_m) - int(here[0])
+				var y: int = int(point[1]) + int(body.y_m) - int(here[1])
+				translated.append([x, y])
+			intents.append({"unit": code, "slot": int(body.slot), "path_m": translated, "budget_m": step, "hostile": false})
+		units.append({"unit": code, "anchor_path_m": [here], "used_m": 0, "step_budget_m": step,
+			"entry_after": {}, "saved_entry_after": saved})
+	var motion := BodyMotion.plan(repo, candidate, intents, int(boundary.abs_day), slice, boundary)
+	if motion.cursor.is_empty(): return {"error": str(motion.reasons.get("error", "Motion refused candidate"))}
+	var terrain := _body_terrain_error(repo, candidate, motion.moves)
+	if not terrain.is_empty(): return {"error": terrain}
+	var arrivals: Array[String] = []
+	# Keep the cost-staged basis intact until BodyMotion.commit has validated it.
+	var after := UnitBodies._copy(candidate)
+	for row: Dictionary in units:
+		var code: String = row.unit
+		var current := _entry_of(after, code)
+		var saved: Dictionary = row.saved_entry_after
+		var path: Array = requests[code]
+		var common: Array = []
+		var minimum := BodyMotion.LOCAL_LIMIT + 1
+		for move: Dictionary in motion.moves:
+			if move.unit != code: continue
+			row.used_m = maxi(int(row.used_m), int(move.used_m))
+			var prefix := _body_route_prefix(path, move.path_m)
+			var length := BodyMotion._length(prefix)
+			if length < minimum:
+				minimum = length
+				common = prefix
+		if common.is_empty(): common = [path[0]]
+		row.anchor_path_m = common
+		var at: Array = common.back()
+		var remaining: Array = _body_remaining(path, common)
+		var changed: bool = int(current.get("order_id", 0)) != int(saved.get("order_id", 0)) \
+			or current.get("order") != saved.get("order") or current.dest_x_m != saved.dest_x_m or current.dest_y_m != saved.dest_y_m
+		saved.x_m = int(at[0])
+		saved.y_m = int(at[1])
+		saved.route_m = remaining
+		saved.day_walked_m = int(saved.get("day_walked_m", 0)) + int(row.used_m)
+		saved.march_step = [int(boundary.abs_day), slice]
+		if int(row.used_m) > 0:
+			current.moved_day = int(boundary.abs_day)
+			saved.moved_day = int(boundary.abs_day)
+			_release_camp_on_movement(current)
+			_release_camp_on_movement(saved)
+		if remaining.is_empty() and int(row.step_budget_m) > 0 and not UnitBodies.rows(repo, after, code).is_empty() and saved.order == ORDER_MARCH:
+			saved.order = ORDER_GARRISON
+			_clear_route(saved)
+			arrivals.append(code)
+		if not changed: _publish_march_state(current, saved)
+		else:
+			current.x_m = int(at[0])
+			current.y_m = int(at[1])
+			if current.order == ORDER_GARRISON:
+				current.dest_x_m = int(at[0])
+				current.dest_y_m = int(at[1])
+			# A later received order keeps its destination and begins from the actual anchor.
+			if current.order == ORDER_MARCH:
+				current.route_m = MarchRoute.to_pairs(route_m_of(repo, Vector2i(current.x_m, current.y_m),
+					MarchRoute.from_pairs(current.get("waypoints_m", [])), Vector2i(current.dest_x_m, current.dest_y_m)))
+		if not bool(current.get("battle_retreat", false)) and int(current.get("disengaging", 0)) != 1:
+			var limit: Dictionary = pursuit_limits.get(code, {})
+			var reason: String = limit.reason if not limit.is_empty() and common.back() == limit.at else ""
+			if BattleTaskSystem.credit_pursuit(repo, after, code, int(row.used_m), reason): _retire_saved_march(saved, current)
+		row.entry_after = current.duplicate(true)
+		row.saved_entry_after = saved.duplicate(true)
+		var anchor_error := _body_path_terrain(MarchPath.of_pack(repo), common, 0)
+		if not anchor_error.is_empty(): return {"error": anchor_error}
+	var plan := {"version": 1, "abs_day": int(boundary.abs_day), "substep": slice,
+		"basis": _body_basis(repo, source, MarchPath.of_pack(repo)), "motion": motion, "units": units, "arrivals": arrivals}
+	return {"candidate": candidate, "plan": plan, "tasks": after.unit_tasks}
+
+## Match actual rejoined points to ordered requested legs; a side leg alone earns no anchor progress.
+static func _body_route_prefix(path: Array, travelled: Array) -> Array:
+	var ox: int = int(travelled[0][0]) - int(path[0][0])
+	var oy: int = int(travelled[0][1]) - int(path[0][1])
+	var best: Array = [path[0]]
+	var best_cost := 0
+	var travelled_cost := 0
+	for index: int in range(1, travelled.size()):
+		var actual: Array = travelled[index]
+		travelled_cost += BodyMotion._distance_ceil(travelled[index - 1], actual)
+		var point: Array = [int(actual[0]) - ox, int(actual[1]) - oy]
+		for i: int in range(1, path.size()):
+			var ax: int = int(path[i][0]) - int(path[i - 1][0])
+			var ay: int = int(path[i][1]) - int(path[i - 1][1])
+			if ax == 0 and ay == 0: continue
+			var px: int = int(point[0]) - int(path[i - 1][0])
+			var py: int = int(point[1]) - int(path[i - 1][1])
+			if px * ay != py * ax or px * ax + py * ay < 0 or px * ax + py * ay > ax * ax + ay * ay: continue
+			var prefix: Array = path.slice(0, i)
+			if prefix.back() != point: prefix.append(point)
+			var cost := BodyMotion._length(prefix)
+			if cost >= best_cost and cost <= travelled_cost:
+				best = prefix
+				best_cost = cost
+				break
+	return best
+
+static func _body_remaining(path: Array, prefix: Array) -> Array:
+	var index := prefix.size() - 1
+	while index < path.size() and prefix.back() == path[index]: index += 1
+	return path.slice(index).duplicate(true)
+
+static func _body_terrain_error(repo: DataRepository, state: GameState, moves: Array) -> String:
+	var grid := MarchPath.of_pack(repo)
+	if grid == null or grid.cols <= 0 or grid.rows <= 0 or grid.cell_m <= 0 \
+		or grid.closed.size() != grid.cols * grid.rows or grid.water.size() != grid.closed.size() or grid.water_open:
+		return "Candidate march requires a valid land terrain grid"
+	var paths := {}
+	for move: Dictionary in moves: paths[BodyMotion._id(move)] = move.path_m
+	for code: String in state.regiments.keys() + state.foes.keys():
+		if is_naval(repo, state, code): continue
+		var entry := _entry_of(state, code)
+		var error := _body_path_terrain(grid, [[int(entry.x_m), int(entry.y_m)]], 0)
+		if not error.is_empty(): return error
+		var piece := MapObjects.army_piece(repo, state.army_roster[code])
+		var radius := int(repo.unit_footprints[piece].radius_m)
+		for row: Dictionary in UnitBodies.rows(repo, state, code):
+			var path: Array = paths.get(BodyMotion._id({"unit": code, "slot": row.slot}), [[int(row.x_m), int(row.y_m)]])
+			error = _body_path_terrain(grid, path, radius)
+			if not error.is_empty(): return error
+	return ""
+
+static func _body_path_terrain(grid: MarchPath, path: Array, radius: int) -> String:
+	var width: int = grid.cols * grid.cell_m
+	var height: int = grid.rows * grid.cell_m
+	for point: Variant in path:
+		if not point is Array or point.size() != 2: return "Invalid terrain path"
+		for coordinate: Variant in point:
+			if not BodyMotion._integer(coordinate) or int(coordinate) < -2147483648 or int(coordinate) > 2147483647: return "Terrain bounds exceed int32 coordinate range"
+		if int(point[0]) < radius or int(point[1]) < radius or int(point[0]) > width - radius or int(point[1]) > height - radius:
+			return "Swept body extends outside terrain bounds"
+	for i: int in path.size():
+		var a: Array = path[maxi(0, i - 1)]
+		var b: Array = path[i]
+		var left := maxi(0, floori(float(mini(int(a[0]), int(b[0])) - radius) / grid.cell_m) - 1)
+		var right := mini(grid.cols - 1, floori(float(maxi(int(a[0]), int(b[0])) + radius) / grid.cell_m))
+		var top := maxi(0, floori(float(mini(int(a[1]), int(b[1])) - radius) / grid.cell_m) - 1)
+		var bottom := mini(grid.rows - 1, floori(float(maxi(int(a[1]), int(b[1])) + radius) / grid.cell_m))
+		for y: int in range(top, bottom + 1):
+			for x: int in range(left, right + 1):
+				var cell := y * grid.cols + x
+				if grid.closed[cell] == 0 and grid.water[cell] == 0: continue
+				if _body_rect_distance(a, b, x * grid.cell_m, y * grid.cell_m, grid.cell_m) <= float(radius) * radius:
+					return "Swept segment touches forbidden terrain"
+	return ""
+
+## Double-precision local segment/rectangle distance, including corner grazing.
+static func _body_rect_distance(a: Array, b: Array, x: int, y: int, size: int) -> float:
+	var lo := 0.0
+	var hi := 1.0
+	var intersects := true
+	for axis: int in 2:
+		var start := float(a[axis])
+		var delta := float(int(b[axis]) - int(a[axis]))
+		var low := float(x if axis == 0 else y)
+		if delta == 0:
+			if start < low or start > low + size: intersects = false
+		else:
+			var t0 := (low - start) / delta
+			var t1 := (low + size - start) / delta
+			lo = maxf(lo, minf(t0, t1))
+			hi = minf(hi, maxf(t0, t1))
+	if intersects and lo <= hi: return 0.0
+	var best := INF
+	for point: Array in [a, b]:
+		var dx := maxf(maxf(x - float(point[0]), 0.0), float(point[0]) - x - size)
+		var dy := maxf(maxf(y - float(point[1]), 0.0), float(point[1]) - y - size)
+		best = minf(best, dx * dx + dy * dy)
+	var dx := float(int(b[0]) - int(a[0]))
+	var dy := float(int(b[1]) - int(a[1]))
+	var squared := dx * dx + dy * dy
+	for corner: Array in [[x, y], [x + size, y], [x, y + size], [x + size, y + size]]:
+		var px := float(int(corner[0]) - int(a[0]))
+		var py := float(int(corner[1]) - int(a[1]))
+		var t := clampf((px * dx + py * dy) / squared, 0.0, 1.0) if squared > 0 else 0.0
+		best = minf(best, (px - t * dx) * (px - t * dx) + (py - t * dy) * (py - t * dy))
+	return best
+
+static func _body_enemies(repo: DataRepository, state: GameState, a: String, b: String) -> bool:
+	if a == b: return false
+	for battle: Dictionary in state.battles:
+		if not UnitBodies._live(battle): continue
+		if (a in battle.att and b in battle.def) or (b in battle.att and a in battle.def): return true
+	return _hostile({"player": repo.resolve_realm("player_realm"), "raider": repo.resolve_realm("raider_realm"),
+		"diplomacy": repo.world_table("political", "diplomacy"), "hostile": {}},
+		str(state.army_roster[a].get("kingdom_code", "")), str(state.army_roster[b].get("kingdom_code", "")))

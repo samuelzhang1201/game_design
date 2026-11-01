@@ -403,3 +403,37 @@ func test_distance_rounding_cannot_spend_one_metre_less_than_exact_length() -> v
 		var x: int = int(b[0]) - int(a[0])
 		var y: int = int(b[1]) - int(a[1])
 		assert_true(x * x + y * y <= limit * limit, "integer squared distance independently proves the budget")
+
+func test_real_frozen_boundary_plan_commit_and_json_retry() -> void:
+	var f := _fixture([[0, 0]])
+	var tx := DayResolution.begin(f.state.day, false, f.state.absolute_day())
+	tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+	tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
+	tx.march_entries = {}
+	tx.march_budgets = {}
+	tx.marching_codes = []
+	tx.body_march = {"version": "1", "abs_day": str(f.state.absolute_day()), "next_substep": "0", "substep_count": "10", "last": {}}
+	f.state.day_resolution = tx
+	var boundary := {"version": 1, "abs_day": f.state.absolute_day(), "substep": 0}
+	var intents := [_intent(f, 0, [20, 0])]
+	var before: Dictionary = f.state.to_dict()
+	assert_true(BodyMotion.plan(f.repo, f.state, intents, boundary.abs_day, 0).cursor.is_empty())
+	var plan := BodyMotion.plan(f.repo, f.state, intents, boundary.abs_day, 0, boundary)
+	assert_false(plan.cursor.is_empty(), str(plan.reasons))
+	assert_eq(f.state.to_dict(), before)
+	var bad := boundary.duplicate(true)
+	bad.substep = 1
+	assert_eq(BodyMotion.commit(f.repo, f.state, plan, bad).status, "error")
+	assert_eq(f.state.to_dict(), before)
+	assert_eq(BodyMotion.commit(f.repo, f.state, plan, boundary).status, "complete")
+	assert_eq(f.state.day_resolution, tx, "inner commit retains exact frozen outer payload")
+	assert_eq(f.state.regiments[f.code].body_groups[0].x_m, 20)
+	var after: Dictionary = f.state.to_dict()
+	assert_eq(BodyMotion.commit(f.repo, f.state, plan, boundary).status, "complete")
+	var restored := _json(f.state)
+	assert_eq(BodyMotion.commit(f.repo, restored, JSON.parse_string(JSON.stringify(plan)), boundary).status, "complete")
+	assert_eq(restored.to_dict(), after)
+	var tamper := plan.duplicate(true)
+	tamper.moves[0].path_m.back()[0] += 1
+	assert_eq(BodyMotion.commit(f.repo, restored, tamper, boundary).status, "error")
+	assert_eq(restored.to_dict(), after)

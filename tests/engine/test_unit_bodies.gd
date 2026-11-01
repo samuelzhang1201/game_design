@@ -474,7 +474,13 @@ func test_passive_serialization_and_production_route_unchanged() -> void:
 	assert_eq(back.military_migration.body_version, 1.5)
 	assert_eq(api.migrate_candidate(f.repo, back).status, "error")
 	for path: String in ["game_state", "army_system", "battle_system", "battle_groups", "military_reorganization"]:
-		assert_false(FileAccess.get_file_as_string("res://scripts/engine/" + path + ".gd").contains("UnitBodies."), path)
+		var source := FileAccess.get_file_as_string("res://scripts/engine/" + path + ".gd")
+		if path == "army_system":
+			var boundary := source.find("## Explicit candidate march transaction")
+			assert_true(boundary > 0)
+			source = source.substr(0, boundary)
+			assert_false(source.contains("body_march_candidate("), "ordinary callers cannot reach candidate APIs")
+		assert_false(source.contains("UnitBodies."), path)
 	assert_false(FileAccess.get_file_as_string("res://scripts/ui/game.gd").contains("UnitBodies."))
 
 func _json(state: GameState) -> GameState:
@@ -841,3 +847,36 @@ func test_exit_growth_keeps_saved_owner_facing() -> void:
 			assert_eq(grown.placement_requests[0].facing_deg, 180 if explicit else 90)
 			assert_eq(api.rows(null, grown.candidate, f.code), saved_rows)
 			assert_eq(_json(grown.candidate).regiments[f.code].group_facing, 90)
+
+func test_explicit_march_boundary_retains_frozen_payload_and_physical_validation() -> void:
+	var f := _fixture()
+	var tx := DayResolution.begin(f.state.day, false, f.state.absolute_day())
+	tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+	tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
+	tx.march_entries = {f.code: f.state.regiments[f.code].duplicate(true)}
+	tx.march_budgets = {f.code: 70}
+	tx.marching_codes = [f.code]
+	tx.body_march = {"version": "1", "abs_day": str(f.state.absolute_day()), "next_substep": "0", "substep_count": "10", "last": {}}
+	f.state.day_resolution = tx
+	var boundary := {"version": 1, "abs_day": f.state.absolute_day(), "substep": 0}
+	var before: Dictionary = f.state.to_dict()
+	assert_eq(UnitBodies.migrate_candidate(f.repo, f.state).status, "deferred")
+	var result := UnitBodies.validate_march_candidate(f.repo, f.state, boundary)
+	assert_eq(result.status, "complete", result.reason)
+	assert_eq(result.candidate.to_dict(), before)
+	assert_eq(f.state.to_dict(), before)
+	result.candidate.day_resolution.march_entries[f.code].body_groups[0].extension.receipt.append("detached")
+	assert_eq(f.state.to_dict(), before)
+	for value: Variant in [true, 0.2, null, -1, 1]:
+		var bad := boundary.duplicate(true)
+		bad.substep = value
+		assert_eq(UnitBodies.validate_march_candidate(f.repo, f.state, bad).status, "error")
+	f.state.regiments[f.code].body_groups[1].x_m = 0
+	assert_eq(UnitBodies.validate_march_candidate(f.repo, f.state, boundary).status, "error", "same measured circle validator executes inside frozen MARCH")
+	f.state.regiments[f.code].body_groups[1].x_m = 10000
+	var battle := _battle(f)
+	battle.pending_round = {"round": 1}
+	assert_eq(UnitBodies.validate_march_candidate(f.repo, f.state, boundary).status, "deferred")
+	assert_eq(f.state.day_resolution, tx, "never delete the day transaction")
+	battle.groups[f.code][0].facing_deg = true
+	assert_eq(UnitBodies.validate_march_candidate(f.repo, f.state, boundary).status, "error", "pending round still validates raw rows before deferral")
