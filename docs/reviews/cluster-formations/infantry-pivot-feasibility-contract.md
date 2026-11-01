@@ -7,9 +7,10 @@ dispatcher before PR handoff. Base: `3ab0f10d53dee5a473c54ea266f8142ef7cc943a`.
 Accepted prerequisites: #202 CF04c locomotion contract, #207 infantry transition,
 #216 archer pivot import. There is **no dependency on unmerged #221**.
 
-**Verdict: the frozen conjunction below is infeasible. Motion acceptance FAIL;
-authority decision PENDING.** A reproducible counterexample/document merge does
-not accept any motion dependency, certify a parameter domain or complete P4.
+**Verdict: the conditional zero-separation A–D conjunction below is infeasible;
+the original finite-certified-error contact contract is not proved infeasible.
+Motion acceptance FAIL; authority decision PENDING.** A counterexample/document
+merge does not accept any motion dependency, certify a parameter domain or complete P4.
 This step authorizes no change to A–D or existing acceptance. A coupled author
 mapper is not dispatchable until feasibility and authority are resolved.
 
@@ -109,9 +110,19 @@ MATCH only; its JSON explicitly says `motion_acceptance: FAIL` and
 The 1e-10 replay comparison tolerance checks floating arithmetic identity; it
 does not alter either edge gate or any original contact policy tolerance.
 
-## Exact endpoint/physical ground contradiction
+## Conditional zero-separation endpoint/physical ground contradiction
 
-Here is the precise conjunction whose incompatibility is demonstrated:
+The accepted [CF04c contract](cf04c-locomotion-contract.md) defines
+`body_locomotion_<arm>_contact_um` as maximum certified ground-contact error in
+integer model micrometres; no arbitrary value is approved. Its per-arm evidence
+requires stance sole/hoof world coordinates, normals, separation, slip,
+penetration/hover, MARCH transitions and continuous contact/envelope bounds.
+It does **not** establish D's strictly zero endpoint separation as an approved
+universal P4 acceptance clause. D comes from the frozen prerequisite proposal.
+The registered clip acceptance likewise supplies no such zero-error clause.
+
+Here is the conditional conjunction whose incompatibility is demonstrated;
+it must not replace that original finite-certified-error contract:
 
 A. Preserve exact imported native MARCH entry and exit matrices, mesh, packed
 weights and binds at the admitted phase pair. An endpoint label or anchor may
@@ -126,7 +137,8 @@ placement its normal is `n=R*(0,1,0)` and its entry height is transformed with
 that same T. A yaw leaves this normal unchanged. Ground/clearance may not be
 redefined independently at exit or follow an animated contact marker.
 
-D. Require zero deformed-boot separation at both endpoints of that plane.
+D. **Conditional proposal assumption:** require zero deformed-boot separation
+at both endpoints of that plane, rather than the original certified error bound.
 
 Let h0 and h1 be the endpoint minima along entry +Y. Translation and the plane
 offset cancel when subtracting their signed separations, leaving
@@ -145,8 +157,11 @@ make both zero. The other two non-seam pairs independently reproduce:
 
 The two loop-seam cases retain opposite approximately .356059 micrometre
 residuals. They are reported without turning a nonzero value into exact zero.
-The contradiction already follows from the first pair; finite samples are
-sufficient to refute a universal conjunction, not to certify a full domain.
+The first pair refutes this zero-error conjunction. Nonzero minima differences
+alone do not refute an unspecified finite contact bound, nor establish which
+stance/contact target applies. These samples prove neither feasibility nor
+infeasibility of the original continuous finite-error contract and do not compel
+MARCH/old-five source changes. No `contact_um` is selected, increased or waived.
 
 This argument is covariant with the **same** rotated plane/body. It does not
 claim that arbitrary new body tilt relative to an independently fixed normal
@@ -174,16 +189,20 @@ cannot cure incoming matrices. No runtime provider/helper or asset implementatio
 from that unmerged PR is consumed here. A future mapper needs its own separately
 registered literal files after accepted feasibility; this PR creates none.
 
-**Pending decision 1 — endpoint versus physical contact.** The authority must
-resolve which exact clause may change, or retain A–D and acknowledge no feasible
-implementation under that freeze. Keeping zero physical contact (D) and a fixed
-ground (C) requires changing A's immutable endpoint source or B's phase-independent
-placement. A source correction would also conflict with protected old-five
-curves; a placement correction conflicts with protected actor-root/height rules.
-Both require explicit authorization and a new bounded registration before work.
-Redefining ground to move with the feet changes C and fails the physical-ground
-goal; accepting the residual changes D and is not the original goal. Neither is
-selected. This document supplies no implicit permission for any option.
+**Pending decision 1 — authoritative contact/stance interpretation and bound.**
+Clarify the original contract's physical stance target and certify its error
+bound under the original continuous-domain obligations. This document chooses
+no tolerance, source correction, placement change or solver. If authority instead
+requires D's strictly zero error in addition to A–C, that conditional conjunction
+has no solution at these frozen endpoints. Only under that additional requirement
+would preserving C/D require changing A's endpoint source or B's placement.
+A source correction would conflict with protected old-five curves; a placement
+correction conflicts with protected actor-root/height rules. They remain unselected
+conditional options requiring explicit authority and separate registration, not
+changes demanded by this evidence or authorized here. Redefining physical ground
+to follow the feet is not a solution. Applying the original certified finite
+error contract is not a waiver of an already approved zero-error clause: none
+has been established. It still requires actual contact certification.
 
 **Pending decision 2 — absolute skin diagnostic at exact native endpoints.**
 Preserve the >4× AND >.03 m gate and its failed native cases. A coupled mapper
@@ -194,10 +213,11 @@ endpoint/old-five promise and all required revalidation. Excluding edges/phases,
 using native failure as a waiver, increasing tolerance or renaming reference
 poses as native is not an authorized solution.
 
-The smallest action now is an authoritative decision record identifying changed
-clauses, scope and preserved goals, or confirmation of the blocked conjunction.
-There is no proposed new solver under unchanged A–D. After an authorized feasible
-resolution, a separately registered coupled author mapper would need to prove
+The smallest action now is an authoritative contact/stance interpretation and
+certification record under the original contract. If an amendment is actually
+needed, identify its exact clauses, scope and preserved goals before work.
+There is no proposed new solver under unchanged conditional A–D. After an
+authorized feasible resolution, a separately registered coupled author mapper would need to prove
 whole-skin behavior over the full admitted turn/phase/duration domain, not only
 this witness. Physical ground, original numerical gates and all twelve final
 goals still require their original acceptance. If an interpretation cannot
