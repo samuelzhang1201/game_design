@@ -480,6 +480,8 @@ static func commit_body_placement_candidate(repo: DataRepository, source: GameSt
 	if not _placement_plan_ok(proposed) or not _placement_request_ok(proposed.request): return _placement_result("error", "Invalid closed placement plan")
 	if BodyMotion._hash(boundary) != BodyMotion._hash(proposed.boundary): return _placement_result("error", "Placement boundary mismatch")
 	var request: Dictionary = proposed.request
+	if UnitBodies._whole(boundary.get("version")) and int(boundary.version) == 2:
+		return _commit_placement_v2(repo, source, proposed, boundary)
 	var checked := UnitBodies.validate_placement_candidate(repo, source, boundary)
 	# Staged recruit counts are validated against their real previous partition below.
 	if checked.status == "error" and request.operation != "recruit": return _placement_result("error", checked.reason)
@@ -520,6 +522,7 @@ static func _placement_plan_ok(plan: Dictionary) -> bool:
 	return true
 
 static func _placement_stage(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
+	if UnitBodies._whole(boundary.get("version")) and int(boundary.version) == 2: return _placement_v2_stage(repo, source, request, boundary)
 	if repo == null or source == null: return _placement_result("error", "Missing placement source")
 	if not _placement_request_ok(request): return _placement_result("error", "Invalid raw placement request")
 	for code: Variant in source.army_roster:
@@ -827,3 +830,112 @@ static func _placement_terrain_error(repo: DataRepository, state: GameState, gri
 			var error := ArmySystem._body_path_terrain(grid, [[int(row.x_m), int(row.y_m)]], radius)
 			if not error.is_empty(): return error + ": " + code + " slot " + str(row.slot)
 	return ""
+
+## Root admission is strict; prefix replay never recursively admits a descendant.
+static func _placement_completion_candidate(repo: DataRepository, source: GameState, boundary: Dictionary) -> Dictionary:
+	if boundary.version != 2: return UnitBodies._failure("Completion proof requires v2 boundary")
+	var proof := UnitBodies._placement_proof(source.military_migration.body_placement.completion_json)
+	if proof.is_empty(): return UnitBodies._failure("Invalid canonical completion proof")
+	var rooted := UnitBodies._placement_origin(repo, source, proof.origin, boundary)
+	if rooted.status != "complete": return rooted
+	var origin: GameState = rooted.candidate
+	var checked := UnitBodies.validate_placement_candidate(repo, origin, boundary)
+	if checked.status != "complete": return UnitBodies._failure("Invalid original completion: " + checked.reason)
+	var current := origin
+	var prefix: Array = []
+	var ids := {}
+	if origin.military_migration.has("body_placement"): ids[origin.military_migration.body_placement.operation_id] = true
+	for plan: Dictionary in proof.plans:
+		if UnitBodies._placement_json(plan.boundary) != UnitBodies._placement_json(boundary) or ids.has(plan.request.operation_id):
+			return UnitBodies._failure("Mixed completion boundary or repeated operation ID")
+		var staged := _placement_v2_apply(repo, current, plan.request, boundary)
+		if staged.status != "complete" or UnitBodies._placement_json(staged.plan) != UnitBodies._placement_json(plan):
+			return UnitBodies._failure("Completion plan differs from legal metadata replay")
+		ids[plan.request.operation_id] = true
+		prefix.append(plan)
+		current = staged.candidate
+		_placement_v2_publish(current, plan, proof.origin, prefix)
+	if UnitBodies._placement_json(current.to_dict()) != UnitBodies._placement_json(source.to_dict()):
+		return UnitBodies._failure("Completion endpoint differs from whole replay")
+	return UnitBodies._result("complete", "Validated exact completion proof endpoint", UnitBodies._copy(source))
+
+static func _placement_v2_stage(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
+	if repo == null or source == null: return _placement_result("error", "Missing placement source")
+	if not _placement_request_ok(request): return _placement_result("error", "Invalid raw placement request")
+	var checked := UnitBodies.validate_placement_candidate(repo, source, boundary)
+	if checked.status != "complete": return _placement_result(checked.status, checked.reason)
+	var saved: Dictionary = source.military_migration.get("body_placement", {})
+	if saved.get("version") == "2":
+		var proof := UnitBodies._placement_proof(saved.completion_json)
+		if proof.origin.military_migration.get("body_placement", {}).get("operation_id") == request.operation_id:
+			return _placement_result("error", "Placement operation ID already consumed")
+		for plan: Dictionary in proof.plans:
+			if plan.request.operation_id == request.operation_id and plan.request.sequence != request.sequence:
+				return _placement_result("error", "Placement operation ID already consumed")
+	return _placement_v2_apply(repo, source, request, boundary)
+
+## Only called after root/proof admission, or with the preceding private replay prefix.
+static func _placement_v2_apply(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
+	var sequence_error := _placement_sequence_error(source, request)
+	if not sequence_error.is_empty(): return _placement_result("error", sequence_error)
+	if request.operation not in ["settle", "leave", "take_seat", "refill", "reconcile"]:
+		return _placement_result("deferred", "frozen_transaction: only metadata operations at completed MARCH")
+	if request.operation in ["settle", "leave", "take_seat"] and (UnitBodies._entry(source, request.unit).is_empty() or UnitBodies._naval(source, request.unit)):
+		return _placement_result("error", "Unknown or non-land placement unit")
+	var candidate := UnitBodies._copy(source)
+	var metadata := _placement_metadata(repo, candidate, request)
+	if metadata.status != "complete": return metadata
+	if not _placement_metadata_only(repo, source, candidate): return _placement_result("error", "Completion changed immutable state")
+	var checked := UnitBodies._migration(repo, candidate, "", 0, true)
+	if checked.status != "complete": return _placement_result("error", checked.reason)
+	var grid := MarchPath.of_pack(repo)
+	if not _placement_grid_ok(grid): return _placement_result("error", "Placement requires a valid land terrain grid")
+	var error := _placement_terrain_error(repo, candidate, grid)
+	if not error.is_empty(): return _placement_result("error", error)
+	var entries := {}
+	for code: String in candidate.regiments.keys() + candidate.foes.keys():
+		var entry := UnitBodies._entry(candidate, code)
+		if entry != UnitBodies._entry(source, code): entries[code] = entry.duplicate(true)
+	var plan := {"version": 1, "request": request.duplicate(true), "boundary": boundary.duplicate(true),
+		"basis": _placement_basis(repo, source, request, boundary), "placements": [],
+		"effects": {"entries": entries, "seats": candidate.town_seat.duplicate(true), "hosts": candidate.ai_hosts.duplicate(true)}}
+	return _placement_result("complete", "Validated completion metadata only", candidate, plan)
+
+static func _placement_metadata_only(_repo: DataRepository, source: GameState, candidate: GameState) -> bool:
+	var unchanged := UnitBodies._copy(candidate)
+	for code: String in source.regiments:
+		var old: Dictionary = source.regiments[code]
+		if old.has("camp_town"): unchanged.regiments[code].camp_town = old.camp_town
+		else: unchanged.regiments[code].erase("camp_town")
+	# LawSystem owns scope contents; the legal camp callbacks above derive them.
+	LawSystem.commit_scopes(unchanged, source)
+	unchanged.town_seat = source.town_seat.duplicate(true)
+	return UnitBodies._placement_json(unchanged.to_dict()) == UnitBodies._placement_json(source.to_dict())
+
+static func _placement_v2_publish(candidate: GameState, plan: Dictionary, origin: Dictionary, plans: Array) -> void:
+	# The plan hashes the prior prefix; this control is never inside its own hash.
+	candidate.military_migration.body_placement = {"version": "2", "sequence": plan.request.sequence,
+		"operation_id": plan.request.operation_id, "receipt": BodyMotion._hash(plan),
+		"completion_json": UnitBodies._placement_json({"version": 1, "origin": origin, "plans": plans})}
+
+static func _commit_placement_v2(repo: DataRepository, source: GameState, proposed: Dictionary, boundary: Dictionary) -> Dictionary:
+	var checked := UnitBodies.validate_placement_candidate(repo, source, boundary)
+	if checked.status != "complete": return _placement_result("error", checked.reason)
+	var error := _placement_sequence_error(source, proposed.request, true)
+	if not error.is_empty(): return _placement_result("error", error)
+	var saved: Dictionary = source.military_migration.get("body_placement", {})
+	var proof: Dictionary = UnitBodies._placement_proof(saved.completion_json) if saved.get("version") == "2" else {"origin": source.to_dict(), "plans": []}
+	if proposed.request.sequence == saved.get("sequence"):
+		if saved.get("version") != "2" or BodyMotion._hash(proposed) != saved.receipt \
+			or UnitBodies._placement_json(proposed) != UnitBodies._placement_json(proof.plans.back()):
+			return _placement_result("error", "Placement retry receipt/plan mismatch")
+		return _placement_result("complete", "Exact completion placement already committed", UnitBodies._copy(source), proposed.duplicate(true))
+	var staged := _placement_v2_stage(repo, source, proposed.request, boundary)
+	if staged.status != "complete": return staged
+	if UnitBodies._placement_json(staged.plan) != UnitBodies._placement_json(proposed): return _placement_result("error", "Stale or modified placement plan")
+	var candidate: GameState = staged.candidate
+	proof.plans.append(staged.plan)
+	_placement_v2_publish(candidate, staged.plan, proof.origin, proof.plans)
+	checked = UnitBodies.validate_placement_candidate(repo, candidate, boundary)
+	if checked.status != "complete": return _placement_result("error", checked.reason)
+	return _placement_result("complete", "Published detached completion proof", candidate, staged.plan)

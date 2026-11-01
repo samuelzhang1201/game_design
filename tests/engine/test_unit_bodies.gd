@@ -924,3 +924,23 @@ func test_explicit_v2_march_boundary_validates_exact_version_without_conversion(
 		bad.version = version
 		assert_eq(UnitBodies.validate_march_candidate(f.repo, f.state, bad).status, "error")
 	assert_eq(f.state.to_dict(), before)
+
+func test_v2_completion_proof_raw_envelope_and_numeric_leaves() -> void:
+	var control := {"version": "2", "sequence": "0", "operation_id": "placement:proof",
+		"receipt": "a".repeat(64), "completion_json": "{}"}
+	assert_true(UnitBodies._placement_control_ok(control))
+	for field: String in control:
+		for value: Variant in [null, true, 2, 2.5, {}, []]:
+			var bad := control.duplicate(true)
+			bad[field] = value
+			assert_false(UnitBodies._placement_control_ok(bad), field + str(value))
+	for value: Variant in [1.5, INF, NAN, 1e100, 9007199254740992, {"nested": [false, {"x": 1.5}]}]:
+		assert_false(UnitBodies._placement_json_numbers_ok(value))
+	assert_true(UnitBodies._placement_json_numbers_ok({"x": [1, 1.0, true, null, "i9007199254740992"]}))
+	var native := {&"facing_deg": "i90"}
+	assert_true(UnitBodies._placement_json_numbers_ok(native))
+	assert_eq(UnitBodies._placement_json(native), UnitBodies._placement_json(JSON.parse_string(JSON.stringify(native))))
+	assert_eq(UnitBodies._placement_json({"b": 2, "a": 1}), "{\"a\":1,\"b\":2}")
+	assert_eq(BodyMotion._hash({"b": 2, "a": 1}), "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777")
+	for raw: String in ["", "null", "[]", "{}", "{bad", "{\"version\":1,\"origin\":{},\"plans\":[]}"]:
+		assert_eq(UnitBodies._placement_proof(raw), {})

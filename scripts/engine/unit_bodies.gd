@@ -51,6 +51,8 @@ static func validate_march_candidate(repo: DataRepository, source: GameState, bo
 	if int(boundary.version) not in [1, 2]: return _failure("Unsupported march boundary")
 	var error := DayResolution.body_march_incompatibility_reason(source.day_resolution)
 	if not error.is_empty(): return _failure(error)
+	if source.military_migration.get("body_placement", {}).get("version") == "2":
+		return _failure("Completion proof requires its placement consumer")
 	var control: Dictionary = source.day_resolution.body_march
 	if str(int(boundary.version)) != control.version: return _failure("Mixed march boundary protocol")
 	if int(boundary.abs_day) != source.absolute_day() or int(boundary.abs_day) != int(control.abs_day) \
@@ -107,6 +109,12 @@ static func _migration(repo: DataRepository, source: GameState, reconciled: Stri
 	var index := _owners(source)
 	if not index.error.is_empty(): return _failure(index.error)
 	if not _control_ok(source.military_migration): return _failure("Invalid body version or descriptor store")
+	if source.military_migration.get("body_placement", {}).get("version") == "2":
+		var error := DayResolution.body_march_incompatibility_reason(source.day_resolution)
+		if not march_boundary or not error.is_empty(): return _failure("Completion proof requires its frozen v2 boundary")
+		var control: Dictionary = source.day_resolution.body_march
+		if control.version != "2" or int(control.next_substep) <= 0 or control.next_substep != control.substep_count:
+			return _failure("Completion proof requires exhausted v2 MARCH")
 	for battle: Dictionary in source.battles:
 		if BattleGroups.saved_size(repo, battle) <= 0:
 			return _failure("Invalid saved battle group size/version")
@@ -583,14 +591,27 @@ static func validate_placement_candidate(repo: DataRepository, source: GameState
 	var error := _placement_boundary_error(source, boundary)
 	if not error.is_empty(): return _failure(error)
 	if boundary.kind == "safe": return _migration(repo, source)
+	if source.military_migration.get("body_placement", {}).get("version") == "2":
+		return ArmyGround._placement_completion_candidate(repo, source, boundary)
 	var control: Dictionary = source.day_resolution.body_march
-	var validated := validate_march_candidate(repo, source, {"version": 1, "abs_day": int(boundary.abs_day), "substep": maxi(0, int(control.next_substep) - 1)})
+	var validated := validate_march_candidate(repo, source, {"version": int(boundary.version), "abs_day": int(boundary.abs_day), "substep": maxi(0, int(control.next_substep) - 1)})
 	if validated.status != "complete": return validated
+	if int(boundary.version) == 2:
+		error = ArmySystem._body_source_error(repo, source, 2)
+		if not error.is_empty(): return _failure(error)
 	if int(control.next_substep) != int(control.substep_count) or int(control.next_substep) <= 0:
 		return _result("deferred", "frozen_transaction: MARCH is not complete")
 	if control.last.receipt != boundary.receipt: return _failure("Placement march receipt mismatch")
-	error = ArmySystem._body_source_error(repo, source)
-	if not error.is_empty(): return _failure(error)
+	if int(boundary.version) == 1:
+		error = ArmySystem._body_source_error(repo, source)
+		if not error.is_empty(): return _failure(error)
+	else:
+		var raw := source.to_dict()
+		for key: String in raw:
+			var number_error := _placement_number_error(raw[key])
+			if not number_error.is_empty(): return _failure("Completion JSON " + key + "/" + number_error)
+		var origin := _placement_origin(repo, source, raw, boundary)
+		if origin.status != "complete": return origin
 	return _result("complete", "Validated completed MARCH without changing frozen payload", _copy(source))
 
 static func _placement_personnel_error(source: GameState, unit: String) -> String:
@@ -608,20 +629,120 @@ static func _placement_personnel_error(source: GameState, unit: String) -> Strin
 
 static func _placement_boundary_error(source: GameState, boundary: Dictionary) -> String:
 	var keys: Array = ["version", "kind", "abs_day", "receipt"] if boundary.get("kind") == "march_complete" else ["version", "kind", "abs_day"]
-	if not BodyMotion._keys(boundary, keys) or not _whole(boundary.get("version")) or int(boundary.version) != 1 \
+	if not BodyMotion._keys(boundary, keys) or not _whole(boundary.get("version")) or int(boundary.version) not in [1, 2] \
 		or boundary.get("kind") not in ["safe", "march_complete"] or not BodyMotion._decimal(boundary.get("abs_day")):
 		return "Invalid raw placement boundary"
 	if int(boundary.abs_day) != source.absolute_day(): return "Placement boundary day mismatch"
 	if boundary.kind == "safe":
+		if int(boundary.version) != 1 or source.military_migration.get("body_placement", {}).get("version") == "2": return "Completion proof requires its v2 frozen boundary"
 		if source.day_resolution.is_empty(): return ""
 		return DayResolution.body_march_incompatibility_reason(source.day_resolution) if source.day_resolution.has("body_march") else DayResolution.incompatibility_reason(source.day_resolution)
 	if not boundary.receipt is String or not BodyMotion._digest(boundary.receipt): return "Invalid placement march receipt"
-	return DayResolution.body_march_incompatibility_reason(source.day_resolution)
+	var error := DayResolution.body_march_incompatibility_reason(source.day_resolution)
+	if not error.is_empty(): return error
+	if source.day_resolution.body_march.version != str(int(boundary.version)): return "Mixed placement/march protocol"
+	return ""
 
 static func _placement_id_ok(value: Variant) -> bool:
 	return value is String and value.begins_with("placement:") and value.length() > "placement:".length()
 
 static func _placement_control_ok(value: Variant) -> bool:
-	return value is Dictionary and BodyMotion._keys(value, ["version", "sequence", "operation_id", "receipt"]) \
-		and value.version is String and value.version == "1" and BodyMotion._decimal(value.sequence) \
-		and _placement_id_ok(value.operation_id) and value.receipt is String and BodyMotion._digest(value.receipt)
+	if not value is Dictionary or not value.get("version") is String or value.version not in ["1", "2"]: return false
+	var keys: Array = ["version", "sequence", "operation_id", "receipt"]
+	if value.version == "2": keys.append("completion_json")
+	return BodyMotion._keys(value, keys) and BodyMotion._decimal(value.sequence) \
+		and _placement_id_ok(value.operation_id) and value.receipt is String and BodyMotion._digest(value.receipt) \
+		and (value.version == "1" or (value.completion_json is String and value.completion_json.begins_with("{")))
+
+static func _placement_json(value: Variant) -> String:
+	return JSON.stringify(BodyMotion._canonical(value))
+
+## Proof strings stay raw through both legacy save codecs.
+static func _placement_proof(raw: String) -> Dictionary:
+	var parser := JSON.new()
+	if parser.parse(raw) != OK or not parser.data is Dictionary: return {}
+	var proof: Dictionary = parser.data
+	if not _placement_json_numbers_ok(proof) or _placement_json(proof) != raw \
+		or not BodyMotion._keys(proof, ["version", "origin", "plans"]) \
+		or not _whole(proof.version) or int(proof.version) != 1 \
+		or not proof.origin is Dictionary or not proof.plans is Array or proof.plans.is_empty(): return {}
+	for plan: Variant in proof.plans:
+		if not plan is Dictionary or not ArmyGround._placement_plan_ok(plan) or not ArmyGround._placement_request_ok(plan.request) \
+			or not plan.placements.is_empty(): return {}
+	return proof
+
+static func _placement_json_numbers_ok(value: Variant) -> bool:
+	return _placement_number_error(value).is_empty()
+
+static func _placement_number_error(value: Variant) -> String:
+	if value is int or value is float:
+		return "unsupported number" if not BodyMotion._loco_integer(value) else ""
+	if value is Dictionary:
+		for key: Variant in value:
+			# Native dictionary-dot keys serialize losslessly as JSON strings.
+			if not (key is String or key is StringName): return "non-string key " + str(key)
+			var error := _placement_number_error(value[key])
+			if not error.is_empty(): return str(key) + "/" + error
+	elif value is Array:
+		for i: int in value.size():
+			var error := _placement_number_error(value[i])
+			if not error.is_empty(): return str(i) + "/" + error
+	return ""
+
+static func _placement_shape(value: Dictionary, template: Dictionary) -> bool:
+	if not BodyMotion._keys(value, template.keys()): return false
+	for key: String in template:
+		if template[key] is int:
+			if not _whole(value[key]): return false
+		elif typeof(value[key]) != typeof(template[key]): return false
+	return true
+
+## Check the unnormalized body image, then require a lossless whole-save rehydrate.
+static func _placement_origin(repo: DataRepository, actual: GameState, raw: Dictionary, boundary: Dictionary) -> Dictionary:
+	if not _placement_shape(raw, actual.to_dict()) or raw.version != GameState.SAVE_VERSION: return _failure("Invalid completion origin save shape")
+	if not _placement_shape(raw.rng, actual.rng.to_dict()): return _failure("Invalid completion RNG shape")
+	for field: String in ["seed", "state"]:
+		if not raw.rng[field].is_valid_int() or str(int(raw.rng[field])) != raw.rng[field]: return _failure("Invalid completion RNG integer")
+	for value: Variant in raw.cooldowns.values():
+		if not _whole(GameState._decode_values(value)): return _failure("Invalid completion cooldown")
+	for value: Variant in raw.skims.values():
+		if not value is Dictionary and not _whole(GameState._decode_values(value)): return _failure("Invalid completion skim")
+	for character: Variant in raw.characters.values():
+		if not character is Dictionary or not _placement_shape(character, Character.new().to_dict()) \
+			or not _whole(GameState._decode_values(character.opinion)): return _failure("Invalid completion character shape")
+	for courier: Variant in raw.couriers:
+		if not courier is Dictionary: return _failure("Invalid completion courier shape")
+	var migration: Dictionary = raw.military_migration
+	if migration.has("body_placement") and (not _placement_control_ok(migration.body_placement) or migration.body_placement.version != "1"): return _failure("Invalid completion origin placement control")
+	if _placement_nested_proof(raw): return _failure("Nested completion proof")
+	var probe := _copy(actual)
+	for key: String in ["regiments", "foes", "battles", "day_resolution"]:
+		probe.set(key, GameState._decode_values(raw[key]))
+	for key: String in ["army_roster", "military_migration", "military_rosters", "military_cohorts"]:
+		probe.set(key, raw[key].duplicate(true))
+	for key: String in ["day", "tick"]:
+		var value: Variant = GameState._decode_values(raw[key])
+		if not BodyMotion._natural(value) or (key == "day" and (int(value) < 1 or int(value) > Calendar.DAYS_PER_TICK)): return _failure("Invalid raw completion calendar")
+		probe.set(key, int(value))
+	probe.loaded_save_version = GameState.SAVE_VERSION
+	var error := DayResolution.body_march_incompatibility_reason(probe.day_resolution)
+	if not error.is_empty(): return _failure(error)
+	var checked := validate_march_candidate(repo, probe, {"version": 2, "abs_day": int(boundary.abs_day), "substep": int(probe.day_resolution.get("body_march", {}).get("next_substep", "0"))})
+	if checked.status != "complete": return _failure("Raw completion bodies: " + checked.reason)
+	var origin := GameState.from_dict(raw, false)
+	if origin == null: return _failure("Completion origin could not rehydrate")
+	var saved := origin.to_dict()
+	for key: String in raw:
+		if _placement_json(saved[key]) != _placement_json(raw[key]):
+			return _failure("Completion origin roundtrip differs: " + key)
+	return _result("complete", "Validated raw lossless completion origin", origin)
+
+static func _placement_nested_proof(value: Variant) -> bool:
+	if value is Dictionary:
+		if value.get("version") is String and value.version == "2" and value.has("completion_json"): return true
+		for item: Variant in value.values():
+			if _placement_nested_proof(item): return true
+	elif value is Array:
+		for item: Variant in value:
+			if _placement_nested_proof(item): return true
+	return false
