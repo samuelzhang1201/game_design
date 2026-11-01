@@ -1,0 +1,464 @@
+extends GutTest
+## Contact errors, flattened split joints and raw-boundary failures, not clip certification.
+
+const PATH: String = "res://scripts/map3d/map3d_archer_pivot.gd"
+const PARTS: Array[String] = ["thigh_twist", "thigh_stretch", "leg_stretch", "leg_twist", "foot", "toes_01"]
+var solver: Script
+
+
+func before_all() -> void:
+	if ResourceLoader.exists(PATH):
+		solver = load(PATH)
+
+
+func _sample(f: Dictionary) -> Dictionary:
+	assert_not_null(solver, "Missing parameterized archer contact solver")
+	if solver == null:
+		return {"ok": false, "locals": {}, "diagnostics": ["missing"]}
+	return solver.sample(f.rest, f.pose, f.op, f.contacts)
+
+
+func _globals(locals: Dictionary, parents: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	var pending: Array = locals.keys()
+	while not pending.is_empty():
+		var advanced: bool = false
+		for name: String in pending.duplicate():
+			var parent: String = parents[name]
+			if parent.is_empty() or out.has(parent):
+				out[name] = locals[name] if parent.is_empty() else out[parent] * locals[name]
+				pending.erase(name)
+				advanced = true
+		assert_true(advanced, "fixture parent graph must be acyclic")
+		if not advanced:
+			break
+	return out
+
+
+func _fixture() -> Dictionary:
+	# Squat: upper sqrt(.2^2+.3^2), lower sqrt(.2^2+.25^2).
+	# Both feet can remain planted over +/-180 without moving the pelvis.
+	var global: Dictionary = {"root.x": Transform3D(Basis(Vector3.FORWARD, 0.17), Vector3(0, .8, 0)),
+		"bow": Transform3D(Basis.IDENTITY, Vector3(.3, .8, -.2))}
+	var parents: Dictionary = {"root.x": "", "bow": "root.x"}
+	for side: String in ["l", "r"]:
+		var x: float = .1 if side == "l" else -.1
+		var hip := Vector3(x, .65, 0)
+		var knee := Vector3(x, .35, -.2)
+		var ankle := Vector3(x, .1, 0)
+		var points: Array[Vector3] = [hip, hip.lerp(knee, .5), knee, knee.lerp(ankle, .5), ankle, ankle + Vector3(0, -.03, -.12)]
+		for i: int in range(6):
+			var name: String = PARTS[i] + "." + side
+			global[name] = Transform3D(Basis(Vector3.UP, .23), points[i])
+			parents[name] = "root.x" if i in [0, 4] else ("leg_stretch." + side if i == 3 else ("foot." + side if i == 5 else ""))
+	var locals: Dictionary = {}
+	for name: String in global:
+		var parent: String = parents[name]
+		locals[name] = global[name] if parent.is_empty() else global[parent].affine_inverse() * global[name]
+	return _from_pose(locals, parents)
+
+
+func _from_pose(locals: Dictionary, parents: Dictionary) -> Dictionary:
+	var legs: Dictionary = {}
+	var contacts: Dictionary = {}
+	var global: Dictionary = _globals(locals, parents)
+	for side: String in ["l", "r"]:
+		legs[side] = {"knee_limits": Vector2(0, PI), "sole_in_foot": Transform3D(Basis.IDENTITY, Vector3(0, -.025, -.04)), "toe_in_toes": Transform3D.IDENTITY}
+		legs[side].rotation_limits = {}
+		for part: String in PARTS:
+			legs[side].rotation_limits[part] = PI
+		var sole: Transform3D = global["foot." + side] * legs[side].sole_in_foot
+		var toe: Transform3D = global["toes_01." + side]
+		var hip: Vector3 = global["thigh_twist." + side].origin
+		var knee: Vector3 = global["leg_stretch." + side].origin
+		var axis: Vector3 = (global["foot." + side].origin - hip).normalized()
+		var bend: Vector3 = (knee - hip - axis * (knee - hip).dot(axis)).normalized()
+		var knee_frame := Basis(bend, axis, bend.cross(axis))
+		contacts[side] = {"track": [{"phase": 0.0, "sole": sole, "toe": toe, "knee_frame": knee_frame}, {"phase": 1.0, "sole": sole, "toe": toe, "knee_frame": knee_frame}],
+			"support": [{"start": 0.0, "end": 1.0, "sole": sole, "toe": toe}]}
+	return {"rest": {"locals": locals.duplicate(true), "parents": parents, "legs": legs}, "pose": locals.duplicate(true),
+		"op": {"yaw_rad": 0.0, "turn_rad": 0.0, "duration_s": 1.3, "phase": .5,
+			"march_entry_phase": .37, "march_exit_phase": .81, "entry_pose": locals.duplicate(true), "exit_pose": locals.duplicate(true)}, "contacts": contacts}
+
+
+func _set_turn(f: Dictionary, turn: float, yaw: float = 0.0) -> void:
+	f.op.turn_rad = turn
+	f.op.yaw_rad = yaw
+	var start := Transform3D(Basis(Vector3.UP, yaw), Vector3.ZERO)
+	var end := Transform3D(Basis(Vector3.UP, yaw - turn), Vector3.ZERO)
+	var mid := Transform3D(Basis(Vector3.UP, yaw - turn * .5), Vector3.ZERO)
+	for side: String in ["l", "r"]:
+		var sole: Transform3D = f.contacts[side].track[0].sole
+		var toe: Transform3D = f.contacts[side].track[0].toe
+		var knee_frame: Basis = f.contacts[side].track[0].knee_frame
+		f.contacts[side].track = [{"phase": 0.0, "sole": start * sole, "toe": start * toe, "knee_frame": start.basis * knee_frame},
+			{"phase": .1, "sole": start * sole, "toe": start * toe, "knee_frame": start.basis * knee_frame},
+			{"phase": .5, "sole": mid * sole, "toe": mid * toe, "knee_frame": mid.basis * knee_frame},
+			{"phase": .9, "sole": end * sole, "toe": end * toe, "knee_frame": end.basis * knee_frame},
+			{"phase": 1.0, "sole": end * sole, "toe": end * toe, "knee_frame": end.basis * knee_frame}]
+		f.contacts[side].support = [{"start": 0.0, "end": .1, "sole": start * sole, "toe": start * toe},
+			{"start": .9, "end": 1.0, "sole": end * sole, "toe": end * toe}]
+
+
+func _check_pose(f: Dictionary, result: Dictionary) -> void:
+	assert_true(result.ok, str(result.diagnostics))
+	if not result.ok:
+		return
+	var g: Dictionary = _globals(result.locals, f.rest.parents)
+	var original: Dictionary = _globals(f.pose, f.rest.parents)
+	var rest: Dictionary = _globals(f.rest.locals, f.rest.parents)
+	var world := Transform3D(Basis(Vector3.UP, f.op.yaw_rad - f.op.turn_rad * f.op.phase), Vector3.ZERO)
+	for side: String in ["l", "r"]:
+		var hip: Vector3 = g["thigh_twist." + side].origin
+		var knee: Vector3 = g["leg_stretch." + side].origin
+		var ankle: Vector3 = g["foot." + side].origin
+		assert_almost_eq(hip.distance_to(knee), rest["thigh_twist." + side].origin.distance_to(rest["leg_stretch." + side].origin), .00001)
+		assert_almost_eq(knee.distance_to(ankle), rest["leg_stretch." + side].origin.distance_to(rest["foot." + side].origin), .00001)
+		assert_almost_eq((g["thigh_stretch." + side].origin - hip).length(), (original["thigh_stretch." + side].origin - original["thigh_twist." + side].origin).length(), .00001)
+		assert_almost_eq(g["leg_twist." + side].origin.distance_to(knee), original["leg_twist." + side].origin.distance_to(original["leg_stretch." + side].origin), .00001)
+		var sole: Transform3D = world * g["foot." + side] * f.rest.legs[side].sole_in_foot
+		var toe: Transform3D = world * g["toes_01." + side]
+		for anchor: Dictionary in f.contacts[side].support:
+			if f.op.phase < anchor.start or f.op.phase > anchor.end:
+				continue
+			assert_almost_eq(sole.origin.distance_to(anchor.sole.origin), 0.0, .00001)
+			assert_almost_eq(toe.origin.distance_to(anchor.toe.origin), 0.0, .00001)
+			assert_true(sole.basis.is_equal_approx(anchor.sole.basis), "sole orientation")
+			assert_true(toe.basis.is_equal_approx(anchor.toe.basis), "toe orientation")
+
+	assert_eq(result.locals["root.x"], f.pose["root.x"])
+	if f.pose.has("bow"):
+		assert_eq(result.locals.bow, f.pose.bow)
+
+
+func test_both_signs_tiny_wrap_and_half_turn_preserve_planted_frames_and_split_spans() -> void:
+	for turn: float in [-PI, -PI / 2, -.034906585, -.0000000174532925, 0.0, .0000000174532925, .034906585, PI / 2, PI]:
+		var f: Dictionary = _fixture()
+		_set_turn(f, turn, TAU - .0174532925)
+		for phase: float in [0.0, .01, .25, .5, .99, 1.0]:
+			f.op.phase = phase
+			_check_pose(f, _sample(f))
+
+
+func test_zero_turn_reconstructs_authored_affine_locals_without_erasing_twist() -> void:
+	var f: Dictionary = _fixture()
+	var result: Dictionary = _sample(f)
+	_check_pose(f, result)
+	if result.ok:
+		for name: String in f.pose:
+			assert_true((result.locals[name] as Transform3D).is_equal_approx(f.pose[name]), name)
+
+
+func test_fps_partitions_and_input_immutability() -> void:
+	var f: Dictionary = _fixture()
+	_set_turn(f, PI / 2)
+	var before: Dictionary = f.duplicate(true)
+	var expected: Dictionary = _sample(f)
+	for fps: int in [24, 30, 60, 144]:
+		for frame: int in range(fps):
+			f.op.phase = float(frame) / fps
+			_sample(f)
+		f.op.phase = .5
+		assert_eq(_sample(f), expected)
+	assert_eq(f, before)
+	if expected.ok:
+		expected.locals.clear()
+		assert_false(f.pose.is_empty(), "output must not alias inputs")
+
+
+func test_knee_path_remains_continuous_at_wrap_and_near_straight() -> void:
+	var f: Dictionary = _fixture()
+	_set_turn(f, PI)
+	var previous := Vector3.ZERO
+	for frame: int in range(101):
+		f.op.phase = frame / 100.0
+		var result: Dictionary = _sample(f)
+		assert_true(result.ok, str(result.diagnostics))
+		if not result.ok:
+			return
+		var p: Vector3 = _globals(result.locals, f.rest.parents)["leg_stretch.l"].origin
+		if frame > 0:
+			assert_lt(p.distance_to(previous), .02, "no arbitrary pole flip")
+		previous = p
+
+
+func _reject(f: Dictionary) -> void:
+	var result: Dictionary = _sample(f)
+	assert_false(result.ok)
+	assert_eq(result.locals, {}, "failure must not leak a partial limb solve")
+	assert_false(result.diagnostics.is_empty())
+
+
+func test_rejects_unreachable_joint_limit_transition_and_support_drift() -> void:
+	var f: Dictionary = _fixture()
+	var unreachable: Dictionary = f.contacts.r.track[0].duplicate(true)
+	unreachable.phase = .5
+	unreachable.sole.origin += Vector3(30, 0, 0)
+	unreachable.toe.origin += Vector3(30, 0, 0)
+	f.contacts.r.track.insert(1, unreachable)
+	f.contacts.r.support = []
+	_reject(f)
+	f = _fixture()
+	f.rest.legs.r.knee_limits = Vector2(0, .01)
+	_reject(f)
+	f = _fixture()
+	f.op.entry_pose["foot.l"].origin += Vector3(.02, 0, 0)
+	_reject(f)
+	f = _fixture()
+	var drift: Dictionary = f.contacts.l.track[0].duplicate(true)
+	drift.phase = .4
+	drift.sole.origin += Vector3(.001, 0, 0)
+	drift.toe.origin += Vector3(.001, 0, 0)
+	f.contacts.l.track.insert(1, drift)
+	_reject(f)
+
+
+func test_rejects_malformed_nonfinite_wrong_raw_types_and_parent_cycles() -> void:
+	for value: Variant in [null, [], "rest", 1]:
+		var f: Dictionary = _fixture()
+		f.rest = value
+		_reject(f)
+	for field: String in ["phase", "turn_rad", "duration_s", "march_entry_phase"]:
+		for value: Variant in ["0.5", true, NAN, INF]:
+			var f: Dictionary = _fixture()
+			f.op[field] = value
+			_reject(f)
+	for value: Variant in [-.1, 1.1]:
+		var f: Dictionary = _fixture()
+		f.op.phase = value
+		_reject(f)
+	var f: Dictionary = _fixture()
+	f.rest.parents["root.x"] = "foot.l"
+	_reject(f)
+	f = _fixture()
+	f.pose["bow"] = Transform3D(Basis.IDENTITY, Vector3(NAN, 0, 0))
+	_reject(f)
+	f = _fixture()
+	f.rest.parents["thigh_stretch.l"] = "thigh_twist.l"
+	_reject(f)
+	f = _fixture()
+	f.contacts.l.track[1].phase = 0.0
+	_reject(f)
+
+
+func _accessor(j: Dictionary, bin: PackedByteArray, index: int) -> Array:
+	var a: Dictionary = j.accessors[index]
+	var view: Dictionary = j.bufferViews[a.bufferView]
+	var width: int = {"SCALAR": 1, "VEC3": 3, "VEC4": 4}[a.type]
+	var out: Array = []
+	for i: int in range(a.count):
+		var row: Array[float] = []
+		for k: int in range(width):
+			row.append(bin.decode_float(int(view.get("byteOffset", 0)) + int(a.get("byteOffset", 0)) + i * int(view.get("byteStride", width * 4)) + k * 4))
+		out.append(row)
+	return out
+
+
+func _native(phase: float) -> Dictionary:
+	# Parse only committed GLB data; no scene, imported skeleton, Blender or cache dependency.
+	var bytes: PackedByteArray = FileAccess.get_file_as_bytes("res://assets/3D/units/archers/archers.glb")
+	var json_length: int = bytes.decode_u32(12)
+	var j: Dictionary = JSON.parse_string(bytes.slice(20, 20 + json_length).get_string_from_utf8())
+	var bin: PackedByteArray = bytes.slice(28 + json_length)
+	var nodes: Array = j.nodes.duplicate(true)
+	if phase >= 0:
+		for animation: Dictionary in j.animations:
+			if animation.name != "MARCH":
+				continue
+			for channel: Dictionary in animation.channels:
+				var sampler: Dictionary = animation.samplers[channel.sampler]
+				assert_true(sampler.get("interpolation", "LINEAR") in ["LINEAR", "STEP"])
+				var times: Array = _accessor(j, bin, sampler.input)
+				var values: Array = _accessor(j, bin, sampler.output)
+				var t: float = phase * float(times[-1][0])
+				var i: int = 0
+				while i + 2 < times.size() and t > float(times[i + 1][0]):
+					i += 1
+				var w: float = (t - float(times[i][0])) / (float(times[i + 1][0]) - float(times[i][0]))
+				if sampler.get("interpolation") == "STEP":
+					w = 1.0 if t == float(times[i + 1][0]) else 0.0
+				var a: Array = values[i]
+				var b: Array = values[i + 1]
+				if channel.target.path == "rotation":
+					var q: Quaternion = Quaternion(a[0], a[1], a[2], a[3]).normalized().slerp(Quaternion(b[0], b[1], b[2], b[3]).normalized(), w)
+					nodes[channel.target.node].rotation = [q.x, q.y, q.z, q.w]
+				else:
+					nodes[channel.target.node][channel.target.path] = [lerpf(a[0], b[0], w), lerpf(a[1], b[1], w), lerpf(a[2], b[2], w)]
+	var locals: Dictionary = {}
+	var parents: Dictionary = {}
+	for index: int in j.skins[0].joints:
+		var node: Dictionary = nodes[index]
+		var q: Array = node.get("rotation", [0.0, 0.0, 0.0, 1.0])
+		var t: Array = node.get("translation", [0.0, 0.0, 0.0])
+		var s: Array = node.get("scale", [1.0, 1.0, 1.0])
+		locals[node.name] = Transform3D(Basis(Quaternion(q[0], q[1], q[2], q[3]).normalized()) * Basis.from_scale(Vector3(s[0], s[1], s[2])), Vector3(t[0], t[1], t[2]))
+		parents[node.name] = ""
+		for pi: int in j.skins[0].joints:
+			for child: int in nodes[pi].get("children", []):
+				if child == index:
+					parents[node.name] = nodes[pi].name
+	return {"locals": locals, "parents": parents}
+
+
+func test_actual_native_rest_and_arbitrary_march_phases_preserve_all_nonleg_locals() -> void:
+	var native_rest: Dictionary = _native(-1.0)
+	for phase: float in [0.0, .137, .37, .81, .999]:
+		var native: Dictionary = _native(phase)
+		var f: Dictionary = _from_pose(native.locals, native.parents)
+		f.rest.locals = native_rest.locals
+		f.op.march_entry_phase = phase
+		f.op.march_exit_phase = phase
+		_set_turn(f, .034906585)
+		f.op.phase = .05
+		var result: Dictionary = _sample(f)
+		_check_pose(f, result)
+		if not result.ok:
+			continue
+		for name: String in f.pose:
+			if name.split(".")[0] not in PARTS:
+				assert_eq(result.locals[name], f.pose[name], name)
+		var g: Dictionary = _globals(result.locals, native.parents)
+		assert_almost_eq(g["thigh_twist.l"].origin.distance_to(g["leg_stretch.l"].origin), .400250, .00001)
+		assert_almost_eq(g["leg_stretch.l"].origin.distance_to(g["foot.l"].origin), .365650, .00001)
+
+
+func test_rotation_frames_are_continuous_as_well_as_knee_positions() -> void:
+	var f: Dictionary = _fixture()
+	_set_turn(f, PI)
+	var previous: Dictionary = {}
+	for frame: int in range(201):
+		f.op.phase = frame / 200.0
+		var result: Dictionary = _sample(f)
+		assert_true(result.ok, str(result.diagnostics))
+		if not result.ok:
+			return
+		var g: Dictionary = _globals(result.locals, f.rest.parents)
+		if not previous.is_empty():
+			for side: String in ["l", "r"]:
+				for part: String in PARTS:
+					var name: String = part + "." + side
+					var a: Quaternion = (previous[name] as Transform3D).basis.get_rotation_quaternion()
+					var b: Quaternion = (g[name] as Transform3D).basis.get_rotation_quaternion()
+					assert_lt(a.angle_to(b), .12, name + " no hidden half-turn")
+		previous = g
+
+
+func test_actual_march_entry_and_exit_can_have_different_phases() -> void:
+	var rest: Dictionary = _native(-1.0)
+	var entry: Dictionary = _native(.137)
+	var exit: Dictionary = _native(.81)
+	var f: Dictionary = _from_pose(entry.locals, entry.parents)
+	f.rest.locals = rest.locals
+	f.op.march_entry_phase = .137
+	f.op.march_exit_phase = .81
+	f.op.exit_pose = exit.locals
+	var exit_g: Dictionary = _globals(exit.locals, exit.parents)
+	for side: String in ["l", "r"]:
+		var last: Dictionary = f.contacts[side].track[1]
+		last.sole = exit_g["foot." + side] * f.rest.legs[side].sole_in_foot
+		last.toe = exit_g["toes_01." + side]
+		var exit_hip: Vector3 = exit_g["thigh_twist." + side].origin
+		var exit_axis: Vector3 = (exit_g["foot." + side].origin - exit_hip).normalized()
+		var exit_knee: Vector3 = exit_g["leg_stretch." + side].origin - exit_hip
+		var exit_bend: Vector3 = (exit_knee - exit_axis * exit_knee.dot(exit_axis)).normalized()
+		last.knee_frame = Basis(exit_bend, exit_axis, exit_bend.cross(exit_axis))
+		f.contacts[side].support = []
+	f.op.phase = 0.0
+	var result: Dictionary = _sample(f)
+	assert_true(result.ok, str(result.diagnostics))
+	if result.ok:
+		for name: String in entry.locals:
+			assert_true((result.locals[name] as Transform3D).is_equal_approx(entry.locals[name]), name)
+	f.op.phase = 1.0
+	f.pose = exit.locals.duplicate(true)
+	result = _sample(f)
+	assert_true(result.ok, str(result.diagnostics))
+	if result.ok:
+		for name: String in exit.locals:
+			assert_true((result.locals[name] as Transform3D).is_equal_approx(exit.locals[name]), name)
+
+
+func test_contact_schema_rejects_bad_support_missing_frames_and_degenerate_affine() -> void:
+	for kind: int in range(7):
+		var f: Dictionary = _fixture()
+		match kind:
+			0: f.contacts.l.support[0].start = -.01
+			1: f.contacts.l.support[0].end = "1"
+			2: f.contacts.l.track[0].erase("toe")
+			3: f.contacts.r.track[0].sole = Transform3D(Basis.from_scale(Vector3(0, 1, 1)), Vector3.ZERO)
+			4: f.rest.locals["leg_stretch.r"] = false
+			5: f.rest.legs.r.knee_limits = Vector2(NAN, PI)
+			6: f.op.duration_s = 0.0
+		_reject(f)
+
+
+func test_local_joint_rotation_limit_is_enforced_on_flattened_bones() -> void:
+	var f: Dictionary = _fixture()
+	_set_turn(f, PI / 2)
+	f.op.phase = .05
+	f.rest.legs.l.rotation_limits.foot = .001
+	_reject(f)
+
+
+func test_native_affine_residual_is_preserved_in_split_bone_not_orthonormalized_away() -> void:
+	var f: Dictionary = _fixture()
+	var affine := Basis(Vector3(1.1, .02, 0), Vector3(0, .9, .03), Vector3(.01, 0, 1.2))
+	f.rest.locals["thigh_stretch.l"].basis = affine
+	f.pose["thigh_stretch.l"].basis = affine
+	f.op.entry_pose = f.pose.duplicate(true)
+	f.op.exit_pose = f.pose.duplicate(true)
+	var result: Dictionary = _sample(f)
+	assert_true(result.ok, str(result.diagnostics))
+	if result.ok:
+		assert_true((result.locals["thigh_stretch.l"] as Transform3D).basis.is_equal_approx(affine))
+
+
+func test_antiparallel_segment_alignment_has_no_hidden_half_turn_twist() -> void:
+	var f: Dictionary = _fixture()
+	var g: Dictionary = _globals(f.pose, f.rest.parents)
+	for side: String in ["l", "r"]:
+		var hip: Vector3 = g["thigh_twist." + side].origin
+		var original: Dictionary = f.contacts[side].track[0]
+		var track: Array = []
+		for i: int in range(5):
+			var rotation := Basis(Vector3.RIGHT, TAU * i / 4.0)
+			var about_hip := Transform3D(rotation, hip - rotation * hip)
+			track.append({"phase": i / 4.0, "sole": about_hip * original.sole,
+				"toe": about_hip * original.toe, "knee_frame": rotation * original.knee_frame})
+		f.contacts[side].track = track
+		f.contacts[side].support = []
+	var previous: Dictionary = {}
+	for frame: int in range(201):
+		f.op.phase = frame / 200.0
+		var result: Dictionary = _sample(f)
+		assert_true(result.ok, str(result.diagnostics))
+		if not result.ok:
+			return
+		var solved: Dictionary = _globals(result.locals, f.rest.parents)
+		if not previous.is_empty():
+			for part: String in PARTS:
+				var name: String = part + ".l"
+				var a: Quaternion = (previous[name] as Transform3D).basis.get_rotation_quaternion()
+				var b: Quaternion = (solved[name] as Transform3D).basis.get_rotation_quaternion()
+				assert_lt(a.angle_to(b), .12, "antiparallel " + name)
+		previous = solved
+
+
+func test_undefined_knee_plane_is_rejected_atomically() -> void:
+	var f: Dictionary = _fixture()
+	for knot: Dictionary in f.contacts.l.track:
+		knot.knee_frame = Basis(Vector3.DOWN, Vector3.FORWARD, Vector3.RIGHT)
+	_reject(f)
+
+
+func test_finite_but_numerically_unsafe_contact_affine_is_rejected_without_engine_errors() -> void:
+	var f: Dictionary = _fixture()
+	var foot: Transform3D = _globals(f.pose, f.rest.parents)["foot.l"]
+	for knot: Dictionary in f.contacts.l.track:
+		knot.sole.basis = Basis.from_scale(Vector3(1e20, 1e-20, 1.0))
+		knot.sole.origin = foot.origin + knot.sole.basis * f.rest.legs.l.sole_in_foot.origin
+	f.contacts.l.support = []
+	var result: Dictionary = _sample(f)
+	assert_false(result.ok)
+	assert_eq(result.locals, {})
+	assert_true(str(result.diagnostics[0]).begins_with("contact:"), "reject unsafe affine before quaternion decomposition")
