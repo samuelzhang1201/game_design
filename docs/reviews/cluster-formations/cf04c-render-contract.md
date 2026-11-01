@@ -131,9 +131,15 @@ slice-local mapping; activation cannot simply pass whole-day share unchanged.
 The optional `committed` input is a transient, trusted fixture-driver envelope:
 `{cursor:{version:1,abs_day:int,substep:int,receipt:String},
  moves:[{unit:String,slot:int,budget_m:int}, ...]}`. The driver constructs it
-only from the successful BodyMotion commit's exact moves (or the `motion`
-member of the successful march commit result), after ordinary sight admission;
-include only own/DEV admitted units. It supplies no positions or replacement
+only after a successful commit, using exact retained plan data:
+`BodyMotion.commit(repo, candidate, proposed, boundary)` returns only status/reason;
+retain `proposed.moves` and bind `BodyMotion._hash(proposed)` to the resulting
+saved inner receipt. For `ArmySystem.commit_body_march_candidate`, the returned
+plan is `result.plan`; use `result.plan.motion.moves` and bind
+`BodyMotion._hash(result.plan.motion)` to `result.candidate.military_migration.body_motion.receipt`.
+The envelope's day/substep come from that same motion plan's cursor. Verify
+success and exact receipt equality before filtering moves through ordinary
+sight admission; include only own/DEV admitted units. No new engine API is needed. It supplies no positions or replacement
 paths. Receipt must equal the saved inner motion receipt and every sampled
 moving identity must have exactly one nonnegative integer budget. No duplicate
 identity or mixed cursor is allowed. This envelope is presentation timing from
@@ -158,7 +164,11 @@ path with zero budget. Repeated points cost zero; one-point/all-zero paths stay
 at their endpoint; endpoints are exact. It never changes saved integers or
 returns deltas. All peers use the same slice fraction with their own committed
 budgets; independent per-body springs/lag/easing cannot distort collision timing.
-The output travels metres -> ArmySystem.metres_to_pack -> ctx.to_world.
+Preserve fractional positions throughout conversion:
+`pack_px = Vector2(row.x_m, row.y_m) / float(ArmySystem.metres_per_pack_px(repo))`,
+then `xz_world = ctx.to_world(pack_px)`. Do not call `metres_to_pack` here: its
+Vector2i argument would truncate interpolated metre coordinates. Do not round
+to integers before terrain seating or hit-box projection.
 Use per-row saved facing; keep upright ground seating and ordinary reference
 scale. No anchor translation, corner shortcut, terrain snapping in XZ, camera
 heading, visual separation or fabricated swept detour is permitted. Facing is
@@ -218,6 +228,9 @@ First red then green `./run_tests.sh --test tests/map3d/test_body_paths.gd`:
 - L-path hand calculations above, unequal body budgets and early stationary
   tails compared with BodyMotion._segments, missing/mixed timing envelopes,
   zero-length/duplicate/negative coordinates,
+  fractional world output: L-path (3,0.5) must equal
+  ctx.to_world(Vector2(3,0.5)/float(ArmySystem.metres_per_pack_px(repo)))
+  and differ from the truncated (3,0) result in nondegenerate map metadata,
   exact endpoints, invalid nonfinite shares, malformed controls/paths, rejected
   incomplete ownership/counts, and mutation of returned copies leaves source intact.
 - 0/1/9/10 figure identities, 901->900 and 1->0 survivor node identity/phase;
