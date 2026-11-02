@@ -1,0 +1,202 @@
+{
+  "continuous_bound": {
+    "reason": "Finite native clip samples do not enclose interpolated poses or arbitrary adaptive entry/exit/turn parameters. Numeric contact boundary already fails; no full CERT or radius PASS follows.",
+    "status": "NOT ESTABLISHED"
+  },
+  "coverage": "All native extracted body/bow/quiver/arrow vertices at every native key, quarter/mid/three-quarter interval and 257 uniform samples of each of three clips. Full yaw preserves XZ radius exactly.",
+  "equipped_observations": {
+    "MARCH/archers": {
+      "phase": 0.17142857982187884,
+      "position_model_m": [
+        -0.298882649167436,
+        0.2234173008562201,
+        -0.6304454869407308
+      ],
+      "radius_model_m": 0.6977050594465256,
+      "radius_simulation_m": 294.0392069063075,
+      "radius_world_m": 14.701960345315413,
+      "surface": 0,
+      "time_s": 0.20000000298023224,
+      "vertex": 13872
+    },
+    "MARCH/archers_arrow": {
+      "phase": 0.0,
+      "position_model_m": [
+        0.22598751575483766,
+        1.5012599057850744,
+        0.18499595137357477
+      ],
+      "radius_model_m": 0.29205112446566106,
+      "radius_simulation_m": 123.08135056681496,
+      "radius_world_m": 6.154067528340763,
+      "surface": 0,
+      "time_s": 0.0,
+      "vertex": 11601
+    },
+    "MARCH/archers_bow": {
+      "phase": 0.20000000766345458,
+      "position_model_m": [
+        -0.2576004290708995,
+        0.286773134716139,
+        0.838098770806682
+      ],
+      "radius_model_m": 0.8767938929333295,
+      "radius_simulation_m": 369.51399077272947,
+      "radius_world_m": 18.47569953863652,
+      "surface": 0,
+      "time_s": 0.23333333432674408,
+      "vertex": 563
+    },
+    "MARCH/archers_quiver": {
+      "phase": 0.0,
+      "position_model_m": [
+        0.3570816883625935,
+        1.5510385454191205,
+        0.19757442258733746
+      ],
+      "radius_model_m": 0.40809678340388833,
+      "radius_simulation_m": 171.98736473014125,
+      "radius_world_m": 8.599368236507084,
+      "surface": 0,
+      "time_s": 0.0,
+      "vertex": 18455
+    },
+    "PIVOT_LEFT/archers": {
+      "phase": 0.08203125,
+      "position_model_m": [
+        0.38754409852720884,
+        0.8324324353733388,
+        -0.16713944028526218
+      ],
+      "radius_model_m": 0.42204978474362204,
+      "radius_simulation_m": 177.86768535036515,
+      "radius_world_m": 8.89338426751828,
+      "surface": 0,
+      "time_s": 0.1640625,
+      "vertex": 15448
+    },
+    "PIVOT_LEFT/archers_arrow": {
+      "phase": 0.15234375,
+      "position_model_m": [
+        0.2259875172283834,
+        1.499138347244595,
+        0.18499593022548022
+      ],
+      "radius_model_m": 0.29205111220990004,
+      "radius_simulation_m": 123.08134540177537,
+      "radius_world_m": 6.154067270088784,
+      "surface": 0,
+      "time_s": 0.3046875,
+      "vertex": 11601
+    },
+    "PIVOT_LEFT/archers_bow": {
+      "phase": 0.15234375,
+      "position_model_m": [
+        -0.3517826407744068,
+        0.3460479515952918,
+        0.579359743919584
+      ],
+      "radius_model_m": 0.6777969749303853,
+      "radius_simulation_m": 285.6491898025283,
+      "radius_world_m": 14.28245949012645,
+      "surface": 0,
+      "time_s": 0.3046875,
+      "vertex": 2561
+    },
+    "PIVOT_LEFT/archers_quiver": {
+      "phase": 0.90234375,
+      "position_model_m": [
+        0.35708172586148706,
+        1.550125171064905,
+        0.19757441764275258
+      ],
+      "radius_model_m": 0.4080968138212929,
+      "radius_simulation_m": 171.98737754918193,
+      "radius_world_m": 8.599368877459117,
+      "surface": 0,
+      "time_s": 1.8046875,
+      "vertex": 18455
+    },
+    "PIVOT_RIGHT/archers": {
+      "phase": 0.08203125,
+      "position_model_m": [
+        0.38754409852720884,
+        0.8324324353733388,
+        -0.16713944028526218
+      ],
+      "radius_model_m": 0.42204978474362204,
+      "radius_simulation_m": 177.86768535036515,
+      "radius_world_m": 8.89338426751828,
+      "surface": 0,
+      "time_s": 0.1640625,
+      "vertex": 15448
+    },
+    "PIVOT_RIGHT/archers_arrow": {
+      "phase": 0.15234375,
+      "position_model_m": [
+        0.2259875172283834,
+        1.499138347244595,
+        0.18499593022548022
+      ],
+      "radius_model_m": 0.29205111220990004,
+      "radius_simulation_m": 123.08134540177537,
+      "radius_world_m": 6.154067270088784,
+      "surface": 0,
+      "time_s": 0.3046875,
+      "vertex": 11601
+    },
+    "PIVOT_RIGHT/archers_bow": {
+      "phase": 0.15234375,
+      "position_model_m": [
+        -0.3517826407744068,
+        0.3460479515952918,
+        0.579359743919584
+      ],
+      "radius_model_m": 0.6777969749303853,
+      "radius_simulation_m": 285.6491898025283,
+      "radius_world_m": 14.28245949012645,
+      "surface": 0,
+      "time_s": 0.3046875,
+      "vertex": 2561
+    },
+    "PIVOT_RIGHT/archers_quiver": {
+      "phase": 0.90234375,
+      "position_model_m": [
+        0.35708172586148706,
+        1.550125171064905,
+        0.19757441764275258
+      ],
+      "radius_model_m": 0.4080968138212929,
+      "radius_simulation_m": 171.98737754918193,
+      "radius_world_m": 8.599368877459117,
+      "surface": 0,
+      "time_s": 1.8046875,
+      "vertex": 18455
+    }
+  },
+  "ordinary_scale": {
+    "attack_bones": [
+      "DEF-weapon.R"
+    ],
+    "fov_deg": 45.0,
+    "max_stature": 1.06,
+    "max_tilt_deg": 14.0,
+    "model_height": 2.26497411727905,
+    "ref_m": 10973.6980107868,
+    "ref_px": 12.0,
+    "simulation_scale": 421.437687637757,
+    "size": 0.7,
+    "stand_extent": [
+      0.905093431472778,
+      0.948496401309967
+    ],
+    "view_h_px": 1600.0,
+    "world_per_sim_m": 0.05,
+    "world_scale": 21.0718843818879
+  },
+  "radius_simulation_m": 932,
+  "retained_obligations": "All original 12 P4 gates, full native real-window matrix, independent unique Review, later policy/consumer/activation remain required.",
+  "schema": 1,
+  "source_payload_sha256": "b5c2b0537f00bd98b5093ae38adf5a447bcb6a7082bc89684359eff38b32d0f2",
+  "status": "NOT_CERTIFIED"
+}
