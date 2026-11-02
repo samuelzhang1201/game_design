@@ -200,7 +200,8 @@ Proposed pure API (new names, not installed behavior):
 
 ```gdscript
 Map3DRoyalLocomotion.prepare(source: Dictionary, physical: Dictionary,
-    operation: Dictionary, profile: Dictionary) -> Dictionary
+    operation: Dictionary, boundary_kinematics: Dictionary,
+    profile: Dictionary) -> Dictionary
 Map3DRoyalLocomotion.sample(prepared: Dictionary, phase: float) -> Dictionary
 ```
 
@@ -223,12 +224,15 @@ Inputs and data flow:
    bounded at keys, off-keys and loop seams. Cache identity includes import/Godot
    version and all source hashes. A stale or incomplete cache rejects.
 2. The admitted consumer supplies the validated copied operation: integer
-   start_heading_udeg, signed turn_udeg, duration_q, plus independent native
+   start_heading_udeg, signed turn_udeg, t0_q/t1_q (duration_q=t1_q-t0_q),
+   operation index and receipt/cursor binding, plus independent native
    φ0/φ1 in [0,1). End heading is exact integer modulo; zero turn is hold, never
    a fabricated pivot. Phase is [0,1]. Use all nonzero integer microdegree turns
    in (-180,180], all 360-million headings, both signs and +180 tie. Duration is
    every admitted positive integer duration in Q; `duration_q/Q` is dimensionless
    substep share, not the source clip's 12 seconds or real wall time.
+   Boundary kinematics below are also mandatory: these pivot fields and native
+   phases alone do not determine neighboring move speed or native phase rate.
 3. Physical supplies actual immutable placement/scale and a bounded terrain
    patch covering the **whole swept skin**, including height/normal interpolation,
    LOD discrepancy, valid spatial domain and uncertainty. Its domain is inherited
@@ -251,6 +255,97 @@ Inputs and data flow:
    to the admitted figure. Simulation origin/yaw, seat, scale, cost and RNG are
    untouched; observed hostile current-pose data never grants future operations.
 
+### Boundary kinematics and derivative authority
+
+Use one unwrapped substep coordinate `s = substep_index + time_q/Q` across
+adjacent slices. For a pivot starting at s0, `D = duration_q/Q` and
+`u=(s-s0)/D`. Derivatives refer to the continuous extension of the committed
+piecewise interpolation, not finite differences of the integer cursor or rendered
+frames. The existing shared clock maps wall time to s. Pause, 1x/4x and FPS do
+not change these derivative inputs or divide by a zero wall-clock rate.
+
+`boundary_kinematics` is a copied, versioned transient input with `entry` and
+`exit` records plus receipt/cursor, adjacent-operation digest, native phase-law
+digest and placement/terrain digest. Each boundary record contains **both** the
+adjacent-MARCH side and the pivot-inside side:
+
+- `model_to_world` H and `model_to_world_ds` H_s: full homogeneous affine value
+  and one-sided derivative, including fixed ordinary scale, actual origin,
+  seat/orientation and committed yaw. H_s has bottom row zero. Translation
+  derivative is built-world units per s; angular rates are radians per s.
+- `phase_rate` r = dφ/ds and `phase_side` (left/right branch at a key or seam)
+  on the adjacent native side; the source supplies the corresponding exact
+  native affine value and one-sided derivative dM/dφ. Phases use an unwrapped
+  local lift at the seam before native lookup. The pivot-inside pose derivative
+  is an output constraint derived below, not another invented native phase rate.
+- Exact copied adjacent op kind, interval, endpoints and yaw, or an explicit
+  authoritative hold/endpoint-only boundary classification. Missing neighbors
+  are not silently zero-rate holds. Endpoint-only load display does not claim
+  a motion transition or authorize rewind.
+
+The consumer derives these values from admitted neighboring operations and the
+same approved native phase law used by playback, never hidden future orders or
+the camera. In simulation coordinates an op's origin derivative is
+`Q*(b-a)/(t1_q-t0_q)`; yaw derivative is
+`Q*turn_udeg/(t1_q-t0_q) * π/180_000_000`, followed by the existing pack-to-world
+axis convention. The physical transform derivative includes the actual seat/
+terrain response. Recompute/validate those relationships and C0 transforms;
+reject missing, nonfinite, stale or inconsistent rates and branch selections.
+All identities/values are bound into prepared data and certificate/profile domain.
+They are never written into simulation state as a second timing authority.
+
+For native hoof affine `M(φ)=G_hoof(φ)*sole_offset`, the adjacent world contact
+and its derivative are
+
+`C = H M`, `C_s = H_s M + H M_φ r`.
+
+This chain rule includes origin, yaw, seat and animation terms. At entry use the
+preceding op's left limit; at exit use the following op's right limit. Derivatives
+on the pivot side generally differ for the actor carrier H, even when its value
+is continuous. Matching that adjacent contact derivative on the pivot side
+requires the hoof-local global derivative
+
+`M_u = D * H_pivot^-1 * (C_s_adjacent - H_s_pivot M)`.
+
+This is a feasibility constraint on the permitted limb/reference derivatives,
+not permission to change H or native endpoint values. Apply the same product
+rule through parent/local affines and full weighted skin; a matching rigid hoof
+frame alone does not prove that a mixed-weight sole patch has matching velocity.
+
+The kernel's contact segments use its fixed START frame. Let S be the fixed
+model-to-world start frame (including scale); then supply
+`C_START=S^-1 C` and `dC_START/du=D*S^-1 C_s`. S is constant: do not differentiate
+an animated frame or replace the start frame at each sample. The kernel's turn
+Y(u) must satisfy `H_pivot(u)=S Y(u)` in that certified placement domain; validate
+this against actual seating. If a changing seat/tilt makes that factorization
+false, the fixed-START kernel cannot represent a world-fixed stance as declared:
+reject with the actual carrier mismatch and retain it as an unmet prerequisite,
+not a transform to omit. Kernel full-affine derivatives obey its existing
+orientation/stretch conventions and phase units; the adapter must convert the
+matrices above accordingly, including the factor D.
+
+**C1 scope:** internal contact-curve joins promise C1 in u. At each MARCH↔pivot
+boundary require exact C0 native pose/skin and explicitly test the one-sided
+world material-contact derivative using the inputs above. A C1 contact claim
+requires equality of those derivatives; otherwise retain the precise defect,
+never zero the input or label a moving patch planted. The engine root remains
+its committed piecewise-linear XZ/yaw and need not be C1 at stop/pivot boundaries.
+This document promises no universal C1 for that root or all non-contact mesh
+vertices. A contact solver may compensate only through its permitted limb/
+reference derivatives; if those constraints cannot satisfy a required join,
+return FAIL/UNRESOLVED and preserve original physical/visual acceptance. No root
+smoothing, retiming or hidden transition outside the committed pivot is allowed.
+
+**Explicit R2 prerequisite:** accepted BodyMotion provides op timing/geometry,
+but neither a bare pivot request nor the old `gait_rate` function supplies this
+complete native phase-law and two-sided seated-transform contract. R1 may capture
+native derivatives; it cannot invent neighboring motion. Before R2a/R2b claim
+executable MARCH boundary matching, the dispatcher must bind an approved admitted
+phase-law/kinematic derivation with its full reachable rate/placement domain.
+If that requires a caller or timing implementation, register its literal files
+separately before editing; none is authorized here. Synthetic supplied kinematics
+can test the pure component, but cannot clear this production prerequisite.
+
 How the profile is constructed is part of this contract, not a caller omission:
 
 - Partition native phase at every imported key, loop seam and authored support
@@ -262,13 +357,13 @@ How the profile is constructed is part of this contract, not a caller omission:
   waypoint. Sole orientation uses SO(3) exponential-coordinate Hermite and
   positive stretch interpolation; never coefficient-lerp through a singular
   180-degree basis. Whole-affine value and phase derivatives agree at joins.
-- Endpoint sole transforms/derivatives come from requested native FK and the
-  committed yaw derivative, including continuation from/to MARCH. A planted
+- Endpoint sole transforms/derivatives use native FK and the two-sided chain
+  rule above, including neighboring origin/seat/yaw and phase rates. A planted
   stance has zero world derivative; if incoming native motion does not match,
   a finite swing/contact-transfer interval is necessary. Calling that interval
   stance or setting its derivative to zero does not fix the discontinuity.
-  C0 exact endpoint equality is mandatory; prove the promised C1 joins, and
-  separately test one-sided MARCH velocity at native nonsmooth keys.
+  C0 exact endpoint equality is mandatory; prove C1 only in the scope above,
+  with the specified one-sided branch at native nonsmooth keys.
 - Choose step count, knots, lift and reference rotations jointly by constrained
   minimization: first minimize the maximum physical material-point error; among
   feasible results minimize squared change from the native/reference rotations.
@@ -296,7 +391,10 @@ with that exact counterexample; this document does not authorize that change.
 Finite native/dense checks are independent adversarial tests. Continuous coverage
 uses outward-rounded interval enclosures of imported interpolation, the profile,
 FK, raw-weight LBS and terrain on **all** cells in
-`(heading,turn,duration_q,φ0,φ1,u,admitted placement/terrain)`.
+`(heading,turn,duration_q,φ0,φ1,u,boundary_kinematics,admitted placement/terrain)`.
+Include all reachable neighboring move/hold rates, native phase rates/branches
+and one-sided carrier derivatives under the approved phase law; identical endpoint
+poses do not collapse different derivative contexts into one cache/profile cell.
 Discrete integer axes may be bounded in blocks; continuous phases include every
 real point and one-sided seam. Unbounded or unspecified terrain/scale inputs
 prevent a universal certificate; record the inherited admissible domain explicitly.
@@ -349,11 +447,26 @@ Mandatory hand-computed and negative controls for the future implementation:
 - For a cell radius .1, center error .001 and proven derivative bound .02,
   upper error is .003 before η; a .0025 budget is inconclusive until refinement,
   not an observed .003 error. Test outward rounding near every threshold.
+- Same native scalar pose `p(φ)=φ`, φ=.25, D=.1, fixed carrier: adjacent phase
+  rates r=1 and r=2 require `dp/du=.1` and `.2` respectively. If the neighboring
+  origin additionally moves at 3 model metres per s, total contact derivatives
+  are `.4` and `.5` per u. The stationary pivot must supply those contact
+  derivatives through permitted locals, not continue translating its root.
+  Different rates must produce distinct prepared identity/constraints; omitting
+  either adjacent record must reject, not return the same cached trajectory.
+- Planar chain-rule control in standard XY coordinates: M=(1,0), neighboring
+  translation rate (3,0), native rate 0 and neighboring angular rate 0; pivot
+  angular rate 2 radians per unit s, D=.1, H=identity at the boundary. Required local
+  `M_u=.1*((3,0)-(0,2))=(.3,-.2)`; adding the prescribed pivot carrier term
+  `(0,.2)` gives world contact derivative `(.3,0)`. The actor angular-rate
+  jump remains. With constant START basis `2*R90`, world derivative `(0,4)`
+  converts to START derivative `(.2,0)` per u, not `(.4,0)` or `(0,.4)`.
 - Both signs, ±1 microdegree, near 180/+180, heading 76.000012→256.000012,
   350→10 and reverse, duration 1 and Q and original finite duration cases,
   φ0/φ1 independently at keys/off-keys/.73/seam. Never replace a request by
   nearest cache entry; mutated input/digest, wrong units/binds/weights, zero
-  duration, invalid phases, broken C1, singular basis and terrain holes reject
+  duration, invalid phases, missing/inconsistent two-sided kinematics or phase-law
+  identity, unsupported moving carrier, broken C1, singular basis and terrain holes reject
   atomically. Repeated sampling in arbitrary order must be identical.
 
 ## 5. Exact future steps, ownership and conditional source change
@@ -388,8 +501,9 @@ hand cases. It may deliver UNRESOLVED contact disposition honestly; that is a
 usable input component, **not an accepted contact prerequisite for activation**.
 No new general-purpose research report or second certifier is required.
 
-**R2a — Royal parameter evaluator**, after R1's component acceptance and a
-documented physically justified endpoint budget/domain decision. Exact paths:
+**R2a — Royal parameter evaluator**, after R1's component acceptance, the explicit
+boundary-kinematic/phase-law prerequisite in §3 and a documented physically
+justified endpoint budget/domain decision. Exact paths:
 
 ```text
 scripts/map3d/map3d_royal_locomotion.gd
@@ -409,7 +523,7 @@ limits, original precision, synthetic profile-bound tests and all malformed-inpu
 cases. This evaluator component alone is **not** the promised total provider.
 
 **R2b — Coupled profile construction**, after R2a and the same resolved endpoint
-budget/domain decision. Proposed exact owned paths:
+budget/domain and boundary-kinematic decisions. Proposed exact owned paths:
 
 ```text
 tools/units3d/royal_install/locomotion_profile.gd
