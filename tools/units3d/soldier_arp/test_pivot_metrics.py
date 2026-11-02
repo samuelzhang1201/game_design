@@ -164,7 +164,7 @@ def raw_control(m=None, scale=1., units=1.):
         'inputs': {'fixture_sha256': metric.FIXTURE_SHA256, 'source_sha256': frozen.HASHES,
                    'native': dict(ref), 'installed': dict(ref), 'placement': dict(ref), 'terrain': dict(ref)},
         'placement': {'matrix': m, 'original_scale': scale, 'world_unit_m': units,
-                      'precision': 'binary64', 'matrix_bits': [[struct.pack('>d', x).hex() for x in r] for r in m],
+                      'precision': 'binary64', 'scale_precision': 'binary64', 'matrix_bits': [[struct.pack('>d', x).hex() for x in r] for r in m],
                       'scale_bits': struct.pack('>d', scale).hex(),
                       'construction_inputs': dict(ref), 'unavailable_reason': None},
         'frame': {'units': 'world_coordinate_units', 'coordinate_frame': 'synthetic-world',
@@ -331,7 +331,8 @@ class RawMetricsTest(unittest.TestCase):
         self.assertNotEqual(scale, 26.351918763158388)  # retained seat k cannot replace reported scale
         raw, cases = raw_control(m, scale)
         h = raw['header']
-        h['placement'].update(precision='binary32', matrix_bits=words, scale_bits='41cac287',
+        h['placement'].update(precision='binary32', matrix_bits=words, scale_precision='binary64',
+            scale_bits='40395850e0000000',
             construction_inputs=None, unavailable_reason=witness['construction'])
         payload = json.dumps(witness, sort_keys=True, separators=(',', ':')).encode()
         h['evidence']['native_witness'] = {'sha256': hashlib.sha256(payload).hexdigest(),

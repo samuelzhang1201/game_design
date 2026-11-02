@@ -243,7 +243,7 @@ def validate_raw_observation(observation, cases):
         exact_keys(inputs[name], 'source sha256')
         reference(inputs[name])
     placement = h['placement']
-    exact_keys(placement, 'matrix original_scale world_unit_m precision matrix_bits scale_bits construction_inputs unavailable_reason')
+    exact_keys(placement, 'matrix original_scale world_unit_m precision scale_precision matrix_bits scale_bits construction_inputs unavailable_reason')
     m, scale, units = [placement[k] for k in ['matrix', 'original_scale', 'world_unit_m']]
     uniformity = raw_uniformity(m, scale)
     require(number(units) and units > 0 and number(scale*units) and scale*units > 0, 'invalid world units')
@@ -254,7 +254,7 @@ def validate_raw_observation(observation, cases):
         for value, word in zip(values, bits):
             decoded = raw_word(word, placement['precision'])
             require(struct.pack('>d', value) == struct.pack('>d', decoded), 'raw matrix bits/value mismatch')
-    require(struct.pack('>d', scale) == struct.pack('>d', raw_word(placement['scale_bits'], placement['precision'])),
+    require(struct.pack('>d', scale) == struct.pack('>d', raw_word(placement['scale_bits'], placement['scale_precision'])),
             'raw scale bits/value mismatch')
     if placement['construction_inputs'] is None:
         require(isinstance(placement['unavailable_reason'], str) and placement['unavailable_reason'].strip(),
