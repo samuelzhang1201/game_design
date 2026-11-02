@@ -169,7 +169,7 @@ scan. Every observation report retains all legacy adverse skin results.
 |---|---|
 | `schema_status` | `VALID` means structurally valid, byte-bound input; `REJECTED` means no consumable physical report. Explicit null uncertainty is valid missing evidence, not zero. |
 | `measurement_status` | `GENERATED` for all requested finite values; `PARTIAL` for explicit unavailable surface rows; `PENDING_RESPONSES` for a query manifest alone. None means physical acceptance. |
-| `placement_uniformity` | `PASS`/`FAIL` for the original strict Gram predicate only, with all nine residuals, scale, threshold and worst indices. The recorded matrix is `FAIL` in every report. This is not a claim that its residual is harmless rounding. |
+| `placement_uniformity` | `PREDICATE_SATISFIED`/`FAIL` for the original strict Gram predicate only, with all nine residuals, scale, threshold and worst indices. Raw mode never emits uniform-placement `PASS`, even for an exact synthetic matrix. The recorded matrix is `FAIL` in every report; no harmless-rounding claim follows. |
 | `coverage` | Separate expected/received/valid/uncovered counts and identities for vertices, anchors, active and outgoing patches; `COMPLETE_FINITE`/`UNCOVERED`. Continuous domain and rendered surface each remain `PENDING` absent independent proof. |
 | `uncertainty_status` | `BOUNDED` only with justified conservative bounds for every contributing input; otherwise `UNKNOWN`, with null upper bounds and explicit missing terms. |
 | `budget_status` | Missing authorized E: `PENDING`. E supplied but placement FAIL: `INELIGIBLE_PLACEMENT`. Missing coverage/uncertainty: `PENDING`. Only otherwise compare the outward model bound: `WITHIN_FINITE_SAMPLES` or `FAIL`. Swing: `SWING_NO_STANCE_VERDICT`. Never `PASS`. |
