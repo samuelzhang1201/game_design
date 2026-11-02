@@ -767,3 +767,275 @@ func test_invalid_rest_split_and_degenerate_raw_joint_directions_reject_atomical
 	var raw: Dictionary = _globals(f.pose, f.rest.parents)
 	f.pose["leg_stretch.r"].origin = raw["thigh_twist.r"].origin
 	_reject(f)
+
+
+func _boundary_fixture() -> Dictionary:
+	var rest: Dictionary = {"locals": {"a": Transform3D.IDENTITY, "b": Transform3D(Basis.IDENTITY, Vector3(0, 1, 0))}, "parents": {"a": "", "b": ""}, "segments": [{"a": "a", "b": "b"}]}
+	var raw: Dictionary = {"a": Transform3D(Basis.IDENTITY, Vector3(2, 0, 0)), "b": Transform3D(Basis.IDENTITY, Vector3(4, 0, 0))}
+	var meshes: Dictionary = {"body": {"binds": [{"bone": "a", "pose": Transform3D.IDENTITY}, {"bone": "b", "pose": Transform3D.IDENTITY}],
+		"vertices": [{"position": Vector3(1, 0, 0), "influences": [{"bind": 0, "weight": .25}, {"bind": 1, "weight": .5}]}], "sole_indices": [0]}}
+	return {"rest": rest, "raw": raw, "candidate": raw.duplicate(true), "meshes": meshes, "ground": {"origin": Vector3.ZERO, "normal": Vector3.UP}, "model_from_native": Transform3D.IDENTITY}
+
+
+func _measure_boundary(f: Dictionary) -> Dictionary:
+	if not solver.has_method("measure_boundary"):
+		assert_true(false, "missing pure native-boundary measurement")
+		return {"ok": false}
+	return solver.measure_boundary(f.rest, f.raw, f.candidate, f.meshes, f.model_from_native, f.ground)
+
+
+func test_boundary_lbs_preserves_raw_weights_and_separate_ground_components() -> void:
+	var f: Dictionary = _boundary_fixture()
+	f.candidate.a.origin += Vector3(0, 4, 3)
+	f.candidate.b.origin += Vector3(0, 4, 3)
+	var unchanged: Dictionary = f.duplicate(true)
+	var result: Dictionary = _measure_boundary(f)
+	assert_true(result.ok)
+	if not result.ok:
+		return
+	assert_eq(f, unchanged)
+	# (1+2)*.25 + (1+4)*.5 = 3.25, never divide by the .75 weight sum.
+	assert_eq(result.meshes.body.raw_points[0], Vector3(3.25, 0, 0))
+	assert_almost_eq(result.body_displacement_m, 3.75, 0.000001)
+	assert_almost_eq(result.sole_displacement_m, 3.75, 0.000001)
+	assert_almost_eq(result.sole_normal_displacement_m, 3.0, 0.000001)
+	assert_almost_eq(result.sole_tangent_displacement_m, 2.25, 0.000001)
+	assert_eq(result.physical_error_status, "unknown")
+	assert_false(result.has("certified"))
+
+
+func test_boundary_error_conditions_are_necessary_only_and_metric_specific() -> void:
+	if not solver.has_method("boundary_condition"):
+		assert_true(false, "missing finite-error necessary condition")
+		return
+	var j: float = Vector3(3e-6, 4e-6, 0).length()
+	assert_eq(solver.boundary_condition(j, 2e-6, false).status, "excluded")
+	assert_eq(solver.boundary_condition(j, 3e-6, false).status, "not_excluded")
+	assert_eq(solver.boundary_condition(j, 3e-6, true).status, "excluded")
+	assert_eq(solver.boundary_condition(j, 6e-6, true).status, "not_excluded")
+	assert_false(solver.boundary_condition(j, -1.0, false).ok)
+
+
+func test_boundary_full_affine_model_frame_is_applied_after_raw_lbs() -> void:
+	var f: Dictionary = _boundary_fixture()
+	f.model_from_native = Transform3D(Basis(Vector3(2, 0, 0), Vector3(.3, 1, 0), Vector3(0, .2, 1)), Vector3(10, 20, 30))
+	var result: Dictionary = _measure_boundary(f)
+	assert_true(result.ok)
+	if result.ok:
+		assert_eq(result.meshes.body.raw_points[0], Vector3(16.5, 20, 30))
+		assert_almost_eq(result.body_displacement_m, 0.0, 1e-8)
+
+
+func test_boundary_malformed_input_rejects_atomically_without_metrics() -> void:
+	for kind: int in range(14):
+		var f: Dictionary = _boundary_fixture()
+		match kind:
+			0: f.rest.parents.a = "b"; f.rest.parents.b = "a"
+			1: f.raw.erase("b")
+			2: f.candidate.a.origin.x = NAN
+			3: f.meshes.body.binds[0].bone = "missing"
+			4: f.meshes.body.vertices[0].influences[0].weight = -.25
+			5: f.meshes.body.vertices[0].influences[0].weight = INF
+			6: f.meshes.body.vertices[0].influences[0].bind = 2
+			7: f.meshes.body.sole_indices = [1]
+			8: f.meshes.body.binds[0].pose.basis.x = Vector3.ZERO
+			9: f.ground.normal = Vector3(0, 2, 0)
+			10: f.rest.segments[0].b = "missing"
+			11: f.model_from_native.origin.y = INF
+			12: f.meshes.body.vertices[0].position = Vector3(NAN, 0, 0)
+			13:
+				f.model_from_native.origin.x = 1e38
+				f.ground.origin.x = -3e38
+				f.ground.normal = Vector3.RIGHT
+		# var_to_bytes also compares NaN without NaN != NaN ambiguity.
+		var before: PackedByteArray = var_to_bytes(f)
+		var result: Dictionary = _measure_boundary(f)
+		assert_false(result.ok, str(kind))
+		assert_false(result.has("body_displacement_m"), "no partial metrics " + str(kind))
+		assert_eq(var_to_bytes(f), before, "no repaired inputs " + str(kind))
+
+
+func _boundary_encode(value: Variant) -> Variant:
+	if value is Transform3D:
+		var t: Transform3D = value
+		return {"$t": [[t.basis.x.x, t.basis.y.x, t.basis.z.x, t.origin.x], [t.basis.x.y, t.basis.y.y, t.basis.z.y, t.origin.y], [t.basis.x.z, t.basis.y.z, t.basis.z.z, t.origin.z], [0.0, 0.0, 0.0, 1.0]]}
+	if value is Vector3:
+		return {"$v3": [value.x, value.y, value.z]}
+	if value is Dictionary:
+		var out: Dictionary = {}
+		for key: Variant in value:
+			out[key] = _boundary_encode(value[key])
+		return out
+	if value is Array:
+		var out: Array = []
+		for item: Variant in value:
+			out.append(_boundary_encode(item))
+		return out
+	return value
+
+
+func _played_boundary_pose(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, phase: float) -> Dictionary:
+	player.stop()
+	skeleton.reset_bone_poses()
+	player.play(clip)
+	player.seek(player.get_animation(clip).length * phase, true)
+	skeleton.force_update_all_bone_transforms()
+	var locals: Dictionary = {}
+	var globals: Dictionary = {}
+	for i: int in range(skeleton.get_bone_count()):
+		var name: String = skeleton.get_bone_name(i)
+		locals[name] = skeleton.get_bone_pose(i)
+		globals[name] = skeleton.get_bone_global_pose(i)
+	return {"clip": clip, "phase": phase, "time_s": player.get_animation(clip).length * phase, "kind": "raw_animation_player", "locals": locals, "globals": globals}
+
+
+func _imported_boundary_meshes(scene: Node3D, skeleton: Skeleton3D) -> Dictionary:
+	var meshes: Dictionary = {}
+	for mesh: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		assert_not_null(mesh.skin, str(mesh.name) + " actual Skin")
+		if mesh.skin == null:
+			continue
+		assert_eq(mesh.get_node(mesh.skeleton), skeleton)
+		var binds: Array = []
+		for i: int in range(mesh.skin.get_bind_count()):
+			var name: String = mesh.skin.get_bind_name(i)
+			if name.is_empty():
+				name = skeleton.get_bone_name(mesh.skin.get_bind_bone(i))
+			binds.append({"bone": name, "pose": mesh.skin.get_bind_pose(i)})
+		for surface: int in range(mesh.mesh.get_surface_count()):
+			var arrays: Array = mesh.mesh.surface_get_arrays(surface)
+			var positions: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var palette: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+			var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+			var width: int = palette.size() / positions.size()
+			assert_true(width == 4 or width == 8)
+			var vertices: Array = []
+			var soles: Array = []
+			for v: int in range(positions.size()):
+				var influences: Array = []
+				var footwear: float = 0.0
+				for j: int in range(width):
+					var bind: int = palette[v * width + j]
+					var weight: float = weights[v * width + j]
+					influences.append({"bind": bind, "weight": weight})
+					if binds[bind].bone in ["foot.l", "foot.r", "toes_01.l", "toes_01.r"]:
+						footwear += weight
+				vertices.append({"position": positions[v], "influences": influences})
+				# Frozen native sole triangles (body surface 0), all raw influences retained.
+				if str(mesh.name) == "archers" and surface == 0 and v in [25967, 49673, 25970, 17151, 31276, 17148]:
+					assert_gt(footwear, .8, "fixed shoe material membership")
+					soles.append(v)
+			meshes[str(mesh.name) + "/" + str(surface)] = {"binds": binds, "vertices": vertices, "sole_indices": soles}
+	return meshes
+
+
+func test_real_imported_native_boundary_and_capture_provenance() -> void:
+	var scene: Node3D = (load("res://scenes/models/units/archers.tscn") as PackedScene).instantiate()
+	add_child(scene)
+	var skeleton: Skeleton3D = scene.find_children("*", "Skeleton3D", true, false)[0]
+	var player: AnimationPlayer = scene.find_children("*", "AnimationPlayer", true, false)[0]
+	player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	var rest: Dictionary = {"locals": {}, "parents": {}, "segments": []}
+	for i: int in range(skeleton.get_bone_count()):
+		var name: String = skeleton.get_bone_name(i)
+		rest.locals[name] = skeleton.get_bone_rest(i)
+		var parent: int = skeleton.get_bone_parent(i)
+		rest.parents[name] = "" if parent == -1 else str(skeleton.get_bone_name(parent))
+	for side: String in ["l", "r"]:
+		rest.segments.append({"a": "thigh_twist." + side, "b": "leg_stretch." + side, "split": "thigh_stretch." + side})
+		rest.segments.append({"a": "leg_stretch." + side, "b": "foot." + side, "split": "leg_twist." + side})
+	var model_from_native: Transform3D = scene.global_transform.affine_inverse() * skeleton.global_transform
+	var meshes: Dictionary = _imported_boundary_meshes(scene, skeleton)
+	assert_gte(meshes.size(), 4, "body and every equipped Skin")
+	var phases: Array[float] = [0.0, .137, .81, .000001, .999999]
+	var march: Animation = player.get_animation("MARCH")
+	for track: int in range(march.get_track_count()):
+		if march.track_get_key_count(track) > 2:
+			var key_phase: float = march.track_get_key_time(track, 1) / march.length
+			phases.append(key_phase - 0.000001)
+			phases.append(key_phase)
+			phases.append(key_phase + 0.000001)
+			break
+	var samples: Array = []
+	for phase: float in phases:
+		var raw: Dictionary = _played_boundary_pose(player, skeleton, "MARCH", phase)
+		var rebuilt: Dictionary = _globals(raw.locals, rest.parents)
+		for name: String in rebuilt:
+			_matrix_boundary(rebuilt[name], raw.globals[name], "native global " + name)
+		samples.append(raw)
+	var raw: Dictionary = samples[0].locals
+	var f: Dictionary = {"rest": rest, "raw": raw, "candidate": raw, "meshes": meshes, "model_from_native": model_from_native, "ground": {"origin": Vector3.ZERO, "normal": Vector3.UP}}
+	var identity: Dictionary = _measure_boundary(f)
+	assert_true(identity.ok, str(identity.get("diagnostics")))
+	if identity.ok:
+		assert_eq(identity.body_displacement_m, 0.0)
+	var boundary_measurements: Array = []
+	var pivot_samples: Array = []
+	for clip: String in ["PIVOT_LEFT", "PIVOT_RIGHT"]:
+		for endpoint: float in [0.0, 1.0]:
+			var candidate: Dictionary = _played_boundary_pose(player, skeleton, clip, endpoint)
+			pivot_samples.append(candidate)
+			# Clips contain local poses; heading belongs to the external actor, not these bones.
+			f.candidate = candidate.locals
+			var result: Dictionary = _measure_boundary(f)
+			assert_true(result.ok, str(result.get("diagnostics")))
+			if result.ok:
+				assert_gt(result.body_displacement_m, 0.0001, "installed raw-to-pivot seam still exists")
+				assert_gt(result.sole_displacement_m, 0.00001, "fixed material seam still exists")
+				for mesh_name: String in result.meshes:
+					var measured: Dictionary = result.meshes[mesh_name]
+					boundary_measurements.append({"clip": clip, "phase": endpoint, "mesh": mesh_name, "max_displacement_m": measured.max_displacement_m,
+						"raw_sole_heights_m": measured.raw_sole_heights_m, "candidate_sole_heights_m": measured.candidate_sole_heights_m})
+				print("NATIVE_BOUNDARY ", clip, " ", endpoint, " body_m=", result.body_displacement_m, " sole_m=", result.sole_displacement_m, " normal_m=", result.sole_normal_displacement_m, " tangent_m=", result.sole_tangent_displacement_m)
+	assert_eq(boundary_measurements.size(), 16, "both endpoints, both clips, all four body/gear meshes retained")
+	var output: String = OS.get_environment("ARCHER_BOUNDARY_CAPTURE")
+	if not output.is_empty():
+		var digests: Dictionary = {}
+		for name: String in DirAccess.get_files_at("res://assets/3D/units/archers"):
+			var path: String = "assets/3D/units/archers/" + name
+			digests[path] = FileAccess.get_sha256("res://" + path)
+		for path: String in ["scenes/models/units/archers.tscn", "tools/units3d/archer_arp/pivot_import.gd"]:
+			digests[path] = FileAccess.get_sha256("res://" + path)
+		var source_rest: Dictionary = _native(-1.0)
+		var source_from_native: Transform3D = source_rest.locals["root.x"] * rest.locals["root.x"].affine_inverse()
+		var capture: Dictionary = {"schema": "archer-native-boundary-v1", "kind": "raw_animation_player", "godot": Engine.get_version_info(), "resource_sha256": digests, "capture_script_sha256": FileAccess.get_sha256("res://tests/map3d/test_archer_pivot.gd"),
+			"rest": rest, "model_from_native": model_from_native, "source_from_native": source_from_native, "native_from_source": source_from_native.affine_inverse(),
+			"clip": "MARCH", "clip_length_s": march.length, "samples": samples, "meshes": meshes, "pivot_samples": pivot_samples, "boundary_measurements": boundary_measurements}
+		var file: FileAccess = FileAccess.open(output, FileAccess.WRITE)
+		assert_not_null(file)
+		if file != null:
+			file.store_string(JSON.stringify(_boundary_encode(capture)))
+			file.close()
+			print("NATIVE_CAPTURE_SHA256=", FileAccess.get_sha256(output))
+	remove_child(scene)
+	scene.free()
+
+
+func _matrix_boundary(a: Transform3D, b: Transform3D, label: String) -> void:
+	assert_lt(a.origin.distance_to(b.origin), .00001, label)
+	for axis: int in range(3):
+		assert_lt(a.basis[axis].distance_to(b.basis[axis]), .00001, label + " affine")
+
+
+func test_boundary_reports_native_bone_segment_split_and_affine_residuals() -> void:
+	var f: Dictionary = _boundary_fixture()
+	f.rest.locals["split"] = Transform3D(Basis.IDENTITY, Vector3(0, .5, 0))
+	f.rest.parents["split"] = "a"
+	f.rest.segments[0].split = "split"
+	f.raw = f.rest.locals.duplicate(true)
+	f.candidate = f.raw.duplicate(true)
+	f.candidate.b.origin.y = 2.0
+	f.candidate.split.origin.x = 3.0
+	f.candidate.a.basis.x *= 2.0
+	var result: Dictionary = _measure_boundary(f)
+	assert_true(result.ok)
+	if not result.ok:
+		return
+	assert_eq(result.bones.a.local_gram_residual, 3.0)
+	assert_eq(result.bones.a.raw_rest_gram_residual, 0.0)
+	assert_eq(result.bones.a.candidate_rest_gram_residual, 3.0)
+	assert_almost_eq(result.segments[0].candidate_length_residual_native_m, 1.0, .000001)
+	assert_almost_eq(result.segments[0].raw_length_residual_native_m, 0.0, .000001)
+	assert_almost_eq(result.segments[0].raw_split_residual_native_m, 0.0, .000001)
+	# Scaled parent puts the split at (6,.5,0), target fraction at (0,1,0).
+	assert_almost_eq(result.segments[0].candidate_split_residual_native_m, sqrt(36.25), .000001)

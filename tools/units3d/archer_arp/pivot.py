@@ -1,7 +1,9 @@
 """Author transient archer pivot poses from the unchanged ARP six-clip export.
 
 Run in background Blender: --python pivot.py -- BODY_GLB WORK_DIRECTORY
-[ACTUAL_NATIVE_MARCH_JSON IMPORTED_BODY_GLB].
+[ACTUAL_NATIVE_MARCH_JSON IMPORTED_BODY_GLB CAPTURE_SHA256].
+Read-only: --boundary-preflight SOURCE_GLB IMPORTED_BODY_GLB CAPTURE_JSON SHA256 PHASE...
+Self-check: --boundary-self-check SOURCE_GLB IMPORTED_BODY_GLB CAPTURE_JSON SHA256
 The output is input for the accepted Map3DArcherPivot, not a motion certificate.
 Native bone space excludes the model root. Positive pack turn means RIGHT.
 """
@@ -78,6 +80,36 @@ def encoded(value):
     return value
 
 
+def finite_number(value):
+    return type(value) in (int, float) and math.isfinite(value)
+
+
+def read_affine(value):
+    rows = value.get('$t') if isinstance(value, dict) and set(value) == {'$t'} else None
+    if not isinstance(rows, list) or len(rows) != 4 or any(not isinstance(r, list) or len(r) != 4 or not all(finite_number(x) for x in r) for r in rows) or rows[3] != [0, 0, 0, 1]:
+        raise ValueError('invalid full affine matrix')
+    matrix = Matrix(rows)
+    if not math.isfinite(matrix.determinant()) or abs(matrix.determinant()) <= 1e-10 or not all(math.isfinite(x) for r in matrix.inverted() for x in r):
+        raise ValueError('singular/overflowing full affine matrix')
+    return matrix
+
+
+def read_locals(value, parents):
+    if not isinstance(value, dict) or set(value) != set(parents):
+        raise ValueError('incomplete named native transforms')
+    return {name: read_affine(item) for name, item in value.items()}
+
+
+def matrix_error(a, b):
+    values = [abs(a[i][j] - b[i][j]) for i in range(4) for j in range(4)]
+    return max(values) if all(math.isfinite(v) for v in values) else math.inf
+
+
+def change_space(local, parents, target_from_source):
+    # Only roots change basis space; every parent-relative descendant stays intact.
+    return {n: target_from_source @ m if not parents[n] else m.copy() for n, m in local.items()}
+
+
 class NativeSource:
     def __init__(self, path):
         self.bytes = Path(path).read_bytes()
@@ -138,11 +170,18 @@ class NativeSource:
                 # actual toe shoe vertices are audited separately through skinning.
                 'toe_in_toes': Matrix.Identity(4)}
 
-    def use_native_march(self, dump_path, imported_body_path):
+    def use_native_march(self, dump_path, imported_body_path, capture_sha256=None):
+        """Bind a trusted actual-playback capture; never infer its provenance from a label.
+
+        The caller retains SHA256 from the GUT capture run separately from this file.
+        This detects replacement/corruption, not a dishonest capture producer.
+        Validate everything before changing this source; legacy unbound dumps reject.
+        """
+        payload = Path(dump_path).read_bytes()
+        if not capture_sha256 or hashlib.sha256(payload).hexdigest() != capture_sha256:
+            raise ValueError('native capture does not match independently retained SHA256')
+        dump = json.loads(payload)
         imported = NativeSource(imported_body_path)
-        dump = json.loads(Path(dump_path).read_text())
-        if dump['body_sha256'] != hashlib.sha256(imported.bytes).hexdigest() or dump['errors']:
-            raise ValueError('native MARCH dump does not bind its imported body')
         for key, value in self.doc.items():
             if key == 'buffers':
                 continue
@@ -153,17 +192,100 @@ class NativeSource:
                 raise ValueError('native MARCH body differs from immutable source ' + key)
         if imported.binary[:len(self.binary)] != self.binary:
             raise ValueError('native MARCH body changed immutable source payload')
-        poses = {}
+        if dump.get('schema') != 'archer-native-boundary-v1' or dump.get('kind') != 'raw_animation_player' or dump.get('clip') != 'MARCH':
+            raise ValueError('expected raw AnimationPlayer MARCH capture, not calibrated input')
+        project = Path(imported_body_path).resolve().parents[4]
+        folder = project / 'assets/3D/units/archers'
+        paths = {str(p.relative_to(project)) for p in folder.iterdir() if p.is_file()}
+        paths.update(('scenes/models/units/archers.tscn', 'tools/units3d/archer_arp/pivot_import.gd'))
+        digests = dump.get('resource_sha256', {})
+        if set(digests) != paths or any(hashlib.sha256((project / p).read_bytes()).hexdigest() != digests[p] for p in paths):
+            raise ValueError('native capture has stale body/import/scene/gear source digests')
+        if digests['assets/3D/units/archers/archers.glb'] != hashlib.sha256(imported.bytes).hexdigest():
+            raise ValueError('capture imported body path mismatch')
+        if dump.get('capture_script_sha256') != hashlib.sha256((project / 'tests/map3d/test_archer_pivot.gd').read_bytes()).hexdigest():
+            raise ValueError('stale native capture producer')
+        if not isinstance(dump.get('godot'), dict) or not dump['godot'].get('hash') or not dump['godot'].get('string'):
+            raise ValueError('native runtime identity missing')
+        action = next(a for a in imported.doc['animations'] if a['name'] == 'MARCH')
+        length = max(imported.accessor(s['input'])[-1][0] for s in action['samplers'])
+        if not finite_number(dump.get('clip_length_s')) or abs(dump['clip_length_s'] - length) > 1e-6:
+            raise ValueError('native MARCH length differs from source')
+        rest = dump.get('rest', {})
+        if rest.get('parents') != self.parents:
+            raise ValueError('native skeleton names/parents differ from source')
+        native_rest = read_locals(rest.get('locals'), self.parents)
+        source_from_native = read_affine(dump.get('source_from_native'))
+        native_from_source = read_affine(dump.get('native_from_source'))
+        read_affine(dump.get('model_from_native'))
+        if matrix_error(source_from_native @ native_from_source, Matrix.Identity(4)) > 1e-5 or matrix_error(native_from_source @ source_from_native, Matrix.Identity(4)) > 1e-5:
+            raise ValueError('native/source affine transforms are not mutual inverses')
+        converted_rest = change_space(native_rest, self.parents, source_from_native)
+        if any(matrix_error(converted_rest[n], self.rest[n]) > 1e-5 for n in self.parents):
+            raise ValueError('same-name native rest differs from bound source rest')
+        # Validate the full captured named skins and ALL raw influences, never normalize.
+        meshes = dump.get('meshes')
+        if not isinstance(meshes, dict) or not meshes:
+            raise ValueError('missing actual equipped mesh/skin data')
+        for mesh in meshes.values():
+            binds = mesh['binds']
+            if not binds or len({b['bone'] for b in binds}) != len(binds):
+                raise ValueError('missing or duplicate named Skin binds')
+            for bind in binds:
+                if bind['bone'] not in self.parents:
+                    raise ValueError('unknown Skin bone')
+                read_affine(bind['pose'])
+            if not mesh['vertices']:
+                raise ValueError('empty captured mesh')
+            for vertex in mesh['vertices']:
+                point = vertex['position']['$v3']
+                if len(point) != 3 or not all(finite_number(v) for v in point):
+                    raise ValueError('invalid captured material point')
+                weights = vertex['influences']
+                if not weights or any(type(w['bind']) is not int or not 0 <= w['bind'] < len(binds) or not finite_number(w['weight']) or w['weight'] < 0 for w in weights) or sum(w['weight'] for w in weights) <= 0:
+                    raise ValueError('invalid raw skin weights/bind indices')
+            if any(type(i) is not int or not 0 <= i < len(mesh['vertices']) for i in mesh['sole_indices']) or len(set(mesh['sole_indices'])) != len(mesh['sole_indices']):
+                raise ValueError('invalid fixed material index')
+        if not any(m['sole_indices'] for m in meshes.values()):
+            raise ValueError('missing fixed sole material points')
+        poses, raw_native = {}, {}
         for row in dump['samples']:
-            phase = float(row['phase'])
-            matrices = {name: Matrix(value['$t']) for name, value in row['locals'].items()}
-            if not 0 <= phase < 1 or phase in poses or set(matrices) != set(self.parents) or any(
-                    len(m) != 4 or len(m[0]) != 4 or not all(math.isfinite(x) for r in m for x in r) for m in matrices.values()):
-                raise ValueError('malformed or duplicate actual native MARCH sample')
-            poses[phase] = matrices
+            phase = row.get('phase')
+            if not finite_number(phase) or not 0 <= phase < 1 or phase in poses or row.get('kind') != 'raw_animation_player' or row.get('clip') != 'MARCH':
+                raise ValueError('malformed/duplicate native MARCH phase or calibrated baseline')
+            if not finite_number(row.get('time_s')) or abs(row['time_s'] - phase * length) > 1e-6:
+                raise ValueError('native phase/time mismatch')
+            local = read_locals(row['locals'], self.parents)
+            global_pose = read_locals(row['globals'], self.parents)
+            rebuilt = globals_of(local, self.parents)
+            if any(matrix_error(rebuilt[n], global_pose[n]) > 1e-5 for n in self.parents):
+                raise ValueError('native full local/global reconstruction mismatch')
+            converted = change_space(local, self.parents, source_from_native)
+            roundtrip = change_space(converted, self.parents, native_from_source)
+            source_globals = globals_of(converted, self.parents)
+            if any(matrix_error(roundtrip[n], local[n]) > 1e-5 or matrix_error(source_globals[n], source_from_native @ global_pose[n]) > 1e-5 for n in self.parents):
+                raise ValueError('native/source full affine roundtrip failed')
+            poses[phase], raw_native[phase] = converted, local
         if 0.0 not in poses:
             raise ValueError('actual native MARCH reference phase missing')
         self.native_poses = poses
+        self.native_boundary = {'capture_sha256': capture_sha256, 'capture': dump,
+                                'raw_native': raw_native, 'rest': native_rest,
+                                'source_from_native': source_from_native, 'native_from_source': native_from_source}
+
+    def boundary_preflight(self, phase):
+        """Read-only finite input comparison; no solver/export/policy side effect."""
+        if not finite_number(phase) or not self.native_poses or phase not in self.native_poses:
+            raise ValueError('exact actual native MARCH phase missing; no nearest/interpolated fallback')
+        raw_source = self.pose(phase)
+        calibrated_source, _, _ = self.calibrated(phase)
+        return {'physical_error_status': 'unknown', 'capture_sha256': self.native_boundary['capture_sha256'],
+                'phase': phase, 'raw_native_locals': {n: m.copy() for n, m in self.native_boundary['raw_native'][phase].items()},
+                'raw_source_locals': raw_source, 'calibrated_source_locals': calibrated_source,
+                'native_rest': {n: m.copy() for n, m in self.native_boundary['rest'].items()}, 'source_rest': {n: m.copy() for n, m in self.rest.items()},
+                'source_from_native': self.native_boundary['source_from_native'].copy(),
+                'native_from_source': self.native_boundary['native_from_source'].copy(),
+                'diagnostics': ['finite captured phase only; not a contact or full-domain certificate']}
 
     def accessor(self, index):
         if index not in self.cache:
@@ -179,11 +301,12 @@ class NativeSource:
         return self.cache[index]
 
     def pose(self, phase):
+        if self.native_poses and not finite_number(phase):
+            raise ValueError('native phase must be finite numeric input')
         if phase >= 0 and self.native_poses:
-            sample = min(self.native_poses, key=lambda p: abs(p - phase))
-            if abs(sample - phase) > 1e-12:
+            if phase not in self.native_poses:
                 raise ValueError('actual native MARCH sample missing; no invented interpolation')
-            return {name: matrix.copy() for name, matrix in self.native_poses[sample].items()}
+            return {name: matrix.copy() for name, matrix in self.native_poses[phase].items()}
         nodes = [dict(node) for node in self.doc['nodes']]
         if phase >= 0:
             action = next(a for a in self.doc['animations'] if a['name'] == 'MARCH')
@@ -379,14 +502,105 @@ class NativeSource:
             'contacts': contacts if contacts is not None else self.contact_plan(turn, entry, exit)}
 
 
+def boundary_self_check(source, args):
+    """Small author-side checks, using only this branch and a pinned native capture."""
+    import copy
+    import tempfile
+    source_path, imported_path, dump_path, capture_sha256 = args
+    original = json.loads(Path(dump_path).read_text())
+    frozen = encoded(source.native_poses)
+    for phase in source.native_poses:
+        result = source.boundary_preflight(phase)
+        assert result['physical_error_status'] == 'unknown'
+        assert matrix_error(result['source_from_native'] @ result['native_from_source'], Matrix.Identity(4)) < 1e-5
+        # Mutating a returned record must not corrupt the bound raw baseline.
+        result['raw_native_locals']['root.x'].translation.x += 1
+    assert encoded(source.native_poses) == frozen
+    for phase in (.123456789, .137 + 1e-13, math.nan, True):
+        try:
+            source.pose(phase)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('invented/malformed native phase')
+    transform = Matrix(((2, .3, 0, 10), (0, 1, .2, 20), (0, 0, .5, 30), (0, 0, 0, 1)))
+    local = {'a': Matrix.Translation((1, 2, 3)), 'b': Matrix.Translation((4, 5, 6))}
+    parents = {'a': '', 'b': 'a'}
+    converted = change_space(local, parents, transform)
+    rebuilt = globals_of(converted, parents)
+    assert matrix_error(converted['b'], local['b']) == 0
+    assert matrix_error(rebuilt['b'], transform @ globals_of(local, parents)['b']) < 1e-5
+    assert all(matrix_error(m, local[n]) < 1e-5 for n, m in change_space(converted, parents, transform.inverted()).items())
+    for mutation in ('digest', 'import_digest', 'scene_digest', 'gear_digest', 'producer', 'rest', 'parent', 'cycle', 'phase', 'duplicate', 'nan', 'weight', 'bind', 'inverse', 'time', 'calibrated', 'substituted_raw'):
+        dump = copy.deepcopy(original)
+        if mutation == 'digest':
+            dump['resource_sha256']['assets/3D/units/archers/archers.glb'] = '0' * 64
+        elif mutation in ('import_digest', 'scene_digest', 'gear_digest'):
+            path = {'import_digest': 'assets/3D/units/archers/archers.glb.import', 'scene_digest': 'scenes/models/units/archers.tscn', 'gear_digest': 'assets/3D/units/archers/archers_bow.res'}[mutation]
+            dump['resource_sha256'][path] = '0' * 64
+        elif mutation == 'producer':
+            dump['capture_script_sha256'] = '0' * 64
+        elif mutation == 'rest':
+            dump['rest']['locals']['foot.l']['$t'][0][3] += .01
+        elif mutation == 'parent':
+            dump['rest']['parents']['foot.l'] = 'missing'
+        elif mutation == 'cycle':
+            dump['rest']['parents']['root.x'] = 'foot.l'
+        elif mutation == 'phase':
+            dump['samples'][0]['phase'] = 1.0
+        elif mutation == 'duplicate':
+            dump['samples'].append(dump['samples'][0])
+        elif mutation == 'nan':
+            dump['samples'][0]['locals']['foot.l']['$t'][0][0] = math.nan
+        elif mutation == 'weight':
+            next(iter(dump['meshes'].values()))['vertices'][0]['influences'][0]['weight'] = -.1
+        elif mutation == 'bind':
+            next(iter(dump['meshes'].values()))['binds'][0]['bone'] = 'missing'
+        elif mutation == 'inverse':
+            dump['native_from_source']['$t'][0][3] += .1
+        elif mutation == 'time':
+            dump['samples'][0]['time_s'] += .1
+        elif mutation == 'calibrated':
+            dump['samples'][0]['kind'] = 'calibrated'
+        elif mutation == 'substituted_raw':
+            dump['samples'][0]['locals'] = encoded(source.calibrated(0.0)[0])
+        payload = json.dumps(dump).encode()
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'invalid.json'
+            path.write_bytes(payload)
+            try:
+                # A relabelled replacement cannot match the independently retained hash.
+                pin = capture_sha256 if mutation == 'substituted_raw' else hashlib.sha256(payload).hexdigest()
+                source.use_native_march(path, imported_path, pin)
+            except (ValueError, KeyError, TypeError):
+                pass
+            else:
+                raise AssertionError('accepted malformed capture: ' + mutation)
+        assert encoded(source.native_poses) == frozen, mutation + ' mutated bound input'
+    # Legacy raw GLB author mode still evaluates arbitrary phases independently.
+    fallback = NativeSource(source_path)
+    assert fallback.pose(.123456789) and not fallback.native_poses
+    print('BOUNDARY_SELF_CHECK_PASS', len(source.native_poses), 'exact phases; 17 atomic negative cases; E unknown')
+
+
 def main():
     args = sys.argv[sys.argv.index('--') + 1:]
-    if len(args) not in (2, 4):
-        raise ValueError('expected BODY_GLB WORK_DIRECTORY [NATIVE_MARCH_JSON IMPORTED_BODY_GLB]')
+    if args and args[0] in ('--boundary-preflight', '--boundary-self-check'):
+        source = NativeSource(args[1])
+        source.use_native_march(args[3], args[2], args[4])
+        if args[0] == '--boundary-self-check':
+            boundary_self_check(source, args[1:5])
+        else:
+            if len(args) < 6:
+                raise ValueError('explicit captured phases required')
+            print(json.dumps(encoded([source.boundary_preflight(float(p)) for p in args[5:]]), allow_nan=False))
+        return
+    if len(args) not in (2, 5):
+        raise ValueError('expected BODY_GLB WORK_DIRECTORY [NATIVE_MARCH_JSON IMPORTED_BODY_GLB CAPTURE_SHA256]')
     source_path, work = map(Path, args[:2])
     source = NativeSource(source_path)
-    if len(args) == 4:
-        source.use_native_march(args[2], args[3])
+    if len(args) == 5:
+        source.use_native_march(args[2], args[3], args[4])
     work.mkdir(parents=True, exist_ok=True)
     cases = []
     for name, turn in [('PIVOT_LEFT', -math.pi), ('PIVOT_RIGHT', math.pi)]:
@@ -398,7 +612,7 @@ def main():
             cases.append(case)
     metadata = {'body_glb_sha256': hashlib.sha256(source.bytes).hexdigest(),
         'helper_sha256': hashlib.sha256((Path(__file__).resolve().parents[3] / 'scripts/map3d/map3d_archer_pivot.gd').read_bytes()).hexdigest()}
-    if len(args) == 4:
+    if len(args) == 5:
         metadata.update(native_march_sha256=hashlib.sha256(Path(args[2]).read_bytes()).hexdigest(),
             imported_body_sha256=hashlib.sha256(Path(args[3]).read_bytes()).hexdigest())
     (work / 'pivot-source-input.json').write_text(json.dumps(encoded({'source': metadata, 'cases': cases}), separators=(',', ':')) + '\n')

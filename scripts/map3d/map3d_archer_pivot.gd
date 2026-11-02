@@ -387,3 +387,150 @@ static func _solve(rest: Dictionary, reference: Dictionary, source: Dictionary, 
 	if not _geometry(rebuilt, reference):
 		return _fail("pose: reconstructed physical geometry disagrees with rest")
 	return {"ok": true, "locals": locals, "diagnostics": []}
+
+
+## Read-only finite boundary measurement. All poses/rest are full native locals.
+## meshes: {id:{binds:[{bone,pose}], vertices:[{position,influences:[{bind,weight}]}],
+## sole_indices:[int]}}. Keep EVERY raw influence, including zero/nonunit sums.
+## rest.segments explicitly names {a,b,split?} anatomical spans; no inferred rig.
+## model_from_native includes the full skeleton ancestor affine transform.
+## Length/split residuals are native skeleton metres; displacement/height is model metres.
+## ground: {origin,normal} in model metres, unit normal. ok means valid inputs,
+## never acceptable contact or continuity; no physical E is installed here.
+static func measure_boundary(rest: Variant, raw: Variant, candidate: Variant, meshes: Variant, model_from_native: Variant, ground: Variant) -> Dictionary:
+	if not _dict(rest) or not _dict(raw) or not _dict(candidate) or not _dict(meshes) or meshes.is_empty() or not _dict(ground):
+		return _fail("boundary: expected complete dictionaries")
+	if not _dict(rest.get("locals")) or not _dict(rest.get("parents")) or typeof(rest.get("segments")) != TYPE_ARRAY:
+		return _fail("boundary: missing native rest/parents/segments")
+	if not _transform(model_from_native) or typeof(ground.get("origin")) != TYPE_VECTOR3 or typeof(ground.get("normal")) != TYPE_VECTOR3:
+		return _fail("boundary: malformed model/ground frame")
+	if not ground.origin.is_finite() or not ground.normal.is_finite() or absf(ground.normal.length() - 1.0) > EPS:
+		return _fail("boundary: ground normal must be unit length")
+	var reference: Dictionary = _globals(rest.locals, rest.parents)
+	var poses: Array[Dictionary] = [_globals(raw, rest.parents), _globals(candidate, rest.parents)]
+	if reference.is_empty() or poses[0].is_empty() or poses[1].is_empty() or rest.parents.has(""):
+		return _fail("boundary: invalid complete pose or parent graph")
+	var out: Dictionary = {"ok": true, "physical_error_status": "unknown", "diagnostics": ["finite samples only; no contact or full-domain certificate"],
+		"body_displacement_m": 0.0, "sole_displacement_m": 0.0, "sole_normal_displacement_m": 0.0, "sole_tangent_displacement_m": 0.0,
+		"meshes": {}, "bones": {}, "segments": []}
+	for name: String in reference:
+		var gram_raw: Basis = raw[name].basis.transposed() * raw[name].basis
+		var gram_candidate: Basis = candidate[name].basis.transposed() * candidate[name].basis
+		var gram_rest: Basis = rest.locals[name].basis.transposed() * rest.locals[name].basis
+		var raw_rest_residual: float = 0.0
+		var candidate_rest_residual: float = 0.0
+		var affine_residual: float = 0.0
+		for axis: int in range(3):
+			affine_residual = maxf(affine_residual, gram_raw[axis].distance_to(gram_candidate[axis]))
+			raw_rest_residual = maxf(raw_rest_residual, gram_raw[axis].distance_to(gram_rest[axis]))
+			candidate_rest_residual = maxf(candidate_rest_residual, gram_candidate[axis].distance_to(gram_rest[axis]))
+		var row: Dictionary = {"origin_displacement_m": (model_from_native * poses[0][name].origin).distance_to(model_from_native * poses[1][name].origin), "local_gram_residual": affine_residual, "raw_rest_gram_residual": raw_rest_residual, "candidate_rest_gram_residual": candidate_rest_residual}
+		var parent: String = rest.parents[name]
+		if not parent.is_empty():
+			var length: float = reference[name].origin.distance_to(reference[parent].origin)
+			row.raw_length_residual_native_m = poses[0][name].origin.distance_to(poses[0][parent].origin) - length
+			row.candidate_length_residual_native_m = poses[1][name].origin.distance_to(poses[1][parent].origin) - length
+		for field: String in row:
+			if not is_finite(row[field]):
+				return _fail("boundary: overflowing bone metric")
+		out.bones[name] = row
+	for segment: Variant in rest.segments:
+		if not _dict(segment) or not reference.has(segment.get("a")) or not reference.has(segment.get("b")):
+			return _fail("boundary: invalid anatomical segment")
+		var a: String = segment.a
+		var b: String = segment.b
+		var span: Vector3 = reference[b].origin - reference[a].origin
+		if span.length() <= EPS:
+			return _fail("boundary: degenerate anatomical segment")
+		var row: Dictionary = {"a": a, "b": b, "raw_length_residual_native_m": poses[0][a].origin.distance_to(poses[0][b].origin) - span.length(),
+			"candidate_length_residual_native_m": poses[1][a].origin.distance_to(poses[1][b].origin) - span.length()}
+		if segment.has("split"):
+			if not reference.has(segment.split):
+				return _fail("boundary: unknown split bone")
+			var fraction: float = (reference[segment.split].origin - reference[a].origin).dot(span) / span.length_squared()
+			row.split = segment.split
+			row.rest_fraction = fraction
+			row.raw_split_residual_native_m = poses[0][segment.split].origin.distance_to(poses[0][a].origin.lerp(poses[0][b].origin, fraction))
+			row.candidate_split_residual_native_m = poses[1][segment.split].origin.distance_to(poses[1][a].origin.lerp(poses[1][b].origin, fraction))
+		for field: String in row:
+			if typeof(row[field]) == TYPE_FLOAT and not is_finite(row[field]):
+				return _fail("boundary: overflowing segment metric")
+		out.segments.append(row)
+	var sole_count: int = 0
+	for mesh_name: Variant in meshes:
+		var mesh: Variant = meshes[mesh_name]
+		if typeof(mesh_name) != TYPE_STRING or mesh_name.is_empty() or not _dict(mesh):
+			return _fail("boundary: invalid mesh identity")
+		for field: String in ["binds", "vertices", "sole_indices"]:
+			if typeof(mesh.get(field)) != TYPE_ARRAY:
+				return _fail("boundary: missing mesh " + field)
+		if mesh.binds.is_empty() or mesh.vertices.is_empty():
+			return _fail("boundary: empty skin/mesh")
+		var bind_names: Dictionary = {}
+		var transforms: Array = [[], []]
+		for bind: Variant in mesh.binds:
+			if not _dict(bind) or not reference.has(bind.get("bone")) or bind_names.has(bind.bone) or not _transform(bind.get("pose")):
+				return _fail("boundary: invalid named Skin bind")
+			bind_names[bind.bone] = true
+			for i: int in range(2):
+				transforms[i].append(poses[i][bind.bone] * bind.pose)
+		var soles: Dictionary = {}
+		for index: Variant in mesh.sole_indices:
+			if typeof(index) != TYPE_INT or index < 0 or index >= mesh.vertices.size() or soles.has(index):
+				return _fail("boundary: invalid fixed sole material index")
+			soles[index] = true
+		sole_count += soles.size()
+		var row: Dictionary = {"raw_points": PackedVector3Array(), "candidate_points": PackedVector3Array(), "max_displacement_m": 0.0,
+			"raw_sole_heights_m": [], "candidate_sole_heights_m": [], "weight_sums": PackedFloat64Array()}
+		for index: int in range(mesh.vertices.size()):
+			var vertex: Variant = mesh.vertices[index]
+			if not _dict(vertex) or typeof(vertex.get("position")) != TYPE_VECTOR3 or not vertex.position.is_finite() or typeof(vertex.get("influences")) != TYPE_ARRAY or vertex.influences.is_empty():
+				return _fail("boundary: malformed material vertex")
+			var points: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO]
+			var weight_sum: float = 0.0
+			for influence: Variant in vertex.influences:
+				if not _dict(influence) or typeof(influence.get("bind")) != TYPE_INT or influence.bind < 0 or influence.bind >= mesh.binds.size() or not _float(influence.get("weight")) or influence.weight < 0.0:
+					return _fail("boundary: invalid raw skin influence")
+				weight_sum += influence.weight
+				for i: int in range(2):
+					points[i] += (transforms[i][influence.bind] * vertex.position) * influence.weight
+			if weight_sum <= 0.0 or not is_finite(weight_sum) or not points[0].is_finite() or not points[1].is_finite():
+				return _fail("boundary: degenerate or overflowing raw LBS")
+			for i: int in range(2):
+				points[i] = model_from_native * points[i]
+				if not points[i].is_finite():
+					return _fail("boundary: overflowing model-space LBS")
+			row.weight_sums.append(weight_sum)
+			row.raw_points.append(points[0])
+			row.candidate_points.append(points[1])
+			var delta: Vector3 = points[1] - points[0]
+			if not delta.is_finite() or not is_finite(delta.length()):
+				return _fail("boundary: overflowing displacement metric")
+			row.max_displacement_m = maxf(row.max_displacement_m, delta.length())
+			out.body_displacement_m = maxf(out.body_displacement_m, delta.length())
+			if soles.has(index):
+				var normal: float = delta.dot(ground.normal)
+				out.sole_displacement_m = maxf(out.sole_displacement_m, delta.length())
+				out.sole_normal_displacement_m = maxf(out.sole_normal_displacement_m, absf(normal))
+				out.sole_tangent_displacement_m = maxf(out.sole_tangent_displacement_m, (delta - ground.normal * normal).length())
+				var raw_height: float = (points[0] - ground.origin).dot(ground.normal)
+				var candidate_height: float = (points[1] - ground.origin).dot(ground.normal)
+				if not is_finite(raw_height) or not is_finite(candidate_height) or not is_finite(out.sole_normal_displacement_m) or not is_finite(out.sole_tangent_displacement_m):
+					return _fail("boundary: overflowing ground metric")
+				row.raw_sole_heights_m.append(raw_height)
+				row.candidate_sole_heights_m.append(candidate_height)
+		out.meshes[mesh_name] = row
+	if sole_count == 0:
+		return _fail("boundary: explicit fixed sole material points required")
+	return out
+
+
+## Caller supplies E for ONE named displacement norm. Not_excluded is NOT sufficient.
+## A common approximation has J <= 2E; preserving raw exactly has J <= E.
+static func boundary_condition(jump_m: float, error_m: float, raw_fixed: bool) -> Dictionary:
+	if not is_finite(jump_m) or not is_finite(error_m) or jump_m < 0.0 or error_m < 0.0:
+		return _fail("boundary: invalid explicit metric error")
+	var limit: float = error_m if raw_fixed else 2.0 * error_m
+	if not is_finite(limit):
+		return _fail("boundary: overflowing necessary limit")
+	return {"ok": true, "status": "excluded" if jump_m > limit else "not_excluded", "necessary_limit_m": limit, "sufficient": false}
