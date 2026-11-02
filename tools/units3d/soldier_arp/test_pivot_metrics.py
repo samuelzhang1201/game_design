@@ -372,6 +372,12 @@ class RawMetricsTest(unittest.TestCase):
         self.assertEqual(result['coverage']['uncovered_vertex_ids'], [1])
         self.assertEqual(result['patches'][0]['budget_status'], 'PENDING')
         self.assertAlmostEqual(result['whole_mesh_penetration_world_m'], .01)
+        h['surfaces'][0]['domain']['xz_max'][0] = .001
+        state = metric.validate_raw_observation(raw, cases)
+        result = metric.raw_physical_metrics({'mapped': [[.003, -.002, 0.]]}, state, 0, 1.)['mapped']
+        self.assertEqual(result['coverage']['active_patches']['uncovered_ids'], ['sole'])
+        self.assertEqual(result['coverage']['outgoing_patches']['valid'], 0)
+        self.assertEqual(result['coverage']['anchors']['valid'], 1)
 
     def test_cli_modes_are_explicit_and_exclusive(self):
         with tempfile.TemporaryDirectory() as folder:

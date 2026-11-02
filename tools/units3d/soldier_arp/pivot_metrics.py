@@ -346,7 +346,7 @@ def validate_raw_observation(observation, cases):
 
 
 
-def raw_patch_coverage(row, phase, covered):
+def raw_patch_coverage(row, phase, covered, world):
     result = {}
     for role in ['anchors', 'active_patches', 'outgoing_patches']:
         identities, valid = [], []
@@ -361,7 +361,8 @@ def raw_patch_coverage(row, phase, covered):
                     valid.append(covered(anchor))
             else:
                 identities.append(patch['id'])
-                valid.append(all(covered(anchor) for anchor in patch['anchors']))
+                valid.append(all(covered(anchor) and covered(world[vertex])
+                                 for vertex, anchor in zip(patch['vertices'], patch['anchors'])))
         result[role] = {'expected': len(identities), 'received': len(identities), 'valid': sum(valid),
                         'uncovered': len(valid)-sum(valid),
                         'uncovered_ids': [identity for identity, ok in zip(identities, valid) if not ok]}
@@ -447,7 +448,7 @@ def raw_physical_metrics(points_by_label, state, case_index, phase):
                                    'valid_vertices': sum(covered(p) for p in world),
                                    'uncovered_vertex_ids': uncovered, 'uncovered_vertices': len(uncovered),
                                    'status': 'UNCOVERED' if uncovered else 'COMPLETE_FINITE',
-                                   **raw_patch_coverage(row, phase, covered)}}
+                                   **raw_patch_coverage(row, phase, covered, world)}}
     if 'source' in out:
         out['introduced_vs_source_world_m'] = {label: [[v['signed_world_m']-s['signed_world_m'],
                     v['slip_world_m']-s['slip_world_m']] for p, q in zip(out[label]['patches'], out['source']['patches'])
