@@ -157,23 +157,40 @@ class SelectionTests(unittest.TestCase):
             requested = json.loads(subprocess.check_output(command + ['--request-text', 'GUT_INCLUDE: simulation']))
             self.assertIn('simulation', requested['categories'])
 
-    def test_ci_military_batches_cover_every_script_once_in_order(self):
+    def test_ci_military_batches_cover_every_script_once_round_robin(self):
         chosen = self.select('scripts/engine/army_system.gd')
         jobs = chosen['matrix']['include']
         military = [job for job in jobs if job['category'] == 'engine-military']
         self.assertEqual([job['batch'] for job in military], [1, 2, 3, 4])
         files = []
+        body_batches = {}
         for job in military:
             selected = json.loads(subprocess.check_output([
                 'python3', 'tools/select_gut_tests.py', '--category', job['category'],
                 '--batch', str(job['batch'])]))
-            self.assertTrue(selected['files'])
-            files.extend(selected['files'])
-        self.assertEqual(files, self.catalog['engine-military'])
+            batch = selected['files']
+            self.assertTrue(batch)
+            self.assertEqual(batch, sorted(batch))
+            self.assertEqual(batch, self.catalog['engine-military'][job['batch'] - 1::len(military)])
+            repeated = json.loads(subprocess.check_output([
+                'python3', 'tools/select_gut_tests.py', '--category', job['category'],
+                '--batch', str(job['batch'])]))
+            self.assertEqual(selected, repeated)
+            for name in ['marches', 'motion', 'placement']:
+                if f'tests/engine/test_body_{name}.gd' in batch:
+                    body_batches[name] = job['batch']
+            files.extend(batch)
+        self.assertEqual(sorted(files), self.catalog['engine-military'])
+        self.assertEqual(len(body_batches), 3)
+        self.assertEqual(len(set(body_batches.values())), 3)
         self.assertEqual(len(files), len(set(files)))
         for job in jobs:
             if job['category'] != 'engine-military':
                 self.assertEqual(job['batch'], 1)
+                selected = json.loads(subprocess.check_output([
+                    'python3', 'tools/select_gut_tests.py', '--category', job['category'],
+                    '--batch', '1']))
+                self.assertEqual(selected['files'], self.catalog[job['category']])
         self.assertNotIn('simulation', [job['category'] for job in jobs])
 
     def test_real_runner_batch_count_offline_and_failure_propagation(self):
@@ -203,6 +220,11 @@ class SelectionTests(unittest.TestCase):
     def test_batch_requires_one_category_and_valid_manifest_index(self):
         for args in [['--batch', '1'], ['--category', 'engine-military', '--batch', '0'],
                      ['--category', 'engine-military', '--batch', '5'],
+                     ['--category', 'engine-military', '--batch', '-1'],
+                     ['--category', 'engine-military', '--batch', 'invalid'],
+                     ['--category', 'engine-military', '--batch', '1', '--functional'],
+                     ['--category', 'engine-military', '--batch', '1', '--base', 'HEAD'],
+                     ['--category', 'engine-military', '--batch', '1', '--include', 'ui'],
                      ['--category', 'engine-core', '--batch', '2'],
                      ['--test', 'tests/engine/test_calendar.gd', '--batch', '1'],
                      ['--category', 'engine-military', '--category', 'ui', '--batch', '1']]:
