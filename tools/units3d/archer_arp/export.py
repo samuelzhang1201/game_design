@@ -1,6 +1,6 @@
 """Bake the equipped ARP rig to one shared game skeleton and separate gear GLBs.
 
-Blender --background --python export.py -- WORK_DIRECTORY PROJECT_DIRECTORY
+Blender --background --python export.py -- WORK_DIRECTORY PROJECT_DIRECTORY [PIVOT_INPUT PIVOT_RESULT]
 The source skin and topology stay intact; the string's linear shape keys are
 baked to a string bone so separately imported gear follows the same skeleton.
 """
@@ -39,7 +39,10 @@ def mirror_pose(pose, rests):
 
 
 def main():
-    work, project = map(Path, sys.argv[sys.argv.index("--") + 1:])
+    args = sys.argv[sys.argv.index("--") + 1:]
+    if len(args) not in (2, 4):
+        raise ValueError("expected WORK PROJECT [PIVOT_INPUT PIVOT_RESULT]")
+    work, project = map(Path, args[:2])
     bpy.ops.wm.open_mainfile(filepath=str(work / "archer_six_clips.blend"))
     scene = bpy.context.scene
     source = bpy.data.objects["Soldier_ARP"]
@@ -283,6 +286,8 @@ def main():
     out = project / "assets/3D/units/archers"
     out.mkdir(parents=True, exist_ok=True)
     for index, mesh in enumerate(meshes):
+        if len(args) == 4 and index > 0:
+            continue  # Pivot delivery preserves the separately installed simplified gear.
         for obj in bpy.context.selected_objects:
             obj.select_set(False)
         rig.select_set(True)
@@ -295,6 +300,9 @@ def main():
             export_skins=True, export_def_bones=False, export_influence_nb=8,
             export_all_influences=True, export_image_format="JPEG", export_jpeg_quality=90,
             export_yup=True, export_morph=False, export_apply=False)
+        if index == 0 and len(args) == 4:
+            from pivot import append_pivots
+            append_pivots(path, Path(args[2]), Path(args[3]))
         if index > 0:
             prune_skin(path)
         print("EXPORTED", path, flush=True)

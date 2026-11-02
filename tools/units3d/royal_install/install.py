@@ -5,7 +5,7 @@
 SRC defaults to assets/3D/units/royal/model_wip/tripo/knight_rigged_20k.glb:
 decimate.py's export of the owner's delivery (knight_rig_anim.blend, rigged
 and animated by the owner) collapsed to the units' ~20k triangles.
-Writes assets/3D/units/royal/royal.glb: the same mesh, skin and five clips,
+Writes assets/3D/units/royal/royal.glb: the same mesh, skin and source clips,
 turned half round to face the way every piece faces (glTF -Z), the two head
 bones renamed (BONES) and the rest named on the cavalry's pattern (royal_rig /
 royal / royal_atlas*) so Godot's import extracts the maps as
@@ -13,6 +13,9 @@ royal_royal_atlas{,_n,_mr}.jpg beside it, each
 downsized 4096 -> 2048 JPEG (one 2048 atlas per unit, like the cavalry: the
 piece is a few dozen px on the map, the WAR ROOM's closest look ~400 px).
 Then: Godot's import, and tools/units3d/royal_install/make_scene.gd.
+A contact-solved copy exported by pivot.py also carries PIVOT_LEFT/RIGHT;
+the owned .glb.import uses the accepted pair-only post-import provider to
+retain their source keys without changing the five existing animations.
 Nothing else in the file changes, so a re-delivery is one re-run.
 """
 import io
