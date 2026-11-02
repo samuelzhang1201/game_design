@@ -150,10 +150,37 @@ The proposed replacement is precise enough to falsify:
    that s mapping its three **raw native origins** to the three candidate origins.
    Shared hip/knee/ankle positions must agree between adjacent segments. Therefore
    native span length, fractional location and perpendicular split residual are
-   carried together. A pairwise-distance match that reflects the oriented limb
-   is insufficient. Use the native oriented bone frames to disambiguate Q.
-   Include foot-to-toe span and both legs. Q acts in native skeleton coordinates;
-   at entry/exit it is identity after factoring out external placement/yaw.
+   carried together. Bind the same Q to the following named global affine bases,
+   for each side l/r (all names carry that side suffix):
+
+   | Segment origins a,c,b (or a,b) | Bases bound to this segment's Q |
+   |---|---|
+   | thigh_twist, thigh_stretch, leg_stretch | thigh_twist and thigh_stretch |
+   | leg_stretch, leg_twist, foot | leg_stretch and leg_twist |
+   | foot, toes_01 | foot and toes_01 |
+
+   Write native/candidate global origins as p/p' and complete global basis
+   matrices as A/B. With `Q(p)=U*p+q`, require `B_k=U*A_k` for **all three raw
+   basis columns** of each listed bone k, as well as the origin equations.
+   The terminal joint's basis belongs to the next segment where listed; its
+   origin is shared. Specifically `U=B_a*A_a^-1`, `q=p'_a-U*p_a`, `U^T U=I`
+   and `det(U)=+1`. This uniquely defines Q without extracting/normalizing a
+   rotation or replacing scale/shear in A/B. It transports the split relative
+   to the actual oriented affine triad, rather than matching distances alone.
+   For example, a=(0,0,0), b=(1,0,0), c=(.5,.001,0) to c'=(.5,-.001,0) with
+   unchanged identity bases is rejected: the bases force U=I, whereas the
+   origins would require a half-turn about ab. A proper origin-only rotation
+   `diag(1,-1,-1)` and equal local Gram matrices do not satisfy this predicate.
+   This example isolates the predicate; it is not a full-rig feasibility case.
+
+   Collinear split origins and the two-point foot/toe span use the same full
+   basis equations; do not infer a frame from a cross product of origins or
+   leave twist free. Require positive anatomical span length and finite,
+   positive-determinant invertible bases. Missing/singular bases, zero-length
+   spans or an inverse that cannot be conservatively bounded reject the cell;
+   they do not select an arbitrary orientation or remove that cell from required
+   coverage. Q acts in native skeleton coordinates. At entry/exit U=I and q=0
+   after factoring out external placement/yaw, with the same one-sided limits.
 3. Require candidate local `B_b^T B_b = N_b(phi)^T N_b(phi)` for every modified
    bone, plus the existing positive determinant and joint-limit conditions.
    Retain all other locals according to the explicitly bound author reference
@@ -342,11 +369,36 @@ certification remains explicitly partial; it cannot remove a required case.
 seconds or derive a 2-second minimum from the reference export. Geometric contact
 bounds can be independent of duration only if the candidate map is proved to be.
 For velocity/acceleration criteria a lawful adjacent-operation phase/placement
-rate is necessary: `dx/dt = H_dot*x + H*x_phi*phi_dot` (with affine translation
-included). Pause/1x/4x and frame partitions change sampling, not the bound identity
-or phase authority. No wall clock, hidden phase reset, second timer or duration
-clamp is introduced. Absent a lower duration/rate authority, no finite universal
-speed/acceleration budget can be claimed from a nonconstant reference curve.
+rate is necessary. Distinguish candidate position x from world position y:
+write the external affine placement as `H(t)=(A(t),h(t))`, and
+`y(t)=A(t)*x(s(t),phi(t),eta(t))+h(t)`. On each differentiable cell:
+
+```text
+xdot = x_s*sdot + x_phi*phidot + sum_j x_eta_j*eta_j_dot
+ydot = Adot*x + A*xdot + hdot
+yddot = Addot*x + 2*Adot*xdot + A*xddot + hddot
+```
+
+Here `xddot` is the total second derivative, retaining mixed partials and the
+rates/accelerations of every independent admitted input eta. Parameters fixed
+within one operation have zero rate; nonzero rates must come from their actual
+authority. Use one-sided derivatives at key/support/wrap boundaries and verify
+any required kinematic matching there. Only for a pure adjacent native reference
+`x=N(phi)` with no independent s/eta dependence does the shape term reduce to
+`N_phi*phidot`. A held native reference does not freeze the pivot/contact map.
+
+Hand case from the retained author law: entry=exit makes phidot=0, but with
+turn=pi/2 the internal root displacement is
+`dy_root(s)=-0.01*sin(pi/4)*sin(pi*s)^2` native m. At s=1/4 its derivative is
+`-0.01*sin(pi/4)*pi=-0.02221441469079183` native m per unit s. It contributes
+this value times sdot to the native root velocity even though phidot=0. Ordinary
+placement converts that contribution to world units; it does not erase it.
+This is an existing-law arithmetic control, not new permission to change the root.
+
+Pause/1x/4x and frame partitions change sampling, not the bound identity or phase
+authority. No wall clock, hidden phase reset, second timer or duration clamp is
+introduced. Absent a lower duration/rate authority, no finite universal speed/
+acceleration budget can be claimed from a nonconstant candidate trajectory.
 
 Partition the parameter domain at native key/loop seams, phase-law wrap, support
 handoffs, solver branch/singularity boundaries and terrain cells. For each closed
