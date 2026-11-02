@@ -1,0 +1,227 @@
+{
+  "version": 1,
+  "step_id": "CAV-CONTACT-NATIVE",
+  "status": "BLOCKED_NOT_ACCEPTED",
+  "engine": {
+    "build": "official",
+    "hash": "ed1daf0bf001b61586d9930840f2f1394092c079",
+    "hex": 263938,
+    "major": 4,
+    "minor": 7,
+    "patch": 2,
+    "status": "stable",
+    "string": "4.7.2-stable (official)",
+    "timestamp": 0
+  },
+  "inputs": {
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/capture-v4/native.json": "b2887597eb545e4231624a07900f3fb69b7827e7af5156c1a0b05903f3ab7e36",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/capture-v4/samples.jsonl": "e5e12840fa5e483cf838de806b81b1512a537b2662430d7ff6a2ee7ca8b7fee2",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/source-geometry-v3.json": "51332e9e6b36da212617d959190dedac31001246e3748750336379e82fe69d9a",
+    "/Users/samuelzhang/.codex/worktrees/cluster-loco-clip-cavalry/game_design/assets/3D/units/cavalry/model_wip/loco_clip/body-response-c.blend": "01b7340791391919ea84f766db2f8d727e95e8b8e8f1c183ac7512193befd38d",
+    "/Users/samuelzhang/.codex/worktrees/cluster-loco-clip-cavalry/game_design/assets/3D/units/cavalry/model_wip/loco_clip/candidate-body-response-native216/godot-imported-native-v3.json": "30d69f07b6d76d155b7af33f40e62b7a32c774fd413fa76fcdfeb05d67d82308",
+    "/Users/samuelzhang/.codex/worktrees/cluster-loco-clip-cavalry/game_design/assets/3D/units/cavalry/model_wip/loco_clip/candidate-body-response-native216/godot-imported-geometry-v3.json": "4960509ddaae535d5deabdf687976dbba5a93f64ecc8674541efbac8d45a19bd",
+    "/Users/samuelzhang/.codex/worktrees/cluster-loco-cert-cavalry/game_design/.superpowers/loco-cert-cavalry/march-contact-witness.json": "00ea96475bf9887176479b7867bb6e2ac5a903a915c0d55bff50743b3b903583",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/accounting-e79ace28e04e50629eea31f53663adabce7e986f35b3de5d84d6f6e3536773ec.json": "e79ace28e04e50629eea31f53663adabce7e986f35b3de5d84d6f6e3536773ec",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/assets/3D/units/cavalry/cavalry.glb": "bb82ae98905f336d9d36aadb09df54e97d0f5e52d0bb43152a998fdaadb803ed",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/assets/3D/units/cavalry/cavalry.glb.import": "c3bf1ee66a5ecefb5e7bb99992adc232c903c6d2dfaca0bc6fff67c407961253",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/assets/3D/units/cavalry/cavalry_cavalry_atlas.jpg": "af3ffa3df4db6ebe779f9811b2acd2f839af163e33d775917cb46c81fc3eb80d",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/assets/3D/units/cavalry/cavalry_cavalry_atlas.jpg.import": "8452042b9d79175f2533551948e7da74f1f5992e02daf7455dd957ab784d8dc2",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/assets/3D/units/cavalry/cavalry_cavalry_atlas_mr.jpg": "c39d5f22577c5e46a306e81fd767fcfd73fc09fa479a8aa982b78d0413d00de9",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/assets/3D/units/cavalry/cavalry_cavalry_atlas_mr.jpg.import": "11dff65fe566eeb885a8fa35def5ba0f20d11d667c845cbc134ed5550c09818f",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg": "38f28344390a6b6844b3cedfb3da1a0383ce253025701a30cc232818c448e228",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg.import": "e99b960c02adede00ec5aecf53389c48384c93fdf4fc6a6ef24ed8efb0c6f250",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/project.godot": "2ce1c6b3488e646c5743a71c4f255b9407a2246926a187329c253b54ff86f56a",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/probe-v4/tools/units3d/cavalry_march_capture.gd": "9a1a35a1148e36b8ea2d38ec2de1ad34a9ff69f6f59d9b5b1f74c4328ae2b91d",
+    "/Applications/Godot.app/Contents/MacOS/Godot": "c7cccbf8fb143e34e02fd6521e09be2c2b974f0d5db080b19071c9c570718ccf",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/engine-source/sources.json": "b0ede32c79c57b64732047680bd4b25b4726718c2861dca2ed103dc1529a0548",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/engine-source/core/math/quaternion.cpp": "e17f8509dc2ca546512b421d0ea3d1d8e1afd7c959d4cc38f067dbf7b7990acc",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/engine-source/core/math/basis.cpp": "07b6d2d2e43b6a738d76b3c860fd21863ae9b480fcc9e91bd16f6bd2d3053441",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/engine-source/core/math/transform_3d.h": "3f07c39120950a106049a631286632120d0c79dd4fe6831222622bad9d44d0aa",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/engine-source/scene/resources/animation.cpp": "6faaa27c9d032bfd95ea1dc541a7700032f2a66093814fc34e1ed7cae928f988",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/engine-source/scene/resources/animation.h": "53d096c826040ed1df7d8ab05066bee9f3fc655e2aa68272afc476491e89c167",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/engine-source/scene/animation/animation_mixer.cpp": "e41ffd0f9e49a8327f2bee2246c44af1cbe666379f1f92ff201dca4be0a598da",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/engine-source/servers/rendering/rendering_server.cpp": "b108f62d9d6113061dd1261e7bef51515fbdba9080b4393245e84cecc67ad7ca",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/engine-source/modules/gltf/gltf_document.cpp": "f4ee7d0d1ed1608ee70e5129bbec3a7f6ff7d68644d0318457bda10ae92d132d",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/cavalry.glb": "bb82ae98905f336d9d36aadb09df54e97d0f5e52d0bb43152a998fdaadb803ed",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/cavalry.glb.import": "c3bf1ee66a5ecefb5e7bb99992adc232c903c6d2dfaca0bc6fff67c407961253",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/cavalry_rig/install.py": "faed5b98d7082984b8c08280fc9ee398958faea958f36504f59c9fc0bea10655",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/cavalry_rig/actions.py": "300d05d3efee1f34fbe5e2ad873591aa232f8498a414af809764aeaa491c712f",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/cavalry_tripo/tripo_parts.csv": "19f70f3333dbb0103880d8d401204bc96672fdf5ab43d738f109f3cf0f3a9ef1",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/cavalry_march_capture.gd": "9a1a35a1148e36b8ea2d38ec2de1ad34a9ff69f6f59d9b5b1f74c4328ae2b91d",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/cavalry_march_capture.gd.uid": "a545048192c4a8b39c5162132d39e9a90f11150b7ed53d48986d96c913174d38",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/check_cavalry_march_capture.py": "aa30d0d3f1f03792053c1b5e028616149cf24b733a59157c6040dc85d659c47e",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/test_cavalry_march_capture.py": "4f895189dc613f73eb5b9b619b7544923ebfd3fa640805866d63f673300008e0"
+  },
+  "accounting_payload": "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/accounting-e79ace28e04e50629eea31f53663adabce7e986f35b3de5d84d6f6e3536773ec.json",
+  "engine_source_references": {
+    "core/math/quaternion.cpp": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/ed1daf0bf001b61586d9930840f2f1394092c079/core/math/quaternion.cpp",
+      "sha256": "e17f8509dc2ca546512b421d0ea3d1d8e1afd7c959d4cc38f067dbf7b7990acc"
+    },
+    "core/math/basis.cpp": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/ed1daf0bf001b61586d9930840f2f1394092c079/core/math/basis.cpp",
+      "sha256": "07b6d2d2e43b6a738d76b3c860fd21863ae9b480fcc9e91bd16f6bd2d3053441"
+    },
+    "core/math/transform_3d.h": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/ed1daf0bf001b61586d9930840f2f1394092c079/core/math/transform_3d.h",
+      "sha256": "3f07c39120950a106049a631286632120d0c79dd4fe6831222622bad9d44d0aa"
+    },
+    "scene/resources/animation.cpp": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/ed1daf0bf001b61586d9930840f2f1394092c079/scene/resources/animation.cpp",
+      "sha256": "6faaa27c9d032bfd95ea1dc541a7700032f2a66093814fc34e1ed7cae928f988"
+    },
+    "scene/resources/animation.h": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/ed1daf0bf001b61586d9930840f2f1394092c079/scene/resources/animation.h",
+      "sha256": "53d096c826040ed1df7d8ab05066bee9f3fc655e2aa68272afc476491e89c167"
+    },
+    "scene/animation/animation_mixer.cpp": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/ed1daf0bf001b61586d9930840f2f1394092c079/scene/animation/animation_mixer.cpp",
+      "sha256": "e41ffd0f9e49a8327f2bee2246c44af1cbe666379f1f92ff201dca4be0a598da"
+    },
+    "servers/rendering/rendering_server.cpp": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/ed1daf0bf001b61586d9930840f2f1394092c079/servers/rendering/rendering_server.cpp",
+      "sha256": "b108f62d9d6113061dd1261e7bef51515fbdba9080b4393245e84cecc67ad7ca"
+    },
+    "modules/gltf/gltf_document.cpp": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/ed1daf0bf001b61586d9930840f2f1394092c079/modules/gltf/gltf_document.cpp",
+      "sha256": "f4ee7d0d1ed1608ee70e5129bbec3a7f6ff7d68644d0318457bda10ae92d132d"
+    }
+  },
+  "reproduction": {
+    "prepare": "python3 tools/units3d/check_cavalry_march_capture.py prepare NEW_PROBE",
+    "import": "SHARED_GODOT_LOCK python3 tools/run_with_timeout.py 300 GODOT --headless --path NEW_PROBE --editor --import",
+    "capture": "SHARED_GODOT_LOCK python3 tools/run_with_timeout.py 300 GODOT --headless --path NEW_PROBE --script res://tools/units3d/cavalry_march_capture.gd -- --out ABSOLUTE_NEW_CAPTURE",
+    "source": "BLENDER --background --factory-startup --disable-autoexec FROZEN_BLEND --python tools/units3d/check_cavalry_march_capture.py -- source NEW_SOURCE_JSON",
+    "audit": "python3 tools/units3d/check_cavalry_march_capture.py audit CAPTURE SOURCE_JSON --frozen-native FROZEN_NATIVE --frozen-geometry FROZEN_GEOMETRY --witness FROZEN_WITNESS --out MANIFEST",
+    "verify": "python3 tools/units3d/check_cavalry_march_capture.py verify MANIFEST",
+    "exit_status": "2 means unresolved acceptance, including an identical replay of a blocked report. Never a PASS."
+  },
+  "capture_directory": "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/capture-v4",
+  "source_geometry": "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/source-geometry-v3.json",
+  "frozen_paths": {
+    "native": "/Users/samuelzhang/.codex/worktrees/cluster-loco-clip-cavalry/game_design/assets/3D/units/cavalry/model_wip/loco_clip/candidate-body-response-native216/godot-imported-native-v3.json",
+    "geometry": "/Users/samuelzhang/.codex/worktrees/cluster-loco-clip-cavalry/game_design/assets/3D/units/cavalry/model_wip/loco_clip/candidate-body-response-native216/godot-imported-geometry-v3.json",
+    "witness": "/Users/samuelzhang/.codex/worktrees/cluster-loco-cert-cavalry/game_design/.superpowers/loco-cert-cavalry/march-contact-witness.json"
+  },
+  "topology": {
+    "triangles": 19047,
+    "vertices": 21175,
+    "position_duplicate_vertices": 9698
+  },
+  "bones": 53,
+  "source_triangles": 19047,
+  "sample_count": 154,
+  "source_bone_aliases": {
+    "Head": "head_h",
+    "R_Head": "head"
+  },
+  "track_span_count": 16,
+  "track_operations": {
+    "retained": 33,
+    "removed_immutable_track_uses_native_default": 113,
+    "key_reduction": 13
+  },
+  "max_vertex_delta_by_operation_m": {
+    "removed_tracks": 8.576107287126749e-07,
+    "reduced_keys": 0.0061284449795927015,
+    "native_key_search_and_float32_fraction": 6.012536106171241e-05,
+    "quantized_weights": 0.00010141780682460314,
+    "native_track_arithmetic_residual": 4.2291151412671783e-07,
+    "native_mixer_arithmetic_residual": 7.70172842446103e-07,
+    "native_basis_arithmetic_residual": 9.956927886607837e-07,
+    "native_fk_arithmetic_residual": 6.941069281769659e-07,
+    "native_cpu_lbs_residual": 7.246189768214092e-07
+  },
+  "native_pose_arithmetic_residual_m": 1.318846801892491e-06,
+  "patch_counts": {
+    "FrontHoof.R": {
+      "shell_vertices": 170,
+      "shell_triangles": 184,
+      "sole_vertices": 124,
+      "sole_triangles": 116
+    },
+    "HindHoof.L": {
+      "shell_vertices": 124,
+      "shell_triangles": 136,
+      "sole_vertices": 82,
+      "sole_triangles": 75
+    },
+    "HindHoof.R": {
+      "shell_vertices": 126,
+      "shell_triangles": 131,
+      "sole_vertices": 89,
+      "sole_triangles": 82
+    },
+    "FrontHoof.L": {
+      "shell_vertices": 111,
+      "shell_triangles": 109,
+      "sole_vertices": 80,
+      "sole_triangles": 69
+    }
+  },
+  "patch_definition": "Every source-labeled hoof shell triangle retained; candidate underside is every nondegenerate rest-space facet with outward normal Y<0. No low-height, weight, slip or success filter.",
+  "frozen_witness": {
+    "vertex": 16496,
+    "phases": [
+      0.137,
+      0.25
+    ],
+    "stride_model_m": 5.9,
+    "native_positions": [
+      [
+        0.22937184743435318,
+        -0.008251129438762538,
+        -0.8491935876074085
+      ],
+      [
+        0.22823209675034398,
+        -0.006495467432936505,
+        -1.1239575671099065
+      ]
+    ],
+    "displacement_model_m": [
+      -0.0011397506840092053,
+      0.001755662005826033,
+      0.391936020497502
+    ],
+    "horizontal_slip_model_m": 0.39193767769256377,
+    "status": "ADVERSE_WITNESS_REPRODUCED_NOT_CERTIFICATE",
+    "old79": {
+      "count": 79,
+      "slip_range_model_m": [
+        0.3900470722034819,
+        0.3959411533384765
+      ],
+      "membership": "Not supplied by frozen observations; not promoted to a complete patch."
+    }
+  },
+  "current_native_witness_positions": {
+    "0.137": [
+      0.22937184743435365,
+      -0.008251129438762533,
+      -0.8491935876074083
+    ],
+    "0.25": [
+      0.2282320967503444,
+      -0.006495467432936508,
+      -1.1239575671099062
+    ]
+  },
+  "unresolved": [
+    "Nonzero native-pose arithmetic residual is measured, not yet explained by a validated operation/rounding enclosure.",
+    "Geometric underside candidates retain full source shells but are not independently accepted complete anatomical material patches.",
+    "Native capture is CPU data, not real-window rendered geometry/visual acceptance. Existing locked-desktop request remains pending."
+  ],
+  "claims": {
+    "continuous_uncertainty_bound": false,
+    "contact_certificate": false,
+    "phase_map": false,
+    "policy_E": null,
+    "activation": false,
+    "original_12_gates_preserved": true
+  }
+}
