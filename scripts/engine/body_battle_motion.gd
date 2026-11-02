@@ -48,7 +48,7 @@ static func _source_error(repo: DataRepository, source: GameState, boundary: Dic
 		if ledger.get("orders", {}).has(""): return "Task record requires a nonempty id"
 		var id: String = ledger.get("current_id", "")
 		if not id.is_empty():
-			var task: Variant = ledger.orders.get(id)
+			var task: Variant = ledger.get("orders", {}).get(id)
 			if not task is Dictionary or not task.get("request") is Dictionary or not task.get("status") is String: return "Missing received task"
 			var request: Dictionary = task.request
 			if not BodyMotion._keys(request, ["id", "unit", "battle_id", "task", "formation", "target_unit", "source", "issuer", "max_route_m", "region"]): return "Incomplete received task"

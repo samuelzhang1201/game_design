@@ -414,3 +414,21 @@ func test_empty_task_id_rejects_empty_key_record_and_preserves_cancellation() ->
 			assert_gt(collected.units[0].budget_m, 0)
 		assert_eq(BodyBattleMotion.plan_candidate(f.repo, source, _boundary(source), {"deployment": _provider}).status, "complete")
 		assert_eq(BodyMotion._hash(source.to_dict()), before)
+
+func test_current_task_requires_orders_and_matching_record() -> void:
+	var f := _fixture([100], 1000)
+	for ledger: Dictionary in [{"current_id": "missing"}, {"current_id": "missing", "orders": {}}]:
+		var damaged := UnitBodies._copy(f.state)
+		damaged.unit_tasks[f.code] = ledger
+		for source: GameState in [damaged, _json(damaged)]:
+			var before := BodyMotion._hash(source.to_dict())
+			var rejected := BodyBattleMotion.plan_candidate(f.repo, source, _boundary(source))
+			assert_eq(rejected.status, "error", "a current id must resolve to a received task")
+			assert_eq(rejected.reason, "Missing received task")
+			assert_null(rejected.candidate)
+			assert_eq(rejected.plan, {})
+			assert_eq(BodyMotion._hash(source.to_dict()), before)
+	for ledger: Dictionary in [{}, {"current_id": ""}]:
+		f.state.unit_tasks[f.code] = ledger
+		for source: GameState in [f.state, _json(f.state)]:
+			assert_eq(BodyBattleMotion.plan_candidate(f.repo, source, _boundary(source)).status, "complete", "no current task permits an absent orders table")
