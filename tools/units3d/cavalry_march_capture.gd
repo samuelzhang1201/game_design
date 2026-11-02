@@ -31,6 +31,19 @@ func _vectors(values: Variant) -> Array:
 	return result
 
 
+func _track_values(animation: Animation, time: float) -> Array:
+	var values: Array = []
+	for i: int in animation.get_track_count():
+		match animation.track_get_type(i):
+			Animation.TYPE_POSITION_3D:
+				values.append(_vector(animation.position_track_interpolate(i, time)))
+			Animation.TYPE_ROTATION_3D:
+				values.append(_vector(animation.rotation_track_interpolate(i, time)))
+			Animation.TYPE_SCALE_3D:
+				values.append(_vector(animation.scale_track_interpolate(i, time)))
+	return values
+
+
 func _fail(message: String) -> void:
 	push_error(message)
 	quit(2)
@@ -38,6 +51,9 @@ func _fail(message: String) -> void:
 
 func _capture() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
+	if args.size() == 6 and args[0] == "--views" and args[2] == "--native" and args[4] == "--accounting":
+		await _views(args[1], args[3], args[5])
+		return
 	if args.size() != 2 or args[0] != "--out" or not args[1].is_absolute_path():
 		_fail("Usage: cavalry_march_capture.gd -- --out /absolute/new-directory")
 		return
@@ -110,6 +126,7 @@ func _capture() -> void:
 				times.append(time)
 		tracks.append({"path": str(animation.track_get_path(i)), "type": animation.track_get_type(i),
 			"interpolation": animation.track_get_interpolation_type(i),
+			"compressed": animation.track_is_compressed(i),
 			"loop_wrap": animation.track_get_interpolation_loop_wrap(i),
 			"enabled": animation.track_is_enabled(i), "keys": keys})
 	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(SOURCE)
@@ -165,7 +182,13 @@ func _capture() -> void:
 		var path: String = "res://assets/3D/units/cavalry/cavalry_cavalry_atlas%s.jpg" % suffix
 		input_hashes[path.trim_prefix("res://")] = FileAccess.get_sha256(path)
 		input_hashes[(path + ".import").trim_prefix("res://")] = FileAccess.get_sha256(path + ".import")
-	var static_data: Dictionary = {"version": 1, "engine": Engine.get_version_info(),
+	var os_build: Array = []
+	if OS.get_name() != "macOS" or OS.execute("/usr/bin/sw_vers", ["-buildVersion"], os_build) != 0:
+		_fail("Native numerical replay requires the captured macOS build")
+		return
+	var static_data: Dictionary = {"version": 2, "engine": Engine.get_version_info(),
+		"runtime": {"os": OS.get_name(), "build": str(os_build[0]).strip_edges(),
+			"arm64": OS.has_feature("arm64"), "double_precision": OS.has_feature("double")},
 		"project_root": ProjectSettings.globalize_path("res://"),
 		"engine_executable": OS.get_executable_path(), "engine_executable_sha256": FileAccess.get_sha256(OS.get_executable_path()),
 		"input_hashes": input_hashes, "nodes": nodes, "bones": bones, "skin": binds,
@@ -200,15 +223,7 @@ func _capture() -> void:
 		var locals: Array = []
 		var globals: Array = []
 		var pose_components: Array = []
-		var track_values: Array = []
-		for i: int in animation.get_track_count():
-			match animation.track_get_type(i):
-				Animation.TYPE_POSITION_3D:
-					track_values.append(_vector(animation.position_track_interpolate(i, time)))
-				Animation.TYPE_ROTATION_3D:
-					track_values.append(_vector(animation.rotation_track_interpolate(i, time)))
-				Animation.TYPE_SCALE_3D:
-					track_values.append(_vector(animation.scale_track_interpolate(i, time)))
+		var player_time: float = player.current_animation_position
 		var skin_transforms: Array[Transform3D] = []
 		for i: int in skeleton.get_bone_count():
 			locals.append(_flat(skeleton.get_bone_pose(i)))
@@ -228,10 +243,142 @@ func _capture() -> void:
 				vertices.append(_vector(position))
 			points.append(vertices)
 		samples_file.store_line(JSON.stringify({"time": time, "phase": time / animation.length,
-			"locals": locals, "globals": globals, "track_values": track_values, "pose_components": pose_components,
+			"player_time": player_time, "player_track_values": _track_values(animation, player_time),
+			"locals": locals, "globals": globals, "track_values": _track_values(animation, time), "pose_components": pose_components,
 			"skinned_skeleton_local": points}, "", true, true))
 	samples_file.close()
 	print("NATIVE_CAPTURE ", JSON.stringify({"bones": bones.size(), "surfaces": surfaces.size(),
 		"samples": sample_times.size(), "output": output}))
+	model.queue_free()
+	quit()
+
+
+func _views(output: String, native_path: String, accounting_path: String) -> void:
+	if DisplayServer.get_name() == "headless" or not output.is_absolute_path() or DirAccess.dir_exists_absolute(output):
+		_fail("Views require a normal renderer/window and a new absolute output directory")
+		return
+	var native: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(native_path))
+	var accounting: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(accounting_path))
+	for path: String in native.input_hashes:
+		if FileAccess.get_sha256("res://" + path) != native.input_hashes[path]:
+			_fail("View resource differs from native capture: " + path)
+			return
+	root.size = Vector2i(2560, 1600)
+	var model: Node3D = (load(SCENE) as PackedScene).instantiate()
+	root.add_child(model)
+	var skeleton: Skeleton3D = model.find_children("*", "Skeleton3D", true, false)[0]
+	var mesh: MeshInstance3D = model.find_children("*", "MeshInstance3D", true, false)[0]
+	var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]
+	player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	var camera: Camera3D = Camera3D.new()
+	root.add_child(camera)
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.near = 0.001
+	camera.current = true
+	var environment: WorldEnvironment = WorldEnvironment.new()
+	environment.environment = Environment.new()
+	environment.environment.background_mode = Environment.BG_COLOR
+	environment.environment.background_color = Color(0.12, 0.14, 0.16)
+	environment.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.environment.ambient_light_color = Color.WHITE
+	environment.environment.ambient_light_energy = 0.7
+	root.add_child(environment)
+	var light: DirectionalLight3D = DirectionalLight3D.new()
+	root.add_child(light)
+	light.rotation_degrees = Vector3(-50, -30, 0)
+	var names: Array[String] = ["FrontHoof.L", "FrontHoof.R", "HindHoof.L", "HindHoof.R"]
+	var labels: Image = Image.create(256, 83, false, Image.FORMAT_R8)
+	labels.fill(Color.BLACK)
+	for part: int in names.size():
+		for vertex: int in accounting.patches[names[part]].native_shell_vertices:
+			labels.set_pixel(vertex % 256, vertex / 256, Color(float(part + 1) / 255.0, 0, 0))
+	var material: ShaderMaterial = ShaderMaterial.new()
+	material.shader = Shader.new()
+	material.shader.code = """shader_type spatial;
+render_mode unshaded, cull_disabled;
+uniform sampler2D parts : filter_nearest;
+varying flat int part;
+void vertex() { part = int(round(texelFetch(parts, ivec2(VERTEX_ID % 256, VERTEX_ID / 256), 0).r * 255.0)); }
+void fragment() {
+ ALBEDO = part == 1 ? vec3(1.0,0.2,0.15) : part == 2 ? vec3(0.1,0.65,1.0) :
+          part == 3 ? vec3(0.95,0.7,0.1) : part == 4 ? vec3(0.25,0.85,0.35) : vec3(0.3);
+}
+"""
+	material.set_shader_parameter("parts", ImageTexture.create_from_image(labels))
+	var wire: MeshInstance3D = MeshInstance3D.new()
+	root.add_child(wire)
+	var wire_material: StandardMaterial3D = StandardMaterial3D.new()
+	wire_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	wire_material.no_depth_test = true
+	wire_material.albedo_color = Color(1, 0, 1)
+	wire.material_override = wire_material
+	if DirAccess.make_dir_recursive_absolute(output) != OK:
+		_fail("Cannot create view directory")
+		return
+	var rows: Array = []
+	var arrays: Array = mesh.mesh.surface_get_arrays(0)
+	for phase: float in [0.0, 0.137]:
+		player.stop()
+		for i: int in native.bones.size():
+			var bone: Dictionary = native.bones[i]
+			skeleton.set_bone_pose_position(i, Vector3(bone.default_position[0], bone.default_position[1], bone.default_position[2]))
+			skeleton.set_bone_pose_rotation(i, Quaternion(bone.default_rotation[0], bone.default_rotation[1], bone.default_rotation[2], bone.default_rotation[3]))
+			skeleton.set_bone_pose_scale(i, Vector3(bone.default_scale[0], bone.default_scale[1], bone.default_scale[2]))
+		player.play("MARCH")
+		player.seek(phase * player.get_animation("MARCH").length, true)
+		player.advance(0.0)
+		skeleton.force_update_all_bone_transforms()
+		var transforms: Array[Transform3D] = []
+		for i: int in native.skin.size():
+			transforms.append(skeleton.get_bone_global_pose(int(native.skin[i].resolved_bone)) * mesh.skin.get_bind_pose(i))
+		var points: PackedVector3Array = []
+		for i: int in arrays[Mesh.ARRAY_VERTEX].size():
+			var point: Vector3 = Vector3.ZERO
+			for j: int in 4:
+				point += (transforms[arrays[Mesh.ARRAY_BONES][i * 4 + j]] * arrays[Mesh.ARRAY_VERTEX][i]) * arrays[Mesh.ARRAY_WEIGHTS][i * 4 + j]
+			points.append(skeleton.global_transform * point)
+		for name: String in names:
+			var patch: Dictionary = accounting.patches[name]
+			var bounds: AABB = AABB(points[patch.native_shell_vertices[0]], Vector3.ZERO)
+			for vertex: int in patch.native_shell_vertices:
+				bounds = bounds.expand(points[vertex])
+			var lines: ImmediateMesh = ImmediateMesh.new()
+			lines.surface_begin(Mesh.PRIMITIVE_LINES)
+			for triangle: int in patch.native_sole_triangles:
+				for edge: int in 3:
+					lines.surface_add_vertex(points[arrays[Mesh.ARRAY_INDEX][triangle * 3 + edge]])
+					lines.surface_add_vertex(points[arrays[Mesh.ARRAY_INDEX][triangle * 3 + (edge + 1) % 3]])
+			lines.surface_end()
+			wire.mesh = lines
+			for view: String in ["underside", "oblique"]:
+				var direction: Vector3 = Vector3(0, -1, 0) if view == "underside" else Vector3(0.7, -0.5, 0.7).normalized()
+				var span: float = bounds.size.length()
+				camera.size = span * 1.6
+				camera.position = bounds.get_center() + direction * span * 4.0
+				camera.look_at(bounds.get_center(), Vector3.FORWARD if view == "underside" else Vector3.UP)
+				for mode: String in ["native", "source_parts", "candidate_edges"]:
+					mesh.material_override = null if mode == "native" else material
+					wire.visible = mode == "candidate_edges"
+					for frame: int in 3:
+						await process_frame
+					await RenderingServer.frame_post_draw
+					var filename: String = "%s-p%.3f-%s-%s.png" % [name, phase, view, mode]
+					var screenshot: Image = root.get_texture().get_image()
+					if screenshot.save_png(output.path_join(filename)) != OK:
+						_fail("Cannot save native view")
+						return
+					rows.append({"file": filename, "sha256": FileAccess.get_sha256(output.path_join(filename)),
+						"hoof": name, "phase": phase, "view": view, "mode": mode,
+						"size": [screenshot.get_width(), screenshot.get_height()], "camera_position": _vector(camera.position),
+						"camera_size": camera.size, "target": _vector(bounds.get_center())})
+	var report: Dictionary = {"native_sha256": FileAccess.get_sha256(native_path),
+		"accounting_sha256": FileAccess.get_sha256(accounting_path), "renderer": RenderingServer.get_current_rendering_method(),
+		"display_server": DisplayServer.get_name(), "rows": rows,
+		"legend": {"red": names[0], "blue": names[1], "gold": names[2], "green": names[3], "magenta": "candidate rest-normal-negative triangle edges"},
+		"limits": "Native mesh/skin untouched. Source-part shader changes display material only. Magenta edges are an X-ray CPU-position overlay including hidden candidate triangles, not GPU displacement evidence. No terrain, seat, gameplay-scale, contact, desktop-input or FPS acceptance."}
+	var report_file: FileAccess = FileAccess.open(output.path_join("views.json"), FileAccess.WRITE)
+	report_file.store_string(JSON.stringify(report, "", true, true))
+	report_file.close()
+	print("NATIVE_VIEWS ", rows.size(), " ", output)
 	model.queue_free()
 	quit()

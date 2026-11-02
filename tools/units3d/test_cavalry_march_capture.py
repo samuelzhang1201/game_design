@@ -12,6 +12,53 @@ import check_cavalry_march_capture as capture
 
 
 class CaptureTests(unittest.TestCase):
+    def test_outward_float32_operations_include_fused_and_separate_rounding(self):
+        f = capture.Float32Box
+        halfway = f(2**24) + f(1)
+        self.assertTrue(halfway.contains([2**24, 2**24 + 2]).all())
+        # Separate multiply/add yields zero; one fused operation retains -2^-46.
+        cancellation = f(1 + 2**-23) * f(1 - 2**-23) - f(1)
+        self.assertTrue(cancellation.contains([0, -2**-46]).all())
+        self.assertTrue((f(1) / f(3)).contains(np.float32(1 / 3)))
+        self.assertTrue(f(2).sqrt().contains(np.float32(math.sqrt(2))))
+        with self.assertRaises(ValueError):
+            f(1) / f(0)
+        with self.assertRaises(ValueError):
+            f(float('nan'))
+
+    def test_operation_boxes_enclose_hand_computed_basis_and_affine_product(self):
+        f = capture.Float32Box
+        transform = capture.basis_box([3, 4, 5], [0, 0, 0, 1], [2, 3, 4])
+        expected = np.array([[2, 0, 0, 3], [0, 3, 0, 4], [0, 0, 4, 5]])
+        self.assertTrue(transform.contains(expected).all())
+        product = capture.affine_box(transform, f([[1, 0, 0, 1], [0, 1, 0, 2], [0, 0, 1, 3]]))
+        expected[:, 3] = [5, 10, 17]
+        self.assertTrue(product.contains(expected).all())
+        self.assertFalse(product.contains(expected + 1).all())
+
+    def test_native_slerp_and_import_endpoint_operations_are_separate(self):
+        functions = capture.system_math()
+        track = {'keys': [{'time': 0., 'value': [0, 0, 0, 1]}, {'time': 1., 'value': [0, 0, -1, 0]}],
+                 'type': 2, 'interpolation': 1}
+        midpoint = capture.native_track_box(track, .5, 1., functions)
+        self.assertTrue(midpoint.contains([0, 0, -math.sqrt(.5), math.sqrt(.5)]).all())
+        raw = {'times': [0., 1.], 'values': [[0, 0, 0, .99999994]] * 2, 'step': False}
+        endpoint = capture.imported_key_box(raw, 1., True, functions)
+        self.assertTrue(endpoint.contains([0, 0, 0, 1]).all())
+
+    def test_operation_audit_rejects_corrupted_skin_output(self):
+        identity = np.eye(4)[:3].ravel().tolist()
+        native = {'bones': [{'parent': -1}], 'tracks': [], 'length': 1.}
+        sample = {'time': 0., 'track_values': [], 'locals': [identity], 'globals': [identity],
+                  'pose_components': [{'position': [0, 0, 0], 'rotation': [0, 0, 0, 1], 'scale': [1, 1, 1]}],
+                  'skinned_skeleton_local': [[[.75, 0, 0]]]}
+        surface = {'vertices': [[1, 0, 0]], 'joints': [[0, 0, 0, 0]], 'weights': [[.75, 0, 0, 0]]}
+        result = capture.operation_enclosures(native, sample, surface, [np.eye(4)], {})
+        self.assertTrue(all(v['outside_components'] == 0 for v in result.values()))
+        sample['skinned_skeleton_local'][0][0][0] = .751
+        result = capture.operation_enclosures(native, sample, surface, [np.eye(4)], {})
+        self.assertEqual(result['bind_and_cpu_lbs']['outside_components'], 1)
+
     def test_mixed_skin_preserves_material_weights_and_affine_bind(self):
         transforms = np.repeat(np.eye(4)[None], 2, axis=0)
         transforms[1, 0, 3] = .04

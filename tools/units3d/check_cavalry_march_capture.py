@@ -4,11 +4,15 @@ Requires the project's existing NumPy. No assets, import settings or policies ar
 """
 import argparse
 import csv
+import ctypes
+import ctypes.util
 import hashlib
 import json
 import math
+import platform
 import shutil
 import struct
+import subprocess
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -333,6 +337,303 @@ def forward_kinematics(bones, locals_):
     return np.array(result)
 
 
+class Float32Box:
+    """IEEE binary32 outward enclosure, not an empirically chosen error allowance.
+
+    Endpoints include the exact real operation AND its rounded result. Thus each
+    expression also encloses multiply-add contraction. Binary64 nextafter before
+    binary32 directed conversion protects division/sqrt and endpoint evaluation.
+    No overflow, division through zero, reassociation or transcendental assumption.
+    """
+    def __init__(self, lo, hi=None):
+        self.lo = finite(lo).astype(np.float32).astype(float)
+        self.hi = self.lo if hi is None else finite(hi).astype(np.float32).astype(float)
+        require(np.isfinite(self.lo).all() and np.isfinite(self.hi).all()
+                and (self.lo <= self.hi).all(), 'Invalid float32 enclosure')
+
+    @classmethod
+    def outward(cls, lo, hi):
+        lo, hi = np.nextafter(lo, -np.inf), np.nextafter(hi, np.inf)
+        lower, upper = np.asarray(lo, dtype=np.float32), np.asarray(hi, dtype=np.float32)
+        lower = np.where(lower.astype(float) > lo, np.nextafter(lower, np.float32(-np.inf)), lower)
+        upper = np.where(upper.astype(float) < hi, np.nextafter(upper, np.float32(np.inf)), upper)
+        return cls(lower, upper)
+
+    def __getitem__(self, key):
+        return Float32Box(self.lo[key], self.hi[key])
+
+    def __neg__(self):
+        return Float32Box(-self.hi, -self.lo)
+
+    def __add__(self, other):
+        return self.outward(self.lo + other.lo, self.hi + other.hi)
+
+    def __sub__(self, other):
+        return self + -other
+
+    def __mul__(self, other):
+        products = np.broadcast_arrays(self.lo * other.lo, self.lo * other.hi,
+                                       self.hi * other.lo, self.hi * other.hi)
+        return self.outward(np.minimum.reduce(products), np.maximum.reduce(products))
+
+    def __truediv__(self, other):
+        require(((other.lo > 0) | (other.hi < 0)).all(), 'Division enclosure contains zero')
+        quotients = np.broadcast_arrays(self.lo / other.lo, self.lo / other.hi,
+                                        self.hi / other.lo, self.hi / other.hi)
+        return self.outward(np.minimum.reduce(quotients), np.maximum.reduce(quotients))
+
+    def sqrt(self):
+        require((self.lo >= 0).all(), 'Negative sqrt enclosure')
+        return self.outward(np.sqrt(self.lo), np.sqrt(self.hi))
+
+    def contains(self, actual):
+        actual = finite(actual)
+        return (self.lo <= actual) & (actual <= self.hi)
+
+
+def box_stack(values, axis=0):
+    return Float32Box(np.stack([v.lo for v in values], axis), np.stack([v.hi for v in values], axis))
+
+
+def box_dot(a, b, count):
+    result = a[..., 0] * b[..., 0]
+    for i in range(1, count):
+        result = result + a[..., i] * b[..., i]
+    return result
+
+
+def system_math():
+    """Use the captured platform's actual libm functions; assume no libm ULP budget."""
+    library = ctypes.CDLL(ctypes.util.find_library('m'))
+    functions = {}
+    for name in ['acosf', 'sinf', 'sin']:
+        function = getattr(library, name)
+        number = ctypes.c_double if name == 'sin' else ctypes.c_float
+        function.argtypes, function.restype = [number], number
+        functions[name] = function
+    return functions
+
+
+def math_runtime_identity(functions):
+    require(sys.platform == 'darwin' and platform.machine() == 'arm64', 'Captured native libm requires macOS arm64 replay')
+
+    class ImageInfo(ctypes.Structure):
+        _fields_ = [('path', ctypes.c_char_p), ('base', ctypes.c_void_p),
+                    ('symbol', ctypes.c_char_p), ('address', ctypes.c_void_p)]
+
+    lookup = ctypes.CDLL(None).dladdr
+    lookup.argtypes, lookup.restype = [ctypes.c_void_p, ctypes.POINTER(ImageInfo)], ctypes.c_int
+    images = {}
+    for name, function in functions.items():
+        info = ImageInfo()
+        require(lookup(ctypes.cast(function, ctypes.c_void_p), ctypes.byref(info)) != 0, 'Unidentified libm image')
+        header = ctypes.string_at(info.base, 32)
+        magic, _, _, _, commands, size, _, _ = struct.unpack('<8I', header)
+        require(magic == 0xfeedfacf and size < 1024*1024, 'Unexpected native libm image header')
+        data, offset, uuid = ctypes.string_at(info.base+32, size), 0, None
+        for _ in range(commands):
+            command, length = struct.unpack_from('<II', data, offset)
+            require(length >= 8 and offset+length <= size, 'Malformed libm load command')
+            if command == 0x1b:
+                uuid = data[offset+8:offset+24].hex()
+            offset += length
+        require(uuid is not None, 'Native libm has no build UUID')
+        images[name] = {'image': info.path.decode(), 'mach_o_uuid': uuid}
+    return {'platform': platform.platform(), 'functions': images,
+            'scope': 'Actual platform function replay; no assumed transcendental ULP bound or continuous time enclosure.'}
+
+
+def native_track_box(track, time, length, functions):
+    """Replay every possible rounded dot in slerp, then enclose its multiply-adds.
+
+    The finite enumeration is of floating-point intermediate values, not times.
+    libm results are native-platform operation replay, NOT bounds on ideal sin/acos.
+    """
+    times = [key['time'] for key in track['keys']]
+    values = [key['value'] for key in track['keys']]
+    require(times[0] == 0 and (len(times) == 1 or times[-1] == length)
+            and 0 <= time <= length, 'Unaccounted native track seam')
+    if len(times) == 1:
+        return Float32Box(values[0])
+    low, high, index = 0, len(times)-1, 0
+    while low <= high:
+        middle = (low + high) // 2
+        if abs(time-times[middle]) < max(1e-5, 1e-5*abs(time)):
+            index = middle
+            break
+        if time < times[middle]:
+            high = middle-1
+        else:
+            index, low = middle, middle+1
+    a, b = Float32Box(values[index]), Float32Box(values[(index+1) % len(times)])
+    if track['interpolation'] == 0:
+        return a
+    delta = np.float32(times[index+1]-times[index]) if index+1 < len(times) else np.float32(0)
+    weight = np.float32(0) if abs(delta) < 1e-5 else np.float32(np.float32(time-times[index]) / delta)
+    if track['type'] != 2:
+        return a + (b-a) * Float32Box(weight)
+    return slerp_box(a, b, weight, functions)
+
+
+def slerp_box(a, b, weight, functions):
+    dot = box_dot(a, b, 4)
+    candidate, last = np.float32(dot.lo), np.float32(dot.hi)
+    outputs = []
+    # Near-unit adjacent keys yield a small finite set. A larger domain stays unknown.
+    while candidate <= last:
+        require(len(outputs) < 256, 'Slerp dot domain needs a larger explicit proof, not a tolerance')
+        cosine, target = abs(candidate), -b if candidate < 0 else b
+        if np.float32(1)-cosine > np.float32(1e-5):
+            omega = functions['acosf'](float(cosine)) if cosine <= 1 else 0.
+            denominator = functions['sinf'](omega)
+            require(denominator != 0, 'Slerp denominator zero')
+            # This is the source's DOUBLE overload for scale0 and FLOAT for scale1.
+            scale0 = np.float32(functions['sin']((1.-float(weight))*omega) / denominator)
+            scale1 = np.float32(functions['sinf'](float(np.float32(weight*np.float32(omega)))) / denominator)
+        else:
+            scale0, scale1 = np.float32(1)-weight, weight
+        outputs.append(a*Float32Box(scale0) + target*Float32Box(scale1))
+        candidate = np.nextafter(candidate, np.float32(np.inf))
+    return Float32Box(np.minimum.reduce([v.lo for v in outputs]), np.maximum.reduce([v.hi for v in outputs]))
+
+
+def normalize_box(q):
+    return q * (Float32Box(1) / box_dot(q, q, 4).sqrt())
+
+
+def imported_key_box(raw, time, rotation, functions):
+    # GLTFDocument::_interpolate_track receives FLOAT time, and double key times.
+    time = float(np.float32(time))
+    times = raw['times']
+    # GLTFAccessor::decode_as_quaternions normalizes even endpoint keys.
+    values = [normalize_box(Float32Box(v)) if rotation else Float32Box(v) for v in raw['values']]
+    index = int(np.searchsorted(times, time, side='right'))-1
+    if index < 0 or index >= len(times)-1 or raw['step']:
+        return values[max(0, index)]
+    weight = np.float32((time-times[index])/(times[index+1]-times[index]))
+    a, b = values[index], values[index+1]
+    return normalize_box(slerp_box(a, b, weight, functions)) if rotation else a+(b-a)*Float32Box(weight)
+
+
+def quaternion_product_box(a, b):
+    x, y, z, w = [a[i] for i in range(4)]
+    u, v, s, t = [b[i] for i in range(4)]
+    return box_stack([w*u+x*t+y*s-z*v, w*v+y*t+z*u-x*s,
+                      w*s+z*t+x*v-y*u, w*t-x*u-y*v-z*s])
+
+
+def mixer_rotation_box(rest, target):
+    rest, target = Float32Box(rest), Float32Box(target)
+    relative = quaternion_product_box(rest * Float32Box([-1, -1, -1, 1]), target)
+    # At weight=1 the two sin(omega) calls are identical: scales are exactly 0,1.
+    # Include both short-arc branches if the outward box straddles w=0.
+    if relative.hi[3] < 0:
+        relative = -relative
+    elif relative.lo[3] < 0:
+        relative = Float32Box(np.minimum(relative.lo, -relative.hi), np.maximum(relative.hi, -relative.lo))
+    mixed = quaternion_product_box(rest, relative)
+    return normalize_box(mixed)
+
+
+def basis_box(position, rotation, scale):
+    q = Float32Box(rotation)
+    x, y, z, w = [q[i] for i in range(4)]
+    s = Float32Box(2) / box_dot(q, q, 4)
+    xs, ys, zs = x*s, y*s, z*s
+    wx, wy, wz, xx, xy, xz, yy, yz, zz = w*xs, w*ys, w*zs, x*xs, x*ys, x*zs, y*ys, y*zs, z*zs
+    one = Float32Box(1)
+    basis = box_stack([box_stack([one-(yy+zz), xy-wz, xz+wy]),
+                       box_stack([xy+wz, one-(xx+zz), yz-wx]),
+                       box_stack([xz-wy, yz+wx, one-(xx+yy)])])
+    # Basis::set_quaternion_scale multiplies the rotation by a diagonal basis.
+    diagonal = Float32Box(np.diag(scale))
+    columns = [box_dot(basis, diagonal[:, i], 3) for i in range(3)]
+    return box_stack(columns + [Float32Box(position)], axis=1)
+
+
+def affine_box(a, b):
+    columns = [box_dot(a[:, :3], b[:, i], 3) for i in range(4)]
+    columns[3] = columns[3] + a[:, 3]
+    return box_stack(columns, axis=1)
+
+
+def operation_enclosures(native, sample, surface, binds, functions):
+    """Validate each arithmetic boundary against its own captured input, no fitted epsilon."""
+    stages = defaultdict(list)
+
+    def check(name, enclosure, actual):
+        actual = finite(actual).astype(np.float32).astype(float)
+        stages[name].append({'outside_components': int(np.count_nonzero(~enclosure.contains(actual))),
+                             'component_count': int(actual.size),
+                             'max_interval_width': float(np.max(enclosure.hi - enclosure.lo))})
+
+    for i, track in enumerate(native['tracks']):
+        check('requested_track_platform_replay', native_track_box(track, sample['time'], native['length'], functions), sample['track_values'][i])
+        value = sample['player_track_values'][i]
+        check('player_track_platform_replay', native_track_box(track, sample['player_time'], native['length'], functions), value)
+        bone_id = next(i for i, b in enumerate(native['bones']) if b['name'] == track['path'].split(':')[-1])
+        bone, pose_components = native['bones'][bone_id], sample['pose_components'][bone_id]
+        if track['type'] == 2:
+            check('mixer_rotation', mixer_rotation_box(bone['rest_rotation'], value), pose_components['rotation'])
+        elif track['type'] == 1:
+            initial = Float32Box(matrix(bone['rest'])[:3, 3])
+            check('mixer_position', initial + (Float32Box(value) - initial), pose_components['position'])
+        else:
+            raise ValueError('Unaccounted mixer track type')
+    for i, (bone, pc) in enumerate(zip(native['bones'], sample['pose_components'])):
+        check('basis', basis_box(pc['position'], pc['rotation'], pc['scale']), matrix(sample['locals'][i])[:3])
+        local = Float32Box(matrix(sample['locals'][i])[:3])
+        parent = bone['parent']
+        global_box = local if parent < 0 else affine_box(Float32Box(matrix(sample['globals'][parent])[:3]), local)
+        check('hierarchy', global_box, matrix(sample['globals'][i])[:3])
+    transforms = box_stack([affine_box(Float32Box(matrix(g)[:3]), Float32Box(bind[:3]))
+                            for g, bind in zip(sample['globals'], binds)])
+    vertices, joints, weights = Float32Box(surface['vertices']), np.asarray(surface['joints'], dtype=int), Float32Box(surface['weights'])
+    accumulated = Float32Box(np.zeros((len(joints), 3)))
+    for i in range(4):
+        transform = transforms[joints[:, i]]
+        point = box_dot(transform[:, :, :3], vertices[:, None, :], 3) + transform[:, :, 3]
+        accumulated = accumulated + point * weights[:, i, None]
+    check('bind_and_cpu_lbs', accumulated, sample['skinned_skeleton_local'][0])
+    return {name: {'outside_components': sum(v['outside_components'] for v in values),
+                   'component_count': sum(v['component_count'] for v in values),
+                   'max_interval_width': max(v['max_interval_width'] for v in values)}
+            for name, values in stages.items()}
+
+
+def import_operation_enclosures(document, raw_tracks_, target_tracks, native, functions):
+    nodes = {node['name']: node for node in document['nodes'] if 'name' in node}
+    keys, dropped, rests = [], [], []
+    for (name, kind), track in raw_tracks_.items():
+        if (name, kind) in target_tracks:
+            target = target_tracks[name, kind]
+            for time, value in zip(target['times'], target['values']):
+                box = imported_key_box(track, time, kind == 'rotation', functions)
+                keys.append({'bone': name, 'component': kind, 'time': float(time),
+                             'outside_components': int(np.count_nonzero(~box.contains(np.float32(value))))})
+        else:
+            default = {'translation': [0, 0, 0], 'rotation': [0, 0, 0, 1], 'scale': [1, 1, 1]}[kind]
+            base = Float32Box(nodes[name].get(kind, default))
+            distance = 0.
+            for value in track['values']:
+                box = Float32Box(value)
+                if kind == 'rotation':
+                    box = normalize_box(normalize_box(box))
+                difference = box-base
+                distance = max(distance, float(np.max(np.maximum(abs(difference.lo), abs(difference.hi)))))
+            # CMP_EPSILON is the pinned importer's comparison rule, never a contact allowance.
+            dropped.append({'bone': name, 'component': kind, 'comparison_abs_difference_upper': distance,
+                            'engine_immutable_comparison_proven': distance < float(np.float32(1e-5))})
+    for bone in native['bones']:
+        node = nodes[bone['name']]
+        box = basis_box(node.get('translation', [0, 0, 0]), node.get('rotation', [0, 0, 0, 1]), node.get('scale', [1, 1, 1]))
+        rests.append({'bone': bone['name'], 'outside_components': int(np.count_nonzero(
+            ~box.contains(np.float32(matrix(bone['rest'])[:3]))))})
+    return {'retained_keys': keys, 'removed_tracks': dropped, 'node_to_rest': rests,
+            'covered': all(k['outside_components'] == 0 for k in keys+rests)
+                       and all(d['engine_immutable_comparison_proven'] for d in dropped)}
+
+
 def track_accounting(source, target, native):
     rows = []
     defaults = {b['name']: b for b in native['bones']}
@@ -361,6 +662,8 @@ def track_accounting(source, target, native):
                     dot = float(a @ b)
                     branches[('sign_flip_' if dot < 0 else '') + ('slerp' if 1 - abs(dot) > 1e-5 else 'linear')] += 1
             row.update(operation='key_reduction' if removed else 'retained', native_keys=len(imported['times']),
+                       value_operations=['GLTFAccessor normalized quaternion decode',
+                                         'GLTFDocument slerp then normalization'] if component == 'rotation' else ['GLTFDocument linear interpolation'],
                        removed_seconds=removed, retained_key_max_component_residual=key_residual,
                        equivalent_quaternion_sign_flips=sign_flips, interpolation_branches=dict(branches),
                        seam_first_last_component_delta=(imported['values'][-1] - imported['values'][0]).tolist())
@@ -395,14 +698,21 @@ def frozen_witness(native_path, geometry_path, witness_path):
                       'membership': 'Not supplied by frozen observations; not promoted to a complete patch.'}}
 
 
-def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path):
+def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path, views_path=None):
     native_path, samples_path = capture_dir / 'native.json', capture_dir / 'samples.jsonl'
     native = read_bound(native_path, sha256(native_path))
     source = read_bound(source_path, sha256(source_path))
     require(sha256(ROOT / GLB) == FROZEN['glb'] and source['source_sha256'] == FROZEN['source'], "Unexpected installed/source asset")
     require(sha256(source['source_file']) == FROZEN['source'], "Frozen Blender source changed")
-    require(native['version'] == 1 and len(native['surfaces']) == 1 and len(native['bones']) == 53
+    require(native['version'] == 2 and len(native['surfaces']) == 1 and len(native['bones']) == 53
             and len(native['skin']) == 53, "Incomplete native capture")
+    functions = system_math()
+    runtime = math_runtime_identity(functions)
+    build = subprocess.check_output(['/usr/bin/sw_vers', '-buildVersion'], text=True).strip()
+    require(native['runtime'] == {'os': 'macOS', 'build': build, 'arm64': True, 'double_precision': False},
+            'Native capture/platform arithmetic mismatch')
+    runtime['os_build'] = build
+    require(not any(t['compressed'] for t in native['tracks']), 'Compressed tracks need separate operation accounting')
     for path, digest in native['input_hashes'].items():
         if path != 'project.godot':
             require(sha256(ROOT / path) == digest, f"Capture input changed: {path}")
@@ -455,6 +765,7 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
     require([b['resolved_bone'] for b in native['skin']] == list(range(53)), "Named Skin resolution mismatch")
     source_tracks, target_tracks = raw_tracks(g, binary), native_tracks(native)
     accounting = track_accounting(source_tracks, target_tracks, native)
+    import_enclosures = import_operation_enclosures(g, source_tracks, target_tracks, native, functions)
     default_tracks = {k: v for k, v in source_tracks.items() if k in target_tracks}
     raw_ordered = {k: v[order] for k, v in raw.items() if k != 'indices'}
     rows, new_witness = [], {}
@@ -465,9 +776,11 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
         _, dropped_global = pose(native['bones'], default_tracks, time)
         _, reduced_global = pose(native['bones'], target_tracks, time)
         reconstructed_local, reconstructed_global = pose(native['bones'], target_tracks, time, native['length'])
+        require(sample['player_time'] == time % native['length'], 'Native player loop-time mismatch')
+        _, player_global = pose(native['bones'], target_tracks, sample['player_time'], native['length'])
         actual_global = np.array([matrix(m) for m in sample['globals']])
         actual_local = np.array([matrix(m) for m in sample['locals']])
-        evaluated_tracks = {key: {'times': [0.], 'values': [sample['track_values'][i]], 'step': False}
+        evaluated_tracks = {key: {'times': [0.], 'values': [sample['player_track_values'][i]], 'step': False}
                             for i, key in enumerate(target_tracks)}
         _, track_global = pose(native['bones'], evaluated_tracks, 0.)
         component_locals = [trs(pc['position'], pc['rotation'], pc['scale']) for pc in sample['pose_components']]
@@ -476,21 +789,24 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
         stages = [skin(raw_ordered, raw_global @ raw_bind), skin(raw_ordered, dropped_global @ raw_bind),
                   skin(raw_ordered, reduced_global @ binds), skin(raw_ordered, reconstructed_global @ binds),
                   skin(imported, reconstructed_global @ binds),
+                  skin(imported, player_global @ binds),
                   skin(imported, track_global @ binds), skin(imported, component_global @ binds),
                   skin(imported, local_global @ binds),
                   skin(imported, actual_global @ binds), finite(sample['skinned_skeleton_local'][0], 3)]
         differences = [np.linalg.norm(b - a, axis=1) for a, b in zip(stages, stages[1:])]
         row = {'time': time, 'phase': sample['phase'],
                'max_vertex_delta_by_operation_m': {k: float(v.max()) for k, v in zip(
-                   ['removed_tracks', 'reduced_keys', 'native_key_search_and_float32_fraction', 'quantized_weights',
+                   ['removed_tracks', 'import_key_normalization_and_reduction', 'native_key_search_and_float32_fraction', 'quantized_weights', 'player_loop_time',
                     'native_track_arithmetic_residual', 'native_mixer_arithmetic_residual', 'native_basis_arithmetic_residual',
                     'native_fk_arithmetic_residual', 'native_cpu_lbs_residual'], differences)},
-               'native_pose_arithmetic_residual_m': float(np.linalg.norm(stages[4] - stages[8], axis=1).max()),
+               'native_pose_arithmetic_residual_m': float(np.linalg.norm(stages[5] - stages[9], axis=1).max()),
                'max_local_component_residual': float(np.max(np.abs(actual_local - reconstructed_local))),
-               'raw_native_max_vertex_distance_m': float(np.linalg.norm(stages[0] - stages[8], axis=1).max())}
+               'raw_native_max_vertex_distance_m': float(np.linalg.norm(stages[0] - stages[9], axis=1).max()),
+               'player_time': sample['player_time']}
+        row['operation_enclosures'] = operation_enclosures(native, sample, imported, binds, functions)
         rows.append(row)
         if sample['phase'] in (.137, .25):
-            new_witness[str(sample['phase'])] = stages[8][16496].tolist()
+            new_witness[str(sample['phase'])] = stages[9][16496].tolist()
     require([r['time'] for r in rows] == native['sample_times_seconds'], "Missing or reordered native samples")
     for a, b in zip(native['span_boundaries_seconds'], native['span_boundaries_seconds'][1:]):
         require(any(a < r['time'] < b for r in rows), "Unobserved track span")
@@ -499,7 +815,8 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
     for i, phase in enumerate(['0.137', '0.25']):
         require(np.allclose(new_witness[phase], frozen['native_positions'][i], rtol=0, atol=2e-15),
                 "Current/frozen native witness disagreement; do not widen this arithmetic replay check")
-    payload = {'topology': mapping, 'patches': patches, 'tracks': accounting, 'spans': rows}
+    payload = {'topology': mapping, 'patches': patches, 'tracks': accounting, 'spans': rows,
+               'import_operation_enclosures': import_enclosures}
     encoded = json.dumps(payload, sort_keys=True, separators=(',', ':')).encode()
     digest = hashlib.sha256(encoded).hexdigest()
     detail = capture_dir.parent / f'accounting-{digest}.json'
@@ -509,13 +826,33 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
         detail.write_bytes(encoded)
     inputs = {str(p.resolve()): sha256(p) for p in [native_path, samples_path, source_path, Path(source['source_file']), frozen_native,
                                                   frozen_geometry, witness_path, detail]}
+    views = None
+    if views_path is not None:
+        views = read_bound(views_path, sha256(views_path))
+        require(views['native_sha256'] == sha256(native_path), 'View/native provenance mismatch')
+        visual_detail = capture_dir.parent / ('accounting-' + views['accounting_sha256'] + '.json')
+        visual_payload = read_bound(visual_detail, views['accounting_sha256'])
+        require(visual_payload['topology'] == mapping and visual_payload['patches'] == patches,
+                'View anatomical topology or patch definition changed')
+        inputs[str(visual_detail.resolve())] = views['accounting_sha256']
+        require(views['display_server'] != 'headless' and views['renderer'] == 'forward_plus', 'Views are not native Forward+ window captures')
+        expected = {(name, phase, view, mode) for name in patches for phase in [0., .137]
+                    for view in ['underside', 'oblique'] for mode in ['native', 'source_parts', 'candidate_edges']}
+        require(len(views['rows']) == len(expected) and
+                {(r['hoof'], r['phase'], r['view'], r['mode']) for r in views['rows']} == expected, 'Incomplete anatomical views')
+        inputs[str(views_path.resolve())] = sha256(views_path)
+        for row in views['rows']:
+            require(Path(row['file']).name == row['file'], 'Unsafe view filename')
+            picture = views_path.parent / row['file']
+            require(sha256(picture) == row['sha256'] and row['size'] == [2560, 1600], 'Changed or wrong-sized native view')
+            inputs[str(picture.resolve())] = row['sha256']
     probe = Path(native['project_root'])
     for path, digest in native['input_hashes'].items():
         require(sha256(probe / path) == digest, f"Retained capture project input changed: {path}")
         inputs[str(probe / path)] = digest
     require(sha256(native['engine_executable']) == native['engine_executable_sha256'], "Captured engine executable changed")
     inputs[native['engine_executable']] = native['engine_executable_sha256']
-    engine_sources = capture_dir.parent / 'engine-source/sources.json'
+    engine_sources = capture_dir.parent / 'engine-source/sources-v2.json'
     engine_refs = read_bound(engine_sources, sha256(engine_sources))
     inputs[str(engine_sources.resolve())] = sha256(engine_sources)
     for name, reference in engine_refs.items():
@@ -530,6 +867,11 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
         inputs[str(ROOT / path)] = sha256(ROOT / path)
     maxima = {key: max(r['max_vertex_delta_by_operation_m'][key] for r in rows)
               for key in rows[0]['max_vertex_delta_by_operation_m']}
+    operation_summary = {name: {'outside_components': sum(r['operation_enclosures'][name]['outside_components'] for r in rows),
+                               'component_count': sum(r['operation_enclosures'][name]['component_count'] for r in rows),
+                               'max_sample_interval_width': max(r['operation_enclosures'][name]['max_interval_width'] for r in rows)}
+                         for name in rows[0]['operation_enclosures']}
+    numerical_covered = import_enclosures['covered'] and all(v['outside_components'] == 0 for v in operation_summary.values())
     return {'version': 1, 'step_id': 'CAV-CONTACT-NATIVE', 'status': 'BLOCKED_NOT_ACCEPTED',
             'engine': native['engine'], 'inputs': inputs, 'accounting_payload': str(detail.resolve()),
             'engine_source_references': engine_refs,
@@ -537,26 +879,38 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
                              'import': 'SHARED_GODOT_LOCK python3 tools/run_with_timeout.py 300 GODOT --headless --path NEW_PROBE --editor --import',
                              'capture': 'SHARED_GODOT_LOCK python3 tools/run_with_timeout.py 300 GODOT --headless --path NEW_PROBE --script res://tools/units3d/cavalry_march_capture.gd -- --out ABSOLUTE_NEW_CAPTURE',
                              'source': 'BLENDER --background --factory-startup --disable-autoexec FROZEN_BLEND --python tools/units3d/check_cavalry_march_capture.py -- source NEW_SOURCE_JSON',
+                             'views': 'SHARED_GODOT_LOCK python3 tools/run_with_timeout.py 300 GODOT --path NEW_PROBE --script res://tools/units3d/cavalry_march_capture.gd -- --views ABSOLUTE_NEW_VIEWS --native NATIVE_JSON --accounting ACCOUNTING_JSON (normal window; never headless)',
                              'audit': 'python3 tools/units3d/check_cavalry_march_capture.py audit CAPTURE SOURCE_JSON --frozen-native FROZEN_NATIVE --frozen-geometry FROZEN_GEOMETRY --witness FROZEN_WITNESS --out MANIFEST',
                              'verify': 'python3 tools/units3d/check_cavalry_march_capture.py verify MANIFEST',
                              'exit_status': '2 means unresolved acceptance, including an identical replay of a blocked report. Never a PASS.'},
             'capture_directory': str(capture_dir.resolve()), 'source_geometry': str(source_path.resolve()),
+            'views_manifest': str(views_path.resolve()) if views_path is not None else None,
+            'native_view_evidence': {'images': len(views['rows']), 'legend': views['legend'], 'limits': views['limits'],
+                                     'independent_review': 'PENDING_UNASSIGNED_SOLE_REVIEW'} if views else None,
             'frozen_paths': {'native': str(frozen_native.resolve()), 'geometry': str(frozen_geometry.resolve()),
                              'witness': str(witness_path.resolve())},
             'topology': {k: v for k, v in mapping.items() if k != 'native_to_raw'},
             'bones': len(raw_names), 'source_triangles': len(source['triangles']), 'sample_count': len(rows),
             'source_bone_aliases': aliases,
             'track_span_count': len(native['span_boundaries_seconds']) - 1,
+            'loop_time_rule': 'AnimationPlayer::_process_playback_data applies fposmod; the exact length maps to zero. Direct track queries retain the terminal key. Both paths are captured and separately enclosed.',
             'track_operations': dict(Counter(r['operation'] for r in accounting)),
             'max_vertex_delta_by_operation_m': maxima,
+            'numerical_accounting': {'status': 'SAMPLED_OPERATIONS_ENCLOSED' if numerical_covered else 'UNEXPLAINED_RESIDUAL',
+                                     'platform_math': runtime, 'stages': operation_summary,
+                                     'import_operations_covered': import_enclosures['covered'],
+                                     'retained_key_count': len(import_enclosures['retained_keys']),
+                                     'method': 'Outward binary32 endpoints include exact arithmetic and rounded/FMA results. Enumerate all binary32 dot intermediates, replay pinned-platform acosf/sinf/sin (including double scale0); enclose mixer/rest normalization, basis, affine FK, bind and four unnormalized influences.',
+                                     'limits': 'Per-operation checks at captured times, not an interval over time or a physical error budget. No fast-math reassociation assumed. No libm ULP allowance assumed. Platform mismatch rejects replay.'},
             'native_pose_arithmetic_residual_m': max(r['native_pose_arithmetic_residual_m'] for r in rows),
             'patch_counts': {k: {name: len(v[name]) for name in ['shell_vertices', 'shell_triangles', 'sole_vertices', 'sole_triangles']}
                              for k, v in patches.items()},
             'patch_definition': 'Every source-labeled hoof shell triangle retained; candidate underside is every nondegenerate rest-space facet with outward normal Y<0. No low-height, weight, slip or success filter.',
             'frozen_witness': frozen, 'current_native_witness_positions': new_witness,
-            'unresolved': ['Nonzero native-pose arithmetic residual is measured, not yet explained by a validated operation/rounding enclosure.',
-                           'Geometric underside candidates retain full source shells but are not independently accepted complete anatomical material patches.',
-                           'Native capture is CPU data, not real-window rendered geometry/visual acceptance. Existing locked-desktop request remains pending.'],
+            'unresolved': ([] if numerical_covered else ['Native import/runtime operations fall outside independently derived arithmetic enclosures.']) +
+                          ['Geometric underside candidates retain full source shells but are not independently accepted complete anatomical material patches.',
+                           'Native anatomical images await the unique Review; no independent visual acceptance claimed.' if views else
+                           'Native data capture is CPU only; normal-window anatomical views have not been supplied.'],
             'claims': {'continuous_uncertainty_bound': False, 'contact_certificate': False, 'phase_map': False,
                        'policy_E': None, 'activation': False, 'original_12_gates_preserved': True}}
 
@@ -575,7 +929,7 @@ def prepare(directory):
         target = directory / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / name, target)
-    (directory / 'project.godot').write_text('[application]\nconfig/name="Cavalry native numerical capture"\n[rendering]\nrenderer/rendering_method="gl_compatibility"\n')
+    (directory / 'project.godot').write_text('[application]\nconfig/name="Cavalry native provenance capture"\n[rendering]\nrenderer/rendering_method="forward_plus"\n')
     (directory / 'input-hashes.json').write_text(json.dumps(hashes, indent=2) + '\n')
     return hashes
 
@@ -620,6 +974,7 @@ def main():
     check.add_argument('--frozen-geometry', type=Path, required=True)
     check.add_argument('--witness', type=Path, required=True)
     check.add_argument('--out', type=Path, required=True)
+    check.add_argument('--views', type=Path)
     verify = sub.add_parser('verify')
     verify.add_argument('manifest', type=Path)
     args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else None)
@@ -628,7 +983,7 @@ def main():
     elif args.command == 'source':
         source_geometry(args.output)
     elif args.command == 'audit':
-        report = audit(args.capture, args.source, args.frozen_native, args.frozen_geometry, args.witness)
+        report = audit(args.capture, args.source, args.frozen_native, args.frozen_geometry, args.witness, args.views)
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(report, indent=2) + '\n')
         print(json.dumps({k: report[k] for k in ['status', 'topology', 'max_vertex_delta_by_operation_m', 'unresolved']}, indent=2))
@@ -639,7 +994,8 @@ def main():
             require(sha256(path) == digest, f"Bound input changed: {path}")
         frozen = manifest['frozen_paths']
         replay = audit(Path(manifest['capture_directory']), Path(manifest['source_geometry']),
-                       Path(frozen['native']), Path(frozen['geometry']), Path(frozen['witness']))
+                       Path(frozen['native']), Path(frozen['geometry']), Path(frozen['witness']),
+                       Path(manifest['views_manifest']) if manifest.get('views_manifest') else None)
         require(replay == manifest, "Manifest does not reproduce")
         print('REPLAY_IDENTICAL', manifest['status'])
         return 2 if manifest['status'] != 'PASS' else 0
