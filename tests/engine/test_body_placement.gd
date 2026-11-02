@@ -1017,6 +1017,49 @@ func test_completion_fixture_cache_matches_cold_march_and_is_detached() -> void:
 		_assert_eq_lazy(cached.state.to_dict(), before)
 		assert_eq(UnitBodies.validate_placement_candidate(cold.repo, expected.candidate, cold.boundary).status, "complete")
 
+func test_v2_admission_equivalence_and_original_result() -> void:
+	for imported: bool in [false, true]:
+		var f := _completion_fixture(imported)
+		if f.is_empty(): continue
+		for sequence: String in ["1", "2"]:
+			var before: Dictionary = f.state.to_dict()
+			var request := _request("leave" if sequence == "1" else "settle", f.code, sequence)
+			var request_before := request.duplicate(true)
+			var planned := ArmyGround.plan_body_placement_candidate(f.repo, f.state, request, f.boundary)
+			assert_eq(planned.status, "complete", planned.reason)
+			if planned.status != "complete": continue
+			var plan_before: Dictionary = planned.plan.duplicate(true)
+			var explicit := ArmyGround.commit_body_placement_candidate(f.repo, f.state, planned.plan, f.boundary)
+			var convenient := ArmyGround.body_placement_candidate(f.repo, f.state, request, f.boundary)
+			assert_eq(explicit.status, "complete", explicit.reason)
+			assert_eq(convenient.status, "complete", convenient.reason)
+			_assert_eq_lazy(planned.plan, plan_before)
+			assert_eq(request, request_before)
+			_assert_eq_lazy(f.state.to_dict(), before)
+			assert_eq(f.state.rng.to_dict(), before.rng)
+			if explicit.candidate == null or convenient.candidate == null: continue
+			assert_eq(UnitBodies._placement_json(convenient.plan), UnitBodies._placement_json(explicit.plan))
+			assert_eq(UnitBodies._placement_json(convenient.candidate.to_dict()), UnitBodies._placement_json(explicit.candidate.to_dict()))
+			assert_eq(convenient.candidate.rng.to_dict(), before.rng)
+			assert_false(is_same(convenient.candidate, f.state))
+			f.state = GameState.from_dict(JSON.parse_string(JSON.stringify(convenient.candidate.to_dict())), false)
+		if f.state.military_migration.get("body_placement", {}).get("version") != "2": continue
+		assert_eq(UnitBodies.validate_placement_candidate(f.repo, f.state, f.boundary).status, "complete")
+		var bad := UnitBodies._copy(f.state)
+		var proof := UnitBodies._placement_proof(bad.military_migration.body_placement.completion_json)
+		var original := GameState.from_dict(proof.origin, false)
+		assert_eq(UnitBodies.validate_placement_candidate(f.repo, original, f.boundary).status, "complete")
+		original.metrics.treasury += 1
+		proof.origin = original.to_dict()
+		_completion_set_proof(bad, proof)
+		var rooted := UnitBodies._placement_origin(f.repo, bad, proof.origin, f.boundary)
+		assert_eq(rooted.status, "complete", "raw shape and lossless restore alone are insufficient")
+		if rooted.candidate != null:
+			assert_ne(ArmySystem._body_source_error(f.repo, rooted.candidate, 2), "")
+			assert_eq(UnitBodies.validate_placement_candidate(f.repo, rooted.candidate, f.boundary).status, "error")
+		for source: GameState in [bad, GameState.from_dict(JSON.parse_string(JSON.stringify(bad.to_dict())), false)]:
+			_completion_reject(f, source)
+
 func test_v2_completion_proof_first_commit_and_full_endpoint() -> void:
 	var f := _completion_fixture()
 	if f.is_empty(): return

@@ -471,6 +471,10 @@ static func plan_body_placement_candidate(repo: DataRepository, source: GameStat
 	return result
 
 static func body_placement_candidate(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
+	if UnitBodies._whole(boundary.get("version")) and int(boundary.version) == 2:
+		var staged := _placement_v2_stage(repo, source, request, boundary)
+		if staged.status != "complete": return staged
+		return _finish_placement_v2(repo, source, staged, boundary)
 	var planned := plan_body_placement_candidate(repo, source, request, boundary)
 	if planned.status != "complete": return planned
 	return commit_body_placement_candidate(repo, source, planned.plan, boundary)
@@ -839,7 +843,7 @@ static func _placement_completion_candidate(repo: DataRepository, source: GameSt
 	var rooted := UnitBodies._placement_origin(repo, source, proof.origin, boundary)
 	if rooted.status != "complete": return rooted
 	var origin: GameState = rooted.candidate
-	var checked := UnitBodies.validate_placement_candidate(repo, origin, boundary)
+	var checked := UnitBodies._placement_completed_march(repo, origin, boundary)
 	if checked.status != "complete": return UnitBodies._failure("Invalid original completion: " + checked.reason)
 	var current := origin
 	var prefix: Array = []
@@ -864,6 +868,10 @@ static func _placement_v2_stage(repo: DataRepository, source: GameState, request
 	if not _placement_request_ok(request): return _placement_result("error", "Invalid raw placement request")
 	var checked := UnitBodies.validate_placement_candidate(repo, source, boundary)
 	if checked.status != "complete": return _placement_result(checked.status, checked.reason)
+	return _placement_v2_stage_admitted(repo, source, request, boundary)
+
+## Reuses admission only within the same call, before any source mutation.
+static func _placement_v2_stage_admitted(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
 	var saved: Dictionary = source.military_migration.get("body_placement", {})
 	if saved.get("version") == "2":
 		var proof := UnitBodies._placement_proof(saved.completion_json)
@@ -924,18 +932,23 @@ static func _commit_placement_v2(repo: DataRepository, source: GameState, propos
 	var error := _placement_sequence_error(source, proposed.request, true)
 	if not error.is_empty(): return _placement_result("error", error)
 	var saved: Dictionary = source.military_migration.get("body_placement", {})
-	var proof: Dictionary = UnitBodies._placement_proof(saved.completion_json) if saved.get("version") == "2" else {"origin": source.to_dict(), "plans": []}
 	if proposed.request.sequence == saved.get("sequence"):
+		var proof: Dictionary = UnitBodies._placement_proof(saved.completion_json) if saved.get("version") == "2" else {"origin": source.to_dict(), "plans": []}
 		if saved.get("version") != "2" or BodyMotion._hash(proposed) != saved.receipt \
 			or UnitBodies._placement_json(proposed) != UnitBodies._placement_json(proof.plans.back()):
 			return _placement_result("error", "Placement retry receipt/plan mismatch")
 		return _placement_result("complete", "Exact completion placement already committed", UnitBodies._copy(source), proposed.duplicate(true))
-	var staged := _placement_v2_stage(repo, source, proposed.request, boundary)
+	var staged := _placement_v2_stage_admitted(repo, source, proposed.request, boundary)
 	if staged.status != "complete": return staged
 	if UnitBodies._placement_json(staged.plan) != UnitBodies._placement_json(proposed): return _placement_result("error", "Stale or modified placement plan")
+	return _finish_placement_v2(repo, source, staged, boundary)
+
+static func _finish_placement_v2(repo: DataRepository, source: GameState, staged: Dictionary, boundary: Dictionary) -> Dictionary:
+	var saved: Dictionary = source.military_migration.get("body_placement", {})
+	var proof: Dictionary = UnitBodies._placement_proof(saved.completion_json) if saved.get("version") == "2" else {"origin": source.to_dict(), "plans": []}
 	var candidate: GameState = staged.candidate
 	proof.plans.append(staged.plan)
 	_placement_v2_publish(candidate, staged.plan, proof.origin, proof.plans)
-	checked = UnitBodies.validate_placement_candidate(repo, candidate, boundary)
+	var checked := UnitBodies.validate_placement_candidate(repo, candidate, boundary)
 	if checked.status != "complete": return _placement_result("error", checked.reason)
 	return _placement_result("complete", "Published detached completion proof", candidate, staged.plan)

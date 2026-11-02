@@ -78,6 +78,16 @@ endpoint, including after either provenance branch's whole JSON restore.
 Successors append one plan at the next sequence; overflow and reused IDs reject.
 Proof storage grows with this completion's operations; no truncation is defined.
 
+Each public v2 entrance fully admits its source. Private metadata staging reuses
+that admission only within the same call on the unchanged source. Explicit
+plan commits independently recompute and compare the whole caller plan;
+convenience commits stage once. Both validate the unpublished candidate through
+complete origin/prefix replay and whole-endpoint comparison. Replay calls the
+shared completed-MARCH predicate only after canonical proof and raw frozen-origin
+checks plus lossless rehydrate; it does not repeat that origin's public entrance.
+Original full-result, cursor exhaustion and outer-receipt checks remain in that
+predicate. Admission results are never cached across calls.
+
 Original MARCH/BodyMotion and TickEngine consumers remain strict: this proof is
 not their original endpoint, a day closure, a resume permission or a new-day
 source. A future owning lifecycle must atomically consume it with actual closure;

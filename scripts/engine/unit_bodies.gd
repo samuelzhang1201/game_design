@@ -595,19 +595,9 @@ static func validate_placement_candidate(repo: DataRepository, source: GameState
 	if boundary.kind == "safe": return _migration(repo, source)
 	if source.military_migration.get("body_placement", {}).get("version") == "2":
 		return ArmyGround._placement_completion_candidate(repo, source, boundary)
-	var control: Dictionary = source.day_resolution.body_march
-	var validated := validate_march_candidate(repo, source, {"version": int(boundary.version), "abs_day": int(boundary.abs_day), "substep": maxi(0, int(control.next_substep) - 1)})
-	if validated.status != "complete": return validated
+	var completed := _placement_completed_march(repo, source, boundary)
+	if completed.status != "complete": return completed
 	if int(boundary.version) == 2:
-		error = ArmySystem._body_source_error(repo, source, 2)
-		if not error.is_empty(): return _failure(error)
-	if int(control.next_substep) != int(control.substep_count) or int(control.next_substep) <= 0:
-		return _result("deferred", "frozen_transaction: MARCH is not complete")
-	if control.last.receipt != boundary.receipt: return _failure("Placement march receipt mismatch")
-	if int(boundary.version) == 1:
-		error = ArmySystem._body_source_error(repo, source)
-		if not error.is_empty(): return _failure(error)
-	else:
 		var raw := source.to_dict()
 		for key: String in raw:
 			var number_error := _placement_number_error(raw[key])
@@ -615,6 +605,22 @@ static func validate_placement_candidate(repo: DataRepository, source: GameState
 		var origin := _placement_origin(repo, source, raw, boundary)
 		if origin.status != "complete": return origin
 	return _result("complete", "Validated completed MARCH without changing frozen payload", _copy(source))
+
+## Boundary/source admission, or canonical proof plus raw lossless origin admission, precedes this call.
+static func _placement_completed_march(repo: DataRepository, source: GameState, boundary: Dictionary) -> Dictionary:
+	var control: Dictionary = source.day_resolution.body_march
+	var validated := validate_march_candidate(repo, source, {"version": int(boundary.version), "abs_day": int(boundary.abs_day), "substep": maxi(0, int(control.next_substep) - 1)})
+	if validated.status != "complete": return validated
+	if int(boundary.version) == 2:
+		var error := ArmySystem._body_source_error(repo, source, 2)
+		if not error.is_empty(): return _failure(error)
+	if int(control.next_substep) != int(control.substep_count) or int(control.next_substep) <= 0:
+		return _result("deferred", "frozen_transaction: MARCH is not complete")
+	if control.last.receipt != boundary.receipt: return _failure("Placement march receipt mismatch")
+	if int(boundary.version) == 1:
+		var error := ArmySystem._body_source_error(repo, source)
+		if not error.is_empty(): return _failure(error)
+	return _result("complete", "Validated original completed MARCH predicate")
 
 static func _placement_personnel_error(source: GameState, unit: String) -> String:
 	var roster: Variant = source.military_rosters.get(unit)
