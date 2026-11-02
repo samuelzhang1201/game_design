@@ -590,7 +590,7 @@ def sample_value(record, normal=False, raw=False):
     return result if normal else result[0]
 
 
-def native_sample(response, request, state):
+def native_sample(response, request, state, placement_guard=0.):
     exact_keys(response, 'request status raw_height raw_normal used_height used_normal height_surface_id normal_surface_id height_method normal_method capture_id uncertainty_id reason')
     require(compact(response['request']) == compact(request), 'native query echoed identity mismatch')
     require(response['status'] in ('OK', 'HOLE', 'UNAVAILABLE'), 'invalid native query status')
@@ -644,7 +644,7 @@ def native_sample(response, request, state):
     rounding = math.hypot(query[0]-p[0], query[1]-p[2])*units
     bounds = {k: v['value'] for k, v in state['header']['uncertainty'][response['uncertainty_id']].items()}
     ep = bounds['anchor' if request['role'] == 'anchor' else 'position']
-    guard = 256*math.ulp(max(1., *(abs(x) for x in p), *(abs(x) for x in query)))*units
+    guard = 256*math.ulp(max(1., *(abs(x) for x in p), *(abs(x) for x in query)))*units+placement_guard
     radius = None if ep is None or bounds['query_coordinate'] is None else math.nextafter(ep+rounding+bounds['query_coordinate']+guard, math.inf)
     domain_ok = radius is not None
     if domain_ok:
@@ -652,31 +652,47 @@ def native_sample(response, request, state):
         for j, axis in enumerate((0, 2)):
             domain_ok &= (surface['domain']['xz_min'][j] <= math.nextafter(p[axis]-radius_units, -math.inf)
                           and math.nextafter(p[axis]+radius_units, math.inf) <= surface['domain']['xz_max'][j])
+    missing = [k for k, v in bounds.items() if v is None]
+    available = response['status'] == 'OK' and raw_h is not None and number(raw_h)
+    if not domain_ok:
+        missing.append('surface_domain')
+    if not available:
+        missing.append('surface_unavailable')
+    if height is None:
+        missing.append('height_sample')
+    if normal is None or raw_n is None:
+        missing.append('normal_sample')
     eh = en = eq = None
-    if radius is not None:
-        if bounds['height'] is not None and bounds['height_lipschitz'] is not None:
+    if domain_ok and available:
+        if height is not None and bounds['height'] is not None and bounds['height_lipschitz'] is not None:
             eh = math.nextafter(bounds['height']+bounds['height_lipschitz']*radius, math.inf)
             eq = math.nextafter(math.hypot(radius, eh), math.inf)
-        if bounds['normal'] is not None and bounds['normal_lipschitz'] is not None:
+        if normal is not None and raw_n is not None and bounds['normal'] is not None and bounds['normal_lipschitz'] is not None:
             en = math.nextafter(bounds['normal']+bounds['normal_lipschitz']*radius+normal_roundoff, math.inf)
+    switch = (surface['kind'] == 'sea_clamped' and available and raw_n != [0., 1., 0.]
+              and (eh is None or abs(raw_h-surface['selection']['sea_level'])*units <= eh))
+    if switch:
+        en = None
+        missing.append('surface_switch_normal')
     require(all(x is None or number(x) for x in (eh, en, eq)), 'nonfinite propagated query uncertainty')
-    raw_hole = raw_h is None or not number(raw_h)
-    switch = surface['kind'] == 'sea_clamped' and not raw_hole and raw_h == surface['selection']['sea_level'] and raw_n != [0., 1., 0.]
-    covered = (response['status'] == 'OK' and not raw_hole and not switch and height is not None and normal is not None
-               and domain_ok and eh is not None and en is not None)
+    covered = domain_ok and eh is not None and en is not None
     return {'height': height, 'normal': normal, 'covered': bool(covered), 'domain_covered': bool(domain_ok),
             'position_error': ep, 'height_error': eh, 'normal_error': en, 'ground_error': eq,
             'rounding_xz_world_m': rounding, 'query_xz_f32': request['query_xz_f32'],
-            'missing': [k for k, v in bounds.items() if v is None]}
+            'missing': missing}
 
 
 def native_measure(model_point, request, response, anchor_request, anchor_response, state):
-    sample = native_sample(response, request, state)
-    anchor_sample = native_sample(anchor_response, anchor_request, state) if anchor_request is not None else None
     p = [raw_word(x, 'binary64') for x in request['position_f64']]
     a = [raw_word(x, 'binary64') for x in anchor_request['position_f64']] if anchor_request is not None else p
     placement = state['header']['placement']
     scale, units, m = placement['original_scale'], placement['world_unit_m'], placement['matrix']
+    placement_guard = max(64*math.ulp(max(1., sum(abs(m[r][k]*model_point[k]) for k in range(3))+abs(m[r][3])))
+                          for r in range(3))*4*units
+    guard = 256*math.ulp(max(1., *(abs(x) for x in p+a), abs(sample_value(response['used_height']) or 0.)))*units+placement_guard
+    # Prove the expanded footprint before using either Lipschitz bound.
+    sample = native_sample(response, request, state, guard)
+    anchor_sample = native_sample(anchor_response, anchor_request, state) if anchor_request is not None else None
     v = (p[1]-sample['height'])*units if sample['height'] is not None else None
     d = v*sample['normal'][1] if v is not None and sample['normal'] is not None else None
     slip = None
@@ -685,31 +701,14 @@ def native_measure(model_point, request, response, anchor_request, anchor_respon
         n = anchor_sample['normal']
         projection = sum(delta[k]*n[k] for k in range(3))
         slip = math.hypot(*(delta[k]-projection*n[k] for k in range(3)))
-    placement_guard = max(64*math.ulp(max(1., sum(abs(m[r][k]*model_point[k]) for k in range(3))+abs(m[r][3])))
-                          for r in range(3))*4*units
-    guard = 256*math.ulp(max(1., *(abs(x) for x in p+a), abs(sample['height'] or 0.)))*units+placement_guard
-    # Placement error also enlarges the surface-proof neighbourhood (B R1).
     covered = sample['covered']
-    surface = state['surfaces'][request['surface_id']]
-    if sample['position_error'] is not None:
-        b = state['header']['uncertainty'][response['uncertainty_id']]
-        query_error = b['query_coordinate']['value']
-        if query_error is not None:
-            radius = math.nextafter((sample['position_error']+query_error+sample['rounding_xz_world_m']+guard)/units, math.inf)
-            covered &= all(surface['domain']['xz_min'][j] <= math.nextafter(p[k]-radius, -math.inf)
-                           and math.nextafter(p[k]+radius, math.inf) <= surface['domain']['xz_max'][j]
-                           for j, k in enumerate((0, 2)))
     if anchor_sample is not None:
         covered &= anchor_sample['covered']
     ed = ev = es = None
-    b = state['header']['uncertainty'][response['uncertainty_id']]
     if sample['height_error'] is not None and v is not None:
-        ev = sample['position_error']+sample['height_error']+b['height_lipschitz']['value']*placement_guard
+        ev = sample['position_error']+sample['height_error']
     if sample['ground_error'] is not None and sample['normal_error'] is not None and d is not None:
         ep, eq, en = sample['position_error'], sample['ground_error'], sample['normal_error']
-        # The guarded placement footprint participates in both Lipschitz terms.
-        en += b['normal_lipschitz']['value']*placement_guard
-        eq += placement_guard+b['height_lipschitz']['value']*placement_guard
         ed = ep+eq+(abs(v)+ep+eq)*en
     if sample['position_error'] is not None and anchor_sample is not None and anchor_sample['normal_error'] is not None and slip is not None:
         ep, ea, ena = sample['position_error'], anchor_sample['position_error'], anchor_sample['normal_error']
@@ -790,6 +789,7 @@ class NativeRun:
         self.stack = ExitStack()
         self.writer = None
         self.finished = False
+        self.unknown_terms = set()
 
     def __enter__(self):
         try:
@@ -903,6 +903,7 @@ class NativeRun:
                 if self.writer is not None:
                     continue
                 value = native_measure(p, req, response, None, None, self.state)
+                self.unknown_terms.update(value['unknown_terms'])
                 covered = value['coverage'] == 'COMPLETE_FINITE'
                 valid += covered
                 if not covered:
@@ -931,6 +932,7 @@ class NativeRun:
                         continue
                     ar, answer = self.anchor(ci, patch['id'], vertex)
                     measured = native_measure(p, req, response, ar, answer, self.state)
+                    self.unknown_terms.update(measured['unknown_terms'])
                     agg = aggregates[patch['id']]
                     if label == 'source':
                         source_patches[(patch['id'], vertex)] = {k: measured[k+'_world_m'] for k in ('signed', 'vertical', 'slip')}
@@ -1003,7 +1005,9 @@ class NativeRun:
             request = native_request(self.state, ordinal, ci, None, None, None, vertex, a, patch)
             response = self.consume(request)
             if self.writer is None:
-                ok = native_sample(response, request, self.state)['covered']
+                sample = native_sample(response, request, self.state)
+                self.unknown_terms.update('anchor:'+term for term in sample['missing'])
+                ok = sample['covered']
                 valid_anchors += ok
                 if not ok:
                     uncovered.update(struct.pack('>Q', ordinal))
@@ -1020,6 +1024,9 @@ class NativeRun:
             require(self.request_digest.hexdigest() == self.response_header['request_stream_sha256'], 'regenerated request digest mismatch')
             result = {'request_stream_sha256': self.request_digest.hexdigest(), 'response_file_sha256': self.response_sha256,
                       'response_footer': self.reader.footer, 'measurement_status': 'GENERATED',
+                      'uncertainty_status': 'UNKNOWN' if self.unknown_terms else self.state['uncertainty_status'],
+                      'unknown_terms': sorted(self.unknown_terms),
+                      'blockers': ['native uncertainty: '+term for term in sorted(self.unknown_terms)],
                       'anchors': {'expected': len(self.anchor_order), 'received': len(self.anchor_order),
                                   'valid': valid_anchors, 'uncovered': len(self.anchor_order)-valid_anchors,
                                   'first_ordinal': self.expected_vertices, 'uncovered_ordinal_sha256': uncovered.hexdigest()}}
@@ -1351,6 +1358,8 @@ def _evaluate(data, evidence=None, *, raw_observation=None, native_run=None):
     if raw_state is not None:
         native_summary = native_run.finish() if native_run is not None else None
         if native_summary is not None and 'anchors' in native_summary:
+            raw_state['uncertainty_status'] = native_summary['uncertainty_status']
+            raw_state['blockers'].extend(native_summary['blockers'])
             for key in raw_counts['anchors']:
                 raw_counts['anchors'][key] = native_summary['anchors'][key]
         uncovered = any(counts['uncovered'] for counts in raw_counts.values())

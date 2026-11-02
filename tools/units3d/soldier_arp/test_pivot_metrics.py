@@ -546,6 +546,50 @@ class NativeMetricTest(unittest.TestCase):
         for p in ([10., 0., 0.], [math.nextafter(10., 0.), 0., 0.]):
             self.assertEqual(self.measure(p)['coverage'], 'UNCOVERED')
 
+    def test_unproven_vertex_and_anchor_neighbourhoods_have_no_bounds(self):
+        for x, error in ((11., 0.), (9.999, .01)):
+            with self.subTest(x=x, error=error):
+                raw, cases = native_control()
+                raw['header']['uncertainty']['synthetic']['position']['value'] = error
+                state = metric.validate_raw_observation(raw, cases)
+                value = self.measure([x, -.1, 0.], state=state)
+                self.assertEqual(value['vertical_world_m'], -.1)
+                self.assertEqual(value['signed_world_m'], -.1)
+                self.assertIsNone(value['vertical_interval_world_m'])
+                self.assertIsNone(value['signed_interval_world_m'])
+                self.assertIn('surface_domain', value['unknown_terms'])
+                self.assertIsNone(value['upper_bound_model_um'])
+                # Slip uses the independently captured anchor normal, not the vertex normal.
+                self.assertIsNotNone(value['slip_interval_world_m'])
+                raw['header']['uncertainty']['synthetic']['anchor']['value'] = error
+                state = metric.validate_raw_observation(raw, cases)
+                value = self.measure([0., -.1, 0.], a=[x, 0., 0.], state=state)
+                self.assertEqual(value['slip_world_m'], x)
+                self.assertIsNone(value['slip_interval_world_m'])
+                self.assertIn('anchor:surface_domain', value['unknown_terms'])
+                self.assertIsNotNone(value['vertical_interval_world_m'])
+                self.assertIsNotNone(value['signed_interval_world_m'])
+
+    def test_placement_guard_crossing_invalidates_dependent_bounds(self):
+        raw, cases = native_control()
+        raw['header']['surfaces'][0]['domain']['xz_max'][0] = 1.+8e-14
+        state = metric.validate_raw_observation(raw, cases)
+        p = [1., -.1, 0.]
+        req = metric.native_request(state, 0, 0, .5, .25.hex(), 'mapped', 0, p)
+        self.assertTrue(metric.native_sample(oracle(req), req, state)['covered'])
+        value = self.measure(p, state=state)
+        self.assertEqual(value['vertical_world_m'], -.1)
+        self.assertEqual(value['coverage'], 'UNCOVERED')
+        self.assertIsNone(value['vertical_interval_world_m'])
+        self.assertIsNone(value['signed_interval_world_m'])
+        self.assertIn('surface_domain', value['unknown_terms'])
+        raw['header']['surfaces'][0]['domain']['xz_max'][0] = 1.+2e-14
+        state = metric.validate_raw_observation(raw, cases)
+        value = self.measure([0., -.1, 0.], a=[1., 0., 0.], state=state)
+        self.assertIsNone(value['slip_interval_world_m'])
+        self.assertIn('anchor:surface_domain', value['unknown_terms'])
+        self.assertIsNotNone(value['vertical_interval_world_m'])
+
     def test_normalization_handles_extreme_finite_raw_normals(self):
         for size in (1e-320, 1.5e308):
             result = self.measure([1., .9, 0.], (-1., 0., 0.), 1., (-size, size, 0.))
@@ -578,7 +622,11 @@ class NativeMetricTest(unittest.TestCase):
         response = oracle(request)
         response['raw_height'] = {'precision': 'binary32', 'bits': '7fc00000'}
         response['status'], response['reason'] = 'HOLE', 'native terrain hole; runtime used sea'
-        self.assertFalse(metric.native_sample(response, request, state)['covered'])
+        sample = metric.native_sample(response, request, state)
+        self.assertFalse(sample['covered'])
+        self.assertIsNone(sample['height_error'])
+        self.assertIsNone(sample['normal_error'])
+        self.assertIn('surface_unavailable', sample['missing'])
         response['status'], response['reason'] = 'OK', None
         with self.assertRaisesRegex(ValueError, 'nonfinite raw observation requires unavailable status'):
             metric.native_sample(response, request, state)
@@ -588,7 +636,22 @@ class NativeMetricTest(unittest.TestCase):
             metric.native_sample(response, request, state)
         response = oracle(request, 0., (-1., 1., 0.))
         response['used_normal'] = {'precision': 'binary64', 'bits': [struct.pack('>d', x).hex() for x in (0., 1., 0.)]}
-        self.assertFalse(metric.native_sample(response, request, state)['covered'], 'switch normal is ambiguous')
+        sample = metric.native_sample(response, request, state)
+        self.assertFalse(sample['covered'], 'switch normal is ambiguous')
+        self.assertIsNone(sample['normal_error'])
+        self.assertIsNotNone(sample['height_error'])
+        self.assertIn('surface_switch_normal', sample['missing'])
+        measured = metric.native_measure([0., -.1, 0.], request, response, request, response, state)
+        self.assertEqual(measured['signed_world_m'], -.1)
+        self.assertIsNone(measured['signed_interval_world_m'])
+        self.assertIsNone(measured['slip_interval_world_m'])
+        self.assertIsNotNone(measured['vertical_interval_world_m'])
+        raw['header']['uncertainty']['synthetic']['height']['value'] = .01
+        state = metric.validate_raw_observation(raw, cases)
+        for height, crosses in ((.005, True), (.1, False)):
+            sample = metric.native_sample(oracle(request, height, (-1., 1., 0.)), request, state)
+            self.assertEqual(sample['normal_error'] is None, crosses)
+            self.assertIsNotNone(sample['height_error'])
         raw['header']['surfaces'][0]['resources']['after']['sha256'] = 'a'*64
         with self.assertRaises(ValueError):
             metric.validate_raw_observation(raw, cases)
@@ -609,6 +672,7 @@ class NativeMetricTest(unittest.TestCase):
         result = self.measure([1., .9, 0.], state=state)
         self.assertEqual(result['vertical_world_m'], .9)
         self.assertIsNotNone(result['vertical_interval_world_m'])
+        self.assertIsNone(result['signed_interval_world_m'])
         self.assertIsNone(result['upper_bound_model_um'])
 
     def test_raw_words_rounding_and_echo_tampering(self):
@@ -673,6 +737,8 @@ class NativeRunTest(unittest.TestCase):
                 result = run.finish()
             self.assertEqual(result['vertex_count'], 9)
             self.assertEqual(result['anchor_count'], 2)
+            self.assertEqual(result['uncertainty_status'], 'BOUNDED')
+            self.assertEqual(result['unknown_terms'], [])
             mid = frames[1]['mapped']
             self.assertAlmostEqual(mid['exit_patches'][0]['max_slip_world_m'], 2.)
             self.assertEqual(mid['patches'][0]['id'], 'new')
@@ -739,6 +805,47 @@ class NativeRunTest(unittest.TestCase):
                     for phase in (0., .5, 1.):
                         run.frame(points, 0, phase, float(phase/2).hex())
                     run.finish()
+
+    def test_unproven_domain_propagates_to_extrema_and_run_uncertainty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            q, r = Path(tmp)/'q', Path(tmp)/'r'
+            for role in ('vertex', 'anchor'):
+                raw, cases = native_control()
+                raw['header']['uncertainty']['synthetic'][
+                    'position' if role == 'vertex' else 'anchor']['value'] = .01
+                if role == 'anchor':
+                    raw['header']['cases'][0]['patches'][0]['anchors'] = [[9.999, 0., 0.]]
+                state = metric.validate_raw_observation(raw, cases)
+                points = {label: [[9.999 if role == 'vertex' else 0., -.1, 0.]]
+                          for label in ('source', 'reference', 'mapped')}
+                with metric.NativeRun(state, 1, query_output=q) as run:
+                    for phase in (0., .5, 1.):
+                        run.frame(points, 0, phase, float(phase/2).hex())
+                    run.finish()
+                with q.open('rb') as source:
+                    reader = metric.QueryStream(source, 'requests', metric.query_header(state))
+                    responses = [oracle(req) for req in reader]
+                with r.open('wb') as output:
+                    metric.write_query_stream(output, 'responses', dict(metric.query_header(state),
+                        request_stream_sha256=reader.footer['stream_sha256']), responses)
+                with metric.NativeRun(state, 1, query_responses=r) as run:
+                    frames = [run.frame(points, 0, phase, float(phase/2).hex()) for phase in (0., .5, 1.)]
+                    result = run.finish()
+                self.assertEqual(result.get('uncertainty_status'), 'UNKNOWN')
+                term = 'surface_domain' if role == 'vertex' else 'anchor:surface_domain'
+                self.assertIn(term, result['unknown_terms'])
+                self.assertIn('native uncertainty: '+term, result['blockers'])
+                for frame in frames:
+                    for value in frame.values():
+                        self.assertEqual(value['whole_mesh_min_signed_world_m'], -.1)
+                        self.assertEqual(value['coverage']['status'], 'UNCOVERED')
+                        for interval in value['extrema_intervals_world_m'].values():
+                            if role == 'vertex':
+                                self.assertIsNone(interval)
+                            else:
+                                self.assertIsNotNone(interval)
+                        for patch in value['patches']+value['exit_patches']:
+                            self.assertIsNone(patch['upper_bound_model_um'])
 
     def test_manifest_preserves_ineligible_placement_with_supplied_budget(self):
         m = copy.deepcopy(I); m[0][1] = .01
