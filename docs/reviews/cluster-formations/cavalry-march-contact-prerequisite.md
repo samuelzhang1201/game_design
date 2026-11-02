@@ -256,13 +256,125 @@ The existing rest/authored_pose/operation/contacts dictionaries retain exactly
 the schemas validated by Map3DCavalryPivot; do not translate them into reduced
 TRS endpoints. `native_input` has exactly `{input_sha256, rest, authored_pose,
 surface}`; surface has `{vertices, triangles, bone_names, joints, weights,
-inverse_binds, mesh_to_skeleton}`. Contacts retain the existing `offset` and
-`segments` per hoof; the enclosing contact_plan additionally supplies
-`patches` (hoof -> native vertex/triangle ids) and `boundary_support`
-(entry/exit phase plus source support/airborne labels for all four hooves).
+inverse_binds, mesh_to_skeleton}`. `contact_plan` has exactly
+`{contacts, patches, boundary_support, material_supports, frame_context,
+provenance}`. Contacts retain the existing `offset` and `segments` per hoof;
+`patches` maps hoof -> native vertex/triangle ids, and `boundary_support`
+gives entry/exit phase plus source support/airborne labels for all four hooves.
 Arrays must agree in length, named binds and index domain with the hashed
 capture. The adapter passes only the existing four arguments to the provider,
 then uses these additional arrays to verify its actual skin.
+
+### Material anchors and stateless boundary verification
+
+`material_supports` maps each hoof to its ordered support records intersecting
+this operation. A record has exactly `{support_id, start, end, birth,
+anchors_world}`. start/end are normalized phases of that intersection; the
+source support episode, not each operation, determines the identity. Carry-in
+support starts at 0 here but retains its earlier **birth**. Shared boundaries
+use the next interval, except the exact final sample. A genuine lift ends the
+episode; the next actual touchdown creates a new id. Neither a receipt/owner
+change nor a render refresh creates a touchdown.
+
+`birth` has exactly `{unit, slot, receipt, op_index, event_index, op_phase,
+sample_kind, native_phases, world_frame_id, pose_to_world, locals,
+sample_sha256}`. sample_kind is `march`, `pivot` or `hold`; native_phases has
+exactly `{entry,exit}` (both equal the sampled phase for a MARCH birth;
+otherwise the source packet's unchanged native endpoint phases). It
+identifies the original touchdown, including one before this operation, and
+retains the complete evaluated named bone locals at that event and the full
+pose-space-to-world Transform3D. `sample_sha256` binds the actual event's
+native evaluation/provider input packet, including mapping and phase inputs;
+the capture/certification artifact retains that packet for independent replay.
+For pivot births, these are the **solved** locals, not the authored pre-solve
+pose. At native MARCH births, they are the exact evaluated native locals.
+No current-entry pose is substituted for an earlier birth pose.
+
+`anchors_world` is an ordered array of exactly `{vertex:int, position:Vector3}`
+for **every** native vertex in that hoof's patch. With the actual native
+inverse binds, mesh conversion and unnormalized weights, compute
+`A_v^W = birth.pose_to_world * LBS_v(birth.locals)` once from that birth.
+These are actual material positions, not rest points transformed by a rigid
+hoof frame or points projected onto a fitted ground plane. The validator
+recomputes them from the retained birth pose and checks their input digest;
+only a proved floating representation bound is allowed in that comparison.
+Missing/duplicate vertices, changed birth data, or a forged support id reject.
+`support_id` is the canonical hash of `(unit,slot,hoof,receipt,op_index,
+event_index,sample_sha256)` at birth; the complete immutable record is carried
+across later operation/receipt boundaries until liftoff.
+
+`frame_context` has exactly `{world_frame_id, op_to_world, pose_to_world,
+ground_vertices_world, ground_triangles, ground_sha256, seat_rule_sha256}`.
+The first transform G maps the operation's fixed start-ground model-metre
+frame into the stable world frame, including unchanged ordinary scale k;
+the second maps the **current evaluated pose space** into that same world,
+including installed axis conversion, actual engine XZ/yaw and unchanged seat.
+Thus current material position is `X_v^W = pose_to_world * LBS_v(locals)`.
+Use `G.inverse()*A_v^W` when the provider-frame verifier needs an anchor.
+Between operations i,j the conversion is `A_v^Gj = G_j.inverse()*G_i*A_v^Gi`;
+never copy numerical local coordinates as though their frames were identical.
+World anchors and birth world-frame id remain unchanged. A mismatched world
+frame rejects; it is not a new material anchor.
+
+Ground arrays contain the complete immutable native ground triangles covering
+the contact/verification domain, in that stable world frame. Their digest binds
+the actual terrain source, interpolation/tessellation and capture used by the
+certificate. The continuous verifier must enclose any rendered-surface residual;
+an arbitrary planar substitute or unexplained geometry mismatch rejects.
+Evaluate penetration/hover and ground normals against these triangles and
+the actual unchanged seat transform, separately from drift against A_v^W.
+An anchor already above/below ground at touchdown does not zero its hover or
+penetration metric. No skeletal-Y-equals-ground assumption is permitted.
+
+`provenance` has exactly `{input_sha256, atlas_sha256, mapping_sha256,
+descriptor_sha256}`. The descriptor digest binds the admitted identity,
+receipt/operation sequence, native phase origin, contact event schedule,
+frame_context ground/seat inputs and **carried-in support records**; the
+static input digest agrees with native_input. Retain canonical payloads in
+the evidence, not only hashes. The adapter rejects mismatches atomically.
+Neither anchors nor these transient descriptors become saved simulation state.
+
+Construction is a pure operation over that complete admitted descriptor,
+immutable native evaluation data and explicit carried-in records. Enumerate
+touchdown/liftoff events from the fixed contact schedule, then evaluate the
+same MARCH phase/native sampler or existing four-argument pivot provider at
+each exact touchdown, regardless of the requested display time. Compute all
+new birth records/anchors there. The provider candidate solve does not consume
+material anchors, so event evaluation does not recursively call the surface
+verifier. Reject any event with a failed solve or invalid ground context.
+For support already active at descriptor entry, copy its original record from
+the preceding immutable descriptor; do not sample entry as a new touchdown.
+The pure sample call then selects records by support interval and verifies the
+current skin against those records without changing them.
+
+Sequential playback, direct seeks and same-receipt rebind receive the same
+self-contained contact plan, including carried-in birth poses/anchors and all
+interior event records. They require neither prior frame execution nor a
+mutable last-foot-position cache, historical state query or hidden reads.
+Rebuilding a plan requires the explicit immutable entry records and descriptor
+inputs; missing context rejects with `anchor_context_missing`, not a freshly
+anchored entry pose. This is malformed-input handling, not a reduced phase
+domain or a bypass for a valid receipt. The consumer must preserve this
+transient payload across refresh/identity transfer and pass it on rebind.
+A fresh load without the inherited in-slice presentation envelope retains the
+existing committed-endpoint display rule; it does not certify/replay a missing
+history. The future boundary tests must prove that every valid replay supplies
+the complete context rather than relying on that failure path.
+
+Hand-computed mixed-weight fixture (model k=1, identity binds, flat Y=0 ground;
+synthetic, not a tolerance): a rest vertex `(0,0,0)` has hoof weight .75 and
+cannon weight .25. At touchdown both matrices are identity, so A^W=(0,0,0).
+Later the hoof matrix is unchanged but the cannon translates +.04 m in X;
+LBS gives X^W=(.01,0,0), hence retained-anchor drift .01 m. Resetting at this
+entry would report zero. An alternative history with cannon +.04 already at
+touchdown has A^W=(.01,0,0) and zero drift at the **same current pose and hoof
+frame**, demonstrating why the rigid frame cannot determine the anchor.
+Now set the next operation frame G_j to translation +.10 m in X. The retained
+anchor is -.10 in that frame and the current material point is -.09: the
+drift remains .01 m. Sequential conversion and a direct seek/rebind using the
+birth record must both return that value; reset would again return zero.
+Test both histories, the cross-frame values and identical sequential/random
+access results, plus rejection when the original birth record is omitted.
 
 The adapter calls [Map3DCavalryPivot.sample](../../../scripts/map3d/map3d_cavalry_pivot.gd)
 and uses its full affine FK, 18 permitted limb/hoof rotations, anatomical
