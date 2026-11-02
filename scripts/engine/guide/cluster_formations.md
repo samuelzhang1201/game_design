@@ -134,7 +134,10 @@ circle checks without clearing a frozen day, allocating rows or repairing input.
 marker, mirrored queue/index, processed prefix, stage and substep boundaries.
 Admission also checks actual live canonical field IDs and the daily processed-unit
 barrier. Ordinary day and MARCH consumers reject this marker; both markers
-together are corruption. Safe boundaries defer on valid frozen days/rounds only
+together are corruption. The frozen day must match the source calendar. Owner
+anchors share the row coordinate bounds. Candidate round actions, supply costs,
+parties, contexts and tier extensions retain their existing typed schemas and
+reject malformed nested values before frozen deferral. Safe boundaries defer on valid frozen days/rounds only
 after raw validation. Active battle movement requires the separate TIME consumer;
 round envelopes remain frozen for their own readiness/settlement consumer.
 

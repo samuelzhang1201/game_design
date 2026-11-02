@@ -624,7 +624,7 @@ static func _battle_raw_error(source: GameState) -> String:
 	if tx.has("body_battle"):
 		var control: Dictionary = tx.body_battle
 		var outer: Dictionary = source.military_migration.get("body_battle", {})
-		if int(control.abs_day) != source.absolute_day() or int(control.sequence) != (0 if outer.is_empty() else int(outer.sequence) + 1):
+		if tx.day != source.day or int(control.abs_day) != source.absolute_day() or int(control.sequence) != (0 if outer.is_empty() else int(outer.sequence) + 1):
 			return "Battle day disagrees with receipt/calendar"
 		for code: String in control.processed_units:
 			if _entry(source, code).is_empty() or _naval(source, code): return "Unknown processed battle unit"
@@ -688,6 +688,9 @@ static func _battle_round_error(battle: Dictionary) -> String:
 		or not raw.version is String or raw.version != "1" or not DayResolution._body_decimal(raw.abs_day) or not DayResolution._body_decimal(raw.round) \
 		or int(raw.round) <= 0 or not raw.contacts is Array or not raw.unit_actions is Dictionary:
 		return "Invalid raw battle readiness schema"
+	if not battle.get("att") is Array or not battle.get("def") is Array: return "Invalid readiness parties"
+	var members: Array = battle.att + battle.def
+	if not _battle_actions_ok(raw.unit_actions, members): return "Invalid readiness action record"
 	if not BodyMotion._loco_integer(battle.get("id")) or not raw.token is String or raw.token != "bodyround:%d:%s:%s" % [int(battle.id), raw.abs_day, raw.round]:
 		return "Invalid battle readiness token"
 	for field: String in ["motion_receipt", "contact_digest", "basis"]:
@@ -714,7 +717,48 @@ static func _battle_round_error(battle: Dictionary) -> String:
 		for field: String in ["tier", "contexts", "unit_actions"]:
 			if not pending[field] is Dictionary: return "Invalid pending round payload"
 		if not pending.att is Array or not pending.def is Array or not pending.costs is Array or not pending.reason is String: return "Invalid pending round parties/reason"
+		if not _battle_actions_ok(pending.unit_actions, members): return "Invalid pending action record"
+		var seen := {}
+		for side: String in ["att", "def"]:
+			for code: Variant in pending[side]:
+				if not code is String or code not in battle[side] or seen.has(code): return "Invalid pending party member"
+				seen[code] = true
+		for cost: Variant in pending.costs:
+			if not cost is Dictionary or not BodyMotion._keys(cost, ["code", "supplies", "reason"]) \
+				or not cost.code is String or cost.code not in members or not cost.reason is String \
+				or not BodyMotion._loco_integer(cost.supplies) or cost.supplies < 0: return "Invalid pending supply cost"
+		if not BodyMotion._keys(pending.contexts, ["att", "def"]): return "Invalid pending context sides"
+		for context: Variant in pending.contexts.values():
+			if not context is Dictionary or not BodyMotion._keys(context, ["kind", "loss_permille", "reason"]) \
+				or context.kind not in ["melee", "pursuit", "withdrawal", "ranged", "shock"] or not context.reason is String \
+				or not BodyMotion._loco_integer(context.loss_permille) or context.loss_permille < 0: return "Invalid pending combat context"
+		var tier: Dictionary = pending.tier
+		var numbers := ["eff_min", "eff_max", "attacker_loss_permille", "defender_loss_permille", "wounded_share_permille", "attacker_morale", "defender_morale"]
+		for field: String in numbers:
+			if not BodyMotion._loco_integer(tier.get(field)): return "Invalid pending tier number"
+		for field: String in ["tier", "rout", "siege"]:
+			if not tier.get(field) is String: return "Invalid pending tier label"
+		for field: Variant in tier:
+			if field in numbers or field in ["tier", "rout", "siege"]: continue
+			if field not in ["unit_loss_permille", "unit_morale_permille"] or not tier[field] is Dictionary: return "Invalid pending tier extension"
+			for code: Variant in tier[field]:
+				if not code is String or code not in members or not BodyMotion._loco_integer(tier[field][code]) \
+					or tier[field][code] < 0: return "Invalid pending unit tier value"
 	return ""
+
+static func _battle_actions_ok(actions: Dictionary, members: Array) -> bool:
+	for code: Variant in actions:
+		var action: Variant = actions[code]
+		if not code is String or code not in members or not action is Dictionary: return false
+		for field: String in ["kind", "task_id", "reason"]:
+			if not action.get(field) is String: return false
+		if action.kind not in ["attack", "hold", "retreat"]: return false
+		for field: Variant in action:
+			if field in ["kind", "task_id", "reason"]: continue
+			if field in ["pursuit_target", "pursuit_region"]:
+				if not action[field] is String: return false
+			elif field not in ["close_defence", "living_hold"] or not action[field] is bool: return false
+	return true
 
 static func _battle_pair_less(a: Array, b: Array) -> bool:
 	for i: int in a.size():
@@ -736,6 +780,9 @@ static func _battle_world(repo: DataRepository, source: GameState) -> Dictionary
 		var error := _placement_personnel_error(source, code)
 		if not error.is_empty(): return _failure(error)
 		var owner: Dictionary = index.owners.get(code, {})
+		var anchors: Dictionary = _entry(source, code) if owner.is_empty() else owner.get("group_anchor_m", {})
+		var anchor_key := "group_anchor_m" if owner.is_empty() else code
+		if anchors.has(anchor_key) and not BodyMotion._loco_point(anchors[anchor_key]): return _failure("Invalid raw battle anchor")
 		var saved: Variant = _entry(source, code).get("body_groups") if owner.is_empty() else owner.get("groups", {}).get(code)
 		if not saved is Array: return _failure("Missing required battle bodies")
 		for row: Variant in saved:

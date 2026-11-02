@@ -392,3 +392,100 @@ func test_accepted_v2_placement_proof_is_validated_before_safe_deferral() -> voi
 			_check({"repo": f.repo, "state": corrupt}, _safe(corrupt))
 	assert_eq(fixture.get_fail_count(), 0, "accepted fixture setup succeeded")
 	fixture.free()
+
+func _reject_in_imports(f: Dictionary, from_id: int = 8, to_id: int = 3, side: String = "def") -> void:
+	for imported: bool in [false, true]:
+		var raw := UnitBodies._copy(f.state)
+		if imported: raw.military_migration.import_main_v7 = {}
+		else: raw.military_migration.erase("import_main_v7")
+		for state: GameState in [raw, _json(raw)]:
+			var before := state.to_dict()
+			_check({"repo": f.repo, "state": state}, _boundary(state))
+			_check({"repo": f.repo, "state": state}, _safe(state))
+			var result := UnitBodies.transfer_battle_candidate(f.repo, state, f.code, from_id, to_id, side, _boundary(state))
+			assert_eq(result.status, "error", result.reason)
+			assert_null(result.candidate)
+			assert_true(state.to_dict() == before, "rejected transfer preserves all source facts")
+
+func test_review_anchor_bounds_cover_both_owner_stores() -> void:
+	for battle_owner: bool in [false, true]:
+		var f := _fixture()
+		if battle_owner: _battles(f)
+		else: f.state.battles = [_empty_battle(3)]
+		f.state.day_resolution = _day(f.state)
+		for value: Variant in [9007199254740992, -9007199254740992, true, 1.25]:
+			if battle_owner: f.state.battles[0].group_anchor_m[f.code] = [value, 23]
+			else: f.state.regiments[f.code].group_anchor_m = [value, 23]
+			_reject_in_imports(f, 8 if battle_owner else 0, 3, "def" if battle_owner else "att")
+		if battle_owner: f.state.battles[0].group_anchor_m[f.code] = [9007199254740991, -9007199254740991]
+		else: f.state.regiments[f.code].group_anchor_m = [9007199254740991, -9007199254740991]
+		_check(f, _boundary(f.state), "complete")
+
+func test_review_frozen_day_matches_source_calendar() -> void:
+	var f := _fixture()
+	_battles(f)
+	f.state.day_resolution = _day(f.state)
+	for day: int in [0, 31, 999, 2 if f.state.day == 1 else 1]:
+		f.state.day_resolution.day = day
+		_reject_in_imports(f)
+	f.state.day_resolution.day = f.state.day
+	_check(f, _boundary(f.state), "complete")
+
+func test_review_nested_round_payloads_reject_before_deferral() -> void:
+	var f := _fixture()
+	_battles(f)
+	f.state.day_resolution = _day(f.state)
+	var ready := {"version": "1", "token": "bodyround:8:%d:1" % f.state.absolute_day(),
+		"abs_day": str(f.state.absolute_day()), "round": "1", "motion_receipt": "a".repeat(64),
+		"contact_digest": BodyMotion._hash([]), "basis": "b".repeat(64), "contacts": [],
+		"unit_actions": {f.code: {"kind": "attack", "task_id": "task:1", "reason": "Received task",
+			"pursuit_target": "", "pursuit_region": "", "close_defence": false, "living_hold": false}}}
+	var tier := BattleSystem.tier_of(f.repo, 500).duplicate(true)
+	tier.unit_loss_permille = {f.code: 10}
+	tier.unit_morale_permille = {f.code: 1000}
+	var pending := {"day": f.state.absolute_day(), "round": 1, "att": [f.code], "def": [],
+		"tier": tier, "att_power": 1, "def_power": 0, "odds": 1000, "roll": 500, "eff": 500,
+		"contexts": {"att": {"kind": "melee", "loss_permille": 1000, "reason": "Current contact"},
+			"def": {"kind": "withdrawal", "loss_permille": 0, "reason": "Safe withdrawal"}},
+		"reason": "Frozen round", "costs": [{"code": f.code, "supplies": 2, "reason": "Attack supplies"}],
+		"unit_actions": ready.unit_actions.duplicate(true), "body_round_receipt": BodyMotion._hash(ready)}
+	f.state.battles[0].body_round = ready
+	f.state.battles[0].pending_round = pending
+	for imported: bool in [false, true]:
+		if imported: f.state.military_migration.import_main_v7 = {}
+		else: f.state.military_migration.erase("import_main_v7")
+		_check(f, _boundary(f.state), "deferred")
+		_check({"repo": f.repo, "state": _json(f.state)}, _safe(f.state), "deferred")
+	var legacy := UnitBodies._copy(f.state)
+	legacy.battles[0].erase("body_round")
+	legacy.battles[0].pending_round.erase("body_round_receipt")
+	_check({"repo": f.repo, "state": legacy}, _boundary(legacy), "deferred")
+	_check({"repo": f.repo, "state": _json(legacy)}, _safe(legacy), "deferred")
+	for field: String in ["ready_action", "pending_action", "action_kind", "task_id", "action_reason", "target", "flag", "cost", "supplies", "cost_code", "cost_reason", "party", "context", "context_loss", "context_kind", "context_reason", "tier_number", "tier_map", "tier_value", "tier_label"]:
+		for value: Variant in [true, 1.25, "i42", "f3ff0000000000000"]:
+			var state := UnitBodies._copy(f.state)
+			var round_data: Dictionary = state.battles[0].body_round
+			var payload: Dictionary = state.battles[0].pending_round
+			match field:
+				"ready_action": round_data.unit_actions[f.code] = value
+				"pending_action": payload.unit_actions[f.code] = value
+				"action_kind": round_data.unit_actions[f.code].kind = value
+				"task_id": round_data.unit_actions[f.code].task_id = value if not value is String else true
+				"action_reason": round_data.unit_actions[f.code].reason = value if not value is String else true
+				"target": round_data.unit_actions[f.code].pursuit_target = value if not value is String else true
+				"flag": round_data.unit_actions[f.code].close_defence = value if not value is bool else 1
+				"cost": payload.costs[0] = value
+				"supplies": payload.costs[0].supplies = value
+				"cost_code": payload.costs[0].code = value
+				"cost_reason": payload.costs[0].reason = value if not value is String else true
+				"party": payload.att = [value]
+				"context": payload.contexts.att = value
+				"context_loss": payload.contexts.att.loss_permille = value
+				"context_kind": payload.contexts.att.kind = value
+				"context_reason": payload.contexts.att.reason = value if not value is String else true
+				"tier_number": payload.tier.attacker_morale = value
+				"tier_map": payload.tier.unit_loss_permille = value
+				"tier_value": payload.tier.unit_loss_permille[f.code] = value
+				"tier_label": payload.tier.tier = value if not value is String else true
+			payload.body_round_receipt = BodyMotion._hash(round_data)
+			_reject_in_imports({"repo": f.repo, "state": state, "code": f.code})

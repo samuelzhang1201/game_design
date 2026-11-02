@@ -188,6 +188,7 @@ static func body_battle_incompatibility_reason(tx: Dictionary) -> String:
 		return "Candidate battle requires v4 tactical substeps"
 	for field: String in ["day", "absolute_day", "substep_count", "substep_index", "battle_index", "decision_sequence"]:
 		if not BodyMotion._loco_integer(tx.get(field)) or tx[field] < 0: return "Invalid raw battle day cursor: " + field
+	if tx.day < 1 or tx.day > Calendar.DAYS_PER_TICK: return "Invalid battle day of month"
 	var raw: Variant = tx.get("body_battle")
 	if not raw is Dictionary or not BodyMotion._keys(raw, ["version", "abs_day", "sequence", "next_substep", "substep_count", "stage", "battle_ids", "battle_index", "processed_units"]):
 		return "Invalid body battle control schema"
