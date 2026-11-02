@@ -886,7 +886,7 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
             'capture_directory': str(capture_dir.resolve()), 'source_geometry': str(source_path.resolve()),
             'views_manifest': str(views_path.resolve()) if views_path is not None else None,
             'native_view_evidence': {'images': len(views['rows']), 'legend': views['legend'], 'limits': views['limits'],
-                                     'independent_review': 'PENDING_UNASSIGNED_SOLE_REVIEW'} if views else None,
+                                     'independent_review': 'PENDING_SOLE_REVIEW_VERDICT'} if views else None,
             'frozen_paths': {'native': str(frozen_native.resolve()), 'geometry': str(frozen_geometry.resolve()),
                              'witness': str(witness_path.resolve())},
             'topology': {k: v for k, v in mapping.items() if k != 'native_to_raw'},

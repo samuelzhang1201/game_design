@@ -113,7 +113,7 @@
     "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9",
     "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/cavalry_march_capture.gd": "1405188c219c30c5b0733daf425518e4cf706ec0c535179890ebab6a2f74ed10",
     "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/cavalry_march_capture.gd.uid": "a545048192c4a8b39c5162132d39e9a90f11150b7ed53d48986d96c913174d38",
-    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/check_cavalry_march_capture.py": "f70bf301fdac26a1e0e17d5bfac14add970724b5c56a9d3935fe482f86a16f04",
+    "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/check_cavalry_march_capture.py": "d6a506a22f8be70e8fa1b57c4652a05525585be7fb99014c6e721578c392f3c4",
     "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/tools/units3d/test_cavalry_march_capture.py": "9e08ed7b4e83f9c24500503e35103884c499601e59280249a01362b887230803"
   },
   "accounting_payload": "/Users/samuelzhang/.codex/worktrees/cavalry-contact-native/game_design/assets/3D/units/cavalry/model_wip/contact-native/accounting-d0b35ea9b788b1b99bec17d0130559762b89a315791a540dd47587c0482b76ad.json",
@@ -214,7 +214,7 @@
       "red": "FrontHoof.L"
     },
     "limits": "Native mesh/skin untouched. Source-part shader changes display material only. Magenta edges are an X-ray CPU-position overlay including hidden candidate triangles, not GPU displacement evidence. No terrain, seat, gameplay-scale, contact, desktop-input or FPS acceptance.",
-    "independent_review": "PENDING_UNASSIGNED_SOLE_REVIEW"
+    "independent_review": "PENDING_SOLE_REVIEW_VERDICT"
   },
   "frozen_paths": {
     "native": "/Users/samuelzhang/.codex/worktrees/cluster-loco-clip-cavalry/game_design/assets/3D/units/cavalry/model_wip/loco_clip/candidate-body-response-native216/godot-imported-native-v3.json",
