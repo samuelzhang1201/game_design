@@ -197,6 +197,6 @@
   "radius_simulation_m": 932,
   "retained_obligations": "All original 12 P4 gates, full native real-window matrix, independent unique Review, later policy/consumer/activation remain required.",
   "schema": 1,
-  "source_payload_sha256": "b5c2b0537f00bd98b5093ae38adf5a447bcb6a7082bc89684359eff38b32d0f2",
+  "source_payload_sha256": "af83f6e16a873d1fe1a864293fda669ec0bb11a2717c40e2d126d8dabfd1dc9a",
   "status": "NOT_CERTIFIED"
 }

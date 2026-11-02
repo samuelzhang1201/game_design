@@ -6541,7 +6541,7 @@
     "scope": "Register a separate archer native-MARCH transition/contact authoring step before resuming CERT."
   },
   "schema": 1,
-  "source_payload_sha256": "b5c2b0537f00bd98b5093ae38adf5a447bcb6a7082bc89684359eff38b32d0f2",
+  "source_payload_sha256": "af83f6e16a873d1fe1a864293fda669ec0bb11a2717c40e2d126d8dabfd1dc9a",
   "status": "FAIL",
   "visual": "NOT RUN: numeric certification failed; inherited actual OS focus/pause issue remains unresolved.",
   "whole_cycle_patch_diagnostics": {

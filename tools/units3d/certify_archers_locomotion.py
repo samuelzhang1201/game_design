@@ -340,6 +340,8 @@ def audit(source_blend):
         footprint = next(row for row in csv.DictReader(stream) if row['arm'] == 'archers')
     with (ROOT / 'data/army/balance.csv').open() as stream:
         policy = [row for row in csv.DictReader(stream) if any(str(v).startswith('body_locomotion_archers_') for v in row.values())]
+    if policy:
+        raise ValueError('installed policy needs a new audit; this counterexample binds the pre-policy inputs')
     for value in observed.values():
         value['radius_world_m'] = value['radius_model_m'] * scale['world_scale']
         value['radius_simulation_m'] = value['radius_model_m'] * scale['simulation_scale']
@@ -365,7 +367,8 @@ def audit(source_blend):
             'surfaces': [s['vertices'] for s in m['surfaces']]} for m in native['meshes']]}
     for name in ['tools/units3d/archer_arp/export.py', 'tools/units3d/archer_arp/pivot.py',
                  'scripts/map3d/map3d_archer_pivot.gd', 'data/army/unit_footprints.csv',
-                 'data/screens/map3d/army_art.csv', 'docs/reviews/cluster-formations/evidence/cf01/measurements.json']:
+                 'data/army/balance.csv', 'data/screens/map3d/army_art.csv',
+                 'docs/reviews/cluster-formations/evidence/cf01/measurements.json']:
         source['input_sha256'][name] = sha(ROOT / name)
     payload = json.dumps(source, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
     source['payload_sha256'] = hashlib.sha256(payload).hexdigest()

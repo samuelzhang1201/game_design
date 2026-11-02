@@ -1,6 +1,6 @@
 {
   "arm": "archers",
-  "audit_sha256": "efe72a9f5f1cd5bdc0a75e0243fd1bbf7b4a87721e2fedb5c4ee5027ab63fbbe",
+  "audit_sha256": "e403d7226ac050dcabf4d3758f9583be2305a80fd7ecb13e9ed8edd611bb97ac",
   "capture": {
     "execution_sha256": "846541c836b3b58a43396a26f532b010122bf8f04ed0dee153f8bf4e973cedeb",
     "godot": {
@@ -505,6 +505,7 @@
     "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg.import": "3d1b0b7a807b6798161b3ad06e9b4fc9d38f151661dcfd68ad84fa847080348f",
     "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
     "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg.import": "c8dc15fa86145c123bff4e26fef8300d719dfc5d946d22be712cf4d478ce9067",
+    "data/army/balance.csv": "c91faaef284442c03ae8e36d1269ec4ad0c401536d90c26d08ca857b1e559ae3",
     "data/army/unit_footprints.csv": "3f4b06c876ac881377d9a4e387ffb89b7f9fdfad6e5d21d714dea6b84d386fc7",
     "data/screens/map3d/army_art.csv": "37dbb45fc641488a234fd43058b8156ccac37433249e4237fa2166618ae1fc51",
     "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
@@ -521,7 +522,7 @@
     "tie_udeg": 180000000,
     "world_yaw": "yaw_start - turn * phase"
   },
-  "payload_sha256": "b5c2b0537f00bd98b5093ae38adf5a447bcb6a7082bc89684359eff38b32d0f2",
+  "payload_sha256": "af83f6e16a873d1fe1a864293fda669ec0bb11a2717c40e2d126d8dabfd1dc9a",
   "policy": {
     "contact_um": null,
     "installed": false,
