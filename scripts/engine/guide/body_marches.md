@@ -148,3 +148,49 @@ the calendar or settling the unit. This integration changes no production
 activation, placement, battle, renderer, installed art, save version or save file.
 Test-injected policy/certificates provide numerical coverage only; full arm/contact,
 real-window and final live-world acceptance remain separate.
+
+## Shared battle movement transaction (`BodyBattleMotion`)
+
+`collect_candidate`, `plan_candidate` and `commit_candidate` consume only an
+explicit CF05 battle `move` boundary. The frozen `march_budgets` cover every land
+unit, including stationary and battle-owned peers. Quotient/remainder shares and
+existing `UnitGait` run payments are applied once per unit; tactical movement is
+also capped by that slice's share of `battle_deploy_step_m`. It never adds march
+and tactical budgets or charges per body. Selected writers are, in order,
+withdrawal, pursuit march, flank, charge, deployment, nonbattle march and hold.
+Packing, incapacity, pursuit limits and received law can hold the selected writer.
+No second writer then executes. Base food remains with the normal supply phase.
+
+The optional explicit provider dictionary supplies pure tactical Callables with
+`(repo, source, battle_id, unit, budget_m)` and the CF05 closed contribution shape.
+It is transient, not saved configuration. Missing selected tactical providers
+error; there are no installed tactical providers or production callers here.
+Tests supply explicit contributions. Providers receive a detached source and
+state/RNG mutation rejects. The collector computes budgets and hostility, retains
+all stationary peers, and rejects malformed routes before numerical operations.
+`ArmySystem.march_intent_candidate` shares received route/pursuit extraction with
+v2 MARCH; its settlement helper preserves the existing actual-prefix accounting.
+
+All bodies use the same `BodyMotion` v2 timing/reservation core through explicit
+battle entrances. Their desired affordable slices and returned measured-circle
+paths must clear terrain, including closed edges/corners, water, scarps and map
+bounds. Pivots and tails occupy their full continuous intervals. The shared
+anchor receives the minimum ordered route prefix, and unit distance is the
+maximum actual body path cost. No additional distance comes from pivot time.
+
+The inner battle receipt binds full cost-staged source plus intents, boundary
+and TIME context; its result binds only canonical authoritative bodies, owners
+and slot counters. The outer move plan binds the full original source and shared
+context. Commit independently replans, stages running costs, commits the inner
+timeline, settles anchors/routes, and publishes contact stage and next sequence
+with the full outer receipt and endpoint digest. `UnitBodies` admits active
+battle motion only with the exact consumed move boundary, both proofs, reconstructed
+start-world validation and complete timed terrain/collision checks. Ordinary
+TIME/MARCH admission and hash projections remain separate.
+
+Direct/JSON latest-plan retries validate the full endpoint and inner plan before
+returning a detached no-op. Modified cost, RNG, queues, receipts, policy or terrain
+rejects. Failures publish no staged cost, pose, route or RNG. The inner commit is
+private staging and cannot replay an outer contact endpoint. This step leaves
+that active timeline at contact; closure, later lifecycle/providers, day driver,
+installed policy, rendering and production activation remain separate work.

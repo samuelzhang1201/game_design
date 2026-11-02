@@ -8,8 +8,11 @@ const INT_MIN: int = -9223372036854775807 - 1
 const INT_MAX: int = 9223372036854775807
 
 static func plan(repo: DataRepository, state: GameState, intents: Array, abs_day: int, substep: int, march_boundary: Dictionary = {}) -> Dictionary:
+	return _plan(repo, state, intents, abs_day, substep, march_boundary, false)
+
+static func _plan(repo: DataRepository, state: GameState, intents: Array, abs_day: int, substep: int, march_boundary: Dictionary, battle: bool) -> Dictionary:
 	if repo == null or state == null or abs_day < 0 or substep < 0: return _error("Invalid motion source/cursor")
-	var validated := _validate(repo, state, march_boundary)
+	var validated := _battle_source(repo, state, march_boundary) if battle else _validate(repo, state, march_boundary)
 	if validated.status != "complete": return _error("Motion requires complete unfrozen bodies: " + validated.reason)
 	if not state.military_migration.has("body_version"): return _error("Motion requires explicitly initialized current bodies")
 	if not march_boundary.is_empty() and (int(march_boundary.abs_day) != abs_day or int(march_boundary.substep) != substep):
@@ -699,14 +702,22 @@ static func _loco_boundary_ok(boundary: Dictionary, abs_day: int, substep: int) 
 	return boundary.version == 2 and boundary.abs_day == abs_day and boundary.substep == substep
 
 static func plan_locomotion_candidate(repo: DataRepository, state: GameState, intents: Array, abs_day: int, substep: int, march_boundary: Dictionary = {}) -> Dictionary:
+	return _plan_locomotion(repo, state, intents, abs_day, substep, march_boundary, false)
+
+static func plan_battle_locomotion_candidate(repo: DataRepository, state: GameState, intents: Array, boundary: Dictionary) -> Dictionary:
+	if not _battle_boundary_ok(boundary): return _error("Invalid battle movement boundary")
+	return _plan_locomotion(repo, state, intents, int(boundary.abs_day), int(boundary.substep), boundary, true)
+
+static func _plan_locomotion(repo: DataRepository, state: GameState, intents: Array, abs_day: int, substep: int, march_boundary: Dictionary, battle: bool) -> Dictionary:
 	if repo == null or state == null or not _loco_integer(abs_day) or not _loco_integer(substep) or abs_day < 0 or substep < 0:
 		return _error("Invalid locomotion source/cursor")
-	if not _loco_boundary_ok(march_boundary, abs_day, substep): return _error("Unsupported/mixed locomotion boundary")
-	var validated := _validate(repo, state, march_boundary)
+	if not (_battle_boundary_ok(march_boundary) if battle else _loco_boundary_ok(march_boundary, abs_day, substep)): return _error("Unsupported/mixed locomotion boundary")
+	var validated := _battle_source(repo, state, march_boundary) if battle else _validate(repo, state, march_boundary)
 	if validated.status != "complete" or not state.military_migration.has("body_version"): return _error("Locomotion requires initialized complete bodies")
 	if not march_boundary.is_empty() and (int(march_boundary.abs_day) != abs_day or int(march_boundary.substep) != substep): return _error("Locomotion boundary mismatch")
 	var saved: Variant = state.military_migration.get("body_motion")
 	if state.military_migration.has("body_motion"):
+		if battle: return _error("Battle movement requires the previous timeline to be closed")
 		if not _loco_saved_source_ok(repo, state, saved, march_boundary): return _error("Invalid saved locomotion control")
 		if _older(abs_day, substep, saved) or (int(saved.abs_day) == abs_day and int(saved.substep) == substep): return _error("Locomotion cursor already committed")
 	var grid := MarchPath.of_pack(repo)
@@ -715,7 +726,7 @@ static func plan_locomotion_candidate(repo: DataRepository, state: GameState, in
 	# Reuse v1's closed-world/intent admission only. Its selected geometry and
 	# distance-time sweep are discarded; every v2 operation is reserved below.
 	candidate.military_migration.erase("body_motion")
-	var admitted := plan(repo, candidate, intents, abs_day, substep, march_boundary)
+	var admitted := _plan(repo, candidate, intents, abs_day, substep, march_boundary, battle)
 	if admitted.cursor.is_empty(): return admitted
 	var canonical_intents: Array = admitted.cursor.intents
 	for intent: Dictionary in canonical_intents:
@@ -763,6 +774,8 @@ static func plan_locomotion_candidate(repo: DataRepository, state: GameState, in
 	for intent: Dictionary in ordered:
 		var index: int = lookup[_id(intent)]
 		var body: Dictionary = bodies[index]
+		if battle and not ArmySystem._body_path_terrain(grid, intent.path_m, body.radius).is_empty():
+			return _error("Battle intent crosses forbidden terrain")
 		var move := _loco_timeline(body, intent.path_m, body.turn_q)
 		if move.is_empty(): return _error("Unsafe locomotion heading/arithmetic")
 		var selected := move if _loco_clear(index, move, bodies, grid) else {}
@@ -800,9 +813,9 @@ static func plan_locomotion_candidate(repo: DataRepository, state: GameState, in
 		moves.append(bodies[index].move.duplicate(true))
 	moves.sort_custom(_less)
 	var context := _loco_context(repo, grid, policies, march_boundary)
-	var basis := {"source": _hash([state.to_dict(), canonical_intents, abs_day, substep, context]), "result": ""}
+	var basis := {"source": _hash([state.to_dict(), canonical_intents, march_boundary, context]) if battle else _hash([state.to_dict(), canonical_intents, abs_day, substep, context]), "result": ""}
 	_loco_apply(candidate, moves)
-	basis.result = _loco_result_hash(candidate, context)
+	basis.result = _battle_physical_hash(candidate, context) if battle else _loco_result_hash(candidate, context)
 	return {"version": 2, "cursor": {"abs_day": abs_day, "substep": substep, "basis": basis,
 		"intents": canonical_intents, "priority": next_priority, "boundary": march_boundary.duplicate(true)},
 		"policy_digest": _hash(policies), "moves": moves, "reasons": reasons}
@@ -847,7 +860,7 @@ static func _loco_move_ok(raw: Variant) -> bool:
 	if used == 0 and (raw.ops.size() != 1 or raw.ops[0].kind != "hold"): return false
 	return time == LOCOMOTION_Q and here == raw.end and yaw == int(raw.final_facing_deg) * LOCOMOTION_Q and used == raw.used_m
 
-static func _loco_plan_ok(raw: Variant) -> bool:
+static func _loco_plan_ok(raw: Variant, battle: bool = false) -> bool:
 	if not raw is Dictionary or not _keys(raw, ["version", "cursor", "policy_digest", "moves", "reasons"]): return false
 	if not _loco_integer(raw.version) or raw.version != 2 or not raw.cursor is Dictionary \
 		or not raw.policy_digest is String or not _digest(raw.policy_digest) or not raw.moves is Array or not raw.reasons is Dictionary: return false
@@ -856,7 +869,9 @@ static func _loco_plan_ok(raw: Variant) -> bool:
 		or not _loco_integer(cursor.abs_day) or cursor.abs_day < 0 or not _loco_integer(cursor.substep) or cursor.substep < 0 \
 		or not cursor.basis is Dictionary or not _keys(cursor.basis, ["source", "result"]) \
 		or not cursor.intents is Array or not _priority_ok(cursor.priority) or not cursor.boundary is Dictionary: return false
-	if not _loco_boundary_ok(cursor.boundary, int(cursor.abs_day), int(cursor.substep)): return false
+	if battle:
+		if not _battle_boundary_ok(cursor.boundary) or int(cursor.boundary.abs_day) != int(cursor.abs_day) or int(cursor.boundary.substep) != int(cursor.substep): return false
+	elif not _loco_boundary_ok(cursor.boundary, int(cursor.abs_day), int(cursor.substep)): return false
 	for digest: Variant in cursor.basis.values():
 		if not digest is String or not _digest(digest): return false
 	var identities := {}
@@ -890,10 +905,10 @@ static func _loco_plan_ok(raw: Variant) -> bool:
 		if not requested.has(_id(move)) and move.budget_m != 0: return false
 	return true
 
-static func _loco_saved_ok(raw: Variant) -> bool:
+static func _loco_saved_ok(raw: Variant, battle: bool = false) -> bool:
 	if not raw is Dictionary or not _keys(raw, ["version", "abs_day", "substep", "receipt", "priority", "plan"]) \
 		or not raw.version is String or raw.version != "2" or not _decimal(raw.abs_day) or not _decimal(raw.substep) \
-		or not raw.receipt is String or not _digest(raw.receipt) or not raw.priority is Array or not _loco_plan_ok(raw.plan): return false
+		or not raw.receipt is String or not _digest(raw.receipt) or not raw.priority is Array or not _loco_plan_ok(raw.plan, battle): return false
 	if int(raw.abs_day) != raw.plan.cursor.abs_day or int(raw.substep) != raw.plan.cursor.substep or raw.receipt != _hash(raw.plan): return false
 	var priority: Array = []
 	for item: Variant in raw.priority:
@@ -927,7 +942,7 @@ static func _loco_saved_source_ok(repo: DataRepository, state: GameState, raw: V
 		policies[piece] = policy
 	return _hash(policies) == raw.plan.policy_digest and _loco_receipt_geometry_ok(repo, state, raw.plan.moves, grid, policies, boundary)
 
-static func _loco_receipt_geometry_ok(repo: DataRepository, state: GameState, moves: Array, grid: MarchPath, policies: Dictionary, boundary: Dictionary) -> bool:
+static func _loco_receipt_geometry_ok(repo: DataRepository, state: GameState, moves: Array, grid: MarchPath, policies: Dictionary, boundary: Dictionary, battle: bool = false) -> bool:
 	var starts := UnitBodies._copy(state)
 	var bodies: Array[Dictionary] = []
 	for move: Dictionary in moves:
@@ -941,7 +956,7 @@ static func _loco_receipt_geometry_ok(repo: DataRepository, state: GameState, mo
 		bodies.append({"radius": int(repo.unit_footprints[piece].radius_m), "budget_m": int(move.budget_m), "move": move})
 	# The sweep's t=0 exception requires an independently validated start world,
 	# not merely the saved endpoint world. A matching hash alone is not geometry.
-	if _validate(repo, starts, boundary).status != "complete": return false
+	if (UnitBodies._battle_world(repo, starts) if battle else _validate(repo, starts, boundary)).status != "complete": return false
 	for index: int in bodies.size():
 		if not _loco_clear(index, moves[index], bodies, grid): return false
 	return true
@@ -1005,3 +1020,65 @@ static func sample_locomotion_candidate(projected: Dictionary, time_q: int) -> D
 			"y_m": float(chosen.a[1]) + _difference(chosen.b[1], chosen.a[1]) * share,
 			"yaw_udeg": fposmod(float(chosen.yaw0_udeg) + float(chosen.turn_udeg) * share, LOCOMOTION_TURN)})
 	return {"status": "complete", "reason": "", "rows": rows}
+
+## Battle TIME is private cost-staged geometry; the outer consumer seals full state.
+static func _battle_boundary_ok(boundary: Dictionary) -> bool:
+	if not _keys(boundary, ["version", "kind", "abs_day", "substep", "sequence", "stage"]) \
+		or not _loco_integer(boundary.version) or boundary.version != 1 or boundary.kind != "battle" or boundary.stage != "move": return false
+	for key: String in ["abs_day", "substep", "sequence"]:
+		if not DayResolution._body_decimal(boundary[key]): return false
+	return int(boundary.sequence) < JSON_INTEGER_MAX
+
+static func _battle_source(repo: DataRepository, state: GameState, boundary: Dictionary) -> Dictionary:
+	if repo == null or state == null or not _battle_boundary_ok(boundary): return _failure("Invalid battle motion source")
+	var error := UnitBodies._battle_raw_error(state)
+	if not error.is_empty(): return _failure(error)
+	var control: Dictionary = state.day_resolution.get("body_battle", {})
+	if control.is_empty() or control.stage != "move" or boundary.abs_day != control.abs_day \
+		or boundary.sequence != control.sequence or boundary.substep != control.next_substep: return _failure("Battle motion cursor mismatch")
+	if state.military_migration.has("body_motion"): return _failure("Active timeline must close before another move")
+	return UnitBodies._battle_world(repo, state)
+
+static func _battle_physical_hash(state: GameState, context: Array) -> String:
+	var index := UnitBodies._owners(state)
+	if not index.error.is_empty(): return ""
+	var units: Array = []
+	var codes: Array = state.regiments.keys() + state.foes.keys()
+	codes.sort()
+	for code: String in codes:
+		if UnitBodies._naval(state, code): continue
+		units.append({"unit": code, "owner_id": int(index.owners.get(code, {}).get("id", 0)),
+			"group_next_slot": UnitBodies._entry(state, code).group_next_slot, "rows": _owned_rows(state, code)})
+	return _hash([{"body_version": state.military_migration.body_version, "units": units}, context])
+
+static func _battle_saved_source_ok(repo: DataRepository, state: GameState, raw: Variant) -> bool:
+	if not _loco_saved_ok(raw, true) or not _loco_saved_endpoints(state, raw.plan.moves): return false
+	var grid := MarchPath.of_pack(repo)
+	if not _loco_grid_ok(grid): return false
+	var policies := {}
+	for code: String in state.regiments.keys() + state.foes.keys():
+		if UnitBodies._naval(state, code): continue
+		var piece := MapObjects.army_piece(repo, state.army_roster[code])
+		var policy := _loco_policy(repo, piece)
+		if policy.is_empty(): return false
+		policies[piece] = policy
+	var context := _loco_context(repo, grid, policies, raw.plan.cursor.boundary)
+	return _hash(policies) == raw.plan.policy_digest \
+		and _battle_physical_hash(state, context) == raw.plan.cursor.basis.result \
+		and _loco_receipt_geometry_ok(repo, state, raw.plan.moves, grid, policies, raw.plan.cursor.boundary, true)
+
+static func commit_battle_locomotion_candidate(repo: DataRepository, state: GameState, proposed: Dictionary, boundary: Dictionary) -> Dictionary:
+	if not _loco_plan_ok(proposed, true) or _hash(proposed.cursor.boundary) != _hash(boundary): return _failure("Invalid battle TIME plan")
+	var validated := _battle_source(repo, state, boundary)
+	if validated.status != "complete": return _failure(validated.reason)
+	var expected := plan_battle_locomotion_candidate(repo, state, proposed.cursor.intents, boundary)
+	if not _loco_plan_ok(expected, true) or _hash(expected) != _hash(proposed): return _failure("Stale or modified battle TIME plan")
+	var candidate: GameState = validated.candidate
+	_loco_apply(candidate, expected.moves)
+	var priority: Array = []
+	for identity: Dictionary in expected.cursor.priority: priority.append({"unit": identity.unit, "slot": str(int(identity.slot))})
+	candidate.military_migration.body_motion = {"version": "2", "abs_day": str(int(expected.cursor.abs_day)),
+		"substep": str(int(expected.cursor.substep)), "receipt": _hash(expected), "priority": priority, "plan": _canonical(expected)}
+	if UnitBodies._battle_world(repo, candidate).status != "complete" or not _battle_saved_source_ok(repo, candidate, candidate.military_migration.body_motion):
+		return _failure("Battle TIME final physical validation failed")
+	return {"status": "complete", "reason": "Committed private battle timeline", "candidate": candidate}
