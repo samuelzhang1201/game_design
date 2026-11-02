@@ -159,6 +159,9 @@ also capped by that slice's share of `battle_deploy_step_m`. It never adds march
 and tactical budgets or charges per body. Selected writers are, in order,
 withdrawal, pursuit march, flank, charge, deployment, nonbattle march and hold.
 Packing, incapacity, pursuit limits and received law can hold the selected writer.
+Task completion/bounds hold only that selected pursuit or flank task; an old
+task cannot hold higher-priority actual withdrawal. Empty current task ids are
+valid after cancellation, but an orders record with an empty key is invalid.
 No second writer then executes. Base food remains with the normal supply phase.
 
 The optional explicit provider dictionary supplies pure tactical Callables with

@@ -45,6 +45,7 @@ static func _source_error(repo: DataRepository, source: GameState, boundary: Dic
 			return "Invalid frozen received route: " + code
 		var ledger: Variant = source.unit_tasks.get(code, {})
 		if not ledger is Dictionary or not ledger.get("orders", {}) is Dictionary or not ledger.get("current_id", "") is String: return "Invalid task ledger"
+		if ledger.get("orders", {}).has(""): return "Task record requires a nonempty id"
 		var id: String = ledger.get("current_id", "")
 		if not id.is_empty():
 			var task: Variant = ledger.orders.get(id)
@@ -117,10 +118,12 @@ static func _collect(repo: DataRepository, source: GameState, boundary: Dictiona
 		var here: Array = [int(entry.x_m), int(entry.y_m)]
 		if not battle.is_empty() and battle.get("group_anchor_m", {}).has(code): here = battle.group_anchor_m[code].duplicate()
 		var held := writer == "hold" or bool(entry.get("captured", false)) or not CampSystem.can_march_entry(entry, source.absolute_day()) or MilitaryRoster.fit(staged, code) <= 0
-		if BattleTaskSystem.current(staged, code).get("status", "") in ["bounded", "search_failed", "completed"]: held = true
+		var task := BattleTaskSystem.current(staged, code)
+		if task.get("status", "") in ["bounded", "search_failed", "completed"] \
+			and ((writer == "pursuit_march" and task.has("pursuit")) or (writer == "flank" and task.get("request", {}).get("task") == "flank")): held = true
 		if not battle.is_empty() and writer in ["withdrawal", "pursuit_march", "flank", "charge"]:
 			var required: String = {"withdrawal": "retreat", "pursuit_march": "pursue", "flank": "attack", "charge": "charge"}[writer]
-			var target: String = BattleTaskSystem.current(staged, code).get("request", {}).get("target_unit", "")
+			var target: String = task.get("request", {}).get("target_unit", "")
 			if required not in BattleRules.legal_actions(repo, staged, int(battle.id), BattleRules.side_of(battle, code), code, target): held = true
 		if held: budget = 0
 		else:

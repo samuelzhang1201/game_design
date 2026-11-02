@@ -316,3 +316,101 @@ func test_delivered_task_selects_charge_and_pending_cancel_does_not_replace_it()
 	var corrupt := UnitBodies._copy(f.state)
 	corrupt.unit_tasks[f.code].orders["bt:charge"].request.unit = "absent"
 	assert_eq(BodyBattleMotion.plan_candidate(f.repo, corrupt, _boundary(corrupt), {"charge": _provider}).status, "error")
+
+func test_bounded_pursuit_does_not_hold_actual_rout() -> void:
+	var f := _fixture([1000], 1000)
+	var helper: GutTest = load("res://tests/engine/test_body_marches.gd").new()
+	helper.call("_runner", f, 1000)
+	assert_eq(helper.get_fail_count(), 0)
+	helper.free()
+	f.state.day_resolution.day = f.state.day
+	f.state.day_resolution.absolute_day = f.state.absolute_day()
+	f.state.day_resolution.body_battle.abs_day = str(f.state.absolute_day())
+	f.state.day_resolution.march_entries[f.code] = f.state.regiments[f.code].duplicate(true)
+	_battle(f, "hold")
+	f.repo.balance.battle_deploy_step_m = 1000
+	assert_eq(BattleTaskSystem.issue_task(f.repo, f.state, {"id": "bt:pursue", "unit": f.code,
+		"battle_id": 8, "task": "pursue", "max_route_m": 1, "source": "player"}).status, "pending")
+	assert_eq(BattleTaskSystem.deliver_task(f.repo, f.state, "bt:pursue").status, "received")
+	assert_true(BattleTaskSystem.credit_pursuit(f.repo, f.state, f.code, 1))
+	assert_eq(BattleTaskSystem.current(f.state, f.code).status, "bounded")
+	var held := BodyBattleMotion.collect_candidate(f.repo, f.state, _boundary(f.state))
+	assert_eq(held.status, "complete", held.reason)
+	if held.units.is_empty(): return
+	assert_eq(held.units[0].writer, "pursuit_march")
+	assert_eq(held.units[0].budget_m, 0, "bounded pursuit itself still waits")
+	f.state.battles[0].routed_side = "att"
+	assert_has(BattleRules.legal_actions(f.repo, f.state, 8, "att", f.code, ""), "retreat")
+	var providers := {"withdrawal": _provider}
+	# Bounding halts the old march; also cover a subsequently received withdrawal march.
+	var running := UnitBodies._copy(f.state)
+	running.regiments[f.code].order = ArmySystem.ORDER_MARCH
+	running.regiments[f.code].dest_x_m = 51000
+	running.regiments[f.code].route_m = [[51000, 50000]]
+	var endpoints := {}
+	for source: GameState in [f.state, _json(f.state), running, _json(running)]:
+		var order: String = source.regiments[f.code].order
+		var before := BodyMotion._hash(source.to_dict())
+		var boundary := _boundary(source)
+		var collected := BodyBattleMotion.collect_candidate(f.repo, source, boundary, providers)
+		assert_eq(collected.status, "complete", collected.reason)
+		if collected.units.is_empty(): continue
+		assert_eq(collected.units[0].writer, "withdrawal")
+		assert_eq(collected.units[0].budget_m, 100, "actual rout supersedes the old pursuit bound")
+		assert_eq(collected.units[0].anchor_path_m, [[50000, 50000], [50100, 50000]])
+		var planned := BodyBattleMotion.plan_candidate(f.repo, source, boundary, providers)
+		assert_eq(planned.status, "complete", planned.reason)
+		if planned.plan.is_empty(): continue
+		var applied := BodyBattleMotion.commit_candidate(f.repo, source, planned.plan, boundary, providers)
+		assert_eq(applied.status, "complete", applied.reason)
+		assert_eq(BodyMotion._hash(source.to_dict()), before, "no source or RNG mutation")
+		if applied.candidate == null: continue
+		assert_eq(applied.candidate.battles[0].group_anchor_m[f.code], [50100, 50000])
+		assert_eq(applied.candidate.regiments[f.code].supplies, 990 if order == ArmySystem.ORDER_MARCH else 1000, "only a running withdrawal pays, once per unit")
+		assert_eq(BattleTaskSystem.current(applied.candidate, f.code).pursuit.route_m, 1, "withdrawal earns no pursuit credit")
+		var result_hash := BodyMotion._hash(applied.candidate.to_dict())
+		if not endpoints.has(order): endpoints[order] = result_hash
+		else: assert_eq(result_hash, endpoints[order], "JSON source gives the identical complete endpoint")
+		for saved: GameState in [applied.candidate, _json(applied.candidate)]:
+			var retry := BodyBattleMotion.commit_candidate(f.repo, saved, planned.plan, boundary)
+			assert_eq(retry.status, "complete", retry.reason)
+			if retry.candidate != null: assert_eq(BodyMotion._hash(retry.candidate.to_dict()), result_hash, "retry pays nothing")
+		var corrupt: Dictionary = planned.plan.duplicate(true)
+		corrupt.motion.moves[0].end[0] += 1
+		var rejected := BodyBattleMotion.commit_candidate(f.repo, source, corrupt, boundary, providers)
+		assert_eq(rejected.status, "error")
+		assert_null(rejected.candidate)
+		assert_eq(BodyMotion._hash(source.to_dict()), before, "rejection publishes no costs or RNG")
+
+func test_empty_task_id_rejects_empty_key_record_and_preserves_cancellation() -> void:
+	var f := _fixture([100], 1000)
+	for record: Variant in [true, null, {}, {"status": "received"}]:
+		var damaged := UnitBodies._copy(f.state)
+		damaged.unit_tasks[f.code] = {"current_id": "", "orders": {"": record}}
+		for source: GameState in [damaged, _json(damaged)]:
+			var before := BodyMotion._hash(source.to_dict())
+			var rejected := BodyBattleMotion.plan_candidate(f.repo, source, _boundary(source))
+			assert_eq(rejected.status, "error", "empty-id record is corrupt, never an absent task")
+			assert_null(rejected.candidate)
+			assert_eq(rejected.plan, {})
+			assert_eq(BodyMotion._hash(source.to_dict()), before)
+	f.state.unit_tasks[f.code] = {"current_id": "", "orders": {}}
+	assert_eq(BodyBattleMotion.plan_candidate(f.repo, f.state, _boundary(f.state)).status, "complete")
+	f.state.unit_tasks.clear()
+	_battle(f, "hold")
+	assert_eq(BattleTaskSystem.issue_task(f.repo, f.state, {"id": "bt:charge", "unit": f.code,
+		"battle_id": 8, "task": "charge", "source": "player"}).status, "pending")
+	assert_eq(BattleTaskSystem.deliver_task(f.repo, f.state, "bt:charge").status, "received")
+	assert_eq(BattleTaskSystem.issue_task(f.repo, f.state, {"id": "bt:cancel", "unit": f.code,
+		"battle_id": 8, "task": "cancel", "source": "player"}).status, "pending")
+	assert_eq(BattleTaskSystem.deliver_task(f.repo, f.state, "bt:cancel").status, "received")
+	assert_eq(f.state.unit_tasks[f.code].current_id, "")
+	for source: GameState in [f.state, _json(f.state)]:
+		var before := BodyMotion._hash(source.to_dict())
+		var collected := BodyBattleMotion.collect_candidate(f.repo, source, _boundary(source), {"deployment": _provider})
+		assert_eq(collected.status, "complete", collected.reason)
+		if not collected.units.is_empty():
+			assert_eq(collected.units[0].writer, "deployment")
+			assert_gt(collected.units[0].budget_m, 0)
+		assert_eq(BodyBattleMotion.plan_candidate(f.repo, source, _boundary(source), {"deployment": _provider}).status, "complete")
+		assert_eq(BodyMotion._hash(source.to_dict()), before)
