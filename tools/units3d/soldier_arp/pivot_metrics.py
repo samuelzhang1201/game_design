@@ -399,6 +399,8 @@ def raw_physical_metrics(points_by_label, state, case_index, phase):
             ed = ep + eq + (pq + ep + eq)*en
             eslip = ep + ea + (2*en+en*en)*(math.dist(p, a)*units+ep+ea)
             upper = max(abs(result['signed_world_m'])+ed, result['slip_world_m']+eslip)
+            if any(bounds.values()):
+                guard += 256*math.ulp(max(1., upper, ep, eq, ea, ed, eslip))
         result.pop('signed_model_um')
         result.pop('slip_model_um')
         result.update(vertical_world_m=vertical, vertical_penetration_world_m=max(0., -vertical),
