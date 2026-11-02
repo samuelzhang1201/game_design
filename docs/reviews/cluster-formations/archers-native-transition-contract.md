@@ -10,11 +10,11 @@ Scope is this document alone. It changes no protected requirement or implementat
 **Disposition: the current conjunction is excluded, not ready for B.** Exact
 native MARCH endpoints cannot coexist with the existing rest-length/split rule
 through every endpoint and its neighbourhood. Section 2 proves that obstruction
-and section 3 proposes one narrowly specified change for explicit disposition.
+and section 3 records the bounded P1 route and its authorization disposition.
 Section 4 separates physical quantities and identifies exactly why the retained
 evidence cannot yet authorize contact allowances or a complete support surface.
 Section 5 specifies a testable continuous-input/proof protocol. None of these
-sections is a certificate. D1 has an exclusion proof and an unapproved proposal;
+sections is a certificate. D1 has an exclusion proof and a conditional technical route;
 D2 has no justified admissible contact budget. Therefore this document must not
 be accepted as a completed prerequisite, merged as B-ready, or used to start B/C.
 A review of the proof/proposal does not supply the missing physical authority.
@@ -128,13 +128,26 @@ be checked together. No blanket shear/scale/rotation permission follows.
 
 ## 3. Proposed protected-clause disposition: native intrinsic shape transport
 
-**Proposal P1, not effective:** retain the actual raw MARCH boundary and replace
-only the rest-length/rest-collinearity requirement for a separately identified
-native-transition family by *no additional intrinsic deformation relative to its
-bound native reference*. Keep the existing strict-rest solver and its tests as
-their current contract. Do not silently reinterpret `sample` or change EPS.
-This is a real geometry-rule amendment, not a calibration or a new baseline for
-old evidence. It requires explicit human disposition before product registration.
+**P1 disposition: continue the technical route within existing authorization.**
+The dispatcher `01a17398-42c1-7583-8d3f-7b15e877586c` relays the user's continuing
+instruction, “我批准你的所有建议，不要问我，完成所有实施”, with complete acceptance
+unchanged. The source record is `archers_p1_authorization_disposition` in
+`/Users/samuelzhang/game_design/.superpowers/cluster-formations-dispatch/checkpoint.json`.
+This is the dispatcher's interpretation of existing broad authorization, **not a
+new human line-by-line P1 confirmation** and not geometry/physical/full-domain PASS.
+Do not add another per-item confirmation as a prerequisite for technical work.
+
+P1 retains the raw MARCH boundary and proposes *no additional intrinsic deformation
+relative to the bound native reference* for a separately named native-transition
+family. Its equations differ from strict rest-length/rest-collinearity; they do
+not replace the old API, tests or EPS, or amend CF04c/#231 immutable acceptance.
+The source/rest/binds/weights/root/seat/R/scale/time/policy and all twelve P4 gates
+remain protected. If a later implementation needs any of those clauses changed,
+identify the exact conflict before acting: a different API name cannot make an
+otherwise forbidden geometry or acceptance change legal. In particular the
+section 2 exclusion still applies wherever the original rest rule is required.
+This disposition permits continued technical/evidence work inside the registered
+scope, not B/C implementation, source edits, or a claim that P1 is feasible.
 
 The proposed replacement is precise enough to falsify:
 
@@ -201,20 +214,21 @@ Their observed maxima are not chosen thresholds. The phase-0.81 counterexample
 would cease to disprove *this explicitly different equation*, but continues to
 disprove the old one; neither evidence nor old acceptance is rewritten.
 
-Affected clauses if P1 is approved: the strict rest-anatomy comments and
+Interfaces affected by a later registered P1 implementation: the strict rest-anatomy comments and
 `_geometry`/`_solve` assumptions in `scripts/map3d/map3d_archer_pivot.gd`, and
 calibration/endpoint authoring in `tools/units3d/archer_arp/pivot.py`, require a
 separate native-family path and explicit tests in `tests/map3d/test_archer_pivot.gd`.
-The original contract in those paths remains effective until such a registered
-change passes its own acceptance. This document cannot alter #231's immutable
+The original contract in those paths remains effective; the distinct route cannot
+silently supersede it even after implementation. This document cannot alter #231's immutable
 acceptance, the original twelve P4 gates, `cf04c-locomotion-contract.md`, the six
 old clips, rest/binds/weights, source bytes, actor root/seat, scale, R, committed
 yaw/duration, or contact policy. No CSV change is part of P1.
 
-If P1 is declined, the exact-raw plus original-rest conjunction remains excluded;
-stop this repair route. Editing raw MARCH, retargeting its rest/weights, reducing
+The exact-raw plus original-rest conjunction remains excluded. Editing raw MARCH,
+retargeting its rest/weights, reducing
 the phase/angle domain or allowing a boundary pop are different changes and are
-not fallback permissions. If P1 is approved, D2 still must be resolved before B.
+not fallback permissions. The continuing authorization does not resolve D2; B
+still needs its substantive evidence and the original Review's acceptance.
 
 ## 4. D2: physical objects, metrics, units and the missing authority
 
@@ -319,6 +333,211 @@ positive-area support charts, (b) the ordinary native terrain/placement domain,
 physical or faithful native-window evidence, and (d) their uncertainty budget.
 This is an unmet prerequisite, not a list of PENDING fields that B may fill later.
 No new diagnostic step or source modification is dispatched by this document.
+
+### Minimum D2 evidence acquisition, with proposed ownership before execution
+
+The next work is the following **specific evidence collection**, not another
+native-seam diagnosis. No collector or additional output is created by this PR.
+Propose the literal additions below to the existing dispatcher; preserve this
+step's implementation/Review pair and acceptance if it records a scope addition.
+Do not create another owner or wait for this blocked PR to merge before collecting
+its missing evidence. The two collection passes are serial within that boundary.
+
+#### Reuse inventory and the question each input answers
+
+| Existing input, read-only | Reuse | Missing from it |
+|---|---|---|
+| Original CERT `native.json` and source manifest in section 1 | 1,748 captured native poses; complete four-mesh surface indices, raw normals/vertices/influences, named skins, rest and ancestor affine | full anatomical outsole annotation, actual terrain/placement/camera, continuous curve authority |
+| Accepted A `native.json` | independently accepted raw/rest affine-space binding, eight native MARCH phases and four pivot endpoints | its mesh dictionaries have no triangle topology; do not invent a patch from `sole_indices` |
+| `pivot.py`: `NativeSource.case` / `contact_plan`, plus original CERT `[0,0.125]` right stance | intended canonical eight-step support intervals and reference-phase law; reproduce them read-only from the exact retained author inputs | not a physical support judgement, not raw-MARCH support labels for every phase, not future P1 contacts |
+| #220 `R2-R3-review-round4-complete-frozen.json` in its `assets/3D/units/archers/model_wip/loco_clip/` | hash-indexed accepted sparse asset views and their camera/pose metadata, for anatomical orientation and existing defects | later actual-OS/foreground/full-clock gates were not passed; cannot reuse them as new live D2 evidence |
+| Current `Map3DBattleGroups.place`, `Map3DUnits.scale_for`, `Map3DContext.height_at`, source CSV rows and built default map | actual ordinary upright placement/scale and sampled-ground authority to observe without editing | no archer v2 consumer or future P1 placement receipt; do not pretend a fixture is that consumer |
+
+The #220 manifest is in the original `cluster-loco-clip-archers/game_design`
+worktree, SHA256 `e1007f194cdb181c87bb4c5c4bed0531f8a71cfe2e83706d3eab3f6eeba0b3f6`.
+Its files are reused only after their individual hashes and depicted input IDs
+match. Do not rerun their authoring/captures or re-review that accepted clip PR.
+
+**Pass E1 — material surface and interval declaration.** Decode the existing CERT
+arrays without remeshing/welding, keeping mesh/surface/triangle and ordered vertex
+IDs. Build an annotated anatomical atlas of both *complete* exterior shoes,
+including heel, midsole, toe, sidewall and their boundary edges. Use raw foot/toe
+influences and geometry as navigation aids, not a weight cutoff that discards
+mixed-weight edge triangles. The old 0.8 selection threshold and lowest triangle
+are not a complete-outsole definition. Record every included/excluded triangle,
+its anatomical reason, actual area and oriented normal, plus disconnected parts,
+duplicate seam vertices and degenerate faces. The entire exterior shoe is the
+penetration domain; heel/midsole/toe outsole charts are fixed material subsets
+for support. Their union/overlap and boundary edges must be auditable.
+
+The same implementation labels the atlas; the sole Review checks underside,
+side, heel and toe views against the full original shoe, without seeing error
+rankings as a selection criterion. Keep the old diagnostic triangles even if a
+physical support chart differs. Material IDs/areas are frozen before comparing
+errors. This anatomical decision is ordinary authorized technical work, not a
+new request for the user to pick vertices.
+
+Export the existing canonical support schedule separately from *observed* support:
+both signs, each foot, every exact start/end, chart, incoming/outgoing branch and
+one-sided endpoint, tied to its author-input hash. Review native MARCH through its
+whole cycle to annotate heel/toe support transfer and swing; finite existing
+samples supply observations, not exact transition times. Bracket uncertain
+transfer times with fresh exact native queries only where the old samples cannot
+resolve them; mark the bracket unresolved until its error is bounded. Freeze the
+intended labels before slip tests: a failing stance cannot be relabelled swing.
+Anchor each declared material chart once to the actual ground at stance entry
+(with explicit normal/surface IDs); a non-contacting entry remains a measured
+clearance/failure, never a translated root or an automatically successful anchor.
+No canonical eight-step result is extrapolated to arbitrary P1 entry/exit phases.
+
+**Pass E2 — actual placement, visibility and uncertainty.** Use the existing real
+`snapshot_screen` root/3D-map scene and unmodified equipped archer scene. Observe
+the ordinary upright group path, not `Map3DUnitRig.seat`'s tilted ordinary-regiment
+path substituted for it. Freeze the loaded campaign/default-pack/build and all
+relevant source/config hashes. Select one reproducible flat interior and one
+sloped/terrain-cell-boundary location reachable in that same pack; record the
+chosen coordinates, neighbouring cells and selection rationale. They are minimal
+calibration cases, not the full terrain domain. If no suitable case is found,
+report that fact rather than manufacture flat ground or narrow the required domain.
+
+Record after normal placement: actor/figure/skeleton/mesh transforms, actual k,
+model height/stature, yaw, footprint samples and ground-return values; plus the
+native terrain height neighbourhood, normal and cell interpolation rule. In
+`Map3DBattleGroups.place`, Y is the maximum footprint sample plus
+`child.height_m*k*map3d_unit_seat_clear-map3d_unit_sink_m`. This is an inherited
+placement term, **not** a shoe-contact tolerance. The old model-space plane y=0
+does not include it. Keep sampled-ground error and visible-render-ground error
+as separate columns; do not subtract the existing lift to make contact pass.
+Missing terrain/build data rejects the observation; `height_at`'s sea-level
+fallback is not measured ground for this evidence.
+
+For the visible terrain, a minimal available probe is the existing Terrain3D
+`get_intersection(camera_origin,camera_ray,true)` route used by the repository's
+editor plugin. Record the query ray/frame and bind the returned GPU sample only
+after its draw has completed; serialized fixed-ray queries avoid last-frame
+mixups. The [upstream API documentation](https://terrain3d.readthedocs.io/en/stable/api/class_terrain3d.html#class-terrain3d-method-get-intersection)
+describes asynchronous GPU results and invalid first results. The repository pins
+plugin 1.0.2, while that linked stable documentation is 1.1.0: verify the installed
+binary's exact behavior and render-layer isolation before using it. Missing,
+nonfinite, stale, non-terrain or unbounded depth results stay invalid. This is a
+finite rendered-ground observation, not an analytic surface/LOD bound. A baked
+mesh or heightmap query alone cannot stand in for the displayed terrain surface.
+
+Capture the whole native window at 2560x1600, the actual closest playable camera
+position, the opening-view position, and the farthest position still displaying
+physical archers before symbol replacement. Record *actual* camera/view/projection
+matrices, viewport rectangle, render scale, AA, window/display scale, visibility,
+occlusion and focus; derive positions from the installed camera/settings, not the
+old scalar 421.437687637757 conversion. Include a top and an oblique view where
+available: an error along one camera ray is not bounded by a tiny 2D displacement.
+Keep unaltered full-window frames and 3x nearest-neighbour shoe crops. Compare raw
+MARCH, the current installed pivot pair and their boundaries using their exact
+native times; no corrected/calibrated MARCH substitution or retimed movie.
+
+Native advancing observations cover the full existing MARCH cycle and both pivot
+clips, pause/1x/4x and two measured FPS partitions. These are source-clip
+observations only; no unimplemented P1 map or production v2 clock is claimed.
+The camera/scene remains ordinary; labelled rulers/ID overlays are separate
+diagnostic annotations, never a displaced model, altered sole or moved ground.
+The known actual-window focus/OS-Space failure in the old checkpoint is retained.
+Use the shared Godot lock and the existing visual-review process, sole Review as
+critic. If that capability is still unavailable, stop E2 with its precise missing
+capture, without repeated focus probes, changing permissions or using headless 3D.
+
+Record per-metric observed intervals, not just maxima. Numerical uncertainty must
+separate source float representation, native interpolation/FK/LBS arithmetic,
+affine placement, sampled-surface interpolation/normal, GPU depth/LOD and pixel
+localization. Derive arithmetic bounds from the pinned operations/input bits;
+outward-rounded double evaluation of stored float inputs is a reference calculation,
+not by itself a bound on native/GPU execution. Repeated frames and native-vs-CPU
+comparisons test such bounds but cannot define their supremum. Pixel error uses
+the actual projection of the same fixed material/anchor pair; uncertainty includes
+the actual pixel/AA support and occlusion. Propagate normal and point uncertainty
+through each metric separately; do not reuse one Euclidean E for normal and slip.
+
+**Budget decision after E1/E2.** Present the independent Review with fixed charts,
+support labels, original/candidate-free native comparisons, measured physical
+and pixel intervals, and uncertainty components. Record which error is visible
+at each ordinary view and why a proposed clearance/slip budget is physically or
+visually acceptable under the game's existing no-floating/no-gliding principles.
+Penetration also needs the geometric collision domain; invisibility is not proof
+of nonpenetration. A proposed number requires a separate rationale and conservative
+error allocation; use `observed_upper+uncovered_uncertainty <= allowed_budget`,
+with no double-counting if uncertainty is already in the interval. No approved
+budget exists just because a source clip has an observed error. A synthetic ruler,
+pixel-resolution estimate, source failure maximum or helper EPS cannot become
+policy. If evidence supports no positive allowance, record that outcome and the
+exact conflict requiring disposition; do not round up until old errors pass.
+
+Complete D2 means exact physical charts/intervals/terrain and all separately
+justified budgets/uncertainties are accepted by the original Review. E1/E2 finite
+calibration does not prove the full P1 domain; section 5's bound remains required
+from B and installed C/CERT. If real-ground error already conflicts with protected
+root/seat/source requirements, name that contradiction and stop that route.
+Neither a new name nor continuing authorization permits silently fixing the seat.
+
+#### Literal scope-addition proposal (not registered, no files created)
+
+Reuse the frozen arrays, existing snapshot scene, capture/crop workflow and
+read-only A measurement functions. One bounded collector and its meaningful tests
+are the minimum proposed new executable surface; no new solver/certifier:
+
+- `tools/units3d/archer_arp/contact_evidence.gd`
+- `tools/units3d/archer_arp/contact_evidence.gd.uid`
+- `tests/map3d/test_archer_contact_evidence.gd`
+- `tests/map3d/test_archer_contact_evidence.gd.uid`
+- `docs/reviews/cluster-formations/evidence/archers-contact/material-support.json`
+- `docs/reviews/cluster-formations/evidence/archers-contact/placement-uncertainty.json`
+- `docs/reviews/cluster-formations/evidence/archers-contact/window-observations.json`
+- `docs/reviews/cluster-formations/evidence/archers-contact/anatomy-atlas.png`
+- `docs/reviews/cluster-formations/evidence/archers-contact/native-window-sheet.png`
+- `docs/reviews/cluster-formations/evidence/archers-contact/native-shoe-crops.png`
+- `docs/reviews/cluster-formations/evidence/archers-contact/evidence-review.md`
+
+The collector loads and validates the input hashes/schema, emits the fixed triangle
+inventory and accepts an explicit labelled chart/schedule, then records existing
+native scene/terrain/camera observations without changing their state authority.
+E1's output is input to E2. Reports retain raw query/frame coordinates and complete
+index lists; large unaltered frames/video stay at manifest-pinned worktree-local
+paths (preserved for Review), with the committed sheets/receipt hashes above.
+Do not claim that a sheet replaces native motion. If existing capture utilities
+cannot produce the required recordings, propose the exact extra helper first.
+
+Tests must reject changed source hashes, altered index/weight arrays, missing shoe
+faces, a chart changed after error measurement, moving anchors, stale GPU frame
+association and unit/scale mixing. A missing-face test uses an independently
+supplied complete fixture catalogue; software does not replace the Review's actual
+anatomical judgement. Hand cases use two noncoplanar terrain triangles with vertices
+`(0,0,0),(1,0,0),(0,0,1),(1,0.1,1)`, split on the shared diagonal between the
+second/third vertices. Their heights are `0` or `0.1*(x+z-1)` respectively;
+the fourth corner is 0.1 m, so treating the union as the first triangle's plane
+must fail. Also test normal uncertainty and unequal component budgets: for
+`|d|=0.01 m`, `U_d=0.000001 m`, `U_n=0.0001` (unit-vector norm error), conservative
+normal/tangent error controls are `U_d+|d|*U_n+U_d*U_n=0.0000020001 m` and
+`U_d+2*|d|*U_n+2*U_d*U_n=0.0000030002 m`. Fixture observations 0.004 m normal and
+0.003 m tangent with fixture limits 0.00401 m and 0.003001 m must pass only the
+normal comparison and reject the conjunction. These synthetic numbers check
+interval propagation/units only; they cannot populate any production budget.
+Reuse A's raw-weight LBS
+tests. This is new physical/topological/placement evidence, not repetition of the
+sixteen boundary witnesses. No edit of original CERT files, source assets,
+CSV/policy, map scripts, editor scenes, test gates or accepted A APIs is proposed.
+If the collector would require any such change or exceed its bounded role, stop
+and enumerate that literal dependency before implementation. Proposed checks:
+targeted new evidence GUT under the shared lock, source-preservation assertions,
+native real-window visual-review, affected selector/current-HEAD CI and the same
+Review. No full-suite run and no new session are requested here.
+
+Proposed invocation after registration: the collector accepts
+`--mode material|window --inputs MANIFEST --out OUTPUT_ROOT`. The manifest contains
+the exact source paths/hashes above, immutable E1 chart/schedule digest for window
+mode, actual default-pack/build and loaded-state IDs, selected coordinates,
+ordinary camera/quality settings and bounded capture cases. Run each mode through
+`/Users/samuelzhang/game_design-wt/godot_lock.sh`, outside
+`python3 tools/run_with_timeout.py 300`, invoking the project Godot with
+`--path . --script res://tools/units3d/archer_arp/contact_evidence.gd --` and those
+arguments. Use real windows; no `--headless` mode for the atlas/window evidence.
+This CLI is a proposed contract, not an existing command or a run performed here.
 
 For one already-defined norm with allowed error E, a common approximate boundary
 needs `J<=2E`; if the raw side is fixed, it needs `J<=E`. These follow by the
@@ -458,12 +677,12 @@ permitted physical gap. All sixteen must replay against frozen old inputs and
 be compared separately against any later candidate, with unchanged material IDs.
 Right sole normal/tangent, first-stance slip and swing diagnostics remain separate
 from this table. The geometry rows in section 2 are exclusions for the current
-hard requirements and explicit tests for P1 if authorized, never discarded samples.
+hard requirements and explicit tests for any registered P1 implementation, never discarded samples.
 
 ## 7. Conditional files, sequencing, acceptance and stop
 
 Nothing below starts work. Only the existing dispatcher may register a later
-bounded step after explicit P1 disposition **and substantive D2 resolution**.
+bounded product step under the section 3 authorization disposition **and substantive D2 resolution**.
 Keep A accepted, original CERT failed and all existing owners. Do not dispatch
 an overlapping B or revive A to implement this proposal.
 
@@ -472,11 +691,11 @@ The three original B candidate paths retain these responsibilities:
 - `tools/units3d/archer_arp/pivot.py`: bind the continuous native provider, preserve
   raw/calibrated provenance separation, author the approved contact/mapping family.
 - `scripts/map3d/map3d_archer_pivot.gd`: keep the old strict-rest API; integrate only
-  the explicitly approved separate native-family entry, with atomic rejection.
+  the separately registered native-family entry, with atomic rejection.
 - `tests/map3d/test_archer_pivot.gd`: original negatives plus new simultaneous
   geometry/Gram/boundary/neighbourhood/material/contact proof controls.
 
-If P1 is approved, the proposed literal module boundary for the distinct pure
+For the conditionally permitted P1 route, the proposed literal module boundary for the distinct pure
 native-family solve is `scripts/map3d/map3d_archer_native_transition.gd` and
 `scripts/map3d/map3d_archer_native_transition.gd.uid`. This avoids pretending a
 near-500-line solver can absorb a second contract by deleting checks or raising
@@ -505,13 +724,15 @@ is introduced. Policy, consumer and activation remain downstream. There is no ed
 requiring failed #231 to merge before its repair prerequisites, and no automatic
 successor creation. This document grants no root/seat/R/scale/source/time change.
 
-B/C readiness requires all of: explicit protected-clause disposition; justified
+B/C readiness requires all of: preservation of the section 3 authorization boundary; justified
 D2 material/terrain/budget authority; verifiable D3 provider/proof obligations;
 bounded exact ownership and accepted dependencies. A later B must actually prove
 the equations/contact/full-domain bounds and independent native checks, not just
 adopt their interfaces. Current status is **B=false, C=false, CERT=failed**.
-P1 approval alone cannot flip these flags. If evidence cannot establish D2, stop
-with this concrete proposal and missing authority; do not merge a PENDING contract
+The P1 technical disposition alone cannot flip these flags. Pursue section 4's
+bounded evidence acquisition after its exact scope is registered. If evidence
+cannot establish D2, report the concrete missing result or protected-clause conflict;
+do not merge a PENDING contract
 as an accepted implementation prerequisite or weaken the immutable acceptance.
 
 All twelve spec §9 gates and #202's full contact/envelope/visual/performance gates
