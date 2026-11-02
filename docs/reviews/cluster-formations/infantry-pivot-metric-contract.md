@@ -54,7 +54,7 @@ relative to same-phase source, with one mapping-only crossing. These totals also
 include frames where mapped skin has no failure; no baseline failure is hidden
 by limiting comparison to the mapped failing set.
 
-## Physical measurement input
+## Legacy224 physical measurement input (unchanged)
 
 By default physical contact is **PENDING**: the fixture has no independent physical
 Terrain3D ground/placement and authored material stance provenance. Animated boot
@@ -131,6 +131,334 @@ justified capture/terrain uncertainty is added separately. Budget comparison use
 `WITHIN_FINITE_SAMPLES` is only an upper-bound comparison for measured patch points,
 never motion PASS, ground certification or continuous coverage. Input provenance,
 uncertainty and domain proofs still require independent review.
+
+## Versioned raw observation contract (A; implementation pending)
+
+Step `LOCO-INFANTRY-PHYSICAL-INPUT-CONTRACT`, implementation
+`01a19bd9-7ce0-7ca1-a857-5b14507aee7b`, sole dispatcher as above; its unique
+Review is recorded in the PR/checkpoint before handoff. A owns only this document
+and [skin acceptance](infantry-pivot-skin-acceptance.md). Its prerequisites are
+accepted CF04c/#223/#224/#225, never unmerged capture, #221 or future CERT.
+The following is an external interface for later B/C, not an implemented CLI.
+
+The immutable motivation is the original capture owner's **2026-11-02 Astra
+boundary decision** in `cluster-infantry-contact-capture/game_design/HANDOVER.md`,
+SHA256 `40cc4a7fa1a7c8b411b6a35bdce5e5437c7f0c48028c91d76b05411f6dd05743`.
+It records a maximum relative Gram residual `1.0525859445735615e-7` at (2,2),
+above the unchanged `1e-10` predicate. Legacy224 must still reject that original
+matrix with `placement differs from original uniform scale`. Preserve every raw
+component and the original reported scale; no orthogonalization, polar fit,
+alternate scale getter, rounded export or threshold increase is a repair.
+The recorded material-survey plane residual is `1.3536629676818848` world m in
+native float32 and `1.3536624390927234` recomputed in double; the separate
+17-point footprint survey gives `9.524883270263672` m. These are failed finite
+observations with different arithmetic/coverage, not error bounds, terrain
+coverage or executable dependencies. No unmerged capture code/data is imported.
+
+### Dispatch, schema and separate states
+
+Keep `--contact-input`, `validate_contact_input`, legacy reports and errors
+unchanged. Add an explicit, mutually exclusive `--raw-observation PATH`; never
+retry rejected legacy input in raw mode. Its discriminator is exactly
+`schema: "infantry-pivot-raw-observation/v1"`. Unknown versions/modes reject.
+B supports only `surface_mode: "fixed_plane"`; C adds `"native_queries"`.
+Neither mode changes deformation, native phase selection or the absolute edge
+scan. Every observation report retains all legacy adverse skin results.
+
+| Report field | Values and meaning |
+|---|---|
+| `schema_status` | `VALID` means structurally valid, byte-bound input; `REJECTED` means no consumable physical report. Explicit null uncertainty is valid missing evidence, not zero. |
+| `measurement_status` | `GENERATED` for all requested finite values; `PARTIAL` for explicit unavailable surface rows; `PENDING_RESPONSES` for a query manifest alone. None means physical acceptance. |
+| `placement_uniformity` | `PREDICATE_SATISFIED`/`FAIL` for the original strict Gram predicate only, with all nine residuals, scale, threshold and worst indices. Raw mode never emits uniform-placement `PASS`, even for an exact synthetic matrix. The recorded matrix is `FAIL` in every report; no harmless-rounding claim follows. |
+| `coverage` | Separate expected/received/valid/uncovered counts and identities for vertices, anchors, active and outgoing patches; `COMPLETE_FINITE`/`UNCOVERED`. Continuous domain and rendered surface each remain `PENDING` absent independent proof. |
+| `uncertainty_status` | `BOUNDED` only with justified conservative bounds for every contributing input; otherwise `UNKNOWN`, with null upper bounds and explicit missing terms. |
+| `budget_status` | Missing authorized E: `PENDING`. E supplied but placement FAIL: `INELIGIBLE_PLACEMENT`. Missing coverage/uncertainty: `PENDING`. Only otherwise compare the outward model bound: `WITHIN_FINITE_SAMPLES` or `FAIL`. Swing: `SWING_NO_STANCE_VERDICT`. Never `PASS`. |
+| `motion_acceptance` | `FAIL/PENDING`, retaining introduced failures and every missing original obligation. No v1 observation report can certify motion. |
+
+These fields coexist: `schema_status=VALID`, `measurement_status=GENERATED` and
+`placement_uniformity=FAIL` is a useful adverse result, not a clearance. List
+**all** blockers even when missing E determines the budget status. Exit 0 means
+a completed report/manifest, not any acceptance. Malformed/integrity failures
+exit nonzero; incomplete outputs are never published as complete evidence.
+
+Required v1 header (additional fields require a documented schema revision;
+reject duplicate JSON keys, nonfinite numeric values and conflicting IDs):
+
+| Field | Required contents |
+|---|---|
+| `provenance` | Nonempty source, lowercase SHA256 of an immutable evidence payload, plus capture tool/version, engine/Terrain3D build and capture frame/time IDs. Hashes bind bytes, not truth or authority. Synthetic inputs say `synthetic`; real capture cannot use that label. |
+| `inputs` | Accepted223 fixture digest above; all nine source digests and native mesh/raw-weight/bind/hierarchy/phase identities; installed model/import/scene/gear and placement/terrain manifests with bytes/digests and provenance of any historical identity correspondence. No equality by filename. |
+| `placement` | Original affine row-major 4×4 matrix acting on column vectors, original positive reported scale and `world_unit_m`; original scalar precision and bit patterns for all components/scale, plus the unmodified construction-input record or explicit unavailable reason. Numeric values must decode exactly from those bits. Finite positive determinant required, including on raw mode; singular, reflected, non-affine or nonfinite inputs reject. |
+| `frame` | Units and common coordinate frame, up direction and terrain height-query chart (native world XZ, +Y up), terrain transform and their hashes. Convert all outputs to world metres; never silently exchange model/world units or charts. |
+| `cases` | Exact accepted case order, turn, duration, entry/exit native hexadecimal IDs and operation phase IDs. Fixed material patch IDs/kinds/vertices, intervals and independently authored world anchors follow legacy boundary/no-overlap rules. Keep authorship/source evidence and per-obligation gaps, not just union coverage of unrelated patches. |
+| `surfaces` | Immutable typed surface records described below; fixed-plane mode also supplies actual physical origin/normal and proof of its limited planar domain. Synthetic planar fixtures carry no native-capture claim. |
+| `uncertainty` | Per-contributor conservative position/height/normal/query-coordinate/anchor bounds, units, derivation and evidence digest; each unknown is null with reason. Zero requires an exact synthetic justification. Native rounding alone is not the entire capture/terrain error. |
+| `budget` | Null, or legacy integer `contact_um`, authority and source digest with the independently authorized bound. No fitted/rounded-up test budget becomes policy. |
+
+Wire envelope keys are `schema`, `kind`, `header`, `chunks`, `footer`; kind is
+`observation`, `requests` or `responses`. The observation header contains
+`surface_mode` and the fields above. Requests/responses headers contain
+`observation_header_sha256`, `fixture_sha256`, `surface_manifest_sha256`; response
+headers additionally contain `request_stream_sha256`. Hash the exact compact,
+sorted-key UTF-8 header bytes, with no LF. Observation provenance payloads must
+not include a back-reference to their enclosing file digest. Observation chunks
+are empty; requests/responses carry the streams below. A fixed-plane observation
+needs no response stream. Final capture may store the observation in
+`contact-input.json` and the responses plus independent provenance payloads in
+`contact-provenance.json`; the provenance payload is separately byte-bound so
+the response's header link creates no hash cycle. Such payloads are a named
+`header.evidence` dictionary of base64 bytes/digests, not arbitrary extra keys.
+`header.evidence` is permitted for every envelope, empty when no payload is
+embedded; external payload references require exact bytes available to validation.
+No missing real evidence is repaired by generating a synthetic payload.
+
+Store raw floating-point bits as fixed-width lowercase hexadecimal IEEE-754
+words (8 digits binary32, 16 binary64, most-significant byte first); preserve
+signed zero. Scalars used in arithmetic decode from these words. Native NaN/
+hole observations are stored as raw words with a typed unavailable status, never
+as a JSON NaN number or a usable finite height. Header/payload hashes exclude no
+input bytes: hash each referenced payload and the whole input verbatim; avoid
+self-referential hashes by putting the final input digest in the report.
+
+For matrix basis B and original scale s, compute the **same** legacy sums and
+comparisons `abs(sum_k B[k,r]*B[k,c] - delta_rc*s*s) <= 1e-10*s*s`.
+Passing a schema or positive determinant is not passing this predicate. Apply
+the original raw matrix directly to deformed points, including its translation,
+without normalizing raw skin weights. If uniformity fails, publish world metre
+measurements and optionally `nominal_scale_model_um = world_m/(s*world_unit_m)*1e6`,
+explicitly noncertifying. These nominal numbers cannot enter a model budget
+comparison or claim uniform-scale invariance. An independent original-construction
+and rounding proof may explain the failure later; v1 neither supplies that proof
+nor uses it to erase FAIL or substitute an ideal matrix.
+
+### Native query protocol and surface semantics (C)
+
+Existing consumer boundary is `main -> evaluate -> validate_contact_input /
+physical_metrics`. B adds explicit raw dispatch beside that boundary; C reuses
+`load_frozen`, `deform` and `frozen.Skin.points` read-only to generate requests.
+Caller flow is: external raw header → adapter-generated query manifest → native
+oracle evaluating the unchanged independent terrain → hash-bound responses →
+adapter report. C exposes `--raw-observation HEADER --query-output PATH` for
+manifest generation and `--raw-observation INPUT --query-responses PATH` for
+evaluation. Native mode without responses only generates requests; no sampling
+or query from Python's reconstruction of Terrain3D interpolation is allowed.
+The later original capture tool is the oracle, never a Python import/dependency.
+Header, manifest and responses carry the same header/fixture/surface digests;
+final capture evidence embeds/binds them in its existing two JSON paths.
+
+Each logical request contains a monotonic ordinal; case/turn/duration; operation
+phase hex, exact source native request ID; variant (`source`, `reference`,
+`mapped`); vertex ID or fixed-anchor ID and role (`vertex`, `anchor`); full raw
+placed position binary64 words; intended XZ and actual native query XZ words;
+surface ID/hash and query method/version. Native binary32 XZ conversion is
+round-to-nearest/ties-to-even, recorded with its exact displacement; reject
+overflow. Request order is case, captured phase, source/reference/mapped,
+ascending vertex ID, then anchors in case/patch/vertex order. An anchor request
+binds its interval endpoints and material identity, not a moving phase-derived
+position. Active/outgoing uses reference these immutable request IDs, including
+both intervals at a shared boundary and the phase-1 exit.
+
+Responses echo the ordinal and all identity/coordinate/surface fields exactly,
+plus query status, raw height/normal bits, used height/normal, their respective
+surface IDs/methods, capture context and uncertainty record references. Validate
+against the regenerated requests and hashes, not merely a supplied digest string.
+Missing, extra, reordered, wrong-phase, wrong-coordinate, wrong-terrain or
+duplicate-conflicting responses reject complete evaluation. A present response
+explicitly saying `HOLE`/`UNAVAILABLE` is retained as uncovered adverse evidence;
+no finite-contact comparison may cover it. Truncation is not an unavailable row.
+
+Request row keys are `ordinal`, `case_index`, `turn_udeg`, `duration_q`,
+`phase_hex`, `source_phase_id`, `variant`, `vertex_id`, `anchor_id`, `role`,
+`interval_hex`, `position_f64`, `intended_xz_f64`, `query_xz_f32`, `surface_id`,
+`surface_sha256`, `method`, `method_version`. Integer IDs are nonnegative except
+signed turn; hexadecimal phase strings retain the accepted native format.
+Vertex rows have null anchor/interval, anchor rows have null phase/source/variant
+and identify their patch/vertex with both interval endpoint hex strings.
+Vectors are fixed-length arrays of the raw words defined above. Responses contain
+`request` (the entire matching row), `status` (`OK`, `HOLE`, `UNAVAILABLE`),
+`raw_height`, `raw_normal`, `used_height`, `used_normal`, `height_surface_id`,
+`normal_surface_id`, `height_method`, `normal_method`, `capture_id`,
+`uncertainty_id`, `reason`. Raw/used scalar records carry `precision` and `bits`;
+normal records carry three words. Unavailable fields are null with a nonempty
+reason; nonfinite raw bits remain in raw fields. Used finite values must match
+the declared selection rule. Uncertainty records use a bound value or null,
+unit, derivation, evidence digest and unknown reason for every contributor.
+
+Surface records distinguish `terrain_raw`, `sea_clamped`, `height_override` and
+`rendered_lod`, with original data/resource hashes, terrain transform, region/LOD
+and method parameters, sea level/override identity as applicable. Bind the actual
+bytes of supplied evidence and verify producer-side resource hashes before and
+after the capture; a string identifier alone is insufficient. Record raw results
+separately from the selection rule and used results. `Map3DContext.height_at`
+may return an override, sea for missing/NaN terrain, or max(raw height, sea).
+That result and `terrain.data.get_normal` do not automatically define one surface.
+A sea-clamped branch needs a normal for that declared branch, plus its switch
+boundary/uncertainty; an override needs its own height/normal provenance. A raw
+hole remains recorded even if runtime seating used sea. Such fallback is not
+proof of a valid rendered contact surface. Mixed or unproved height/normal pairs
+are uncovered; do not borrow a favourable plane normal. Rendered LOD discrepancy,
+triangle interiors and swept/continuous coverage require separate evidence.
+
+For each finite vertex p, native queries supply height h and a valid upward unit
+normal n of the **same declared surface**. Let `q=(p.x,h,p.z)` in its query chart:
+vertical clearance `v=p.y-h`; local-normal separation `d=dot(p-q,n)`; report both
+with penetration/hover `max(0,-value)` / `max(0,value)`. Neither is a global nearest
+surface distance. Keep the vertical sign even when the normal is missing; zero,
+nonfinite or downward normals cannot make penetration favourable. Normalize only
+a valid measured surface normal, retaining its raw bits and propagated error;
+never normalize the placement or weights. At a nondifferentiable ridge report
+the method's one-sided normal/ambiguity; an unbounded ambiguity is uncovered.
+
+For each independently prescribed planted anchor a, query its normal n_a once
+on its frozen surface. Stance slip is `||(p-a)-n_a*dot(p-a,n_a)||`. Keep a and n_a
+fixed over that material interval, including its outgoing exit; a new ground
+query under p cannot move a, select another material vertex or change n_a.
+Retain absolute source/reference/mapped values and whole-mesh extrema/worst IDs,
+then source-relative differences. Queries evaluate a pre-existing surface at
+animated XZ; they never choose height from animated boot Y.
+
+### Uncertainty and finite comparisons
+
+All bounds below are in world metres except unit-normal errors (dimensionless).
+Require conservative bounds on position `e_p`, fixed anchor `e_a`, sampled height
+and normalized normals. At intended XZ, height error must include native capture
+error plus `L_h * (query_rounding_xz + position_error_xz)`; normal error similarly
+includes `L_n * (query_rounding_xz + position_error_xz)`. L_h/L_n must bound the
+actual frozen surface over that neighbourhood, with proof; surveys or a maximum
+observed residual are not bounds. Holes, switches or ridges without such bounds
+leave that contribution unknown. Anchor queries use their own independent bounds.
+Let `e_q` bound the full ground-point uncertainty, including XZ and height terms,
+and `e_n`, `e_na` bound normalized n and n_a. Conservative propagated bounds are:
+
+- `e_v = e_p_y + e_h` for vertical clearance.
+- `e_d = e_p + e_q + (||p-q|| + e_p + e_q)*e_n` for normal separation.
+- `e_slip = e_p + e_a + (2*e_na + e_na*e_na)*(||p-a|| + e_p + e_a)`.
+
+Add the existing 256-ULP contact guard and absolute-product 64-ULP placement
+guard (×4 for vector projections), converted to world metres, and outward
+arithmetic bounds for query conversion, normalization and these new calculations.
+Avoid cancellation-based error estimates; guards do not replace physical bounds.
+Propagate intervals for signed values and extrema, keeping measured adverse signs
+visible even if uncertainty straddles zero. Any unknown contributor gives a null
+upper bound, never zero. For strict-uniform, fully covered finite stance points
+with known uncertainty and independently authorized E only, use
+`ceil(max(abs(d)+e_d, slip+e_slip)/(s*world_unit_m)*1e6 + arithmetic_guard_um)`
+against E. Fixed-plane reduction uses the same legacy total guard; additional
+native uncertainty terms must not be dropped to obtain identical verdicts.
+Vertical and local-normal comparisons remain separately named; v1's model error
+uses the legacy normal-separation definition, not a new vertical budget.
+Whole-mesh penetration remains adverse even outside stance patches.
+
+### Complete coverage and bounded transport
+
+The frozen workload is `20,880 * 1,300 * 3 = 81,432,000` vertex evaluations,
+before anchors and outgoing-interval evaluations. Enumerate every logical request;
+reuse an identical query result only for identical native coordinate bits, method
+and frozen surface/hash, with every original identity retained. Never deduplicate
+approximately, interpolate sparse samples, drop phases or subtract source flags.
+All 33,427 edges in each frame still run regardless of query availability.
+
+Use a streamable JSON envelope with a header, ordered `chunks` and final counts/
+digests. Each chunk is one line containing base64(zlib(UTF-8 JSONL rows)), bounded
+to 4,096 rows, 16 MiB decompressed and 32 MiB encoded line. Split sooner at the
+byte cap. Include chunk ordinal, first logical ordinal, row count, decoded byte
+count and SHA256 (`chunk_index`, `first_ordinal`, `row_count`, `decoded_bytes`,
+`sha256`, `data_base64`). Footer keys are `chunk_count`, `row_count`,
+`decoded_bytes`, `stream_sha256`; empty streams use zero counts and SHA256 of
+empty bytes. Reject excess decompression, trailing streams/bytes and invalid
+rows. Emit header/chunks/footer on separate lines so a stdlib bounded reader
+need not load the entire JSON or an entire base64 payload. The ordered stream
+digest hashes concatenated uncompressed row bytes including LF; per-chunk and
+whole-file digests bind transport too. Define row keys by the request/response
+schema above, use sorted keys and compact JSON with LF, and validate exact bytes.
+Every response stream binds the full request-stream digest. Verify each row against
+regenerated requests; recomputing a digest does not excuse identity mismatches.
+
+Generate/evaluate one frame and bounded chunk at a time, retaining incremental
+counts, geometry hashes, extrema and patch/outgoing results. Exact dedup is
+optional; without it memory remains bounded. A disk-backed index or ignored
+temporary chunks may assist, but no new dependency or tracked evidence path is
+authorized. Final compressed response evidence must be embedded in the capture's
+existing `contact-input.json` / `contact-provenance.json`, with manifest either
+embedded or exactly regenerable from bound inputs. Reports must distinguish
+enumeration completeness from valid-surface completeness and continuous proof.
+Interrupted/incomplete streams cannot pass. C must demonstrate bounded memory,
+chunk corruption/limits/restart rejection and complete finite counts; if real
+storage/runtime is infeasible, return the measured seam/cost rather than sampling,
+raising timeouts or promising an unexecuted 81-million-query native run.
+
+### Hand-computed acceptance controls
+
+These are synthetic controls, not physical evidence or authorized E:
+
+1. **Planar reduction.** With identity placement/units, `h=0`, `n=n_a=(0,1,0)`,
+   `a=(0,0,0)`, `p=(.003,-.002,0)`: v=d=−.002 m, penetration .002 m,
+   slip .003 m, model error 3,000 µm. On any proven plane, `dot(p-q,n)` equals
+   legacy `dot(p-g,n)` because q and g lie on it, and the anchor normal is fixed.
+   Common rigid transforms of points, plane **and measurement chart** preserve
+   error; scale 2 doubles world distances and original s=2 recovers 3,000 µm.
+   A coordinate-unit change also changes s and `world_unit_m` consistently.
+   Holding the chart fixed through an arbitrary rotation may cease to be a height
+   field: no old XZ transcript may be reused as that new surface's observations.
+2. **Nonplanar/fixed anchor.** Use `h(x)=0` for x≤0, `h(x)=x` for x>0, z-free.
+   Anchor a=(−1,0,0), n_a=(0,1,0); p=(1,.9,0) yields v=−.1 m,
+   d=−.1/√2≈−.0707106781 m with n=(−1,1,0)/√2, and slip=2 m.
+   At p=(−.5,−.1,0), d=v=−.1 and slip=.5 m. Replacing the anchor by q at
+   the first point would spuriously give slip≈.07071 m: reject that reselection.
+   At x=0 the ridge has no unique normal; a hole gives no finite height.
+   Retain the vertical result where valid, flag missing normal/height coverage.
+   At a shared phase boundary evaluate outgoing old anchor and incoming new
+   authored anchor separately; do not lose the old anchor's 2 m slip.
+3. **Uncertainty.** In the flat control, take justified e_p=.0001 m,
+   e_q=.0002 m, e_a=.0001 m, e_n=e_na=0. Then e_d=.0003 m,
+   e_slip=.0002 m, error upper bound=max(.0023,.0032)=.0032 m.
+   At s=unit=1 and a conservatively rounded arithmetic guard .01 µm,
+   ceil(3200+.01)=3201: synthetic E=3200 fails, E=3201 is only
+   `WITHIN_FINITE_SAMPLES`. Unknown height/normal bound or absent E is PENDING.
+   Placement FAIL makes even a large supplied E ineligible, never within.
+4. **Legacy negatives.** The recorded original matrix stays rejected by legacy
+   and FAIL in raw mode. B must obtain its complete immutable raw words/scale
+   from the original owner as frozen observation evidence, bind the digest and
+   include a literal regression witness; the scalar residual alone cannot
+   reconstruct it. Test computed Gram residuals immediately below/equal/above
+   `1e-10*s*s` with exact comparison operands (and nearby representable matrices),
+   not decimal-rounded assertions. Equality passes that predicate only. Known
+   shear `[[1,.01,0],[0,1,0],[0,0,1]]` is measured raw but fails uniformity;
+   a reflection, zero determinant, NaN, missing provenance or changed raw bit
+   rejects. Wrong coordinate/phase/hash, missing or conflicting responses reject;
+   sea height with a raw-terrain normal is uncovered, never a planar PASS.
+
+## Serial implementation boundaries after A
+
+Only the sole dispatcher may register/start these steps after actual prerequisite
+acceptance. Each has its own worktree/PR/fixed owner pair. Both own exactly
+`tools/units3d/soldier_arp/pivot_metrics.py` and
+`tools/units3d/soldier_arp/test_pivot_metrics.py`, so they **cannot overlap**.
+
+- **B `LOCO-INFANTRY-RAW-PLACEMENT-METRICS`:** after accepted A/#223/#224 and
+  transitive prerequisites. Implement explicit raw placement/report dispatch with
+  synthetic fixed-plane support only; preserve legacy API/CLI/errors/outputs.
+  Retain exact raw inputs, strict FAIL and world observations; reject malformed
+  transforms/provenance. Verify actual-matrix legacy rejection, threshold
+  boundaries, shear/reflection, hand arithmetic, unchanged weights/fixture and
+  absence of certifying nominal-scale comparisons. No terrain/capture/runtime code.
+- **C `LOCO-INFANTRY-NONPLANAR-MEASUREMENT`:** only after B merges/releases the
+  same paths, plus accepted A/#223/#224/#225. Implement request generation,
+  bounded transcript validation and nonplanar/fixed-anchor metrics as specified.
+  Verify planar reduction, two slopes/ridge/hole, outgoing boundaries, units/frame
+  controls, typed surface mismatch, tampering/truncation/chunk limits, unknown
+  uncertainty, absent E and retained placement FAIL. Test full finite enumeration
+  and streaming; synthetic oracle tests do not certify native terrain correctness.
+
+B and C each run targeted Python tests and the frozen full replay on final affected
+inputs, retaining original per-variant whole-mesh digests, all 652/563/471 absolute
+flags, 103/45 introduced flags and the one mapping-only crossing, fixture integrity
+and current-HEAD required CI. No code/fixture/gate changes occur in A. Native
+integration belongs to the original capture owner after C acceptance, under its
+unchanged [capture acceptance boundary](infantry-pivot-skin-acceptance.md#raw-observation-interface-and-the-active-capture-boundary).
+The data round trip is not a dependency cycle: accepted baseline → A → B → C →
+resume capture → original clip/CERT/POLICY/CONSUMER order. No A/B/C depends on
+unmerged capture/#221, consumes its WIP, starts a successor or claims visual PASS.
 
 ## Residuals, rejection and honest missing evidence
 
