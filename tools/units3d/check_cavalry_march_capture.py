@@ -247,7 +247,7 @@ def source_parts(raw, source):
     return [next(iter(lookup[k])) for k in keys]
 
 
-def sole_patch(raw, parts, part):
+def underside_candidate(raw, parts, part):
     """Whole source-labeled hoof shell and every downward-facing rest-space facet.
 
     This is an explicit geometric underside candidate. Anatomical/ground contact
@@ -269,8 +269,75 @@ def sole_patch(raw, parts, part):
             'sole_triangles': sole.tolist(), 'sole_vertices': sorted(set(triangles[sole].ravel().tolist()))}
 
 
-def validate_patch(raw, parts, part, patch):
-    require(patch == sole_patch(raw, parts, part), "Incomplete or forged anatomical patch")
+def validate_candidate(raw, parts, part, patch):
+    require(patch == underside_candidate(raw, parts, part), "Incomplete or forged diagnostic candidate")
+
+
+def anatomical_patch(raw, parts, part, definition):
+    candidate = underside_candidate(raw, parts, part)
+    classes = {kind: sorted(definition[kind]) for kind in ['bottom', 'rim', 'wall']}
+    all_ids = sum(classes.values(), [])
+    require(len(all_ids) == len(set(all_ids)) and set(all_ids) == set(candidate['shell_triangles']),
+            'Anatomy must classify every shell face exactly once')
+    require(classes['bottom'] and classes['rim'] and classes['wall'], 'Missing anatomical region')
+    triangles, vertices = np.asarray(raw['indices']).reshape(-1, 3), finite(raw['vertices'], 3)
+    uv = finite(raw['uv'], 2)
+    sole = sorted(classes['bottom'] + classes['rim'])
+    categories = {i: kind for kind, ids in classes.items() for i in ids}
+    face_records = []
+    for i in candidate['shell_triangles']:
+        corners = vertices[triangles[i]]
+        normal = np.cross(corners[1]-corners[0], corners[2]-corners[0])
+        normal /= np.linalg.norm(normal)
+        face_records.append({'raw_triangle': i, 'raw_vertices': triangles[i].tolist(),
+                             'points': corners.tolist(), 'uv': uv[triangles[i]].tolist(),
+                             'outward_rest_normal': normal.tolist(), 'class': categories[i],
+                             'included_in_sole': i in sole,
+                             'in_rejected_normal_candidate': i in candidate['sole_triangles']})
+    edges = defaultdict(list)
+    for i in candidate['shell_triangles']:
+        points = [tuple(p) for p in vertices[triangles[i]]]
+        for j in range(3):
+            edges[tuple(sorted((points[j], points[(j+1) % 3])))].append(i)
+    boundary, outer, adjacency = [], [], defaultdict(set)
+    for edge, faces in sorted(edges.items()):
+        require(len(faces) <= 2, 'Nonmanifold source hoof edge')
+        if len(faces) == 2 and all(f in sole for f in faces):
+            adjacency[faces[0]].add(faces[1]); adjacency[faces[1]].add(faces[0])
+        if len(faces) == 1 or len({categories[f] for f in faces}) > 1:
+            labels = [categories[f] for f in faces]
+            require(len(faces) == 2 or labels == ['wall'], 'Open source shell edge touches the material sole')
+            row = {'points': [list(p) for p in edge], 'raw_faces': faces, 'classes': labels,
+                   'included_faces': [f for f in faces if f in sole], 'excluded_faces': [f for f in faces if f not in sole],
+                   'interpretation': 'Open source shell edge; retained in wall provenance' if len(faces) == 1 else
+                       'Material plate/rim interface; both sides included' if 'wall' not in labels else
+                       'Outer material sole boundary; wall side excluded',
+                   'kind': 'source_shell_open_edge' if len(faces) == 1 else 'region_boundary'}
+            boundary.append(row)
+            if any(f in sole for f in faces) and (len(faces) == 1 or 'wall' in labels):
+                outer.append(edge)
+    visited, pending = set(), [sole[0]]
+    while pending:
+        face = pending.pop()
+        if face not in visited:
+            visited.add(face); pending.extend(adjacency[face]-visited)
+    require(visited == set(sole), 'Authored material sole is disconnected')
+    degrees = Counter(p for edge in outer for p in edge)
+    require(degrees and set(degrees.values()) == {2}, 'Sole boundary is not a closed material loop')
+    edge_graph = defaultdict(set)
+    for a, b in outer:
+        edge_graph[a].add(b); edge_graph[b].add(a)
+    visited_points, pending_points = set(), [outer[0][0]]
+    while pending_points:
+        point = pending_points.pop()
+        if point not in visited_points:
+            visited_points.add(point); pending_points.extend(edge_graph[point]-visited_points)
+    require(visited_points == set(degrees), 'Sole boundary has multiple loops or an interior hole')
+    return {**candidate, 'rejected_normal_candidate_triangles': candidate['sole_triangles'],
+            'rejected_normal_candidate_vertices': candidate['sole_vertices'], 'face_records': face_records,
+            'face_classes': classes, 'boundaries': boundary, 'sole_boundary': [[list(p) for p in edge] for edge in outer],
+            'sole_triangles': sole, 'sole_vertices': sorted(set(triangles[sole].ravel().tolist())),
+            'definition': definition['reason']}
 
 
 def raw_surface(document, binary):
@@ -285,8 +352,8 @@ def raw_surface(document, binary):
     return result
 
 
-def raw_tracks(document, binary):
-    animation = [a for a in document['animations'] if a['name'] == 'MARCH']
+def raw_tracks(document, binary, name="MARCH"):
+    animation = [a for a in document['animations'] if a['name'] == name]
     require(len(animation) == 1, "Expected one raw MARCH")
     result = {}
     for channel in animation[0]['channels']:
@@ -501,12 +568,13 @@ def normalize_box(q):
     return q * (Float32Box(1) / box_dot(q, q, 4).sqrt())
 
 
-def imported_key_box(raw, time, rotation, functions):
+def imported_key_box(raw, time, rotation, functions, decoded_values=None):
     # GLTFDocument::_interpolate_track receives FLOAT time, and double key times.
     time = float(np.float32(time))
     times = raw['times']
     # GLTFAccessor::decode_as_quaternions normalizes even endpoint keys.
-    values = [normalize_box(Float32Box(v)) if rotation else Float32Box(v) for v in raw['values']]
+    values = decoded_values if decoded_values is not None else [
+        normalize_box(Float32Box(v)) if rotation else Float32Box(v) for v in raw['values']]
     index = int(np.searchsorted(times, time, side='right'))-1
     if index < 0 or index >= len(times)-1 or raw['step']:
         return values[max(0, index)]
@@ -557,9 +625,53 @@ def affine_box(a, b):
     return box_stack(columns, axis=1)
 
 
+def rest_decomposition_boxes(rest):
+    """SkinTool initialization and Basis::get_rotation_quaternion/get_scale, pinned source."""
+    matrix_ = Float32Box(matrix(rest)[:3])
+    basis = matrix_[:, :3]
+    determinant = (basis[0, 0]*(basis[1, 1]*basis[2, 2]-basis[1, 2]*basis[2, 1])
+                   - basis[0, 1]*(basis[1, 0]*basis[2, 2]-basis[1, 2]*basis[2, 0])
+                   + basis[0, 2]*(basis[1, 0]*basis[2, 1]-basis[1, 1]*basis[2, 0]))
+    require(determinant.lo > 0 or determinant.hi < 0, 'Unclosed rest determinant branch')
+    sign = Float32Box(1 if determinant.lo > 0 else -1)
+    scale = box_stack([box_dot(basis[:, i], basis[:, i], 3).sqrt()*sign for i in range(3)])
+    def normalize_vector(v):
+        return v / box_dot(v, v, 3).sqrt()
+    x, y, z = [basis[:, i] for i in range(3)]
+    x = normalize_vector(x)
+    y = normalize_vector(y-x*box_dot(x, y, 3))
+    z = normalize_vector(z-x*box_dot(x, z, 3)-y*box_dot(y, z, 3))
+    m = box_stack([x*sign, y*sign, z*sign], axis=1)
+    trace = m[0, 0]+m[1, 1]+m[2, 2]
+    half, one = Float32Box(.5), Float32Box(1)
+    if trace.lo > 0:
+        s = (trace+one).sqrt()
+        factor = half/s
+        rotation = box_stack([(m[2, 1]-m[1, 2])*factor, (m[0, 2]-m[2, 0])*factor,
+                              (m[1, 0]-m[0, 1])*factor, s*half])
+    else:
+        require(trace.hi <= 0, 'Unclosed rest quaternion trace branch')
+        i = int(np.argmax(np.diag(m.lo+m.hi)))
+        j, k = (i+1) % 3, (i+2) % 3
+        require(m.lo[i, i] >= max(m.hi[j, j], m.hi[k, k]), 'Unclosed rest quaternion diagonal branch')
+        s = (m[i, i]-m[j, j]-m[k, k]+one).sqrt()
+        factor = half/s
+        result = [None]*4
+        result[i], result[j], result[k], result[3] = s*half, (m[j, i]+m[i, j])*factor, (m[k, i]+m[i, k])*factor, (m[k, j]-m[j, k])*factor
+        rotation = box_stack(result)
+    return {'position': matrix_[:, 3], 'rotation': rotation, 'scale': scale}
+
+
 def operation_enclosures(native, sample, surface, binds, functions):
     """Validate each arithmetic boundary against its own captured input, no fitted epsilon."""
     stages = defaultdict(list)
+    count = len(native['bones'])
+    require(len(sample['pose_components']) == len(sample['locals']) == len(sample['globals']) == count,
+            'Incomplete pose component cardinality')
+    require(len(sample['track_values']) == len(native['tracks']) and
+            len(sample.get('player_track_values', [])) == len(native['tracks']), 'Incomplete evaluated tracks')
+    animated = {(t['path'].split(':')[-1], t['type']) for t in native['tracks']}
+    require(len(animated) == len(native['tracks']), 'Duplicate animated component')
 
     def check(name, enclosure, actual):
         actual = finite(actual).astype(np.float32).astype(float)
@@ -581,6 +693,11 @@ def operation_enclosures(native, sample, surface, binds, functions):
         else:
             raise ValueError('Unaccounted mixer track type')
     for i, (bone, pc) in enumerate(zip(native['bones'], sample['pose_components'])):
+        require(set(pc) == {'position', 'rotation', 'scale'}, 'Incomplete pose components')
+        for component, kind, width in [('position', 1, 3), ('rotation', 2, 4), ('scale', 3, 3)]:
+            require(finite(pc[component]).shape == (width,), 'Malformed pose component')
+            if (bone['name'], kind) not in animated:
+                check('unanimated_defaults', Float32Box(bone['default_'+component]), pc[component])
         check('basis', basis_box(pc['position'], pc['rotation'], pc['scale']), matrix(sample['locals'][i])[:3])
         local = Float32Box(matrix(sample['locals'][i])[:3])
         parent = bone['parent']
@@ -601,7 +718,105 @@ def operation_enclosures(native, sample, surface, binds, functions):
             for name, values in stages.items()}
 
 
+def bake_grid(end, fps):
+    require(0 < fps <= 120 and 0 < end <= 60, 'Unbounded native bake grid')
+    result, time = [], 0.
+    while True:
+        if result and abs(result[-1]-time) < max(1e-5, 1e-5*abs(result[-1])):
+            result[-1] = time
+        else:
+            result.append(time)
+        if time == end:
+            return result
+        time = min(time + 1./fps, end)
+
+
+def validate_import_trace(document, binary, native, functions):
+    trace = native['import_trace']
+    settings = trace['settings']
+    expected = {'bake_fps': 30, 'trimming': False, 'remove_immutable_tracks': True,
+                'optimizer/enabled': True, 'optimizer/max_velocity_error': .01,
+                'optimizer/max_angular_error': .01, 'optimizer/max_precision_error': 3,
+                'compression/enabled': False, 'import_tracks/mode': 1,
+                'generate_scene/remove_immutable_tracks': False}
+    require({k: settings[k] for k in expected} == expected, 'Effective native import settings changed')
+    require(trace['operations'] == ['GLTFDocument.append_from_file', 'GLTFDocument.generate_scene(remove_immutable=false)',
+            'ResourceImporterScene cross-animation immutable removal', 'Animation.optimize',
+            'Animation loop setting', 'ResourceSaver/ResourceLoader roundtrip'], 'Import operation order changed')
+    require(set(trace['all_animation_baked']) == {a['name'] for a in document['animations']}, 'Incomplete animation bake capture')
+    bones = {b['name']: b for b in native['bones']}
+    used, baked_keys, defaults_checked = {}, 0, set()
+    for name, rows in trace['all_animation_baked'].items():
+        source = raw_tracks(document, binary, name)
+        require({(t['path'].split(':')[-1], {1: 'translation', 2: 'rotation', 3: 'scale'}[t['type']]) for t in rows}
+                == source.keys() and len(rows) == len(source), 'Generated track coverage differs from source')
+        end = max(float(t['times'][-1]) for t in source.values())
+        grid = bake_grid(end, settings['bake_fps'])
+        for row in rows:
+            bone, kind = row['path'].split(':')[-1], {1: 'translation', 2: 'rotation', 3: 'scale'}[row['type']]
+            require([k['time'] for k in row['keys']] == grid, 'Generated bake grid differs from pinned importer')
+            key = row['path']+'|'+str(row['type'])
+            initial = finite(trace['immutable_defaults'][key])
+            if key not in defaults_checked:
+                decomposition = rest_decomposition_boxes(bones[bone]['rest'])
+                box = decomposition['position' if kind == 'translation' else kind]
+                require(box.contains(initial).all(), 'Immutable comparator default differs from rest decomposition')
+                defaults_checked.add(key)
+            used.setdefault(key, False)
+            track = source[bone, kind]
+            decoded = [normalize_box(Float32Box(v)) if kind == 'rotation' else Float32Box(v) for v in track['values']]
+            for record in row['keys']:
+                require(record['transition'] == 1., 'Unexpected generated key transition')
+                box = imported_key_box(track, record['time'], kind == 'rotation', functions, decoded)
+                require(box.contains(np.float32(record['value'])).all(), 'Baked value outside raw import operations')
+                value = np.asarray(record['value'], dtype=np.float32)
+                tolerance = np.maximum(np.float32(1e-5), np.float32(1e-5)*abs(value))
+                equal = (value == initial) | (abs(np.float32(value-np.float32(initial))) < tolerance)
+                used[key] |= not bool(equal.all())
+                baked_keys += 1
+    require(used == trace['used_tracks'] and defaults_checked == set(trace['immutable_defaults']), 'Cross-animation immutable decisions differ')
+    expected_baked = [t for t in trace['all_animation_baked']['MARCH'] if used[t['path']+'|'+str(t['type'])]]
+    require(trace['baked'] == expected_baked, 'MARCH immutable deletion result changed')
+    return {'baked_keys_checked': baked_keys, 'effective_settings': settings,
+            'operation_order': trace['operations'], 'cross_animation_used_tracks': used}
+
+
+def validate_import_track_result(tracks, trace):
+    def keyed(rows):
+        result = {(t['path'].split(':')[-1], t['type']): t for t in rows}
+        require(len(result) == len(rows), 'Duplicate import replay component')
+        return result
+    actual, baked, optimized, serialized = [keyed(rows) for rows in
+                                           [tracks, trace['baked'], trace['optimized'], trace['serialized']]]
+    require(actual.keys() == baked.keys() == optimized.keys() == serialized.keys(), 'Import replay track coverage changed')
+    rows = []
+    for key, target in actual.items():
+        # Full key records, including time, values and transitions. Never a surviving-key-only check.
+        require(target['keys'] == serialized[key]['keys'], 'Native key set differs from bounded import/optimizer replay')
+        before, after = baked[key]['keys'], optimized[key]['keys']
+        before_by_time = {k['time']: k for k in before}
+        require(len(before_by_time) == len(before) and all(k['time'] in before_by_time and
+                k == before_by_time[k['time']] for k in after), 'Optimizer changed keys instead of deleting them')
+        expected_serialized = [{**k, 'time': float(np.float32(k['time']))} for k in after]
+        require(serialized[key]['keys'] == expected_serialized, 'Optimized key decisions differ from serialized result')
+        for field in ['interpolation', 'compressed', 'loop_wrap', 'enabled']:
+            require(target.get(field) == serialized[key].get(field) == optimized[key].get(field) == baked[key].get(field),
+                    'Import replay track metadata changed')
+        after_times = {k['time'] for k in after}
+        rows.append({'bone': key[0], 'type': key[1], 'baked_times': [k['time'] for k in before],
+                     'optimized_times': [k['time'] for k in after],
+                     'deleted_times': [k['time'] for k in before if k['time'] not in after_times],
+                     'native_times': [k['time'] for k in target['keys']],
+                     'decision_source': 'Fresh native Animation.optimize on GLTFDocument.generate_scene result; full serialized result compared exactly'})
+    return rows
+
+
 def import_operation_enclosures(document, raw_tracks_, target_tracks, native, functions):
+    optimizer_decisions = validate_import_track_result(native['tracks'], native['import_trace'])
+    recorded_tracks = native_tracks(native)
+    require(target_tracks.keys() == recorded_tracks.keys() and all(
+        np.array_equal(target_tracks[key][field], recorded_tracks[key][field])
+        for key in target_tracks for field in ['times', 'values', 'step']), 'Target tracks differ from complete captured key set')
     nodes = {node['name']: node for node in document['nodes'] if 'name' in node}
     keys, dropped, rests = [], [], []
     for (name, kind), track in raw_tracks_.items():
@@ -624,12 +839,25 @@ def import_operation_enclosures(document, raw_tracks_, target_tracks, native, fu
             # CMP_EPSILON is the pinned importer's comparison rule, never a contact allowance.
             dropped.append({'bone': name, 'component': kind, 'comparison_abs_difference_upper': distance,
                             'engine_immutable_comparison_proven': distance < float(np.float32(1e-5))})
+    require(set(native['import_trace']['initialization']) == {b['name'] for b in native['bones']}, 'Incomplete node initialization capture')
     for bone in native['bones']:
         node = nodes[bone['name']]
+        initial = native['import_trace']['initialization'][bone['name']]
+        require(initial['original_name'] == bone['name'] and initial['rest_transform'] == initial['generated_rest'] == bone['rest'],
+                'Native rest differs from GLTF node rest initialization')
+        require(initial['node_transform'] == initial['rest_transform'], 'Nonlocal rest conversion needs separate accounting')
         box = basis_box(node.get('translation', [0, 0, 0]), node.get('rotation', [0, 0, 0, 1]), node.get('scale', [1, 1, 1]))
         rests.append({'bone': bone['name'], 'outside_components': int(np.count_nonzero(
             ~box.contains(np.float32(matrix(bone['rest'])[:3]))))})
+        initialization = rest_decomposition_boxes(initial['node_transform'])
+        for kind, box in initialization.items():
+            require(initial[kind] == bone['default_'+kind], 'Installed initial pose differs from generated node initialization')
+            rests.append({'bone': bone['name'], 'component': 'initial_'+kind, 'outside_components': int(np.count_nonzero(
+                ~box.contains(np.float32(bone['default_'+kind]))))})
+        rests.append({'bone': bone['name'], 'component': 'rest_rotation', 'outside_components': int(np.count_nonzero(
+            ~rest_decomposition_boxes(bone['rest'])['rotation'].contains(np.float32(bone['rest_rotation']))))})
     return {'retained_keys': keys, 'removed_tracks': dropped, 'node_to_rest': rests,
+            'optimizer_decisions': optimizer_decisions,
             'covered': all(k['outside_components'] == 0 for k in keys+rests)
                        and all(d['engine_immutable_comparison_proven'] for d in dropped)}
 
@@ -728,6 +956,9 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
     mapping = topology(raw, imported)
     order = np.array(mapping['native_to_raw'])
     parts = source_parts(raw, source)
+    anatomy_path = capture_dir.parent / 'anatomy-authored-v2.json'
+    anatomy = read_bound(anatomy_path, sha256(anatomy_path))
+    require(anatomy['glb_sha256'] == FROZEN['glb'], 'Authored anatomy refers to another mesh')
     patches = {}
     with (ROOT / 'tools/units3d/cavalry_tripo/tripo_parts.csv').open() as file:
         for row in csv.DictReader(file):
@@ -735,14 +966,23 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
             if ' hoof' not in label:
                 continue
             name = ('Front' if 'fore' in label else 'Hind') + 'Hoof.' + ('L' if 'near' in label else 'R')
-            patch = sole_patch(raw, parts, int(row['part']))
+            patch = anatomical_patch(raw, parts, int(row['part']), anatomy['hooves'][name])
             inverse = np.argsort(order)
             patch['native_shell_vertices'] = sorted(inverse[patch['shell_vertices']].tolist())
             patch['native_sole_vertices'] = sorted(inverse[patch['sole_vertices']].tolist())
             raw_faces = np.asarray(raw['indices']).reshape(-1, 3)
-            selected = {tuple(sorted(x)) for x in raw_faces[patch['sole_triangles']]}
-            patch['native_sole_triangles'] = [i for i, t in enumerate(order[np.asarray(imported['indices']).reshape(-1, 3)])
-                                               if tuple(sorted(t)) in selected]
+            native_faces = order[np.asarray(imported['indices']).reshape(-1, 3)]
+            face_map = {tuple(sorted(t)): i for i, t in enumerate(native_faces)}
+            require(len(face_map) == len(native_faces), 'Duplicate native face identity')
+            for kind, faces in {'sole': patch['sole_triangles'], 'shell': patch['shell_triangles'],
+                                'candidate': patch['rejected_normal_candidate_triangles'], **patch['face_classes']}.items():
+                patch['native_'+kind+'_triangles'] = [face_map[tuple(sorted(raw_faces[i]))] for i in faces]
+            patch['native_boundary_edges'] = []
+            for row in patch['boundaries']:
+                if row['kind'] == 'region_boundary':
+                    face = raw_faces[row['raw_faces'][0]]
+                    corners = {tuple(raw['vertices'][v]): int(inverse[v]) for v in face}
+                    patch['native_boundary_edges'].append([corners[tuple(point)] for point in row['points']])
             patch['source_description'] = label
             patches[name] = patch
     require(set(patches) == {'HindHoof.L', 'HindHoof.R', 'FrontHoof.L', 'FrontHoof.R'}, "Incomplete four-hoof provenance")
@@ -764,9 +1004,17 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
     require(raw_names == [b['name'] for b in native['skin']] and np.array_equal(raw_bind, binds), "Inverse bind or alias disagreement")
     require([b['resolved_bone'] for b in native['skin']] == list(range(53)), "Named Skin resolution mismatch")
     source_tracks, target_tracks = raw_tracks(g, binary), native_tracks(native)
+    import_replay = validate_import_trace(g, binary, native, functions)
+    replay_resource = capture_dir / 'import-replay.res'
+    require(sha256(replay_resource) == native['import_trace']['serialized_sha256'], 'Changed native replay resource')
     accounting = track_accounting(source_tracks, target_tracks, native)
     import_enclosures = import_operation_enclosures(g, source_tracks, target_tracks, native, functions)
     default_tracks = {k: v for k, v in source_tracks.items() if k in target_tracks}
+    import_stages = {name: native_tracks({'tracks': tracks}) for name, tracks in [
+        ('decoded_normalized_bake', native['import_trace']['all_animation_baked']['MARCH']),
+        ('cross_animation_immutable_removal', native['import_trace']['baked']),
+        ('native_optimizer_deletion', native['import_trace']['optimized']),
+        ('resource_serialization', native['import_trace']['serialized'])]}
     raw_ordered = {k: v[order] for k, v in raw.items() if k != 'indices'}
     rows, new_witness = [], {}
     for line in samples_path.open():
@@ -803,6 +1051,13 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
                'max_local_component_residual': float(np.max(np.abs(actual_local - reconstructed_local))),
                'raw_native_max_vertex_distance_m': float(np.linalg.norm(stages[0] - stages[9], axis=1).max()),
                'player_time': sample['player_time']}
+        previous = stages[0]
+        row['import_stage_delta_m'] = {}
+        for name, tracks in import_stages.items():
+            _, globals_ = pose(native['bones'], tracks, time)
+            current = skin(raw_ordered, globals_ @ raw_bind)
+            row['import_stage_delta_m'][name] = float(np.linalg.norm(current-previous, axis=1).max())
+            previous = current
         row['operation_enclosures'] = operation_enclosures(native, sample, imported, binds, functions)
         rows.append(row)
         if sample['phase'] in (.137, .25):
@@ -816,7 +1071,7 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
         require(np.allclose(new_witness[phase], frozen['native_positions'][i], rtol=0, atol=2e-15),
                 "Current/frozen native witness disagreement; do not widen this arithmetic replay check")
     payload = {'topology': mapping, 'patches': patches, 'tracks': accounting, 'spans': rows,
-               'import_operation_enclosures': import_enclosures}
+               'import_operation_enclosures': import_enclosures, 'import_replay': import_replay}
     encoded = json.dumps(payload, sort_keys=True, separators=(',', ':')).encode()
     digest = hashlib.sha256(encoded).hexdigest()
     detail = capture_dir.parent / f'accounting-{digest}.json'
@@ -825,7 +1080,7 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
     else:
         detail.write_bytes(encoded)
     inputs = {str(p.resolve()): sha256(p) for p in [native_path, samples_path, source_path, Path(source['source_file']), frozen_native,
-                                                  frozen_geometry, witness_path, detail]}
+                                                  frozen_geometry, witness_path, detail, replay_resource, anatomy_path]}
     views = None
     if views_path is not None:
         views = read_bound(views_path, sha256(views_path))
@@ -836,8 +1091,10 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
                 'View anatomical topology or patch definition changed')
         inputs[str(visual_detail.resolve())] = views['accounting_sha256']
         require(views['display_server'] != 'headless' and views['renderer'] == 'forward_plus', 'Views are not native Forward+ window captures')
+        require(views['isolated_material_resource'].startswith('res://'+SCENE+'::'), 'Isolated views lost the installed scene material override')
         expected = {(name, phase, view, mode) for name in patches for phase in [0., .137]
-                    for view in ['underside', 'oblique'] for mode in ['native', 'source_parts', 'candidate_edges']}
+                    for view in ['underside', 'oblique', 'oblique_back', 'oblique_inside', 'oblique_outside']
+                    for mode in ['native', 'source_parts', 'candidate_edges', 'isolated_material', 'classification', 'boundaries']}
         require(len(views['rows']) == len(expected) and
                 {(r['hoof'], r['phase'], r['view'], r['mode']) for r in views['rows']} == expected, 'Incomplete anatomical views')
         inputs[str(views_path.resolve())] = sha256(views_path)
@@ -852,7 +1109,7 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
         inputs[str(probe / path)] = digest
     require(sha256(native['engine_executable']) == native['engine_executable_sha256'], "Captured engine executable changed")
     inputs[native['engine_executable']] = native['engine_executable_sha256']
-    engine_sources = capture_dir.parent / 'engine-source/sources-v2.json'
+    engine_sources = capture_dir.parent / 'engine-source/sources-v5.json'
     engine_refs = read_bound(engine_sources, sha256(engine_sources))
     inputs[str(engine_sources.resolve())] = sha256(engine_sources)
     for name, reference in engine_refs.items():
@@ -886,6 +1143,7 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
             'capture_directory': str(capture_dir.resolve()), 'source_geometry': str(source_path.resolve()),
             'views_manifest': str(views_path.resolve()) if views_path is not None else None,
             'native_view_evidence': {'images': len(views['rows']), 'legend': views['legend'], 'limits': views['limits'],
+                                     'isolated_material_resource': views['isolated_material_resource'],
                                      'independent_review': 'PENDING_SOLE_REVIEW_VERDICT'} if views else None,
             'frozen_paths': {'native': str(frozen_native.resolve()), 'geometry': str(frozen_geometry.resolve()),
                              'witness': str(witness_path.resolve())},
@@ -896,6 +1154,8 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
             'loop_time_rule': 'AnimationPlayer::_process_playback_data applies fposmod; the exact length maps to zero. Direct track queries retain the terminal key. Both paths are captured and separately enclosed.',
             'track_operations': dict(Counter(r['operation'] for r in accounting)),
             'max_vertex_delta_by_operation_m': maxima,
+            'max_import_stage_delta_m': {name: max(r['import_stage_delta_m'][name] for r in rows) for name in import_stages},
+            'import_replay': import_replay,
             'numerical_accounting': {'status': 'SAMPLED_OPERATIONS_ENCLOSED' if numerical_covered else 'UNEXPLAINED_RESIDUAL',
                                      'platform_math': runtime, 'stages': operation_summary,
                                      'import_operations_covered': import_enclosures['covered'],
@@ -903,12 +1163,14 @@ def audit(capture_dir, source_path, frozen_native, frozen_geometry, witness_path
                                      'method': 'Outward binary32 endpoints include exact arithmetic and rounded/FMA results. Enumerate all binary32 dot intermediates, replay pinned-platform acosf/sinf/sin (including double scale0); enclose mixer/rest normalization, basis, affine FK, bind and four unnormalized influences.',
                                      'limits': 'Per-operation checks at captured times, not an interval over time or a physical error budget. No fast-math reassociation assumed. No libm ULP allowance assumed. Platform mismatch rejects replay.'},
             'native_pose_arithmetic_residual_m': max(r['native_pose_arithmetic_residual_m'] for r in rows),
+            'region_counts': {k: {name: len(ids) for name, ids in v['face_classes'].items()} for k, v in patches.items()},
             'patch_counts': {k: {name: len(v[name]) for name in ['shell_vertices', 'shell_triangles', 'sole_vertices', 'sole_triangles']}
                              for k, v in patches.items()},
-            'patch_definition': 'Every source-labeled hoof shell triangle retained; candidate underside is every nondegenerate rest-space facet with outward normal Y<0. No low-height, weight, slip or success filter.',
+            'anatomy_definition': anatomy,
+            'patch_definition': 'Explicit source-face partition into bottom plate, peripheral rim and wall; sole is bottom plus rim. Full shells and rejected negative-normal candidate retained. Exact inter-region edges and source-open edges enumerated. Independent material/anatomical acceptance remains required.',
             'frozen_witness': frozen, 'current_native_witness_positions': new_witness,
             'unresolved': ([] if numerical_covered else ['Native import/runtime operations fall outside independently derived arithmetic enclosures.']) +
-                          ['Geometric underside candidates retain full source shells but are not independently accepted complete anatomical material patches.',
+                          ['Explicit material patch partition requires independent anatomical acceptance; full shells and the rejected normal candidate remain available.',
                            'Native anatomical images await the unique Review; no independent visual acceptance claimed.' if views else
                            'Native data capture is CPU only; normal-window anatomical views have not been supplied.'],
             'claims': {'continuous_uncertainty_bound': False, 'contact_certificate': False, 'phase_map': False,

@@ -1,5 +1,6 @@
 """Independent hand cases and hostile inputs for the native capture verifier."""
 import copy
+import json
 import math
 import struct
 import tempfile
@@ -48,7 +49,8 @@ class CaptureTests(unittest.TestCase):
 
     def test_operation_audit_rejects_corrupted_skin_output(self):
         identity = np.eye(4)[:3].ravel().tolist()
-        native = {'bones': [{'parent': -1}], 'tracks': [], 'length': 1.}
+        native = {'bones': [{'name': 'root', 'parent': -1, 'default_position': [0, 0, 0],
+                             'default_rotation': [0, 0, 0, 1], 'default_scale': [1, 1, 1]}], 'tracks': [], 'length': 1.}
         sample = {'time': 0., 'track_values': [], 'locals': [identity], 'globals': [identity],
                   'pose_components': [{'position': [0, 0, 0], 'rotation': [0, 0, 0, 1], 'scale': [1, 1, 1]}],
                   'skinned_skeleton_local': [[[.75, 0, 0]]]}
@@ -58,6 +60,56 @@ class CaptureTests(unittest.TestCase):
         sample['skinned_skeleton_local'][0][0][0] = .751
         result = capture.operation_enclosures(native, sample, surface, [np.eye(4)], {})
         self.assertEqual(result['bind_and_cpu_lbs']['outside_components'], 1)
+
+    def test_self_consistent_unanimated_drift_and_missing_components_reject(self):
+        identity = np.eye(4)[:3].ravel().tolist()
+        native = {'bones': [{'name': 'root', 'parent': -1, 'default_position': [0, 0, 0],
+                             'default_rotation': [0, 0, 0, 1], 'default_scale': [1, 1, 1]}], 'tracks': [], 'length': 1.}
+        moved = np.eye(4); moved[0, 3] = 10
+        sample = {'time': 0., 'track_values': [], 'player_track_values': [], 'locals': [moved[:3].ravel().tolist()],
+                  'globals': [moved[:3].ravel().tolist()], 'pose_components': [
+                      {'position': [10, 0, 0], 'rotation': [0, 0, 0, 1], 'scale': [1, 1, 1]}],
+                  'skinned_skeleton_local': [[[11, 0, 0]]]}
+        surface = {'vertices': [[1, 0, 0]], 'joints': [[0, 0, 0, 0]], 'weights': [[1, 0, 0, 0]]}
+        result = capture.operation_enclosures(native, sample, surface, [np.eye(4)], {})
+        self.assertEqual(result['unanimated_defaults']['outside_components'], 1)
+        sample['pose_components'] = []
+        with self.assertRaises(ValueError):
+            capture.operation_enclosures(native, sample, surface, [np.eye(4)], {})
+
+    def test_rest_decomposition_preserves_scale_and_rotation_branch(self):
+        rest = np.array([[0, -3, 0, 4], [2, 0, 0, 5], [0, 0, 4, 6]])
+        boxes = capture.rest_decomposition_boxes(rest.ravel())
+        self.assertTrue(boxes['position'].contains([4, 5, 6]).all())
+        self.assertTrue(boxes['scale'].contains([2, 3, 4]).all())
+        self.assertTrue(boxes['rotation'].contains([0, 0, math.sqrt(.5), math.sqrt(.5)]).all())
+        self.assertFalse(boxes['position'].contains([14, 5, 6]).all())
+        rest = np.array([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0]])
+        self.assertTrue(capture.rest_decomposition_boxes(rest.ravel())['rotation'].contains([1, 0, 0, 0]).all())
+
+    def test_import_trace_rejects_deleted_and_shifted_native_keys(self):
+        track = {'path': 'Rig:root', 'type': 1, 'keys': [{'time': 0., 'value': [0, 0, 0]},
+                 {'time': .5, 'value': [0, 1, 0]}, {'time': 1., 'value': [0, 0, 0]}]}
+        trace = {'baked': [copy.deepcopy(track)], 'optimized': [copy.deepcopy(track)], 'serialized': [copy.deepcopy(track)]}
+        self.assertEqual(capture.validate_import_track_result([track], trace)[0]['deleted_times'], [])
+        bad = copy.deepcopy(track); del bad['keys'][1]
+        with self.assertRaises(ValueError):
+            capture.validate_import_track_result([bad], trace)
+        bad = copy.deepcopy(track); bad['keys'][1]['time'] += .001
+        with self.assertRaises(ValueError):
+            capture.validate_import_track_result([bad], trace)
+        changed = copy.deepcopy(trace); del changed['optimized'][0]['keys'][1]
+        with self.assertRaises(ValueError):
+            capture.validate_import_track_result([track], changed)
+
+    def test_bake_grid_replaces_near_endpoint_before_serialization(self):
+        end = float(np.float32(16/30))
+        grid = capture.bake_grid(end, 30)
+        self.assertEqual(len(grid), 17)
+        self.assertEqual(grid[-1], end)
+        self.assertEqual(grid[6], .19999999999999998)
+        with self.assertRaises(ValueError):
+            capture.bake_grid(end, 0)
 
     def test_mixed_skin_preserves_material_weights_and_affine_bind(self):
         transforms = np.repeat(np.eye(4)[None], 2, axis=0)
@@ -139,16 +191,34 @@ class CaptureTests(unittest.TestCase):
                'uv': [[0, 1], [1, 1], [0, 0]], 'indices': [0, 2, 1]}
         result = capture.source_parts(raw, source)
         self.assertEqual(result, [22, 22, 22])
-        patch = capture.sole_patch(raw, result, 22)
+        patch = capture.underside_candidate(raw, result, 22)
         self.assertEqual(patch['sole_triangles'], [0])
         self.assertEqual(patch['sole_vertices'], [0, 1, 2])
         fake = copy.deepcopy(patch)
         fake['sole_vertices'] = [0]
         with self.assertRaises(ValueError):
-            capture.validate_patch(raw, result, 22, fake)
+            capture.validate_candidate(raw, result, 22, fake)
         source['triangle_uv'][0][0] = [.25, .25]
         with self.assertRaises(ValueError):
             capture.source_parts(raw, source)
+
+    def test_authored_regions_require_full_shell_and_connected_closed_sole(self):
+        raw = {'vertices': [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1],
+                            [0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]],
+               'indices': [0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6,
+                           0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2,
+                           2, 6, 7, 2, 7, 3, 3, 7, 4, 3, 4, 0]}
+        raw['uv'] = [[0, 0]] * 8
+        definition = {'bottom': [0], 'rim': [1], 'wall': list(range(2, 12)), 'reason': 'fixture'}
+        patch = capture.anatomical_patch(raw, [22]*8, 22, definition)
+        self.assertEqual(patch['sole_triangles'], [0, 1])
+        self.assertEqual(len(patch['sole_boundary']), 4)
+        self.assertEqual(len(patch['shell_triangles']), 12)
+        self.assertEqual(json.loads(json.dumps(patch)), patch)
+        for change in [{'wall': list(range(3, 12))}, {'rim': [0, 1]},
+                       {'rim': [2], 'wall': [1] + list(range(3, 12))}]:
+            with self.assertRaises(ValueError):
+                capture.anatomical_patch(raw, [22]*8, 22, {**definition, **change})
 
     def test_source_provenance_rejects_flipped_or_missing_triangle(self):
         source = {'vertices': [[0, 0, 0], [1, 0, 0], [0, 1, 0]],

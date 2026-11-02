@@ -44,6 +44,107 @@ func _track_values(animation: Animation, time: float) -> Array:
 	return values
 
 
+func _track_records(animation: Animation) -> Array:
+	var tracks: Array = []
+	for i: int in animation.get_track_count():
+		var keys: Array = []
+		for j: int in animation.track_get_key_count(i):
+			keys.append({"time": animation.track_get_key_time(i, j), "value": _vector(animation.track_get_key_value(i, j)),
+				"transition": animation.track_get_key_transition(i, j)})
+		tracks.append({"path": str(animation.track_get_path(i)), "type": animation.track_get_type(i),
+			"interpolation": animation.track_get_interpolation_type(i), "compressed": animation.track_is_compressed(i),
+			"loop_wrap": animation.track_get_interpolation_loop_wrap(i), "enabled": animation.track_is_enabled(i), "keys": keys})
+	return tracks
+
+
+func _import_trace(output: String) -> Dictionary:
+	var config: ConfigFile = ConfigFile.new()
+	if config.load(SOURCE + ".import") != OK:
+		return {"error": "Cannot read installed import configuration"}
+	var subresources: Dictionary = config.get_value("params", "_subresources", {})
+	# This bounded replay handles this asset's default AnimationPlayer import settings.
+	if not subresources.get("nodes", {}).is_empty():
+		return {"error": "Node import overrides require explicit replay accounting"}
+	var settings: Dictionary = {"bake_fps": config.get_value("params", "animation/fps"),
+		"trimming": config.get_value("params", "animation/trimming"),
+		"remove_immutable_tracks": config.get_value("params", "animation/remove_immutable_tracks"),
+		"optimizer/enabled": true, "optimizer/max_velocity_error": 0.01,
+		"optimizer/max_angular_error": 0.01, "optimizer/max_precision_error": 3,
+		"compression/enabled": false, "import_tracks/mode": 1, "generate_scene/remove_immutable_tracks": false, "source": "pinned ResourceImporterScene INTERNAL_IMPORT_CATEGORY_ANIMATION_NODE defaults; no node overrides"}
+	var document: GLTFDocument = GLTFDocument.new()
+	var state: GLTFState = GLTFState.new()
+	if document.append_from_file(SOURCE, state) != OK:
+		return {"error": "Cannot decode frozen GLB for import replay"}
+	var generated: Node = document.generate_scene(state, float(settings.bake_fps), bool(settings.trimming), false)
+	if generated == null:
+		return {"error": "Native GLTF scene generation failed"}
+	var player: AnimationPlayer = generated.find_children("*", "AnimationPlayer", true, false)[0]
+	var skeleton: Skeleton3D = generated.find_children("*", "Skeleton3D", true, false)[0]
+	var initialization: Dictionary = {}
+	for node: GLTFNode in state.get_nodes():
+		var bone: int = skeleton.find_bone(node.resource_name)
+		if bone >= 0:
+			initialization[node.resource_name] = {"original_name": node.original_name,
+				"node_transform": _flat(node.xform), "rest_transform": _flat(node.get_additional_data("GODOT_rest_transform")),
+				"generated_rest": _flat(skeleton.get_bone_rest(bone)),
+				"position": _vector(skeleton.get_bone_pose_position(bone)),
+				"rotation": _vector(skeleton.get_bone_pose_rotation(bone)),
+				"scale": _vector(skeleton.get_bone_pose_scale(bone))}
+	var generated_tracks: Dictionary = {}
+	var used_tracks: Dictionary = {}
+	var defaults: Dictionary = {}
+	for animation_name: StringName in player.get_animation_list():
+		var candidate: Animation = player.get_animation(animation_name)
+		generated_tracks[str(animation_name)] = _track_records(candidate)
+		for track: int in candidate.get_track_count():
+			var path: NodePath = candidate.track_get_path(track)
+			var bone: int = skeleton.find_bone(path.get_subname(0))
+			if bone < 0:
+				generated.free()
+				return {"error": "Import replay expected a named bone track"}
+			var rest: Transform3D = skeleton.get_bone_rest(bone)
+			var kind: int = candidate.track_get_type(track)
+			var initial: Variant
+			match kind:
+				Animation.TYPE_POSITION_3D:
+					initial = rest.origin / skeleton.motion_scale
+				Animation.TYPE_ROTATION_3D:
+					initial = rest.basis.get_rotation_quaternion()
+				Animation.TYPE_SCALE_3D:
+					initial = rest.basis.get_scale()
+				_:
+					generated.free()
+					return {"error": "Unsupported import replay track"}
+			var key: String = str(path) + "|" + str(kind)
+			defaults[key] = _vector(initial)
+			if not used_tracks.has(key):
+				used_tracks[key] = false
+			for i: int in candidate.track_get_key_count(track):
+				if not candidate.track_get_key_value(track, i).is_equal_approx(initial):
+					used_tracks[key] = true
+	var animation: Animation = player.get_animation("MARCH")
+	if settings.remove_immutable_tracks:
+		for track: int in range(animation.get_track_count() - 1, -1, -1):
+			var key: String = str(animation.track_get_path(track)) + "|" + str(animation.track_get_type(track))
+			if not used_tracks[key]:
+				animation.remove_track(track)
+	var before: Array = _track_records(animation)
+	animation.optimize(float(settings["optimizer/max_velocity_error"]), float(settings["optimizer/max_angular_error"]), int(settings["optimizer/max_precision_error"]))
+	var after: Array = _track_records(animation)
+	animation.loop_mode = Animation.LOOP_LINEAR
+	var serialized_path: String = output.path_join("import-replay.res")
+	if ResourceSaver.save(animation, serialized_path) != OK:
+		generated.free()
+		return {"error": "Cannot retain immutable serialization replay"}
+	var reloaded: Animation = ResourceLoader.load(serialized_path, "Animation", ResourceLoader.CACHE_MODE_IGNORE)
+	var result: Dictionary = {"settings": settings, "initialization": initialization, "all_animation_baked": generated_tracks, "immutable_defaults": defaults,
+		"used_tracks": used_tracks, "baked": before, "optimized": after,
+		"serialized": _track_records(reloaded), "serialized_sha256": FileAccess.get_sha256(serialized_path),
+		"operations": ["GLTFDocument.append_from_file", "GLTFDocument.generate_scene(remove_immutable=false)", "ResourceImporterScene cross-animation immutable removal", "Animation.optimize", "Animation loop setting", "ResourceSaver/ResourceLoader roundtrip"]}
+	generated.free()
+	return result
+
+
 func _fail(message: String) -> void:
 	push_error(message)
 	quit(2)
@@ -203,6 +304,10 @@ func _capture() -> void:
 	if DirAccess.make_dir_recursive_absolute(output) != OK:
 		_fail("Cannot create capture directory")
 		return
+	static_data["import_trace"] = _import_trace(output)
+	if static_data.import_trace.has("error"):
+		_fail(str(static_data.import_trace.error))
+		return
 	var static_file: FileAccess = FileAccess.open(output.path_join("native.json"), FileAccess.WRITE)
 	var samples_file: FileAccess = FileAccess.open(output.path_join("samples.jsonl"), FileAccess.WRITE)
 	if static_file == null or samples_file == null:
@@ -251,6 +356,17 @@ func _capture() -> void:
 		"samples": sample_times.size(), "output": output}))
 	model.queue_free()
 	quit()
+
+
+func _face_surface(target: ArrayMesh, arrays: Array, faces: Array, material: Material) -> void:
+	var subset: Array = arrays.duplicate()
+	var indices: PackedInt32Array = []
+	for face: int in faces:
+		for corner: int in 3:
+			indices.append(arrays[Mesh.ARRAY_INDEX][face * 3 + corner])
+	subset[Mesh.ARRAY_INDEX] = indices
+	target.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, subset)
+	target.surface_set_material(target.get_surface_count() - 1, material)
 
 
 func _views(output: String, native_path: String, accounting_path: String) -> void:
@@ -317,6 +433,27 @@ void fragment() {
 		return
 	var rows: Array = []
 	var arrays: Array = mesh.mesh.surface_get_arrays(0)
+	var original_material: Material = mesh.get_active_material(0)
+	if original_material == null:
+		_fail("Missing effective scene material")
+		return
+	var isolated: MeshInstance3D = MeshInstance3D.new()
+	mesh.get_parent().add_child(isolated)
+	isolated.transform = mesh.transform
+	isolated.skin = mesh.skin
+	isolated.skeleton = isolated.get_path_to(skeleton)
+	var classified: MeshInstance3D = MeshInstance3D.new()
+	mesh.get_parent().add_child(classified)
+	classified.transform = mesh.transform
+	classified.skin = mesh.skin
+	classified.skeleton = classified.get_path_to(skeleton)
+	var region_materials: Dictionary = {}
+	for kind: String in ["bottom", "rim", "wall"]:
+		var region: StandardMaterial3D = StandardMaterial3D.new()
+		region.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		region.cull_mode = BaseMaterial3D.CULL_DISABLED
+		region.albedo_color = Color(0.1, 0.6, 1.0) if kind == "bottom" else Color(1.0, 0.7, 0.1) if kind == "rim" else Color(0.45, 0.45, 0.45)
+		region_materials[kind] = region
 	for phase: float in [0.0, 0.137]:
 		player.stop()
 		for i: int in native.bones.size():
@@ -342,23 +479,43 @@ void fragment() {
 			var bounds: AABB = AABB(points[patch.native_shell_vertices[0]], Vector3.ZERO)
 			for vertex: int in patch.native_shell_vertices:
 				bounds = bounds.expand(points[vertex])
+			var shell_mesh: ArrayMesh = ArrayMesh.new()
+			_face_surface(shell_mesh, arrays, patch.native_shell_triangles, original_material)
+			isolated.mesh = shell_mesh
+			var class_mesh: ArrayMesh = ArrayMesh.new()
+			for kind: String in ["bottom", "rim", "wall"]:
+				_face_surface(class_mesh, arrays, patch["native_" + kind + "_triangles"], region_materials[kind])
+			classified.mesh = class_mesh
+			var boundary_lines: ImmediateMesh = ImmediateMesh.new()
+			boundary_lines.surface_begin(Mesh.PRIMITIVE_LINES)
+			for edge: Array in patch.native_boundary_edges:
+				boundary_lines.surface_add_vertex(points[edge[0]])
+				boundary_lines.surface_add_vertex(points[edge[1]])
+			boundary_lines.surface_end()
 			var lines: ImmediateMesh = ImmediateMesh.new()
 			lines.surface_begin(Mesh.PRIMITIVE_LINES)
-			for triangle: int in patch.native_sole_triangles:
+			for triangle: int in patch.native_candidate_triangles:
 				for edge: int in 3:
 					lines.surface_add_vertex(points[arrays[Mesh.ARRAY_INDEX][triangle * 3 + edge]])
 					lines.surface_add_vertex(points[arrays[Mesh.ARRAY_INDEX][triangle * 3 + (edge + 1) % 3]])
 			lines.surface_end()
 			wire.mesh = lines
-			for view: String in ["underside", "oblique"]:
-				var direction: Vector3 = Vector3(0, -1, 0) if view == "underside" else Vector3(0.7, -0.5, 0.7).normalized()
+			for view: String in ["underside", "oblique", "oblique_back", "oblique_inside", "oblique_outside"]:
+				var directions: Dictionary = {"underside": Vector3(0, -1, 0), "oblique": Vector3(0.7, -0.5, 0.7),
+					"oblique_back": Vector3(-0.7, -0.5, -0.7), "oblique_inside": Vector3(-0.7, -0.5, 0.7),
+					"oblique_outside": Vector3(0.7, -0.5, -0.7)}
+				var direction: Vector3 = directions[view].normalized()
 				var span: float = bounds.size.length()
 				camera.size = span * 1.6
 				camera.position = bounds.get_center() + direction * span * 4.0
 				camera.look_at(bounds.get_center(), Vector3.FORWARD if view == "underside" else Vector3.UP)
-				for mode: String in ["native", "source_parts", "candidate_edges"]:
+				for mode: String in ["native", "source_parts", "candidate_edges", "isolated_material", "classification", "boundaries"]:
+					mesh.visible = mode in ["native", "source_parts", "candidate_edges"]
 					mesh.material_override = null if mode == "native" else material
-					wire.visible = mode == "candidate_edges"
+					isolated.visible = mode in ["isolated_material", "boundaries"]
+					classified.visible = mode == "classification"
+					wire.visible = mode in ["candidate_edges", "boundaries"]
+					wire.mesh = boundary_lines if mode == "boundaries" else lines
 					for frame: int in 3:
 						await process_frame
 					await RenderingServer.frame_post_draw
@@ -374,8 +531,10 @@ void fragment() {
 	var report: Dictionary = {"native_sha256": FileAccess.get_sha256(native_path),
 		"accounting_sha256": FileAccess.get_sha256(accounting_path), "renderer": RenderingServer.get_current_rendering_method(),
 		"display_server": DisplayServer.get_name(), "rows": rows,
-		"legend": {"red": names[0], "blue": names[1], "gold": names[2], "green": names[3], "magenta": "candidate rest-normal-negative triangle edges"},
-		"limits": "Native mesh/skin untouched. Source-part shader changes display material only. Magenta edges are an X-ray CPU-position overlay including hidden candidate triangles, not GPU displacement evidence. No terrain, seat, gameplay-scale, contact, desktop-input or FPS acceptance."}
+		"isolated_material_resource": original_material.resource_path,
+		"legend": {"red": names[0], "blue": names[1], "gold": names[2], "green": names[3], "magenta": "candidate_edges: rejected negative-normal facets; boundaries: all bottom/rim/wall interfaces (X-ray)",
+			"classification": "blue bottom plate; gold peripheral rim; gray wall", "isolated_material": "complete original-material hoof shell, native skin and all original vertex attributes; only index subset is isolated"},
+		"limits": "Installed native mesh/skin untouched. Source-part shader changes display material only. Isolated/classified surfaces copy original native vertex attributes and skin with explicit shell/region index subsets; GPU skinning remains native. Magenta edges are an X-ray CPU-position overlay including hidden candidate triangles, not GPU displacement evidence. No terrain, seat, gameplay-scale, contact, desktop-input or FPS acceptance."}
 	var report_file: FileAccess = FileAccess.open(output.path_join("views.json"), FileAccess.WRITE)
 	report_file.store_string(JSON.stringify(report, "", true, true))
 	report_file.close()
