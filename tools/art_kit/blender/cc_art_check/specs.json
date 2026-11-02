@@ -1024,7 +1024,9 @@
     "MARCH",
     "STANDBY",
     "GARRISON",
-    "ATTACK"
+    "ATTACK",
+    "PIVOT_LEFT",
+    "PIVOT_RIGHT"
    ],
    "optional": [
     "DEFEND"
@@ -1838,6 +1840,8 @@
     "DEFEND",
     "GARRISON",
     "MARCH",
+    "PIVOT_LEFT",
+    "PIVOT_RIGHT",
     "STANDBY"
    ],
    "shipped_tris": 19127,
