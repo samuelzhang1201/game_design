@@ -1,0 +1,586 @@
+[gd_resource type="Resource" script_class="Map3DRoyalLocomotionSource" format=3]
+
+[ext_resource type="Script" path="res://scripts/map3d/map3d_royal_locomotion_source.gd" id="1_k4oyw"]
+
+[resource]
+script = ExtResource("1_k4oyw")
+scene_path = "res://scenes/models/units/royal.tscn"
+source_hashes = Dictionary[String, String]({
+"res://assets/3D/units/royal/royal.glb": "265cefc8aabb9860b7ad18b036d158fd255943b96127fdead127574ec349fe0f",
+"res://assets/3D/units/royal/royal.glb.import": "5c17fddf7820092f51bdafa47e9c80eb614f98f899316db040aaa89fabde4f7c",
+"res://scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
+"res://tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
+})
+provenance = {
+"adverse": {
+"fixed_bake_endpoint_difference_m": 1.5245736529360432,
+"radius_disposition": "sample-within; bound-inconclusive, not observed escape or PASS",
+"real_arithmetic_upper_radius_sim_m": 789.9554707346122,
+"sampled_march_radius_sim_m": 748.8595829969472,
+"unchanged_R_sim_m": 749.0
+},
+"contract": "docs/reviews/cluster-formations/royal-native-contact-feasibility.md sections 2,3,5 R1",
+"evidence_sha256": {
+"native-ground-frame-confirmed-query.json": "dfe208af5e53a0b3e753a31a99a3e439c6feff37fa14a6f2a5e9ec96c5daa02e",
+"native_probe/native-v2-results.json": "c4c2a50dd93f1237b10664e5e97032e3c49d9b0ee0ee7cf35aaee789e62e7379",
+"provider-input-native.json": "bbd622754be79ed18282467ffb84434940d07bf04640af8b28c395e558307d36",
+"rig-facts.json": "ce4d7558e00e1df56250d80cf3ec57c4eafcf5ad6d4018b6b99c30bb862e26dc",
+"sole-frame-calibration.json": "9fac14923b15c253ce96c66d470b1090d6ccdbad957fb544d6fb66234810bd7a",
+"source-facts.json": "1cb04a433bf53ffbc740109b60d5b1b30b35f212cc1f399d4724d24e2c505af6",
+"visual/sequence-lowland/manifest.json": "cb8b63d1f7a6b47c948a0d07bec369d49db36a6828531c68711c65bdeb271840"
+},
+"joint_limits": "UNRESOLVED: diagnostic PI limits are not anatomical authorization.",
+"native_probe_precision": "Finite original-precision equivalence, not a continuous interpolation bound or motion certificate.",
+"physical_budget": "UNRESOLVED: contact_um, turn_q and capture/skinning/terrain/arithmetic uncertainties absent. Reconstruction EPS is not a budget.",
+"retained_20k_blend_sha256": "7f506320d1df4a5a4ae82c456832691d78dfa07bc6fd359c22e43e914e321f8d",
+"source_airborne_observation": "Frozen flat query has all four hoof minima above the reference plane at phase 0; this sample does not establish an airborne interval.",
+"source_blend_sha256": "98425f71356e5354b0e445428141fd34dcb08169bcc668affa417d07f79efb75",
+"source_chain": "Owner knight_rig_anim.blend -> retained 20k -> pivot copy -> royal_install -> accepted GLB -> native importer -> royal.tscn",
+"source_units": "model metres; imported Y-up mesh/skeleton; named inverse binds retained",
+"support_and_airborne_intervals": "UNRESOLVED: no authored material support schedule in accepted evidence. Empty arrays are unknown, never all-swing exemptions.",
+"terrain_domain": "Only retained finite legacy tilted-seat witness; no upright body-row swept-domain or rendered-surface/LOD error enclosure."
+}
+landmarks = {
+"Chest": {
+"head": Vector3(4.3012438e-14, 3.708096e-08, 4.3213472e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, -0.22, 1.30999994],
+"source_tail_blender": [0.0, -0.47999999, 1.34000003],
+"tail": Vector3(4.328251e-14, 0.2617251, 4.2869434e-08)
+},
+"FrontCannon.L": {
+"head": Vector3(-1.9998115e-08, -1.3641267e-07, 2.4083656e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.125, -0.30500001, 0.47],
+"source_tail_blender": [0.122, -0.29699999, 0.16],
+"tail": Vector3(-1.8531749e-08, 0.3101176, 1.7041076e-08)
+},
+"FrontCannon.R": {
+"head": Vector3(-2.9056618e-08, -1.6162984e-08, 1.0489886e-07),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.142, -0.31799999, 0.47],
+"source_tail_blender": [-0.13600001, -0.31299999, 0.16],
+"tail": Vector3(-2.1434559e-08, 0.3100983, 1.0096038e-07)
+},
+"FrontForearm.L": {
+"head": Vector3(-6.267802e-09, -1.3932586e-07, -2.0721924e-09),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.14, -0.34, 0.87],
+"source_tail_blender": [0.125, -0.30500001, 0.47],
+"tail": Vector3(-4.7148214e-09, 0.40180826, 1.1355483e-08)
+},
+"FrontForearm.R": {
+"head": Vector3(-1.292999e-08, 7.201179e-08, 5.4345836e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.15000001, -0.34999999, 0.87],
+"source_tail_blender": [-0.142, -0.31799999, 0.47],
+"tail": Vector3(-2.094241e-08, 0.40135768, 7.082291e-08)
+},
+"FrontHoof.L": {
+"head": Vector3(-1.146644e-08, -9.837773e-08, 3.1215727e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.122, -0.29699999, 0.16],
+"source_tail_blender": [0.13, -0.36000001, 0.02],
+"tail": Vector3(-1.683831e-08, 0.15373018, 2.9014766e-08)
+},
+"FrontHoof.R": {
+"head": Vector3(-1.7561e-08, -5.316916e-09, 1.4229632e-07),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.13600001, -0.31299999, 0.16],
+"source_tail_blender": [-0.14, -0.38, 0.02],
+"tail": Vector3(-2.0917522e-08, 0.15525784, 1.289323e-07)
+},
+"FrontScapula.L": {
+"head": Vector3(4.4733248e-08, 2.7193396e-08, 8.858764e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.09, -0.36000001, 1.45000005],
+"source_tail_blender": [0.14, -0.51999998, 1.13],
+"tail": Vector3(1.6689311e-08, 0.36124784, 9.487046e-08)
+},
+"FrontScapula.R": {
+"head": Vector3(2.5302212e-08, 8.2648675e-08, 7.323864e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.09, -0.36000001, 1.45000005],
+"source_tail_blender": [-0.14, -0.52999997, 1.13],
+"tail": Vector3(2.6300537e-08, 0.3657869, 8.5195474e-08)
+},
+"FrontShoulder.L": {
+"head": Vector3(-1.0684711e-08, -8.989392e-08, -5.997952e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.14, -0.51999998, 1.13],
+"source_tail_blender": [0.14, -0.43000001, 1.0],
+"tail": Vector3(-9.506669e-09, 0.15811378, -4.127422e-08)
+},
+"FrontShoulder.R": {
+"head": Vector3(-2.8926891e-08, 1.13701795e-07, 5.1696777e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.14, -0.52999997, 1.13],
+"source_tail_blender": [-0.14500001, -0.44, 1.0],
+"tail": Vector3(-3.0762074e-08, 0.15819302, 3.9166565e-08)
+},
+"FrontUpperArm.L": {
+"head": Vector3(-2.358217e-08, -8.7399215e-08, -6.133191e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.14, -0.51999998, 1.13],
+"source_tail_blender": [0.14, -0.34, 0.87],
+"tail": Vector3(-2.476021e-08, 0.31622767, -5.6808997e-08)
+},
+"FrontUpperArm.R": {
+"head": Vector3(-1.7248109e-08, 6.338932e-09, 5.1920296e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.14, -0.52999997, 1.13],
+"source_tail_blender": [-0.15000001, -0.34999999, 0.87],
+"tail": Vector3(-1.4184533e-08, 0.31638584, 3.5655166e-08)
+},
+"HindCannon.L": {
+"head": Vector3(8.187114e-09, -1.6964522e-08, -3.976695e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.16500001, 0.95999998, 0.52999997],
+"source_tail_blender": [0.17200001, 0.935, 0.17],
+"tail": Vector3(1.0099836e-08, 0.36093456, -3.177715e-08)
+},
+"HindCannon.R": {
+"head": Vector3(2.0114523e-09, 4.9357656e-08, -1.1638722e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.13699999, 0.91000003, 0.52999997],
+"source_tail_blender": [-0.14300001, 0.87800002, 0.17],
+"tail": Vector3(1.4320417e-08, 0.36146894, 7.2711894e-09)
+},
+"HindHip.L": {
+"head": Vector3(2.1635238e-08, 8.970956e-08, -6.24732e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.15000001, 0.80000001, 1.22000003],
+"source_tail_blender": [0.16500001, 0.70000005, 1.07000005],
+"tail": Vector3(3.223664e-08, 0.18090051, -7.830445e-08)
+},
+"HindHip.R": {
+"head": Vector3(6.981592e-09, -5.3141726e-08, -5.957295e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.15000001, 0.77999997, 1.22000003],
+"source_tail_blender": [-0.16, 0.66999996, 1.07000005],
+"tail": Vector3(1.2899998e-08, 0.18627922, -8.309795e-08)
+},
+"HindHoof.L": {
+"head": Vector3(9.9977635e-09, -2.4801233e-08, -5.9583094e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.17200001, 0.935, 0.17],
+"source_tail_blender": [0.19, 0.86000001, 0.02],
+"tail": Vector3(1.4975624e-08, 0.1686682, -6.584218e-08)
+},
+"HindHoof.R": {
+"head": Vector3(-1.27505695e-08, 3.585318e-08, -9.970609e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.14300001, 0.87800002, 0.17],
+"source_tail_blender": [-0.16, 0.77999997, 0.02],
+"tail": Vector3(-1.5869677e-08, 0.17998055, -9.583467e-08)
+},
+"HindShin.L": {
+"head": Vector3(-1.1682622e-08, 7.786169e-08, 3.172613e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.18000001, 0.60000002, 0.92000002],
+"source_tail_blender": [0.16500001, 0.95999998, 0.52999997],
+"tail": Vector3(-1.4721848e-08, 0.5309659, -1.2536143e-08)
+},
+"HindShin.R": {
+"head": Vector3(6.9563697e-09, -5.4492485e-08, 3.3505334e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.17, 0.56, 0.92000002],
+"source_tail_blender": [-0.13699999, 0.91000003, 0.52999997],
+"tail": Vector3(5.610959e-09, 0.5250608, 2.5931312e-08)
+},
+"HindThigh.L": {
+"head": Vector3(4.7552134e-10, 8.0843364e-08, -2.7427527e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.15000001, 0.80000001, 1.22000003],
+"source_tail_blender": [0.18000001, 0.60000002, 0.92000002],
+"tail": Vector3(2.0666162e-09, 0.36180097, -3.8131954e-08)
+},
+"HindThigh.R": {
+"head": Vector3(2.2131657e-09, -8.99476e-08, -1.6024304e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.15000001, 0.77999997, 1.22000003],
+"source_tail_blender": [-0.17, 0.56, 0.92000002],
+"tail": Vector3(-6.7162444e-09, 0.37255856, -4.2754188e-08)
+},
+"Neck1": {
+"head": Vector3(3.3662373e-14, 5.146332e-08, -1.1695441e-07),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, -0.47999999, 1.34000003],
+"source_tail_blender": [0.0, -0.68000001, 1.5],
+"tail": Vector3(5.2568857e-14, 0.256125, -1.2903251e-07)
+},
+"Neck2": {
+"head": Vector3(2.4001504e-14, -6.2593905e-08, -1.0766027e-07),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, -0.68000001, 1.5],
+"source_tail_blender": [0.0, -0.89999998, 1.67999995],
+"tail": Vector3(1.8495653e-15, 0.28425327, -9.636659e-08)
+},
+"Pelvis": {
+"head": Vector3(-6.6014665e-15, -5.2579608e-08, -1.0347769e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 0.55000001, 1.29999995],
+"source_tail_blender": [0.0, 1.0, 1.32000005],
+"tail": Vector3(-6.4054753e-15, 0.45044422, -1.2485226e-08)
+},
+"R_Chest": {
+"head": Vector3(2.541475e-16, -1.7900108e-08, 2.5070271e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 0.2, 1.79999995],
+"source_tail_blender": [0.0, 0.20999999, 2.0],
+"tail": Vector3(2.9791345e-16, 0.20024984, 2.4292635e-08)
+},
+"R_Clavicle.L": {
+"head": Vector3(1.7997234e-08, 2.9667662e-08, 8.387882e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.05, 0.20999999, 1.96000004],
+"source_tail_blender": [0.20999999, 0.20999999, 1.92999995],
+"tail": Vector3(1.845206e-08, 0.16278824, 8.298442e-08)
+},
+"R_Clavicle.R": {
+"head": Vector3(-1.5270412e-08, 1.2443761e-08, -1.1497772e-07),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.05, 0.20999999, 1.96000004],
+"source_tail_blender": [-0.20999999, 0.22, 1.92999995],
+"tail": Vector3(-1.0430986e-08, 0.16309507, -1.09339354e-07)
+},
+"R_Foot.L": {
+"head": Vector3(-4.8577817e-08, 1.2901529e-07, -2.3603993e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.37, -0.09, 0.86000001],
+"source_tail_blender": [0.41, -0.23999999, 0.80000001],
+"tail": Vector3(-6.337339e-08, 0.16643329, -3.0961623e-08)
+},
+"R_Foot.R": {
+"head": Vector3(-3.9041044e-08, 3.5613773e-08, 3.2484532e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.41, -0.09, 0.87],
+"source_tail_blender": [-0.46000001, -0.31, 0.80000001],
+"tail": Vector3(-4.1508667e-08, 0.23622027, 3.315537e-08)
+},
+"R_Forearm.L": {
+"head": Vector3(2.610297e-08, 2.3178483e-08, -6.41986e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.31, 0.2, 1.71000004],
+"source_tail_blender": [0.25999999, 0.02, 1.71000004],
+"tail": Vector3(1.7856754e-08, 0.18681543, -6.5590484e-08)
+},
+"R_Forearm.R": {
+"head": Vector3(6.5941532e-09, 6.638004e-08, -5.648605e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.37, 0.2, 1.74000001],
+"source_tail_blender": [-0.33000001, -0.06, 1.69000006],
+"tail": Vector3(8.077296e-09, 0.2677686, -4.8776617e-08)
+},
+"R_Hand.L": {
+"head": Vector3(-1.5240085e-08, -9.692454e-09, -5.3329057e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.25999999, 0.02, 1.71000004],
+"source_tail_blender": [0.08, -0.1, 1.65999997],
+"tail": Vector3(-2.2500716e-08, 0.222036, -4.41306e-08)
+},
+"R_Hand.R": {
+"head": Vector3(2.6150955e-08, 2.5468823e-08, 4.5824667e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.33000001, -0.06, 1.69000006],
+"source_tail_blender": [-0.22, -0.15000001, 1.64999998],
+"tail": Vector3(2.7558153e-08, 0.14764829, 4.5644395e-08)
+},
+"R_Hips": {
+"head": Vector3(-1.6342483e-15, -1.7821789e-07, 3.3974647e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 0.14, 1.5],
+"source_tail_blender": [0.0, 0.18000001, 1.62],
+"tail": Vector3(-1.3646031e-15, 0.12649089, 3.044828e-08)
+},
+"R_Neck": {
+"head": Vector3(-3.9644302e-16, 7.772612e-09, -1.3440007e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 0.20999999, 2.0],
+"source_tail_blender": [0.0, 0.19, 2.0999999],
+"tail": Vector3(5.9267e-16, 0.10198027, -2.1217556e-08)
+},
+"R_Shin.L": {
+"head": Vector3(-5.9167814e-08, 6.4412276e-08, 7.290475e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.36000001, -0.05, 1.28999996],
+"source_tail_blender": [0.37, -0.09, 0.86000001],
+"tail": Vector3(-4.8675233e-08, 0.43197227, 6.443262e-08)
+},
+"R_Shin.R": {
+"head": Vector3(2.1273106e-08, 1.969025e-07, 4.2879e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.38999999, -0.07, 1.28999996],
+"source_tail_blender": [-0.41, -0.09, 0.87],
+"tail": Vector3(-2.0209692e-09, 0.42095143, 5.426351e-08)
+},
+"R_Spine": {
+"head": Vector3(-2.2425353e-16, 4.9533085e-08, 1.2561928e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 0.18000001, 1.62],
+"source_tail_blender": [0.0, 0.2, 1.79999995],
+"tail": Vector3(-1.9366536e-16, 0.18110766, 2.279064e-08)
+},
+"R_Thigh.L": {
+"head": Vector3(7.1078496e-08, 4.171681e-08, -1.314462e-07),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.12, 0.1, 1.47000003],
+"source_tail_blender": [0.36000001, -0.05, 1.28999996],
+"tail": Vector3(6.309631e-08, 0.33541033, -1.3231723e-07)
+},
+"R_Thigh.R": {
+"head": Vector3(-6.884336e-08, 3.73676e-09, -2.98996e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.12, 0.1, 1.47000003],
+"source_tail_blender": [-0.38999999, -0.07, 1.28999996],
+"tail": Vector3(-6.642289e-08, 0.36633322, -4.1678568e-08)
+},
+"R_UpperArm.L": {
+"head": Vector3(7.356594e-08, 7.647804e-08, 2.8564795e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.20999999, 0.20999999, 1.92999995],
+"source_tail_blender": [0.31, 0.2, 1.71000004],
+"tail": Vector3(7.747417e-08, 0.24186765, 2.4509223e-08)
+},
+"R_UpperArm.R": {
+"head": Vector3(7.741623e-08, 1.5746738e-07, 1.2050618e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.20999999, 0.22, 1.92999995],
+"source_tail_blender": [-0.37, 0.2, 1.74000001],
+"tail": Vector3(5.0250772e-08, 0.24919881, 1.8681554e-08)
+},
+"Saddle": {
+"head": Vector3(6.158539e-16, 1.7774456e-08, 2.17557e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 0.14, 1.39999998],
+"source_tail_blender": [0.0, 0.14, 1.5],
+"tail": Vector3(1.9895737e-15, 0.10000002, 2.1010642e-08)
+},
+"Spine1": {
+"head": Vector3(-1.2816183e-15, 9.388448e-08, -6.206209e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 0.55000001, 1.29999995],
+"source_tail_blender": [0.0, 0.15000001, 1.28999996],
+"tail": Vector3(-1.2141038e-15, 0.40012503, -6.264504e-08)
+},
+"Spine2": {
+"head": Vector3(3.402972e-15, -8.270128e-09, -1.08245295e-07),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 0.15000001, 1.28999996],
+"source_tail_blender": [0.0, -0.22, 1.30999994],
+"tail": Vector3(3.7254343e-15, 0.3705401, -1.070002e-07)
+},
+"Sword": {
+"head": Vector3(-4.815651e-08, 4.3024144e-08, 5.288573e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [-0.255, -0.15000001, 1.66999996],
+"source_tail_blender": [-0.23999999, -0.63, 2.4000001],
+"tail": Vector3(-6.0573896e-08, 0.87379867, 7.825714e-08)
+},
+"Tail1": {
+"head": Vector3(2.2202264e-16, -8.691149e-08, 5.658905e-09),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 1.02999997, 1.29999995],
+"source_tail_blender": [0.0, 1.07303333, 1.15797329],
+"tail": Vector3(-1.8869076e-15, 0.14840272, 3.8463517e-09)
+},
+"Tail2": {
+"head": Vector3(6.910306e-15, -1.1980651e-07, 4.4969955e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 1.07303333, 1.15797329],
+"source_tail_blender": [0.0, 1.05878091, 1.01091802],
+"tail": Vector3(7.464722e-15, 0.14774403, 4.3895472e-08)
+},
+"Tail3": {
+"head": Vector3(6.450484e-15, -5.580105e-08, 5.0717613e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 1.05878091, 1.01091802],
+"source_tail_blender": [0.0, 1.05043447, 0.86307639],
+"tail": Vector3(6.183919e-15, 0.14807683, 5.2539338e-08)
+},
+"Tail4": {
+"head": Vector3(2.2106457e-15, -4.1943593e-08, 8.7275055e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 1.05043447, 0.86307639],
+"source_tail_blender": [0.0, 1.06370807, 0.71477222],
+"tail": Vector3(2.4862187e-15, 0.14889678, 8.5459604e-08)
+},
+"Tail5": {
+"head": Vector3(4.077944e-15, -3.0653275e-08, -1.1727099e-09),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 1.06370807, 0.71477222],
+"source_tail_blender": [0.0, 1.07285941, 0.56624293],
+"tail": Vector3(4.103236e-15, 0.14881074, -2.3765492e-09)
+},
+"Tail6": {
+"head": Vector3(-1.3042882e-14, -7.288657e-09, 6.15406e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 1.07285941, 0.56624293],
+"source_tail_blender": [0.0, 1.07786489, 0.41746068],
+"tail": Vector3(-1.2954674e-14, 0.14886625, 6.0346494e-08)
+},
+"Tail7": {
+"head": Vector3(-1.3731199e-14, -2.4046187e-08, -1.0922564e-07),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 1.07786489, 0.41746068],
+"source_tail_blender": [0.0, 1.08729887, 0.26886281],
+"tail": Vector3(-1.313328e-14, 0.14889684, -1.03677635e-07)
+},
+"Tail8": {
+"head": Vector3(-3.4835935e-16, -2.4852945e-08, 2.8180906e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 1.08729887, 0.26886281],
+"source_tail_blender": [0.0, 1.08741701, 0.12],
+"tail": Vector3(1.2371211e-16, 0.14886267, 2.428969e-08)
+},
+"head": {
+"head": Vector3(-6.54084e-15, -1.6217585e-07, 2.993735e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 0.19, 2.0999999],
+"source_tail_blender": [0.0, 0.15000001, 2.38000011],
+"tail": Vector3(-8.064839e-15, 0.28284267, 3.2658708e-08)
+},
+"head_h": {
+"head": Vector3(1.1263555e-14, 8.1854886e-08, 8.883542e-08),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, -0.89999998, 1.67999995],
+"source_tail_blender": [0.0, -1.15999997, 1.33000004],
+"tail": Vector3(1.460255e-14, 0.43600455, 9.573413e-08)
+},
+"root": {
+"head": Vector3(0, 0, 0),
+"provenance": "Owner rig-facts bone head/tail; Blender (x,y,z) to glTF (x,z,-y), then actual imported named Skin inverse bind. Not posed bone origins.",
+"source_head_blender": [0.0, 0.0, 0.0],
+"source_tail_blender": [0.0, -0.40000001, 0.0],
+"tail": Vector3(0, 0.4, 0)
+}
+}
+sole_patches = {
+"FrontHoof.L": {
+"bind_frame": Transform3D(-0.66596746, -0.0045564426, 0.74596685, -0.0069924183, 0.99997556, -0.0001345795, -0.745948, -0.0053057377, -0.6659831, 0.11900964, 0.0059881513, 0.37330735),
+"bone_from_sole": Transform3D(0.66528165, -0.052499358, -0.744744, -0.33398455, -0.9130749, -0.2339837, -0.6677234, 0.40439817, -0.6249863, 0.011771819, 0.1713721, 0.006662718),
+"max_frame_plane_residual_m": 0.00254328982305066,
+"provenance": "Fixed underside triangles within the retained dominant-hoof/lowest-5mm diagnostic seed. Exact triangle-position correspondence resolves native import reindexing; frame uses largest triangle edge, upward-facing geometric normal and centroid. Anatomical hoof is the named Skin joint. No stance/airborne interval, physical ground or tolerance inferred.",
+"raw_seed_vertices": PackedInt32Array(1021, 1526, 1527, 1534, 1535, 1536, 5520, 5521, 5522, 5523, 5524, 5540, 5541, 5542, 20629, 20630, 20631, 20632, 20658, 20659, 20660, 20661, 20662),
+"raw_triangles": PackedInt32Array(17835, 17836, 17837, 17839, 17851, 17860, 17861, 17864),
+"reference_barycentric": Vector3(0.33333334, 0.33333334, 0.33333334),
+"reference_positions": [[0.1474103, 0.00610669562593102, 0.37125963], [0.105681315, 0.00566855631768703, 0.32451913], [0.10393728315830232, 0.00618920195847749, 0.42414325]],
+"reference_triangle": 19179,
+"role": "measured_material_patch_not_stance",
+"surface": 0,
+"triangles": PackedInt32Array(19168, 19178, 19154, 19179, 19172, 19175, 19174, 19155),
+"vertices": PackedInt32Array(22928, 22929, 14139, 22928, 14133, 22932, 22919, 22921, 14125, 22932, 14134, 22931, 22929, 22931, 22930, 22931, 22929, 22932, 22932, 22929, 22928, 14124, 14125, 22921)
+},
+"FrontHoof.R": {
+"bind_frame": Transform3D(0.25491443, 0.0015373303, -0.9669624, 0.022716992, 0.99971324, 0.007578142, 0.96669674, -0.023898255, 0.2548064, -0.14538291, 0.0052881585, 0.43422154),
+"bone_from_sole": Transform3D(-0.25416142, 0.02701491, 0.96678424, 0.39011663, -0.9118196, 0.12803824, 0.88499206, 0.40970105, 0.2212105, 0.004960543, 0.19206133, 0.042500526),
+"max_frame_plane_residual_m": 0.00458948289779559,
+"provenance": "Fixed underside triangles within the retained dominant-hoof/lowest-5mm diagnostic seed. Exact triangle-position correspondence resolves native import reindexing; frame uses largest triangle edge, upward-facing geometric normal and centroid. Anatomical hoof is the named Skin joint. No stance/airborne interval, physical ground or tolerance inferred.",
+"raw_seed_vertices": PackedInt32Array(1525, 1568, 1569, 1570, 2670, 5518, 5519, 21261, 21262, 21263, 21264, 21271, 21272, 21273, 21274, 21277, 21278, 21279, 21292, 21293, 21294, 21295, 21296, 21299, 21300, 21308, 21309, 21312, 21313),
+"raw_triangles": PackedInt32Array(18829, 18837, 18838, 18848, 18852, 18856, 18857, 18862, 18863, 18866),
+"reference_barycentric": Vector3(0.33333334, 0.33333334, 0.33333334),
+"reference_positions": [[-0.17026742, 0.00427132891491055, 0.39008468], [-0.15065576, 0.00601904420182108, 0.4644568], [-0.11522557586431505, 0.0055741025134921, 0.4481231272220611]],
+"reference_triangle": 19533,
+"role": "measured_material_patch_not_stance",
+"surface": 0,
+"triangles": PackedInt32Array(19522, 19531, 19542, 19537, 19523, 19530, 19532, 19533, 19526, 19524),
+"vertices": PackedInt32Array(14339, 23160, 23158, 14347, 23163, 14346, 14350, 14351, 23167, 14340, 23158, 23164, 23160, 14343, 23158, 23162, 14346, 23163, 23163, 23164, 23162, 23162, 23164, 23158, 23162, 23158, 23161, 23161, 23158, 14343)
+},
+"HindHoof.L": {
+"bind_frame": Transform3D(0.104465246, 0.011190115, -0.9944656, -0.0011624446, 0.9999374, 0.011129574, 0.9945279, -6.642548e-06, 0.10447171, 0.22332047, 0.00394318, -0.87877524),
+"bone_from_sole": Transform3D(-0.10358269, -0.13024816, 0.98605573, 0.4544093, -0.8880715, -0.06957106, 0.8847504, 0.44086578, 0.15117489, -0.031170016, 0.17815511, -0.025671301),
+"max_frame_plane_residual_m": 0.00415441226374943,
+"provenance": "Fixed underside triangles within the retained dominant-hoof/lowest-5mm diagnostic seed. Exact triangle-position correspondence resolves native import reindexing; frame uses largest triangle edge, upward-facing geometric normal and centroid. Anatomical hoof is the named Skin joint. No stance/airborne interval, physical ground or tolerance inferred.",
+"raw_seed_vertices": PackedInt32Array(1867, 1868, 1869, 1880, 1881, 6157, 6186, 6187, 6188, 6189, 6190, 14259, 14260, 14261, 14266, 14328, 14329, 14330, 14331, 14332),
+"raw_triangles": PackedInt32Array(9708, 9711, 9714, 9715, 9716, 9844, 9845),
+"reference_barycentric": Vector3(0.33333334, 0.33333334, 0.33333334),
+"reference_positions": [[0.2122423, 0.00406691804528236, -0.9142972230911256], [0.21814059, 0.0040012845, -0.8581445], [0.2395785301923752, 0.00376133830286562, -0.86388403]],
+"reference_triangle": 8706,
+"role": "measured_material_patch_not_stance",
+"surface": 0,
+"triangles": PackedInt32Array(15699, 8708, 8706, 8701, 8702, 8717, 15700),
+"vertices": PackedInt32Array(11283, 21254, 21253, 18223, 18224, 18222, 18222, 11250, 18219, 11250, 18217, 18219, 18217, 11250, 18220, 18227, 18224, 11254, 11281, 21254, 11283)
+},
+"HindHoof.R": {
+"bind_frame": Transform3D(0.2500612, 0.07226007, -0.96552986, 0.010976824, 0.99693555, 0.07745334, 0.9681678, -0.029966526, 0.24850172, -0.18340564, 0.0014742593, -0.754617),
+"bone_from_sole": Transform3D(-0.24723427, 0.040466927, 0.96811014, 0.4944038, -0.85401046, 0.16195768, 0.8333312, 0.518678, 0.1911339, 0.021170504, 0.21145225, 0.009831774),
+"max_frame_plane_residual_m": 0.00855071470629583,
+"provenance": "Fixed underside triangles within the retained dominant-hoof/lowest-5mm diagnostic seed. Exact triangle-position correspondence resolves native import reindexing; frame uses largest triangle edge, upward-facing geometric normal and centroid. Anatomical hoof is the named Skin joint. No stance/airborne interval, physical ground or tolerance inferred.",
+"raw_seed_vertices": PackedInt32Array(1863, 1864, 6140, 6141, 6142, 6143, 6144, 6145, 6146, 6147, 15577, 15578, 15582, 15583, 15584, 15585, 15586, 15587, 15588, 15589, 15590, 15591, 15597, 15598, 15621, 15622, 15623),
+"raw_triangles": PackedInt32Array(1732, 11009, 11022, 11026, 11027, 11028, 11029, 11034, 11035, 11036),
+"reference_barycentric": Vector3(0.33333334, 0.33333334, 0.33333334),
+"reference_positions": [[-0.20671287, 0.00188972684554755, -0.7969972], [-0.1880843, 0.00270745670422911, -0.7248725], [-0.15541972, -0.00017440547526348, -0.74198115]],
+"reference_triangle": 8654,
+"role": "measured_material_patch_not_stance",
+"surface": 0,
+"triangles": PackedInt32Array(8652, 8658, 8664, 8657, 8656, 8654, 8655, 8661, 8653, 8663),
+"vertices": PackedInt32Array(18193, 18194, 11644, 11643, 18198, 18197, 11642, 18201, 18200, 18197, 18198, 18195, 18195, 18194, 18197, 18195, 11644, 18194, 18195, 18196, 11644, 11642, 18197, 18194, 18194, 18193, 11645, 18194, 11645, 11642)
+}
+}
+observations = {
+"native_flat": {
+"authority": "Actual imported native query; raw material vertex 21308 maps to native seam copies 14340/14354",
+"bind_position": Vector3(-0.12787002, 0.008773544, 0.47035378),
+"contact_disposition": "UNRESOLVED",
+"evidence_sha256": "dfe208af5e53a0b3e753a31a99a3e439c6feff37fa14a6f2a5e9ec96c5daa02e",
+&"exact_decimals": {
+"model_y": "-0.0592770278453827",
+"seat_m": "0.0360048115253448",
+"separation_m": "-0.023272216320037897"
+},
+"hoof": "FrontHoof.R",
+"model_y": -0.0592770278453827,
+"native_vertices": PackedInt32Array(14340, 14354),
+"phase": 0.73,
+"placement_domain": "independent_flat_seat_diagnostic",
+"seat_m": 0.0360048115253448,
+"separation_m": -0.02327221632003789,
+"uncertainty_um": null,
+"vertex": 21308
+},
+"native_terrain": {
+"contact_disposition": "UNRESOLVED",
+"evidence_sha256": "cb8b63d1f7a6b47c948a0d07bec369d49db36a6828531c68711c65bdeb271840",
+&"exact_decimals": {
+"separation_m": "-0.0248103348948813",
+"separation_world": "-0.504600524902344"
+},
+"figure": 0.0,
+"ground_authority": "Rendered-frame query of actual terrain heightmap; rendered Terrain3D/LOD discrepancy unknown",
+"hoof": "FrontHoof.R",
+"native_root_transform_display": "X=(-20.34851,2.052708,-.032453); Y=(2.052709,20.33832,-.644829); Z=(-.032447,-.644829,-20.44162); O=(-5301.642,103.057,10564.56)",
+"phase": 0.73,
+"placement_domain": "legacy_tilted_seat",
+"reported_conversion_divisor": 20.338319778442397,
+"row": "old-march-p073-yaw0",
+"scale_precision": "Display string rounded; exact uniform scale and uncertainty absent. Original separation_m uses the legacy basis-Y.y divisor, not uniform scale; retained verbatim, not silently promoted.",
+"separation_m": -0.0248103348948813,
+"separation_world": -0.504600524902344,
+"uncertainty_um": null,
+"uniform_scale_conversion_estimate_m": -0.02467265855209607,
+"uniform_scale_display": 20.45181,
+"yaw_evidence": "yaw0/90/180 rows change camera only; one body transform, not three placement cases"
+},
+"raw_flat": {
+"authority": "Frozen raw-GLB FK/LBS witness; raw vertex numbering; not native interpolation",
+"contact_disposition": "UNRESOLVED",
+"evidence_sha256": "e6071e563d2fd731fffd018f939e59a123d7c97fe62cc21ff9ff4305ca03375c",
+&"exact_decimals": {
+"model_y": "-0.05927695958939805",
+"seat_m": "0.0360048115253448",
+"separation_m": "-0.023272148064053248"
+},
+"hoof": "FrontHoof.R",
+"model_y": -0.05927695958939805,
+"phase": 0.73,
+"placement_domain": "independent_flat_seat_diagnostic",
+"seat_m": 0.0360048115253448,
+"separation_m": -0.02327214806405324,
+"uncertainty_um": null,
+"vertex": 21308
+}
+}
+support_intervals = Array[Dictionary]([])
+airborne_intervals = Array[Dictionary]([])
+contact_authority = "UNRESOLVED"
+calibration_sha256 = "d72ca8e53c8794b1be383f3bd7b3cfeb3a7a573316dd169c69d71a3790be23bd"
