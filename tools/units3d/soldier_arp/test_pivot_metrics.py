@@ -379,6 +379,63 @@ class RawMetricsTest(unittest.TestCase):
         self.assertEqual(result['coverage']['outgoing_patches']['valid'], 0)
         self.assertEqual(result['coverage']['anchors']['valid'], 1)
 
+    def test_uncertainty_neighbourhood_must_stay_in_proven_plane(self):
+        for units in [1., .01, 100.]:
+            for contributor in ['position', 'query_coordinate', 'anchor']:
+                raw, cases = raw_control(units=units)
+                h = raw['header']
+                h['budget'] = {'contact_um': 10**12, 'authority': 'synthetic',
+                               'source_sha256': h['provenance']['sha256']}
+                h['uncertainty'][contributor]['value'] = .01
+                h['surfaces'][0]['domain'] = {'xz_min': [-1./units, -1./units],
+                                             'xz_max': [.003/units, 1./units]}
+                if contributor == 'anchor':
+                    h['cases'][0]['patches'][0]['anchors'] = [[.0025/units, 0., 0.]]
+                state = metric.validate_raw_observation(raw, cases)
+                x = .001 if contributor == 'anchor' else .003
+                result = metric.raw_physical_metrics({'mapped': [[x/units, -.002/units, 0.]]}, state, 0, 1.)['mapped']
+                patch = result['patches'][0]
+                self.assertEqual(patch['budget_status'], 'PENDING', (units, contributor))
+                self.assertIsNone(patch['measurements'][0]['upper_bound_model_um'])
+                self.assertEqual(patch['measurements'][0]['coverage'], 'UNCOVERED')
+                self.assertEqual(result['coverage']['status'], 'UNCOVERED')
+                self.assertEqual(result['coverage']['active_patches']['uncovered_ids'], ['sole'])
+                self.assertEqual(result['coverage']['outgoing_patches']['uncovered_ids'], ['sole'])
+                self.assertAlmostEqual(patch['measurements'][0]['signed_world_m'], -.002)
+                if contributor == 'anchor':
+                    self.assertEqual(result['coverage']['valid_vertices'], 1)
+                    self.assertEqual(result['coverage']['anchors']['valid'], 0)
+                else:
+                    self.assertEqual(result['coverage']['valid_vertices'], 0)
+                # The same justified bounds are usable strictly inside the proven domain.
+                h['surfaces'][0]['domain']['xz_max'][0] = 1./units
+                interior = metric.raw_physical_metrics({'mapped': [[x/units, -.002/units, 0.]]}, state, 0, 1.)['mapped']
+                self.assertEqual(interior['patches'][0]['budget_status'], 'WITHIN_FINITE_SAMPLES')
+                self.assertIsNotNone(interior['patches'][0]['measurements'][0]['upper_bound_model_um'])
+
+    def test_unknown_xz_bounds_and_roundoff_cannot_prove_domain_coverage(self):
+        for contributor in ['position', 'query_coordinate', 'anchor']:
+            raw, cases = raw_control()
+            raw['header']['uncertainty'][contributor].update(value=None, reason='unknown neighbourhood')
+            state = metric.validate_raw_observation(raw, cases)
+            result = metric.raw_physical_metrics({'mapped': [[.001, -.002, 0.]]}, state, 0, 1.)['mapped']
+            self.assertEqual(result['coverage']['active_patches']['valid'], 0)
+            self.assertEqual(result['coverage']['outgoing_patches']['valid'], 0)
+            self.assertIsNone(result['patches'][0]['measurements'][0]['upper_bound_model_um'])
+        raw, cases = raw_control()
+        raw['header']['surfaces'][0]['domain']['xz_max'][0] = .003
+        state = metric.validate_raw_observation(raw, cases)
+        result = metric.raw_physical_metrics({'mapped': [[.003, -.002, 0.]]}, state, 0, .5)['mapped']
+        self.assertEqual(result['coverage']['uncovered_vertex_ids'], [0])
+        # A cancelled matrix product still needs its absolute-product placement guard.
+        m = copy.deepcopy(I)
+        m[0][0], m[0][1] = 1e10, -1e10
+        raw, cases = raw_control(m)
+        raw['header']['surfaces'][0]['domain'] = {'xz_min': [-.0005, -10.], 'xz_max': [.0005, 10.]}
+        state = metric.validate_raw_observation(raw, cases)
+        result = metric.raw_physical_metrics({'mapped': [[1., 1., 0.]]}, state, 0, .5)['mapped']
+        self.assertEqual(result['coverage']['uncovered_vertex_ids'], [0])
+
     def test_cli_modes_are_explicit_and_exclusive(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'raw.json'

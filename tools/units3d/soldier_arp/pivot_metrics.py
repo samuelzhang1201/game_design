@@ -346,7 +346,7 @@ def validate_raw_observation(observation, cases):
 
 
 
-def raw_patch_coverage(row, phase, covered, world):
+def raw_patch_coverage(row, phase, anchor_covered, vertex_covered):
     result = {}
     for role in ['anchors', 'active_patches', 'outgoing_patches']:
         identities, valid = [], []
@@ -358,10 +358,10 @@ def raw_patch_coverage(row, phase, covered, world):
             if role == 'anchors':
                 for vertex, anchor in zip(patch['vertices'], patch['anchors']):
                     identities.append({'patch_id': patch['id'], 'vertex_id': vertex})
-                    valid.append(covered(anchor))
+                    valid.append(anchor_covered(anchor))
             else:
                 identities.append(patch['id'])
-                valid.append(all(covered(anchor) and covered(world[vertex])
+                valid.append(all(anchor_covered(anchor) and vertex_covered[vertex]
                                  for vertex, anchor in zip(patch['vertices'], patch['anchors'])))
         result[role] = {'expected': len(identities), 'received': len(identities), 'valid': sum(valid),
                         'uncovered': len(valid)-sum(valid),
@@ -378,10 +378,30 @@ def raw_physical_metrics(points_by_label, state, case_index, phase):
     n = [x/length for x in normal]
     uniform = state['placement_uniformity']['status'] == 'PREDICATE_SATISFIED'
     bounds = {name: term['value'] for name, term in h['uncertainty'].items()}
-    def covered(p):
-        return all(surface['domain']['xz_min'][k] <= p[axis] <= surface['domain']['xz_max'][k]
-                   for k, axis in enumerate([0, 2]))
-    def measure(p, a, model_point):
+    def radius(*names):
+        if any(bounds[name] is None for name in names):
+            return None
+        total_m = math.nextafter(sum(bounds[name] for name in names), math.inf)
+        return math.nextafter(total_m/units, math.inf)
+    position_radius = radius('position', 'query_coordinate')
+    anchor_radius = radius('anchor', 'query_coordinate')
+    def covered(p, error, model_point=None):
+        if error is None or not number(error):
+            return False
+        for k, axis in enumerate([0, 2]):
+            low, high = surface['domain']['xz_min'][k], surface['domain']['xz_max'][k]
+            guard = 256*math.ulp(max(1., abs(p[axis]), abs(low), abs(high)))
+            if model_point is not None:
+                magnitude = sum(abs(m[axis][j]*model_point[j]) for j in range(3)) + abs(m[axis][3])
+                guard += 64*math.ulp(max(1., magnitude))*4
+            spread = math.nextafter(error+guard, math.inf)
+            if not (low <= math.nextafter(p[axis]-spread, -math.inf)
+                    and math.nextafter(p[axis]+spread, math.inf) <= high):
+                return False
+        return True
+    def anchor_covered(anchor):
+        return covered(anchor, anchor_radius)
+    def measure(p, a, model_point, position_covered):
         result = contact(a, p, origin, normal, scale, units)
         height = origin[1] - ((p[0]-origin[0])*n[0] + (p[2]-origin[2])*n[2])/n[1]
         vertical = (p[1]-height)*units
@@ -407,8 +427,8 @@ def raw_physical_metrics(points_by_label, state, case_index, phase):
         result.update(vertical_world_m=vertical, vertical_penetration_world_m=max(0., -vertical),
                       vertical_hover_world_m=max(0., vertical), error_model_um=error/(scale*units)*1e6 if uniform else None,
                       nominal_scale_model_um=None if uniform else error/(scale*units)*1e6,
-                      upper_bound_model_um=(upper+guard)/(scale*units)*1e6 if uniform and known and covered(p) and covered(a) else None,
-                      numeric_guard_world_m=guard, coverage='COMPLETE_FINITE' if covered(p) and covered(a) else 'UNCOVERED')
+                      upper_bound_model_um=(upper+guard)/(scale*units)*1e6 if uniform and known and position_covered and anchor_covered(a) else None,
+                      numeric_guard_world_m=guard, coverage='COMPLETE_FINITE' if position_covered and anchor_covered(a) else 'UNCOVERED')
         require(all(value is None or not isinstance(value, float) or number(value) for value in result.values()),
                 'nonfinite raw physical result')
         return result
@@ -417,14 +437,15 @@ def raw_physical_metrics(points_by_label, state, case_index, phase):
         world = [point(m, p) for p in points]
         require(world and all(all(number(x) for x in p) for p in world), 'nonfinite raw placed points')
         separations = [sum((p[k]-origin[k])*n[k] for k in range(3))*units for p in world]
-        uncovered = [i for i, p in enumerate(world) if not covered(p)]
+        vertex_covered = [covered(p, position_radius, model_point) for p, model_point in zip(world, points)]
+        uncovered = [i for i, ok in enumerate(vertex_covered) if not ok]
         patches, exits = [], []
         for patch in row['patches']:
             active = patch['start'] <= phase < patch['end'] or phase == 1 and patch['end'] == 1
             exiting = phase == patch['end']
             if not active and not exiting:
                 continue
-            values = [measure(world[v], a, points[v]) for v, a in zip(patch['vertices'], patch['anchors'])]
+            values = [measure(world[v], a, points[v], vertex_covered[v]) for v, a in zip(patch['vertices'], patch['anchors'])]
             status = 'PENDING'
             if patch['kind'] == 'swing':
                 status = 'SWING_NO_STANCE_VERDICT'
@@ -439,16 +460,18 @@ def raw_physical_metrics(points_by_label, state, case_index, phase):
                 patches.append(measured)
             if exiting:
                 exits.append(measured)
+        patch_coverage = raw_patch_coverage(row, phase, anchor_covered, vertex_covered)
+        incomplete = bool(uncovered) or any(value['uncovered'] for value in patch_coverage.values())
         worst = min(range(len(world)), key=lambda i: separations[i])
         out[label] = {'whole_mesh_min_signed_world_m': separations[worst],
                       'whole_mesh_max_signed_world_m': max(separations),
                       'whole_mesh_penetration_world_m': max(0., -separations[worst]),
                       'worst_penetration_vertex': worst, 'patches': patches, 'exit_patches': exits,
                       'coverage': {'expected_vertices': len(world), 'received_vertices': len(world),
-                                   'valid_vertices': sum(covered(p) for p in world),
+                                   'valid_vertices': sum(vertex_covered),
                                    'uncovered_vertex_ids': uncovered, 'uncovered_vertices': len(uncovered),
-                                   'status': 'UNCOVERED' if uncovered else 'COMPLETE_FINITE',
-                                   **raw_patch_coverage(row, phase, covered, world)}}
+                                   'status': 'UNCOVERED' if incomplete else 'COMPLETE_FINITE',
+                                   **patch_coverage}}
     if 'source' in out:
         out['introduced_vs_source_world_m'] = {label: [[v['signed_world_m']-s['signed_world_m'],
                     v['slip_world_m']-s['slip_world_m']] for p, q in zip(out[label]['patches'], out['source']['patches'])
