@@ -325,6 +325,23 @@ def _body_inputs(angle, phase, entry_pose=None, exit_pose=None, cycles=3):
     neutral = standing_pose()
     lower = {k: v.copy() for k, v in neutral.items()}
     lower["root"][2, 3] -= 0.075 * min(1.0, abs(angle) / 30.0)
+    # Load the fore contacts twice per stepping cycle; settle before native exit.
+    weight = min(1.0, abs(angle) / 30.0) * smooth(
+        min(1.0, max(0.0, (phase - 0.125) / 0.125))
+    ) * smooth(min(1.0, max(0.0, (0.875 - phase) / 0.125)))
+    beat = (phase - 0.125) * cycles / 0.75
+    lower["root"][2, 3] -= 0.008 * weight * (1 + math.cos(4 * math.pi * beat))
+    # Existing source rig uses local X for pitch; rider response trails the saddle.
+    for name, amplitude, lag in [
+        ("Spine1", 1.5, 0.0),
+        ("Neck1", -1.0, 0.04),
+        ("R_Hips", -1.2, 0.08),
+        ("R_Spine", -0.6, 0.13),
+    ]:
+        half = math.radians(amplitude * weight * math.sin(2 * math.pi * (beat - lag))) / 2
+        lower[name][:3, :3] = lower[name][:3, :3] @ quat(
+            [math.sin(half), 0.0, 0.0, math.cos(half)]
+        )
     # Authored internal vertical motion, no heading or ground-plane translation.
     if phase == 0.0:
         locals = entry
@@ -737,6 +754,13 @@ else:
 
     entry = native_pose(0.37)
     exit = native_pose(0.81)
+    # A turn must not freeze the horse's upper body and rider between footfalls.
+    holds = [
+        _body_inputs(180.0, phase)["authored_pose"]["locals"]
+        for phase in [0.3, 0.35, 0.4]
+    ]
+    for name in ["root", "Spine1", "R_Hips", "R_Spine"]:
+        assert np.max(np.ptp([pose[name] for pose in holds], axis=0)) > 1e-6, name
     count = 0
     for angle in [180.0, -179.999999, 90.0, -90.0, 1e-6, -1e-6]:
         for phase in [0.0, 1e-6, 0.125, 0.25, 0.37, 0.5, 0.875, 1.0 - 1e-6, 1.0]:
