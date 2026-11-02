@@ -2,6 +2,13 @@ extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
+func _assert_eq_lazy(actual: Variant, expected: Variant, context: String = "") -> void:
+	# GUT eagerly formats large equal saves; retain its exact comparison and failure path.
+	if (actual is Dictionary or actual is Array) and typeof(actual) == typeof(expected) and actual == expected:
+		assert_true(true, context)
+	else:
+		assert_eq(actual, expected, context)
+
 func _api() -> GDScript:
 	var path := "res://scripts/engine/unit_bodies.gd"
 	assert_true(FileAccess.file_exists(path), "passive foundation API exists")
@@ -60,7 +67,7 @@ func _migrate(api: GDScript, f: Dictionary, expected: String) -> Dictionary:
 	var result: Dictionary = api.migrate_candidate(f.repo, f.state)
 	assert_eq(result.keys().size(), 5)
 	assert_eq(result.status, expected, result.get("error", "") + result.get("reason", ""))
-	assert_eq(f.state.to_dict(), before, "source state stays exact")
+	_assert_eq_lazy(f.state.to_dict(), before, "source state stays exact")
 	assert_eq(f.state.rng.to_dict(), rng)
 	if expected == "error":
 		assert_null(result.candidate)
@@ -73,7 +80,7 @@ func _reconcile(api: GDScript, f: Dictionary, previous: Variant, expected: Strin
 	var before: Dictionary = f.state.to_dict()
 	var result: Dictionary = api.reconcile_candidate(f.repo, f.state, f.code, previous)
 	assert_eq(result.status, expected, result.reason)
-	assert_eq(f.state.to_dict(), before)
+	_assert_eq_lazy(f.state.to_dict(), before)
 	assert_eq(f.state.rng.to_dict(), before.rng)
 	assert_eq(result.keys().size(), 5)
 	if expected in ["error", "deferred"]:
@@ -89,7 +96,7 @@ func test_queries_are_detached_and_never_materialize() -> void:
 	var rows: Array = api.rows(null, f.state, f.code)
 	rows[0].path_m[0][0] = -99
 	rows[0].extension.receipt.append("changed")
-	assert_eq(f.state.to_dict(), before)
+	_assert_eq_lazy(f.state.to_dict(), before)
 	assert_eq(api.rows(null, f.state, "unknown"), [])
 	var extent: Vector2i = api.footprint(f.repo, f.code, f.state)
 	assert_true(extent.x > 0 and extent.y > 0)
@@ -140,11 +147,11 @@ func test_counts_survivors_and_retired_slots() -> void:
 	assert_eq(retry.status, "needs_placement", "partial-candidate retry is idempotent: " + retry.error)
 	var partial_saved: Dictionary = growth.candidate.to_dict()
 	var partial_back := GameState.from_dict(JSON.parse_string(JSON.stringify(partial_saved)), false)
-	assert_eq(partial_back.to_dict(), partial_saved, "JSON preserves the partial candidate exactly")
+	_assert_eq_lazy(partial_back.to_dict(), partial_saved, "JSON preserves the partial candidate exactly")
 	var json_retry: Dictionary = api.migrate_candidate(f.repo, partial_back)
 	assert_eq(json_retry.status, "needs_placement", "JSON partial retry is idempotent: " + json_retry.error)
 	if retry.candidate != null:
-		assert_eq(retry.candidate.to_dict(), growth.candidate.to_dict())
+		_assert_eq_lazy(retry.candidate.to_dict(), growth.candidate.to_dict())
 		assert_eq(retry.placement_requests, growth.placement_requests)
 
 	var small := _fixture(1)
@@ -176,7 +183,7 @@ func test_candidate_migration_isolated_and_idempotent() -> void:
 		var back := GameState.from_dict(JSON.parse_string(JSON.stringify(saved)), false)
 		var again: Dictionary = api.migrate_candidate(f.repo, back)
 		assert_eq(again.status, "complete")
-		assert_eq(again.candidate.to_dict(), saved)
+		_assert_eq_lazy(again.candidate.to_dict(), saved)
 		candidate.world["detachment"] = {"nested": [1]}
 		assert_false(f.state.world.has("detachment"))
 		var detached: Array = api.rows(null, candidate, f.code)
@@ -214,7 +221,7 @@ func test_legacy_missing_pose_requests() -> void:
 	var before := fresh.to_dict()
 	var result: Dictionary = api.migrate_candidate(repo, fresh)
 	assert_eq(result.status, "needs_placement")
-	assert_eq(fresh.to_dict(), before)
+	_assert_eq_lazy(fresh.to_dict(), before)
 	assert_eq(fresh.rng.to_dict(), result.candidate.rng.to_dict())
 	assert_false(result.candidate.military_migration.has("body_version"))
 	var previous := ""
@@ -296,7 +303,7 @@ func _transfer(api: GDScript, state: GameState, code: String, from_id: int, to_i
 	var before := state.to_dict()
 	var result: Dictionary = api.transfer_candidate(state, code, from_id, to_id)
 	assert_eq(result.status, expected, result.reason)
-	assert_eq(state.to_dict(), before)
+	_assert_eq_lazy(state.to_dict(), before)
 	assert_eq(state.rng.to_dict(), before.rng)
 	return result
 
@@ -321,7 +328,7 @@ func test_candidate_transfer_lifecycle() -> void:
 	var entered := _transfer(api, valid.candidate, f.code, 0, 1, "complete")
 	assert_eq(entered.candidate.battles[0].terms, b.terms)
 	var replay := _transfer(api, entered.candidate, f.code, 0, 1, "complete")
-	assert_eq(replay.candidate.to_dict(), entered.candidate.to_dict())
+	_assert_eq_lazy(replay.candidate.to_dict(), entered.candidate.to_dict())
 	entered.candidate.battles[0].group_anchor_m = {f.code: [17, 23]}
 	entered.candidate.battles[0].group_facing = {f.code: 90}
 	var merged := _transfer(api, entered.candidate, f.code, 1, 2, "complete")
@@ -436,7 +443,7 @@ func test_frozen_candidate_defers_without_replay() -> void:
 			assert_eq(rows[i].path_m, saved_rows[i * 2].path_m)
 		assert_eq(converted.candidate.regiments[f.code].group_next_slot, 27)
 		var back := GameState.from_dict(JSON.parse_string(JSON.stringify(converted.candidate.to_dict())), false)
-		assert_eq(api.migrate_candidate(f.repo, back).candidate.to_dict(), converted.candidate.to_dict())
+		_assert_eq_lazy(api.migrate_candidate(f.repo, back).candidate.to_dict(), converted.candidate.to_dict())
 
 	var partial := _fixture(999)
 	partial.state.military_migration.erase("body_version")
@@ -462,13 +469,13 @@ func test_passive_serialization_and_production_route_unchanged() -> void:
 	var fresh := SuiteData.campaign(repo, 319)
 	var saved := fresh.to_dict()
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(saved)), false)
-	assert_eq(back.to_dict(), saved)
+	_assert_eq_lazy(back.to_dict(), saved)
 	for entry: Dictionary in back.regiments.values():
 		assert_false(entry.has("body_groups"))
 	assert_false(back.military_migration.has("body_version"))
 	var f := _fixture(100)
 	back = GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())), false)
-	assert_eq(back.to_dict(), f.state.to_dict())
+	_assert_eq_lazy(back.to_dict(), f.state.to_dict())
 	f.state.military_migration.body_version = 1.5
 	back = GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())), false)
 	assert_eq(back.military_migration.body_version, 1.5)
@@ -509,7 +516,7 @@ func _reconciliation_boundaries() -> void:
 			var result := _reconcile(api, f, pair.x, expected)
 			var replay := _reconcile(api, f, float(pair.x), expected)
 			if result.candidate == null: continue
-			assert_eq(replay.candidate.to_dict(), result.candidate.to_dict())
+			_assert_eq_lazy(replay.candidate.to_dict(), result.candidate.to_dict())
 			var saved_rows: Array = api.rows(null, result.candidate, f.code)
 			assert_eq(saved_rows.size(), mini(original.size(), target_count))
 			for i: int in saved_rows.size():
@@ -527,7 +534,7 @@ func _reconciliation_boundaries() -> void:
 			for retry: int in 3:
 				f.state = result.candidate if retry == 0 else _json(result.candidate)
 				result = _migrate(api, f, expected)
-				assert_eq(result.candidate.to_dict(), saved)
+				_assert_eq_lazy(result.candidate.to_dict(), saved)
 			if expected == "needs_placement": _reconcile(api, f, pair.x, "error")
 	var f := _fixture(100)
 	f.state.regiments[f.code].body_groups[0].home_slot = 9
@@ -632,7 +639,7 @@ func _pending_isolation() -> void:
 			assert_eq(result.candidate.regiments[other], unchanged)
 			assert_eq(result.candidate.military_cohorts, f.state.military_cohorts)
 			var again: Dictionary = api.migrate_candidate(f.repo, _json(result.candidate))
-			assert_eq(again.candidate.to_dict(), result.candidate.to_dict())
+			_assert_eq_lazy(again.candidate.to_dict(), result.candidate.to_dict())
 			result.candidate.regiments[other].orders.paid.append(4)
 			result.candidate.regiments[f.code].body_reconciliation.target_fit = 2
 			assert_eq(f.state.regiments[other], unchanged)
@@ -648,7 +655,7 @@ func _passive_pending() -> void:
 	for battle: bool in [false, true]:
 		var f := _pending(api, 0, 1, battle)
 		if f.state == null: continue
-		assert_eq(_json(f.state).to_dict(), f.state.to_dict())
+		_assert_eq_lazy(_json(f.state).to_dict(), f.state.to_dict())
 		assert_eq(_json(f.state).regiments[f.code].body_reconciliation, {"version": 1, "basis_fit": 0, "target_fit": 1})
 	var fresh := SuiteData.campaign(SuiteData.repo(), 319)
 	for entry: Dictionary in _json(fresh).regiments.values():
@@ -785,11 +792,11 @@ func test_measured_overlap_accepts_distant_int64_coordinates() -> void:
 			rows[1][axis] = pair[1]
 			var result := _migrate(api, f, "complete")
 			if result.candidate == null: continue
-			assert_eq(api.migrate_candidate(f.repo, result.candidate).candidate.to_dict(), result.candidate.to_dict())
+			_assert_eq_lazy(api.migrate_candidate(f.repo, result.candidate).candidate.to_dict(), result.candidate.to_dict())
 			var loaded := GameState.from_dict(result.candidate.to_dict(), false)
-			assert_eq(api.migrate_candidate(f.repo, loaded).candidate.to_dict(), loaded.to_dict())
+			_assert_eq_lazy(api.migrate_candidate(f.repo, loaded).candidate.to_dict(), loaded.to_dict())
 			if pair[0] == 0:
-				assert_eq(api.migrate_candidate(f.repo, _json(result.candidate)).candidate.to_dict(), result.candidate.to_dict())
+				_assert_eq_lazy(api.migrate_candidate(f.repo, _json(result.candidate)).candidate.to_dict(), result.candidate.to_dict())
 		rows[0][axis] = 0
 		rows[1][axis] = diameter - 1
 		_migrate(api, f, "error")
@@ -863,10 +870,10 @@ func test_explicit_march_boundary_retains_frozen_payload_and_physical_validation
 	assert_eq(UnitBodies.migrate_candidate(f.repo, f.state).status, "deferred")
 	var result := UnitBodies.validate_march_candidate(f.repo, f.state, boundary)
 	assert_eq(result.status, "complete", result.reason)
-	assert_eq(result.candidate.to_dict(), before)
-	assert_eq(f.state.to_dict(), before)
+	_assert_eq_lazy(result.candidate.to_dict(), before)
+	_assert_eq_lazy(f.state.to_dict(), before)
 	result.candidate.day_resolution.march_entries[f.code].body_groups[0].extension.receipt.append("detached")
-	assert_eq(f.state.to_dict(), before)
+	_assert_eq_lazy(f.state.to_dict(), before)
 	for value: Variant in [true, 0.2, null, -1, 1]:
 		var bad := boundary.duplicate(true)
 		bad.substep = value
@@ -893,14 +900,14 @@ func test_placement_control_raw_validation_and_frozen_preservation() -> void:
 			f.state.military_migration.body_placement[field] = raw
 			var before: Dictionary = f.state.to_dict()
 			assert_eq(UnitBodies.validate_placement_candidate(f.repo, f.state, boundary).status, "error", field + str(raw))
-			assert_eq(f.state.to_dict(), before)
+			_assert_eq_lazy(f.state.to_dict(), before)
 			var loaded := _json(f.state)
 			assert_eq(UnitBodies.validate_placement_candidate(f.repo, loaded, boundary).status, "error", "JSON must not repair " + field)
 	f.state.military_migration.body_placement = valid.duplicate(true)
 	f.state.day_resolution = DayResolution.begin(f.state.day, false, f.state.absolute_day())
 	var frozen: Dictionary = f.state.to_dict()
 	assert_eq(UnitBodies.validate_placement_candidate(f.repo, f.state, boundary).status, "deferred")
-	assert_eq(f.state.to_dict(), frozen)
+	_assert_eq_lazy(f.state.to_dict(), frozen)
 	f.state.military_migration.body_placement.sequence = true
 	assert_eq(UnitBodies.validate_placement_candidate(f.repo, f.state, boundary).status, "error", "bad control precedes frozen deferral")
 
@@ -918,12 +925,12 @@ func test_explicit_v2_march_boundary_validates_exact_version_without_conversion(
 	var before: Dictionary = f.state.to_dict()
 	var result := UnitBodies.validate_march_candidate(f.repo, f.state, boundary)
 	assert_eq(result.status, "complete", result.reason)
-	if result.candidate != null: assert_eq(result.candidate.to_dict(), before)
+	if result.candidate != null: _assert_eq_lazy(result.candidate.to_dict(), before)
 	for version: Variant in [1, 3, true, "2", 2.1]:
 		var bad := boundary.duplicate(true)
 		bad.version = version
 		assert_eq(UnitBodies.validate_march_candidate(f.repo, f.state, bad).status, "error")
-	assert_eq(f.state.to_dict(), before)
+	_assert_eq_lazy(f.state.to_dict(), before)
 
 func test_v2_completion_proof_raw_envelope_and_numeric_leaves() -> void:
 	var control := {"version": "2", "sequence": "0", "operation_id": "placement:proof",
@@ -975,10 +982,10 @@ func test_march_rejects_malformed_present_placement_before_version_read() -> voi
 				assert_eq(result.get("status"), "error", "v%d raw=%s" % [version, str(raw)])
 				assert_eq(result.size(), 5)
 				assert_false(str(result.get("reason", "")).is_empty())
-				assert_eq(source.to_dict(), before)
+				_assert_eq_lazy(source.to_dict(), before)
 				assert_eq(source.rng.to_dict(), before.rng)
 		state.military_migration.body_placement = {"version": "2", "sequence": "0", "operation_id": "placement:existing",
 			"receipt": "a".repeat(64), "completion_json": "{}"}
 		var before := state.to_dict()
 		assert_eq(UnitBodies.validate_march_candidate(f.repo, state, boundary).status, "error", "v2 completion still requires placement consumer")
-		assert_eq(state.to_dict(), before)
+		_assert_eq_lazy(state.to_dict(), before)

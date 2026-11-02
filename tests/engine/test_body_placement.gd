@@ -47,7 +47,7 @@ func test_lazy_equality_preserves_gut_pass_fail_and_assert_counts() -> void:
 	missing.rows.erase("127")
 	var reordered := {"rows": saved.rows.duplicate(true), "nested": saved.nested.duplicate(true)}
 	var original := GutTest.new()
-	var lazy: GutTest = get_script().new()
+	var helpers: Array[GutTest] = [get_script().new(), load("res://tests/engine/test_unit_bodies.gd").new()]
 	for pair: Array in [[saved, saved.duplicate(true)], [saved, changed], [saved, numeric],
 		[saved, missing], [saved, reordered], [[1, 2], [1, 2]], [[1, 2], [2, 1]],
 		["same", "same"], ["same", &"same"], ["same", "different"], [{}, []], [1, "1"], [null, null],
@@ -55,17 +55,18 @@ func test_lazy_equality_preserves_gut_pass_fail_and_assert_counts() -> void:
 		var previous: int = original.get_assert_count()
 		var failures: int = original.get_fail_count()
 		original.assert_eq(pair[0], pair[1], "same complete values")
-		lazy.call("_assert_eq_lazy", pair[0], pair[1], "same complete values")
 		assert_eq(original.get_assert_count() - previous, 1)
-		assert_eq(lazy.get_assert_count(), original.get_assert_count())
-		assert_eq(lazy.get_pass_count(), original.get_pass_count())
-		assert_eq(lazy.get_fail_count(), original.get_fail_count())
-		if original.get_fail_count() > failures:
-			assert_eq(lazy._fail_pass_text.back(), original._fail_pass_text.back())
+		for lazy: GutTest in helpers:
+			lazy.call("_assert_eq_lazy", pair[0], pair[1], "same complete values")
+			assert_eq(lazy.get_assert_count(), original.get_assert_count())
+			assert_eq(lazy.get_pass_count(), original.get_pass_count())
+			assert_eq(lazy.get_fail_count(), original.get_fail_count())
+			if original.get_fail_count() > failures:
+				assert_eq(lazy._fail_pass_text.back(), original._fail_pass_text.back())
 	assert_gt(original.get_pass_count(), 0)
 	assert_gt(original.get_fail_count(), 0)
 	original.free()
-	lazy.free()
+	for lazy: GutTest in helpers: lazy.free()
 
 func _available() -> bool:
 	return (load("res://scripts/engine/army_ground.gd") as GDScript).has_method("body_placement_candidate")
