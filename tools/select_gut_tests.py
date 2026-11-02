@@ -180,7 +180,7 @@ def main():
         if not 1 <= args.batch <= count or count > len(chosen['files']):
             parser.error('--batch is outside the nonempty manifest batches')
         files = chosen['files']
-        chosen['files'] = files[len(files) * (args.batch - 1) // count:len(files) * args.batch // count]
+        chosen['files'] = files[args.batch - 1::count]
     if args.github_output:
         with args.github_output.open('a') as output:
             output.write(f"run-gut={str(chosen['run_gut']).lower()}\n")
