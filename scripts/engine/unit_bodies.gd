@@ -571,6 +571,259 @@ static func _failure(reason: String) -> Dictionary:
 	result.error = reason
 	return result
 
+## CF05 admission never repairs rows, clears a frozen day or certifies future motion/round consumers.
+static func validate_battle_candidate(repo: DataRepository, source: GameState, boundary: Dictionary) -> Dictionary:
+	if repo == null or source == null: return _failure("Battle validation requires data and source")
+	for code: Variant in source.army_roster:
+		if not code is String or not source.army_roster[code] is Dictionary: return _failure("Invalid raw battle roster")
+	var kind: Variant = boundary.get("kind")
+	var keys := ["version", "kind", "abs_day", "sequence"]
+	if kind is String and kind == "battle": keys.append_array(["substep", "stage"])
+	if not BodyMotion._keys(boundary, keys) or not BodyMotion._loco_integer(boundary.get("version")) \
+		or boundary.version != 1 or kind not in ["safe", "battle"]:
+		return _failure("Invalid raw battle boundary")
+	for field: String in ["abs_day", "sequence"]:
+		if not DayResolution._body_decimal(boundary[field]): return _failure("Invalid battle boundary cursor")
+	if kind == "battle" and (not DayResolution._body_decimal(boundary.substep) \
+		or boundary.stage not in ["move", "contact", "round", "advance", "complete"]): return _failure("Invalid battle boundary stage")
+	var error := _battle_raw_error(source)
+	if not error.is_empty(): return _failure(error)
+	if int(boundary.abs_day) != source.absolute_day(): return _failure("Battle boundary day mismatch")
+	var outer: Dictionary = source.military_migration.get("body_battle", {})
+	var sequence := 0 if outer.is_empty() else int(outer.sequence) + 1
+	if int(boundary.sequence) != sequence: return _failure("Battle boundary sequence mismatch")
+	var tx := source.day_resolution
+	if kind == "battle":
+		if not tx.has("body_battle"): return _failure("Battle boundary requires its saved day")
+		var control: Dictionary = tx.body_battle
+		if boundary.abs_day != control.abs_day or boundary.sequence != control.sequence \
+			or boundary.substep != control.next_substep or boundary.stage != control.stage:
+			return _failure("Battle boundary disagrees with saved control")
+	var physical := _battle_world(repo, source)
+	if physical.status == "error": return physical
+	if not outer.is_empty():
+		var digest := _battle_result_hash(repo, source)
+		if digest.is_empty() or digest != outer.result: return _failure("Battle endpoint proof mismatch")
+	if physical.status != "complete": return physical
+	if kind == "safe" and not tx.is_empty(): return _result("deferred", "Frozen day prevents safe battle operation")
+	for battle: Dictionary in source.battles:
+		if _live(battle) and (not battle.get("pending_round", {}).is_empty() or battle.has("body_round")):
+			return _result("deferred", "Frozen round requires its own settlement consumer")
+	return _result("complete", "Validated battle boundary without changing state", _copy(source))
+
+static func _battle_raw_error(source: GameState) -> String:
+	if source.military_migration.has("body_battle") and not _battle_control_ok(source.military_migration.body_battle):
+		return "Invalid raw battle receipt control"
+	var index := _owners(source)
+	if not index.error.is_empty(): return index.error
+	var tx := source.day_resolution
+	if not tx.is_empty():
+		var error := DayResolution.body_battle_incompatibility_reason(tx) if tx.has("body_battle") else \
+			(DayResolution.body_march_incompatibility_reason(tx) if tx.has("body_march") else DayResolution.incompatibility_reason(tx))
+		if not error.is_empty(): return error
+	if tx.has("body_battle"):
+		var control: Dictionary = tx.body_battle
+		var outer: Dictionary = source.military_migration.get("body_battle", {})
+		if int(control.abs_day) != source.absolute_day() or int(control.sequence) != (0 if outer.is_empty() else int(outer.sequence) + 1):
+			return "Battle day disagrees with receipt/calendar"
+		for code: String in control.processed_units:
+			if _entry(source, code).is_empty() or _naval(source, code): return "Unknown processed battle unit"
+		for i: int in tx.battle_ids.size():
+			var id := int(tx.battle_ids[i])
+			var battle := _battle(source, id)
+			if battle.is_empty() or BattleSystem.canonical(source, id) != id: return "Battle queue requires canonical live fields"
+			if i < int(tx.battle_index): continue
+			if not BodyMotion._loco_integer(battle.get("last_resolved_day", -1)): return "Invalid raw resolved day"
+			if battle.get("last_resolved_day", -1) == source.absolute_day(): return "Battle already resolved today"
+			for code: String in battle.att + battle.def:
+				if code in control.processed_units: return "Queued battle contains an already processed unit"
+		for id: Variant in tx.processed_battle_ids:
+			if BattleSystem.canonical(source, int(id)) != int(id): return "Processed battle ID is not canonical"
+	for raw: Variant in source.battles:
+		if not raw is Dictionary: return "Invalid raw battle record"
+		var error := _battle_round_error(raw)
+		if not error.is_empty(): return error
+	if source.military_migration.has("body_motion"):
+		var motion: Variant = source.military_migration.body_motion
+		if not BodyMotion._saved_ok(motion) and not BodyMotion._loco_saved_ok(motion): return "Invalid saved movement control"
+		# The future B-TIME entrance must certify its own physical/result projection.
+		if tx.has("body_battle"): return "Active movement requires the battle TIME consumer"
+	var outer: Dictionary = source.military_migration.get("body_battle", {})
+	var closed: Dictionary = outer.get("closed_motion", {})
+	if not closed.is_empty():
+		if int(closed.abs_day) > source.absolute_day(): return "Closed movement lies in the future"
+		if tx.has("body_battle") and int(closed.abs_day) == source.absolute_day() \
+			and (int(closed.substep) > int(tx.substep_index) or (tx.body_battle.stage == "move" and int(closed.substep) == int(tx.substep_index))):
+			return "Battle cursor reopens closed movement"
+		var motion: Dictionary = source.military_migration.get("body_motion", {})
+		if not motion.is_empty() and not BodyMotion._older(int(closed.abs_day), int(closed.substep), motion):
+			return "Active movement must be later than closed cursor"
+	return ""
+
+static func _battle_control_ok(value: Variant) -> bool:
+	if not value is Dictionary or not BodyMotion._keys(value, ["version", "sequence", "receipt", "result", "closed_motion"]) \
+		or not value.version is String or value.version != "1" or not DayResolution._body_decimal(value.sequence) \
+		or int(value.sequence) >= BodyMotion.JSON_INTEGER_MAX or not value.closed_motion is Dictionary: return false
+	for field: String in ["receipt", "result"]:
+		if not value[field] is String or not BodyMotion._digest(value[field]): return false
+	var closed: Dictionary = value.closed_motion
+	if closed.is_empty(): return true
+	if not BodyMotion._keys(closed, ["version", "abs_day", "substep", "receipt", "priority"]) or not closed.version is String or closed.version != "2": return false
+	for field: String in ["abs_day", "substep"]:
+		if not DayResolution._body_decimal(closed[field]): return false
+	var legacy := closed.duplicate(true)
+	legacy.version = "1"
+	if not BodyMotion._saved_ok(legacy): return false
+	for item: Dictionary in closed.priority:
+		if item.unit.is_empty() or not DayResolution._body_decimal(item.slot): return false
+	return true
+
+static func _battle_round_error(battle: Dictionary) -> String:
+	if not battle.has("body_round"):
+		if battle.get("pending_round") is Dictionary and battle.pending_round.has("body_round_receipt"):
+			return "Pending candidate round lacks readiness envelope"
+		return ""
+	var raw: Variant = battle.body_round
+	if not raw is Dictionary or not BodyMotion._keys(raw, ["version", "token", "abs_day", "round", "motion_receipt", "contact_digest", "basis", "contacts", "unit_actions"]) \
+		or not raw.version is String or raw.version != "1" or not DayResolution._body_decimal(raw.abs_day) or not DayResolution._body_decimal(raw.round) \
+		or int(raw.round) <= 0 or not raw.contacts is Array or not raw.unit_actions is Dictionary:
+		return "Invalid raw battle readiness schema"
+	if not BodyMotion._loco_integer(battle.get("id")) or not raw.token is String or raw.token != "bodyround:%d:%s:%s" % [int(battle.id), raw.abs_day, raw.round]:
+		return "Invalid battle readiness token"
+	for field: String in ["motion_receipt", "contact_digest", "basis"]:
+		if not raw[field] is String or not BodyMotion._digest(raw[field]): return "Invalid battle readiness digest"
+	var previous: Array = []
+	for pair: Variant in raw.contacts:
+		if not pair is Dictionary or not BodyMotion._keys(pair, ["unit", "slot", "target_unit", "target_slot", "count", "target_count", "kind", "reason"]) \
+			or not pair.unit is String or pair.unit.is_empty() or not pair.target_unit is String or pair.target_unit.is_empty() \
+			or not pair.kind is String or pair.kind != "melee" or not pair.reason is String or pair.reason.is_empty(): return "Invalid readiness contact"
+		for field: String in ["slot", "target_slot", "count", "target_count"]:
+			if not BodyMotion._loco_integer(pair[field]) or pair[field] < (1 if field in ["count", "target_count"] else 0): return "Invalid raw contact number"
+		var identity := [pair.unit, int(pair.slot), pair.target_unit, int(pair.target_slot)]
+		if not previous.is_empty() and not _battle_pair_less(previous, identity): return "Unsorted or duplicate readiness contacts"
+		previous = identity
+	if BodyMotion._hash(raw.contacts) != raw.contact_digest: return "Readiness contact digest mismatch"
+	if battle.has("pending_round") and not battle.pending_round is Dictionary: return "Invalid pending round type"
+	if battle.has("pending_round") and not battle.pending_round.is_empty():
+		var pending: Dictionary = battle.pending_round
+		if not BodyMotion._keys(pending, ["day", "round", "att", "def", "tier", "att_power", "def_power", "odds", "roll", "eff", "contexts", "reason", "costs", "unit_actions", "body_round_receipt"]) \
+			or not pending.body_round_receipt is String or pending.body_round_receipt != BodyMotion._hash(raw): return "Invalid candidate pending round envelope"
+		for field: String in ["day", "round", "att_power", "def_power", "odds", "roll", "eff"]:
+			if not BodyMotion._loco_integer(pending[field]) or pending[field] < 0: return "Invalid raw pending round number"
+		if pending.day != int(raw.abs_day) or pending.round != int(raw.round): return "Pending round disagrees with readiness"
+		for field: String in ["tier", "contexts", "unit_actions"]:
+			if not pending[field] is Dictionary: return "Invalid pending round payload"
+		if not pending.att is Array or not pending.def is Array or not pending.costs is Array or not pending.reason is String: return "Invalid pending round parties/reason"
+	return ""
+
+static func _battle_pair_less(a: Array, b: Array) -> bool:
+	for i: int in a.size():
+		if a[i] != b[i]: return a[i] < b[i]
+	return false
+
+static func _battle_world(repo: DataRepository, source: GameState) -> Dictionary:
+	if not source.military_migration.has("body_version"): return _failure("Battle requires explicitly initialized bodies")
+	if not _control_ok(source.military_migration): return _failure("Invalid battle body control")
+	var index := _owners(source)
+	if not index.error.is_empty(): return _failure(index.error)
+	for code: String in source.army_roster:
+		if not source.army_roster[code] is Dictionary: return _failure("Invalid raw army roster")
+		if not _naval(source, code) and _entry(source, code).is_empty(): return _failure("Roster unit lacks body entry")
+	for code: String in index.codes:
+		if _entry(source, code).has("body_reconciliation"): return _failure("Battle cannot consume unfinished reconciliation")
+		if _naval(source, code): continue
+		if not BodyMotion._loco_integer(_entry(source, code).get("group_next_slot")): return _failure("Invalid raw slot counter")
+		var error := _placement_personnel_error(source, code)
+		if not error.is_empty(): return _failure(error)
+		var owner: Dictionary = index.owners.get(code, {})
+		var saved: Variant = _entry(source, code).get("body_groups") if owner.is_empty() else owner.get("groups", {}).get(code)
+		if not saved is Array: return _failure("Missing required battle bodies")
+		for row: Variant in saved:
+			if not row is Dictionary: return _failure("Invalid battle body")
+			for field: String in ["slot", "home_slot", "count", "x_m", "y_m", "facing_deg"]:
+				if not BodyMotion._loco_integer(row.get(field)): return _failure("Invalid raw battle body number")
+			for point: Variant in row.get("path_m", []) if row.get("path_m", []) is Array else [null]:
+				if not BodyMotion._loco_point(point): return _failure("Invalid raw battle body path")
+	for battle: Dictionary in source.battles:
+		if not BodyMotion._loco_integer(battle.get("id")): return _failure("Invalid raw battle ID")
+		if _live(battle) and (not battle.has("body_version") or not battle.get("groups") is Dictionary):
+			return _failure("Battle destination requires complete current schema")
+	if source.military_migration.get("body_placement", {}).get("version") == "2":
+		var march: Dictionary = source.day_resolution.get("body_march", {})
+		if march.get("version") != "2": return _failure("Completion proof requires its frozen v2 MARCH")
+		var completed := validate_placement_candidate(repo, source, {"version": 2, "kind": "march_complete",
+			"abs_day": str(source.absolute_day()), "receipt": march.get("last", {}).get("receipt", "")})
+		if completed.status != "complete": return completed
+		return _result("deferred", "Completed v2 placement remains frozen")
+	return _migration(repo, source, "", 0, source.day_resolution.has("body_battle"))
+
+## The outer transaction seals this private ownership stage with its own plan/receipt.
+static func transfer_battle_candidate(repo: DataRepository, source: GameState, unit: String,
+		from_battle_id: int, to_battle_id: int, to_side: String, boundary: Dictionary) -> Dictionary:
+	if from_battle_id < 0 or to_battle_id < 0 or from_battle_id > BodyMotion.JSON_INTEGER_MAX or to_battle_id > BodyMotion.JSON_INTEGER_MAX or from_battle_id == to_battle_id \
+		or (to_side != "" if to_battle_id == 0 else to_side not in ["att", "def"]): return _failure("Invalid battle transfer endpoints/side")
+	var checked := validate_battle_candidate(repo, source, boundary)
+	if checked.status == "error": return checked
+	var index := _owners(source)
+	if unit not in index.codes or _naval(source, unit): return _failure("Unknown land transfer unit")
+	if int(index.owners.get(unit, {}).get("id", 0)) != from_battle_id: return _failure("Transfer source is not the sole owner")
+	var to := _battle(source, to_battle_id)
+	if to_battle_id > 0:
+		if to.is_empty() or BattleSystem.canonical(source, to_battle_id) != to_battle_id \
+			or BattleSystem._side_for(source, to, unit) != to_side: return _failure("Invalid destination allegiance")
+		for side: String in ["att", "def"]:
+			for member: String in to[side]:
+				if ArmySystem._body_enemies(repo, source, unit, member) != (side != to_side): return _failure("Incompatible destination hostility")
+	if checked.status != "complete": return checked
+	if boundary.kind == "safe" and to_battle_id > 0: return _result("deferred", "Enrollment requires a contact boundary")
+	if boundary.kind == "battle":
+		if not source.day_resolution.pending_decision.is_empty(): return _result("deferred", "Pending decision prevents transfer")
+		if boundary.stage != ("advance" if to_battle_id == 0 else "contact"): return _result("deferred", "Transfer waits for its lifecycle stage")
+	var candidate := _copy(source)
+	var entry := _entry(candidate, unit)
+	var src := _battle(candidate, from_battle_id)
+	var dst := _battle(candidate, to_battle_id)
+	var moving: Array = entry.body_groups if from_battle_id == 0 else src.groups[unit]
+	var metadata := {}
+	for field: String in ["group_facing", "group_anchor_m"]:
+		if from_battle_id == 0:
+			if entry.has(field): metadata[field] = entry[field]
+			entry.erase(field)
+		elif src.get(field, {}).has(unit): metadata[field] = src[field][unit]
+	if from_battle_id == 0: entry.erase("body_groups")
+	else:
+		for side: String in ["att", "def"]: src[side].erase(unit)
+		for field: String in ["groups", "group_facing", "group_anchor_m"]:
+			if src.has(field): src[field].erase(unit)
+	if to_battle_id == 0:
+		entry.body_groups = moving
+		for field: String in metadata: entry[field] = metadata[field]
+	else:
+		dst[to_side].append(unit)
+		dst.groups[unit] = moving
+		for field: String in metadata:
+			if not dst.has(field): dst[field] = {}
+			dst[field][unit] = metadata[field]
+	var final := _battle_world(repo, candidate)
+	if final.status != "complete": return _failure("Transferred world failed final validation: " + final.reason)
+	return _result("complete", "Staged exact body ownership without movement", candidate)
+
+static func _battle_result_hash(repo: DataRepository, source: GameState) -> String:
+	var grid := MarchPath.of_pack(repo)
+	if not BodyMotion._loco_grid_ok(grid): return ""
+	var policies := {}
+	for code: String in source.regiments.keys() + source.foes.keys():
+		if _naval(source, code): continue
+		var piece := MapObjects.army_piece(repo, source.army_roster.get(code, {}))
+		var policy := BodyMotion._loco_policy(repo, piece)
+		if policy.is_empty(): return ""
+		policies[piece] = policy
+	var context := BodyMotion._loco_context(repo, grid, policies, {})
+	context.remove_at(3)
+	var saved := source.to_dict()
+	saved.military_migration.body_battle.result = ""
+	return BodyMotion._hash([saved, context])
+
 ## Placement validates raw controls before migration or frozen deferral.
 static func validate_placement_candidate(repo: DataRepository, source: GameState, boundary: Dictionary) -> Dictionary:
 	if repo == null or source == null: return _failure("Placement requires data and source")

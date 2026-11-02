@@ -481,7 +481,7 @@ func to_dict() -> Dictionary:
 	var chars := {}
 	for id in characters:
 		chars[id] = characters[id].to_dict()
-	return {
+	var saved := {
 		"version": SAVE_VERSION, "map_id": map_id,
 		"tick": _encode_values(tick), "day": _encode_values(day), "rng": rng.to_dict(),
 		"metrics": _encode_values(metrics.duplicate()),
@@ -565,6 +565,27 @@ func to_dict() -> Dictionary:
 		"grievance": _encode_values(grievance.duplicate(true)),
 		"conduct_marks": _encode_values(conduct_marks.duplicate(true)),
 	}
+	if day_resolution.has("body_battle"):
+		saved.day_resolution.body_battle = _raw_battle_value(day_resolution.body_battle)
+	for i: int in battles.size():
+		if not battles[i] is Dictionary: continue
+		for field: String in ["body_round", "pending_round"]:
+			if battles[i].has(field) and (field == "body_round" or battles[i].has("body_round") \
+				or (battles[i][field] is Dictionary and battles[i][field].has("body_round_receipt"))):
+				saved.battles[i][field] = _raw_battle_value(battles[i][field])
+	return saved
+
+## Candidate envelopes are plain JSON in both import branches; strings never use the legacy codec.
+static func _raw_battle_value(value: Variant) -> Variant:
+	if value is Dictionary:
+		var out := {}
+		for key: Variant in value: out[key] = _raw_battle_value(value[key])
+		return out
+	if value is Array:
+		var out: Array = []
+		for item: Variant in value: out.append(_raw_battle_value(item))
+		return out
+	return int(value) if value is float and BodyMotion._loco_integer(value) else value
 
 ## `invalidate` false for a scratch copy of the live state (Game.review_drafts):
 ## the live border caches stay warm, since the copy changes no owner.
@@ -610,6 +631,10 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	var raw_motion: Variant = (d.get("military_migration", {}) as Dictionary).get("body_motion")
 	if raw_motion is Dictionary and raw_motion.get("version") is String and raw_motion.version == "2":
 		s.military_migration.body_motion = BodyMotion._canonical(raw_motion)
+	if d.get("military_migration", {}).has("body_battle"):
+		s.military_migration.body_battle = _raw_battle_value(d.military_migration.body_battle)
+	if d.get("day_resolution", {}).has("body_battle"):
+		s.day_resolution.body_battle = _raw_battle_value(d.day_resolution.body_battle)
 	# Normalize integral JSON markers, preserving corrupt raw values for candidate validation.
 	if (d.get("military_migration", {}) as Dictionary).has("body_version"):
 		var marker: Variant = _decode_values(d.military_migration.body_version)
@@ -681,6 +706,13 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.foes = _decode_values(d.get("foes", {}))
 	s.ai_hosts = _decode_values(d.get("ai_hosts", {}))
 	s.battles = _decode_values(d.get("battles", []))
+	for i: int in s.battles.size():
+		var raw: Variant = d.battles[i]
+		if not raw is Dictionary: continue
+		for field: String in ["body_round", "pending_round"]:
+			if raw.has(field) and (field == "body_round" or raw.has("body_round") \
+				or (raw[field] is Dictionary and raw[field].has("body_round_receipt"))):
+				s.battles[i][field] = _raw_battle_value(raw[field])
 	# Opt-in body validation must see corrupt fit values before legacy rounding.
 	var body_schema := s.military_migration.has("body_version")
 	for units: Dictionary in [s.regiments, s.foes]:

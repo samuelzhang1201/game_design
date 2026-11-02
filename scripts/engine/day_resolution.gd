@@ -45,6 +45,7 @@ static func begin(day: int, month_end: bool, absolute_day := -1,
 ## Refuse to resume a transaction whose saved execution protocol this build
 ## cannot interpret. Never silently run it with today's phase ordering.
 static func incompatibility_reason(tx: Dictionary) -> String:
+	if tx.has("body_battle"): return "Candidate body battle requires its explicit consumer"
 	if tx.has("body_march"): return "Candidate body march requires its explicit consumer"
 	return _protocol_error(tx)
 
@@ -146,6 +147,7 @@ static func block_on_encounter(tx: Dictionary, battle_id: int) -> Dictionary:
 
 ## Candidate-only MARCH protocol. Raw decimal strings survive legacy save rounding.
 static func body_march_incompatibility_reason(tx: Dictionary) -> String:
+	if tx.has("body_battle"): return "Mixed candidate day protocols"
 	var error := _protocol_error(tx)
 	if not error.is_empty(): return error
 	if int(tx.get("protocol_version", 0)) != 4 or tx.phase != "FIXED_TACTICAL_SUBSTEPS" \
@@ -175,3 +177,73 @@ static func body_march_incompatibility_reason(tx: Dictionary) -> String:
 		return "Missing frozen march inputs"
 	if not tx.journal.get("arrivals") is Array: return "Invalid frozen march arrival journal"
 	return ""
+
+## Admission only; the ordinary day consumer cannot advance this marker.
+static func body_battle_incompatibility_reason(tx: Dictionary) -> String:
+	if tx.has("body_march"): return "Mixed candidate day protocols"
+	if not tx.get("phase") is String: return "Invalid raw battle day phase"
+	var error := _protocol_error(tx)
+	if not error.is_empty(): return error
+	if tx.get("protocol_version") != 4 or tx.get("phase") != "FIXED_TACTICAL_SUBSTEPS":
+		return "Candidate battle requires v4 tactical substeps"
+	for field: String in ["day", "absolute_day", "substep_count", "substep_index", "battle_index", "decision_sequence"]:
+		if not BodyMotion._loco_integer(tx.get(field)) or tx[field] < 0: return "Invalid raw battle day cursor: " + field
+	var raw: Variant = tx.get("body_battle")
+	if not raw is Dictionary or not BodyMotion._keys(raw, ["version", "abs_day", "sequence", "next_substep", "substep_count", "stage", "battle_ids", "battle_index", "processed_units"]):
+		return "Invalid body battle control schema"
+	var control: Dictionary = raw
+	if not control.version is String or control.version != "1": return "Unsupported body battle version"
+	for field: String in ["abs_day", "sequence", "next_substep", "substep_count", "battle_index"]:
+		if not _body_decimal(control[field]): return "Invalid raw battle cursor: " + field
+	if int(control.abs_day) != int(tx.absolute_day) or int(control.next_substep) != int(tx.substep_index) \
+		or int(control.substep_count) != int(tx.substep_count) or int(control.battle_index) != int(tx.battle_index):
+		return "Body battle cursor disagrees with day header"
+	if control.stage not in ["move", "contact", "round", "advance", "complete"]: return "Invalid battle stage"
+	if not control.battle_ids is Array or control.battle_ids.size() != tx.battle_ids.size(): return "Invalid mirrored battle queue"
+	var previous := 0
+	for i: int in control.battle_ids.size():
+		var id: Variant = control.battle_ids[i]
+		if not _body_decimal(id) or int(id) <= previous or int(id) != tx.battle_ids[i]: return "Invalid mirrored battle ID"
+		previous = int(id)
+	if not control.processed_units is Array: return "Invalid processed units"
+	var last := ""
+	for unit: Variant in control.processed_units:
+		if not unit is String or unit.is_empty() or unit <= last: return "Invalid sorted processed units"
+		last = unit
+	for field: String in ["processed_battle_ids", "substep_battle_ids"]:
+		previous = 0
+		for id: Variant in tx[field]:
+			if not BodyMotion._loco_integer(id) or id <= previous: return "Invalid canonical battle IDs: " + field
+			previous = int(id)
+	if not tx.get("march_entries") is Dictionary or not tx.get("march_budgets") is Dictionary \
+		or not tx.get("marching_codes") is Array or not tx.get("journal") is Dictionary \
+		or not tx.journal.get("arrivals") is Array or not tx.get("consumed_tokens") is Array:
+		return "Missing frozen battle day inputs"
+	var index := int(control.battle_index)
+	var count: int = control.battle_ids.size()
+	if control.stage in ["move", "contact", "complete"]:
+		if tx.battle_step != "" or count != 0 or index != 0 or not tx.substep_battle_ids.is_empty() or not tx.pending_decision.is_empty():
+			return "Battle stage requires idle cursor"
+	elif tx.battle_step != "fighting": return "Battle queue requires fighting cursor"
+	if control.stage == "round" and index >= count: return "Round requires an unresolved battle"
+	if control.stage == "advance" and (index != count or not tx.pending_decision.is_empty()): return "Advance requires an exhausted queue"
+	if (control.stage == "complete") != (int(control.next_substep) == int(control.substep_count)):
+		return "Battle completion disagrees with substep count"
+	for id: Variant in tx.substep_battle_ids:
+		if id not in tx.battle_ids: return "New encounter is outside battle queue"
+	if not tx.pending_decision.is_empty():
+		var pending: Dictionary = tx.pending_decision
+		if not pending.get("token") is String or pending.token.is_empty() or pending.get("kind") not in ["encounter", "battle_event"] \
+			or not pending.get("choices") is Array or pending.choices.is_empty() or not pending.get("selected") is String or pending.selected != "":
+			return "Invalid pending battle decision"
+		if pending.kind == "encounter" and (not BodyMotion._loco_integer(pending.get("substep_index")) or pending.substep_index != tx.substep_index):
+			return "Encounter decision disagrees with substep"
+		if pending.kind == "battle_event" and (not BodyMotion._loco_integer(pending.get("day")) or pending.day != tx.absolute_day):
+			return "Battle event decision disagrees with day"
+		for choice: Variant in pending.choices:
+			if not choice is String or choice.is_empty(): return "Invalid battle decision choice"
+		if pending.token in tx.consumed_tokens: return "Pending battle decision already consumed"
+	return ""
+
+static func _body_decimal(value: Variant) -> bool:
+	return BodyMotion._decimal(value) and int(value) <= BodyMotion.JSON_INTEGER_MAX

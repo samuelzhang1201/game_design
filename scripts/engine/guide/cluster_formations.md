@@ -120,3 +120,41 @@ visual and performance acceptance remain explicit limits.
 `UnitBodies.validate_placement_candidate` validates raw placement controls and
 safe/completed-MARCH boundaries without creating a row or removing frozen data.
 Placement transactions and replay: `scripts/engine/guide/body_placement.md`.
+
+## Candidate battle boundary
+
+`UnitBodies.validate_battle_candidate` and `transfer_battle_candidate` implement
+the raw admission/ownership seam of `docs/reviews/cluster-formations/cf05-battle-contract.md`.
+They require complete current bodies and reject pending reconciliation, duplicate
+owners, missing stores, unsafe JSON numbers, unknown control keys and versions.
+Validation reuses the foundation's personnel, partition, identity and measured
+circle checks without clearing a frozen day, allocating rows or repairing input.
+
+`DayResolution.body_battle_incompatibility_reason` checks the closed v4 battle
+marker, mirrored queue/index, processed prefix, stage and substep boundaries.
+Admission also checks actual live canonical field IDs and the daily processed-unit
+barrier. Ordinary day and MARCH consumers reject this marker; both markers
+together are corruption. Safe boundaries defer on valid frozen days/rounds only
+after raw validation. Active battle movement requires the separate TIME consumer;
+round envelopes remain frozen for their own readiness/settlement consumer.
+
+GameState writes the new day control, outer receipt and candidate round envelopes
+as plain JSON and preserves them before legacy value conversion in both import
+branches. Exact safe integral JSON numbers canonicalize; encoded-looking strings,
+booleans, fractions and future schemas remain visible to rejection. Legacy saves
+and v1 MARCH receipts retain their existing codecs and save versions.
+
+Transfers explicitly validate destination side/allegiance and move sole-owner
+rows, membership, facing and anchor snapshots together on a detached clone.
+Enrollment and field-to-field transfers require contact; exits require advance
+or a safe boundary. Completed v2 placement proofs use the existing full proof
+validator before safe admission defers with the frozen day intact.
+Complete empty destination skeletons are allowed; missing groups/markers are not.
+Every resulting world passes the same physical/count/owner validation. Poses,
+paths, slots, counts, next-slot high water, resources, personnel and RNG stay exact.
+This helper returns private ownership staging for an enclosing lifecycle
+transaction, which must seal its own outer plan/receipt/result before publication;
+it does not create that transaction or certify battle law, departure or contact.
+Saved outer endpoint digests are checked against the full save and the unchanged
+terrain/footprint/balance/policy/diplomacy context before admission. No movement,
+day driver, lifecycle, damage, production activation or visual acceptance is added.
