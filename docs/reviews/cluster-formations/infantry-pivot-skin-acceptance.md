@@ -227,6 +227,73 @@ remain required in full, as enumerated in #223; no supported subset completes
 P4. This includes actual 3D-map/window/FPS acceptance and all original simulation,
 formation, contact, clearance, command, battle and save/determinism outcomes.
 
+## Raw observation interface and the active capture boundary
+
+`LOCO-INFANTRY-PHYSICAL-INPUT-CONTRACT` (A), implementation
+`01a19bd9-7ce0-7ca1-a857-5b14507aee7b`, owns this addition and the
+[versioned external interface](infantry-pivot-metric-contract.md#versioned-raw-observation-contract-a-implementation-pending).
+Its sole dispatcher is `01a17398-42c1-7583-8d3f-7b15e877586c`; unique Review is
+recorded before handoff. Prerequisites are accepted CF04c/#223/#224/#225.
+This is a documentary interface decision, not completion of the active capture.
+
+The original capture owner's frozen **2026-11-02 Astra boundary decision**,
+`cluster-infantry-contact-capture/game_design/HANDOVER.md`, SHA256
+`40cc4a7fa1a7c8b411b6a35bdce5e5437c7f0c48028c91d76b05411f6dd05743`,
+supplies failure facts and an interface proposal only. A imports no unmerged
+capture/#221 code, artifacts or source changes. Its strict placement witness
+`1.0525859445735615e-7 > 1e-10` remains FAIL. An invertible positive raw matrix
+can yield actual world observations without satisfying uniform placement;
+legacy224 still rejects it. No fitted matrix, alternate scale, benign-rounding
+assumption, raised threshold or nominal-scale model budget PASS is authorized.
+
+The compatibility decision is additive: #224's legacy physical path and #225's
+physical acceptance requirements remain binding. A v1 adverse report can be
+linked in a per-flag record as measurement evidence, **never as a replacement
+disposition**. Item 4's fixed origin/normal describes the proven planar sample;
+its explicit nonplanar obligation is represented in v1 by a frozen independent
+surface and actual per-coordinate native queries. Fixed material vertices,
+authored intervals, independently planted anchors and each anchor's normal stay
+fixed; the query under a moving vertex does not move the physical anchor.
+Do not apply a fixed plane beyond its proven domain or relabel holes, sea-clamp,
+override or queried-height/rendered-LOD differences as covered terrain.
+
+| Original active-capture requirement | What an interface report can supply; what remains required |
+|---|---|
+| Actual unchanged source/scene/terrain/placement and native identity | Byte-bound raw inputs and strict predicate outcomes. The original capture owner still proves actual installed identity, original placement and native capture provenance; synthetic fixtures do not supply it. |
+| Fixed annotated sole/toe patches, intervals and anchors | The schema carries all identities and outgoing/incoming boundaries. Candidate vertex lists or two footfall phases do not establish authored full stance intervals; missing annotations cannot pass capture. |
+| Justified capture/material/terrain uncertainty | Explicit bound terms and outward propagation. Null is honest missing evidence; neither observed survey maxima nor float32/double disagreement supplies a conservative bound. |
+| Actual-input adapter result, compatible224 measurement | Versioned results preserve the legacy gate and units, plus distinct raw-world/nonplanar fields. A generated adverse report can satisfy only the result-generation component. An exit-0 replay without real inputs or an empty PENDING shell still fails capture acceptance. |
+| Actual planar coverage and explicit nonplanar/continuous obligations | Full finite query enumeration and typed coverage defects are recorded. Sparse rest probes, finite vertices or queries alone cannot prove rendered geometry, triangle interiors or continuous swept coverage. |
+| Actual equipped native-window stance/flagged variants, crops and unique Review | Still required in the original capture pair. No report, document merge, synthetic test or headless render substitutes for these checks. |
+
+Thus A does not rewrite the active capture's immutable registered acceptance,
+dependencies, owners or failed evidence. The entire original six-file task still
+needs real independent evidence and its own verification/Review, not merely
+VALID/GENERATED statuses. Missing E continues to be PENDING as originally allowed;
+missing material annotation, uncertainty or window evidence is not completion.
+Any future claim that capture must now pass despite one of those missing facts,
+or that its matrix must be declared uniform to satisfy “compatible224”, is an
+exact acceptance conflict: return the clause and witness to the dispatcher before
+changing a gate. This interface grants no such interpretation or waiver.
+
+All per-flag items 1–7 and Conditions for leaving FAIL/PENDING remain in full.
+The 652/563/471 absolute flags, 103/45 introduced flags, one mapping-only crossing,
+all 20,880 vertices/four raw weights/69 binds/33,427 edges and strict 4× AND .03 m
+predicate remain. Actual defect evidence is FAIL; missing physical proofs remain
+PENDING. A finite budget upper comparison is at most WITHIN_FINITE_SAMPLES,
+eligible only under the separately stated gates; no raw report yields physical
+ACCEPTED or complete motion PASS. Inherited flags still need the original
+continuous geometry/contact/envelope/native-window adjudication. Introduced
+defects still need actual mapping correction and full final-helper validation.
+
+The [literal B/C paths and serial checks](infantry-pivot-metric-contract.md#serial-implementation-boundaries-after-a)
+are bounded Python follow-ups, not launched here. After their accepted merges,
+the same original capture owner may resume its six files with new-input checks;
+the dispatcher records readiness through the supported workflow without replacing
+immutable acceptance. The native oracle round trip is data flow, not an A/B/C
+dependency on unmerged capture/#221 or future CERT. Final clip → independent
+CERT → POLICY → CONSUMER and all twelve original P4 outcomes remain unchanged.
+
 ## Evidence provenance and verification scope
 
 The read-only proposal is original #221's ignored
