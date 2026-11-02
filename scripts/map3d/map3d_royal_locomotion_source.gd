@@ -36,6 +36,8 @@ func extract() -> Dictionary:
 				return imported
 			if not source_hashes.has(imported.source_file):
 				return _reject("unbound_import_source")
+			if not imported.import_script.is_empty() and not source_hashes.has(imported.import_script):
+				return _reject("unbound_import_script:" + imported.import_script)
 			imports[path] = imported
 	if imports.is_empty():
 		return _reject("native_import_missing")
@@ -70,6 +72,9 @@ static func import_identity(settings_path: String) -> Dictionary:
 			return _reject("import_settings_schema")
 	var source: Variant = settings.get_value("deps", "source_file")
 	var native: Variant = settings.get_value("remap", "path")
+	var import_script: Variant = settings.get_value("params", "import_script/path", "")
+	if not import_script is String:
+		return _reject("import_script_schema")
 	if not source is String or not native is String or not FileAccess.file_exists(source) or not FileAccess.file_exists(native) or settings.get_value("deps", "dest_files") != [native]:
 		return _reject("import_paths")
 	var checksums := ConfigFile.new()
@@ -80,11 +85,13 @@ static func import_identity(settings_path: String) -> Dictionary:
 		return _reject("import_receipt_schema")
 	if checksums.get_value("", "source_md5") != FileAccess.get_md5(source) or checksums.get_value("", "dest_md5") != FileAccess.get_md5(native):
 		return _reject("stale_or_corrupt_native_import")
-	return {"ok": true, "source_file": source, "native_file": native, "native_sha256": FileAccess.get_sha256(native)}
+	return {"ok": true, "source_file": source, "import_script": import_script,
+		"native_file": native, "native_sha256": FileAccess.get_sha256(native)}
 
 
 func calibration_data() -> Dictionary:
-	return {"provenance": provenance.duplicate(true), "landmarks": landmarks.duplicate(true),
+	return {"scene_path": scene_path, "source_hashes": source_hashes.duplicate(),
+		"provenance": provenance.duplicate(true), "landmarks": landmarks.duplicate(true),
 		"sole_patches": sole_patches.duplicate(true), "observations": observations.duplicate(true),
 		"support_intervals": support_intervals.duplicate(true), "airborne_intervals": airborne_intervals.duplicate(true),
 		"contact_authority": contact_authority}

@@ -583,4 +583,4 @@ observations = {
 support_intervals = Array[Dictionary]([])
 airborne_intervals = Array[Dictionary]([])
 contact_authority = "UNRESOLVED"
-calibration_sha256 = "d72ca8e53c8794b1be383f3bd7b3cfeb3a7a573316dd169c69d71a3790be23bd"
+calibration_sha256 = "aa82d08948b58de39c09ef97cf3e86ce4126892fa2d7a47f7f8c001ffb02fdd2"

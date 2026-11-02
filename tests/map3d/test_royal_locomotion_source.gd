@@ -238,6 +238,32 @@ func test_corrupt_stale_and_invalid_inputs_reject_without_partial_pose() -> void
 	assert_false(bad.extract().ok)
 
 
+func test_calibration_binds_complete_source_identity_and_required_importer() -> void:
+	var settings := ConfigFile.new()
+	assert_eq(settings.load("res://assets/3D/units/royal/royal.glb.import"), OK)
+	var importer: String = settings.get_value("params", "import_script/path")
+	assert_false(importer.is_empty())
+	var bad = _calibration.duplicate(true)
+	bad.source_hashes.erase(importer)
+	assert_ne(Source._digest(bad.calibration_data()), bad.calibration_sha256, "the seal binds the complete dependency set")
+	for reseal: bool in [false, true]:
+		if reseal:
+			bad.calibration_sha256 = Source._digest(bad.calibration_data())
+		var result: Dictionary = bad.extract()
+		assert_false(result.ok, "missing importer, resealed=%s" % reseal)
+		assert_true(result.source.is_empty())
+		assert_eq(result.diagnostics.get("reason", ""), "unbound_import_script:" + importer)
+	bad = _calibration.duplicate(true)
+	bad.source_hashes[importer] = "changed dependency"
+	var changed: Dictionary = bad.extract()
+	assert_false(changed.ok)
+	assert_true(changed.source.is_empty())
+	assert_eq(changed.diagnostics.get("reason", ""), "stale_source:" + importer)
+	bad = _calibration.duplicate(true)
+	bad.scene_path += ".changed"
+	assert_ne(Source._digest(bad.calibration_data()), bad.calibration_sha256, "the seal binds the scene path")
+
+
 func test_raw_packed_weights_and_affine_skin_are_not_normalized() -> void:
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
@@ -266,6 +292,11 @@ func test_disk_import_identity_rejects_stale_or_corrupt_native_cache() -> void:
 	checksums.set_value("", "dest_md5", FileAccess.get_md5(paths[2]))
 	assert_eq(checksums.save(paths[3]), OK)
 	assert_true(Source.import_identity(paths[1]).ok)
+	settings.set_value("params", "import_script/path", 42)
+	assert_eq(settings.save(paths[1]), OK)
+	assert_eq(Source.import_identity(paths[1]).diagnostics.reason, "import_script_schema")
+	settings.set_value("params", "import_script/path", "")
+	assert_eq(settings.save(paths[1]), OK)
 	var file := FileAccess.open(paths[2], FileAccess.WRITE)
 	file.store_string("changed compiled native scene")
 	file.close()
