@@ -1,6 +1,7 @@
 """Author transient archer pivot poses from the unchanged ARP six-clip export.
 
-Run in background Blender: --python pivot.py -- BODY_GLB WORK_DIRECTORY.
+Run in background Blender: --python pivot.py -- BODY_GLB WORK_DIRECTORY
+[ACTUAL_NATIVE_MARCH_JSON IMPORTED_BODY_GLB].
 The output is input for the accepted Map3DArcherPivot, not a motion certificate.
 Native bone space excludes the model root. Positive pack turn means RIGHT.
 """
@@ -84,6 +85,7 @@ class NativeSource:
         self.doc = json.loads(self.bytes[20:20 + length])
         self.binary = self.bytes[28 + length:]
         self.cache = {}
+        self.native_poses = {}
         self.joints = self.doc['skins'][0]['joints']
         nodes = self.doc['nodes']
         self.parents = {nodes[i]['name']: next((nodes[p]['name'] for p in self.joints
@@ -136,6 +138,33 @@ class NativeSource:
                 # actual toe shoe vertices are audited separately through skinning.
                 'toe_in_toes': Matrix.Identity(4)}
 
+    def use_native_march(self, dump_path, imported_body_path):
+        imported = NativeSource(imported_body_path)
+        dump = json.loads(Path(dump_path).read_text())
+        if dump['body_sha256'] != hashlib.sha256(imported.bytes).hexdigest() or dump['errors']:
+            raise ValueError('native MARCH dump does not bind its imported body')
+        for key, value in self.doc.items():
+            if key == 'buffers':
+                continue
+            observed = imported.doc[key]
+            if key in ('animations', 'accessors', 'bufferViews'):
+                observed = observed[:len(value)]
+            if observed != value:
+                raise ValueError('native MARCH body differs from immutable source ' + key)
+        if imported.binary[:len(self.binary)] != self.binary:
+            raise ValueError('native MARCH body changed immutable source payload')
+        poses = {}
+        for row in dump['samples']:
+            phase = float(row['phase'])
+            matrices = {name: Matrix(value['$t']) for name, value in row['locals'].items()}
+            if not 0 <= phase < 1 or phase in poses or set(matrices) != set(self.parents) or any(
+                    len(m) != 4 or len(m[0]) != 4 or not all(math.isfinite(x) for r in m for x in r) for m in matrices.values()):
+                raise ValueError('malformed or duplicate actual native MARCH sample')
+            poses[phase] = matrices
+        if 0.0 not in poses:
+            raise ValueError('actual native MARCH reference phase missing')
+        self.native_poses = poses
+
     def accessor(self, index):
         if index not in self.cache:
             a = self.doc['accessors'][index]
@@ -150,6 +179,11 @@ class NativeSource:
         return self.cache[index]
 
     def pose(self, phase):
+        if phase >= 0 and self.native_poses:
+            sample = min(self.native_poses, key=lambda p: abs(p - phase))
+            if abs(sample - phase) > 1e-12:
+                raise ValueError('actual native MARCH sample missing; no invented interpolation')
+            return {name: matrix.copy() for name, matrix in self.native_poses[sample].items()}
         nodes = [dict(node) for node in self.doc['nodes']]
         if phase >= 0:
             action = next(a for a in self.doc['animations'] if a['name'] == 'MARCH')
@@ -182,20 +216,27 @@ class NativeSource:
             result[n['name']] = matrix
         return result
 
-    def floor_raise(self, foot, toe, side):
+    def shoe_floor(self, foot, toe, side):
         foot_row, toe_row = foot.row[1], toe.row[1]
         lowest = min(foot_row.dot(a) + toe_row.dot(b) for a, b in self.sole_clouds[side])
-        return max(0.0, -lowest)
+        return lowest
+
+    def floor_raise(self, foot, toe, side):
+        return max(0.0, -self.shoe_floor(foot, toe, side))
 
     def calibrated(self, phase):
         original = self.pose(phase)
         raw = globals_of(original, self.parents)
-        # Fractional source interpolation can put a shoe below its bind ground.
-        # Correct only transient foot/toe goals, never the old clip or body origin.
+        # Seat the received stance shoe; preserve the airborne foot and body.
+        # Only transient leg goals change, never the source clip or actor origin.
+        stance = min(('l', 'r'), key=lambda side: self.shoe_floor(raw['foot.' + side], raw['toes_01.' + side], side))
         for side in ('l', 'r'):
             lift = self.floor_raise(raw['foot.' + side], raw['toes_01.' + side], side)
             raw['foot.' + side].translation.y += lift
             raw['toes_01.' + side].translation.y += lift
+        height = self.shoe_floor(raw['foot.' + stance], raw['toes_01.' + stance], stance)
+        raw['foot.' + stance].translation.y -= height
+        raw['toes_01.' + stance].translation.y -= height
         mapped = {n: m.copy() for n, m in raw.items()}
         hints = {}
         for side in ('l', 'r'):
@@ -233,14 +274,18 @@ class NativeSource:
                 name = part + '.' + side
                 parent = self.parents[name]
                 corrected[name] = mapped[parent].inverted() @ mapped[name] if parent else mapped[name].copy()
+        hints['stance'] = stance
         return corrected, raw, hints
 
     def contact_plan(self, turn, entry, exit, steps=8):
         _, first, first_hints = self.calibrated(entry)
         _, last, last_hints = self.calibrated(exit)
         finish_yaw = Matrix.Rotation(-turn, 4, 'Y')
-        # The initially higher ankle swings first; the other foot supplies support.
-        first_side = 'l' if first['foot.l'].translation.y > first['foot.r'].translation.y else 'r'
+        # Keep the grounded source foot bearing weight through the first swing.
+        stance = first_hints['stance']
+        first_side = 'r' if stance == 'l' else 'l'
+        exit_stance = last_hints['stance']
+        release_at = 1.0 - 1.0 / (4 * steps)
         order = [first_side, 'r' if first_side == 'l' else 'l']
         contacts = {}
         for side in ('l', 'r'):
@@ -258,6 +303,8 @@ class NativeSource:
             own_steps = [i for i in range(steps) if order[i % 2] == side]
             for i in own_steps:
                 a, b = i / steps, (i + 1) / steps
+                if i == steps - 1 and side == exit_stance:
+                    b = release_at
                 strength = abs(math.sin(turn / 2))
                 received_foot = mix(initial, last['foot.' + side], b)
                 neutral = mix(received_foot, flat, strength)
@@ -267,7 +314,10 @@ class NativeSource:
                     foot_knots.append((a, previous.copy(), previous_toe.copy()))
                 received_toe = mix(foot_knots[0][2], final_toe, b)
                 landing_toe = final_toe.copy() if i == own_steps[-1] else mix(received_toe, flat_toe, strength)
-                landing.translation.y += self.floor_raise(landing, landing @ landing_toe, side)
+                if i != own_steps[-1] or (i == steps - 2 and side != exit_stance):
+                    landing.translation.y -= self.shoe_floor(landing, landing @ landing_toe, side)
+                else:
+                    landing.translation.y += self.floor_raise(landing, landing @ landing_toe, side)
                 for substep in range(1, 9):
                     share = substep / 8
                     swing = mix(previous, landing, share)
@@ -277,6 +327,15 @@ class NativeSource:
                         swing.translation.y += self.floor_raise(swing, swing @ relative, side)
                     foot_knots.append((a + (b - a) * share, swing, relative))
                 previous, previous_t, previous_toe = landing, b, landing_toe
+            # Receive the exit stance before releasing the other foot into MARCH.
+            if side != exit_stance and own_steps[-1] == steps - 2:
+                contacts[side]['support'].append((previous_t, release_at, previous.copy()))
+                foot_knots.append((release_at, previous.copy(), previous_toe.copy()))
+                for substep in range(1, 9):
+                    share = substep / 8
+                    foot_knots.append((release_at + (1.0 - release_at) * share,
+                        mix(previous, final, share), mix(previous_toe, final_toe, share)))
+                previous_t = 1.0
             if previous_t < 1.0:
                 contacts[side]['support'].append((previous_t, 1.0, previous.copy()))
                 foot_knots.append((1.0, previous.copy(), previous_toe.copy()))
@@ -321,18 +380,28 @@ class NativeSource:
 
 
 def main():
-    source_path, work = map(Path, sys.argv[sys.argv.index('--') + 1:])
+    args = sys.argv[sys.argv.index('--') + 1:]
+    if len(args) not in (2, 4):
+        raise ValueError('expected BODY_GLB WORK_DIRECTORY [NATIVE_MARCH_JSON IMPORTED_BODY_GLB]')
+    source_path, work = map(Path, args[:2])
     source = NativeSource(source_path)
+    if len(args) == 4:
+        source.use_native_march(args[2], args[3])
     work.mkdir(parents=True, exist_ok=True)
     cases = []
     for name, turn in [('PIVOT_LEFT', -math.pi), ('PIVOT_RIGHT', math.pi)]:
         contacts = source.contact_plan(turn, 0.0, 0.0)
-        phases = sorted({i / 60 for i in range(61)} | {i / 64 for i in range(65)})
+        phases = sorted({i / 60 for i in range(61)} | {k['phase'] for side in contacts.values() for k in side['track']})
         for i, phase in enumerate(phases):
             case = source.case(turn, 2.0, phase, 0.0, 0.0, contacts)
             case['id'] = name + '/' + str(i)
             cases.append(case)
-    (work / 'pivot-source-input.json').write_text(json.dumps(encoded({'source': {'body_glb_sha256': hashlib.sha256(source.bytes).hexdigest(), 'helper_sha256': hashlib.sha256((Path(__file__).resolve().parents[3] / 'scripts/map3d/map3d_archer_pivot.gd').read_bytes()).hexdigest()}, 'cases': cases}), separators=(',', ':')) + '\n')
+    metadata = {'body_glb_sha256': hashlib.sha256(source.bytes).hexdigest(),
+        'helper_sha256': hashlib.sha256((Path(__file__).resolve().parents[3] / 'scripts/map3d/map3d_archer_pivot.gd').read_bytes()).hexdigest()}
+    if len(args) == 4:
+        metadata.update(native_march_sha256=hashlib.sha256(Path(args[2]).read_bytes()).hexdigest(),
+            imported_body_sha256=hashlib.sha256(Path(args[3]).read_bytes()).hexdigest())
+    (work / 'pivot-source-input.json').write_text(json.dumps(encoded({'source': metadata, 'cases': cases}), separators=(',', ':')) + '\n')
     print('PIVOT_AUTHOR_PREPARED', len(cases), 'unexecuted reference clip cases')
 
 
@@ -383,7 +452,10 @@ def append_pivots(path, inputs_path, results_path):
         duration = cases[0]['operation']['duration_s']
         if not math.isfinite(duration) or duration <= 0 or any(c['operation']['duration_s'] != duration for c in cases) or any(a['operation']['phase'] >= b['operation']['phase'] for a, b in zip(cases, cases[1:])):
             raise ValueError('noncanonical pivot sample times')
-        time = accessor([(duration * c['operation']['phase'],) for c in cases], 'SCALAR')
+        times = [struct.unpack('<f', struct.pack('<f', duration * c['operation']['phase']))[0] for c in cases]
+        if not all(math.isfinite(t) for t in times) or any(a >= b for a, b in zip(times, times[1:])):
+            raise ValueError('pivot times must remain distinct finite float32 values')
+        time = accessor([(t,) for t in times], 'SCALAR')
         animation = {'name': clip, 'channels': [], 'samplers': []}
         poses = []
         for case in cases:
