@@ -338,10 +338,18 @@ No new diagnostic step or source modification is dispatched by this document.
 
 The next work is the following **specific evidence collection**, not another
 native-seam diagnosis. No collector or additional output is created by this PR.
-Propose the literal additions below to the existing dispatcher; preserve this
-step's implementation/Review pair and acceptance if it records a scope addition.
-Do not create another owner or wait for this blocked PR to merge before collecting
-its missing evidence. The two collection passes are serial within that boundary.
+This step's immutable acceptance says **“No scripts/assets/CSV/policy/CERT edits
+inthisPR”**. Adding the proposed collector and test paths to its ownership would
+still violate that clause; an ordinary file-scope addition cannot resolve it.
+The existing dispatcher must register the collection as separate, independently
+verifiable prerequisite PRs. E1 supplies the fixed material/support evidence;
+E2 consumes accepted E1 and supplies terrain/window/uncertainty evidence. They
+run serially because they extend the same collector/test files. Neither depends
+on this blocked PR merging: use the frozen accepted inputs listed below and the
+dispatcher-bound acquisition brief, not this document as an accepted contract.
+PR236 keeps its one document and original implementation/Review pair, consuming
+the resulting merged and accepted evidence before deciding D2. No collection
+step, owner or successor is created by this document.
 
 #### Reuse inventory and the question each input answers
 
@@ -370,7 +378,7 @@ duplicate seam vertices and degenerate faces. The entire exterior shoe is the
 penetration domain; heel/midsole/toe outsole charts are fixed material subsets
 for support. Their union/overlap and boundary edges must be auditable.
 
-The same implementation labels the atlas; the sole Review checks underside,
+E1's implementation labels the atlas; that PR's sole Review checks underside,
 side, heel and toe views against the full original shoe, without seeing error
 rankings as a selection criterion. Keep the old diagnostic triangles even if a
 physical support chart differs. Material IDs/areas are frozen before comparing
@@ -440,7 +448,7 @@ observations only; no unimplemented P1 map or production v2 clock is claimed.
 The camera/scene remains ordinary; labelled rulers/ID overlays are separate
 diagnostic annotations, never a displaced model, altered sole or moved ground.
 The known actual-window focus/OS-Space failure in the old checkpoint is retained.
-Use the shared Godot lock and the existing visual-review process, sole Review as
+Use the shared Godot lock and the existing visual-review process, E2's sole Review as
 critic. If that capability is still unavailable, stop E2 with its precise missing
 capture, without repeated focus probes, changing permissions or using headless 3D.
 
@@ -476,7 +484,7 @@ from B and installed C/CERT. If real-ground error already conflicts with protect
 root/seat/source requirements, name that contradiction and stop that route.
 Neither a new name nor continuing authorization permits silently fixing the seat.
 
-#### Literal scope-addition proposal (not registered, no files created)
+#### Literal prerequisite-file proposal (not registered, no files created)
 
 Reuse the frozen arrays, existing snapshot scene, capture/crop workflow and
 read-only A measurement functions. One bounded collector and its meaningful tests
@@ -525,8 +533,12 @@ CSV/policy, map scripts, editor scenes, test gates or accepted A APIs is propose
 If the collector would require any such change or exceed its bounded role, stop
 and enumerate that literal dependency before implementation. Proposed checks:
 targeted new evidence GUT under the shared lock, source-preservation assertions,
-native real-window visual-review, affected selector/current-HEAD CI and the same
-Review. No full-suite run and no new session are requested here.
+native real-window visual-review, affected selector/current-HEAD CI and each
+prerequisite PR's unique Review. `tests/categories.json` already classifies
+`tests/map3d/test_archer_contact_evidence.gd` through `tests/map3d/test_*.gd` as
+`map3d`; no classification edit is needed for that test. PR236's pair assesses
+the accepted evidence against D2, without becoming a third code reviewer for
+those PRs. No full-suite run or automatic session creation is requested here.
 
 Proposed invocation after registration: the collector accepts
 `--mode material|window --inputs MANIFEST --out OUTPUT_ROOT`. The manifest contains
@@ -730,7 +742,8 @@ bounded exact ownership and accepted dependencies. A later B must actually prove
 the equations/contact/full-domain bounds and independent native checks, not just
 adopt their interfaces. Current status is **B=false, C=false, CERT=failed**.
 The P1 technical disposition alone cannot flip these flags. Pursue section 4's
-bounded evidence acquisition after its exact scope is registered. If evidence
+bounded evidence acquisition through separately registered prerequisite PRs,
+not by expanding this PR's immutable scope. If evidence
 cannot establish D2, report the concrete missing result or protected-clause conflict;
 do not merge a PENDING contract
 as an accepted implementation prerequisite or weaken the immutable acceptance.
