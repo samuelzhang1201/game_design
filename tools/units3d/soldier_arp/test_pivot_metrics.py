@@ -3,14 +3,18 @@
 import base64
 import copy
 import hashlib
+import io
 import json
 import math
+import resource
+import time
 from pathlib import Path
 import struct
 import subprocess
 import sys
 import tempfile
 import unittest
+import zlib
 
 import test_pivot_feasibility as frozen
 try:
@@ -235,6 +239,14 @@ class RawMetricsTest(unittest.TestCase):
         self.assertIn('uncertainty: height', state['blockers'])
         self.assertIn('external contact budget', state['blockers'])
 
+    def test_b_errors_precede_new_dispatch_and_surface_checks(self):
+        raw, cases = raw_control()
+        raw['header']['surfaces'][0]['kind'] = 'unknown'
+        with self.assertRaisesRegex(ValueError, '^duplicate/unsupported raw surface$'):
+            metric.validate_raw_observation(raw, cases)
+        with self.assertRaisesRegex(ValueError, '^unknown/missing raw schema fields$'):
+            metric.evaluate({'round1_arc_combined/inputs.json': {'cases': cases}}, raw_observation={})
+
     def test_raw_integrity_negatives(self):
         mutations = [lambda x: x.update(schema='unknown'), lambda x: x.update(extra=1),
             lambda x: x['header'].update(surface_mode='native_queries'),
@@ -449,6 +461,541 @@ class RawMetricsTest(unittest.TestCase):
                           capture_output=True, text=True).stdout)
 
 
+def native_control(m=None, scale=1., units=1.):
+    raw, cases = raw_control(m, scale, units)
+    h = raw['header']
+    h['surface_mode'] = 'native_queries'
+    ref = h['inputs']['terrain']
+    h['surfaces'] = [{'id': 'plane', 'kind': 'terrain_raw',
+        'domain': {'xz_min': [-10., -10.], 'xz_max': [10., 10.]}, 'provenance': dict(ref),
+        'resources': {'before': dict(ref), 'after': dict(ref)}, 'terrain_transform': I,
+        'region': 'synthetic', 'lod': 'synthetic', 'method': 'synthetic-oracle', 'method_version': '1',
+        'parameters': dict(ref), 'selection': {'height': 'raw', 'normal': 'raw', 'sea_level': None, 'override_id': None}}]
+    bounds = h['uncertainty']
+    bounds['height_lipschitz'] = dict(bounds['normal'])
+    bounds['normal_lipschitz'] = dict(bounds['normal'], unit='1/m')
+    h['uncertainty'] = {'synthetic': bounds}
+    return raw, cases
+
+
+def oracle(request, height=0., normal=(0., 1., 0.)):
+    scalar = lambda value: {'precision': 'binary64', 'bits': struct.pack('>d', value).hex()}
+    n = None if normal is None else {'precision': 'binary64', 'bits': [struct.pack('>d', x).hex() for x in normal]}
+    h = None if height is None else scalar(height)
+    return {'request': copy.deepcopy(request), 'status': 'OK' if height is not None else 'HOLE',
+            'raw_height': h, 'raw_normal': n, 'used_height': h, 'used_normal': n,
+            'height_surface_id': request['surface_id'], 'normal_surface_id': request['surface_id'],
+            'height_method': request['method'], 'normal_method': request['method'],
+            'capture_id': '0', 'uncertainty_id': 'synthetic',
+            'reason': None if height is not None and normal is not None else 'synthetic unavailable'}
+
+
+class NativeMetricTest(unittest.TestCase):
+    def setup_native(self, m=None, scale=1., units=1.):
+        raw, cases = native_control(m, scale, units)
+        self.assertTrue(hasattr(metric, 'native_request'), 'C native requests missing')
+        return raw, cases, metric.validate_raw_observation(raw, cases)
+
+    def measure(self, p, a=(0., 0., 0.), height=0., normal=(0., 1., 0.), anchor_normal=(0., 1., 0.), state=None):
+        if state is None:
+            _, _, state = self.setup_native()
+        req = metric.native_request(state, 0, 0, .5, .25.hex(), 'mapped', 0, p)
+        patch = dict(state['header']['cases'][0]['patches'][0], anchors=[list(a)])
+        ar = metric.native_request(state, 1, 0, None, None, None, 0, list(a), patch)
+        return metric.native_measure(p, req, oracle(req, height, normal), ar,
+                                     oracle(ar, a[1], anchor_normal), state)
+
+    def test_hand_planar_slopes_fixed_anchor_ridge_and_hole(self):
+        result = self.measure([.003, -.002, 0.])
+        self.assertAlmostEqual(result['vertical_world_m'], -.002)
+        self.assertAlmostEqual(result['signed_world_m'], -.002)
+        self.assertAlmostEqual(result['slip_world_m'], .003)
+        self.assertAlmostEqual(result['error_model_um'], 3000.)
+        result = self.measure([1., .9, 0.], (-1., 0., 0.), 1., (-1., 1., 0.))
+        self.assertAlmostEqual(result['vertical_world_m'], -.1)
+        self.assertAlmostEqual(result['signed_world_m'], -.1/math.sqrt(2))
+        self.assertAlmostEqual(result['slip_world_m'], 2.)
+        result = self.measure([-.5, -.1, 0.], (-1., 0., 0.))
+        self.assertAlmostEqual(result['signed_world_m'], -.1)
+        self.assertAlmostEqual(result['slip_world_m'], .5)
+        for height, normal in [(0., None), (None, None), (0., (0., 0., 0.)), (0., (0., -1., 0.))]:
+            result = self.measure([0., -.1, 0.], height=height, normal=normal)
+            self.assertEqual(result['coverage'], 'UNCOVERED')
+            self.assertIsNone(result['upper_bound_model_um'])
+            self.assertEqual(result['vertical_world_m'], None if height is None else -.1)
+
+    def test_uncertainty_unknown_fail_placement_and_footprint(self):
+        raw, cases, state = self.setup_native()
+        b = raw['header']['uncertainty']['synthetic']
+        b['position']['value'] = .0001
+        b['height']['value'] = .0002
+        b['anchor']['value'] = .0001
+        state = metric.validate_raw_observation(raw, cases)
+        result = self.measure([.003, -.002, 0.], state=state)
+        self.assertEqual(math.ceil(result['upper_bound_model_um']), 3201)
+        self.assertEqual(metric.budget_status(result['upper_bound_model_um'], 0., {'contact_um': 3200}), 'FAIL')
+        self.assertEqual(metric.budget_status(result['upper_bound_model_um'], 0., {'contact_um': 3201}), 'WITHIN_FINITE_SAMPLES')
+        b['height_lipschitz'].update(value=None, reason='no neighbourhood proof')
+        result = self.measure([.003, -.002, 0.], state=metric.validate_raw_observation(raw, cases))
+        self.assertIsNone(result['upper_bound_model_um'])
+        m = copy.deepcopy(I); m[0][1] = .01
+        _, _, state = self.setup_native(m)
+        result = self.measure([.003, -.002, 0.], state=state)
+        self.assertIsNone(result['error_model_um'])
+        self.assertIsNone(result['upper_bound_model_um'])
+        for p in ([10., 0., 0.], [math.nextafter(10., 0.), 0., 0.]):
+            self.assertEqual(self.measure(p)['coverage'], 'UNCOVERED')
+
+    def test_unproven_vertex_and_anchor_neighbourhoods_have_no_bounds(self):
+        for x, error in ((11., 0.), (9.999, .01)):
+            with self.subTest(x=x, error=error):
+                raw, cases = native_control()
+                raw['header']['uncertainty']['synthetic']['position']['value'] = error
+                state = metric.validate_raw_observation(raw, cases)
+                value = self.measure([x, -.1, 0.], state=state)
+                self.assertEqual(value['vertical_world_m'], -.1)
+                self.assertEqual(value['signed_world_m'], -.1)
+                self.assertIsNone(value['vertical_interval_world_m'])
+                self.assertIsNone(value['signed_interval_world_m'])
+                self.assertIn('surface_domain', value['unknown_terms'])
+                self.assertIsNone(value['upper_bound_model_um'])
+                # Slip uses the independently captured anchor normal, not the vertex normal.
+                self.assertIsNotNone(value['slip_interval_world_m'])
+                raw['header']['uncertainty']['synthetic']['anchor']['value'] = error
+                state = metric.validate_raw_observation(raw, cases)
+                value = self.measure([0., -.1, 0.], a=[x, 0., 0.], state=state)
+                self.assertEqual(value['slip_world_m'], x)
+                self.assertIsNone(value['slip_interval_world_m'])
+                self.assertIn('anchor:surface_domain', value['unknown_terms'])
+                self.assertIsNotNone(value['vertical_interval_world_m'])
+                self.assertIsNotNone(value['signed_interval_world_m'])
+
+    def test_placement_guard_crossing_invalidates_dependent_bounds(self):
+        raw, cases = native_control()
+        raw['header']['surfaces'][0]['domain']['xz_max'][0] = 1.+8e-14
+        state = metric.validate_raw_observation(raw, cases)
+        p = [1., -.1, 0.]
+        req = metric.native_request(state, 0, 0, .5, .25.hex(), 'mapped', 0, p)
+        self.assertTrue(metric.native_sample(oracle(req), req, state)['covered'])
+        value = self.measure(p, state=state)
+        self.assertEqual(value['vertical_world_m'], -.1)
+        self.assertEqual(value['coverage'], 'UNCOVERED')
+        self.assertIsNone(value['vertical_interval_world_m'])
+        self.assertIsNone(value['signed_interval_world_m'])
+        self.assertIn('surface_domain', value['unknown_terms'])
+        raw['header']['surfaces'][0]['domain']['xz_max'][0] = 1.+2e-14
+        state = metric.validate_raw_observation(raw, cases)
+        value = self.measure([0., -.1, 0.], a=[1., 0., 0.], state=state)
+        self.assertIsNone(value['slip_interval_world_m'])
+        self.assertIn('anchor:surface_domain', value['unknown_terms'])
+        self.assertIsNotNone(value['vertical_interval_world_m'])
+
+    def test_normalization_handles_extreme_finite_raw_normals(self):
+        for size in (1e-320, 1.5e308):
+            result = self.measure([1., .9, 0.], (-1., 0., 0.), 1., (-size, size, 0.))
+            self.assertAlmostEqual(result['signed_world_m'], -.1/math.sqrt(2), places=14)
+            self.assertEqual(result['coverage'], 'COMPLETE_FINITE')
+
+    def test_scale_units_and_requeried_rotated_surface(self):
+        for scale, units in [(1., 1.), (2., 1.), (200., .01)]:
+            m = [[scale*x if r < 3 else x for x in row] for r, row in enumerate(I)]
+            _, _, state = self.setup_native(m, scale, units)
+            result = self.measure([.003, -.002, 0.], state=state)
+            self.assertAlmostEqual(result['error_model_um'], 3000.)
+            self.assertAlmostEqual(result['slip_world_m'], .003*scale*units)
+        # Rotating points AND querying the rotated plane keeps normal/slip error.
+        t = math.sqrt(.5)
+        m = [[t, -t, 0., 0.], [t, t, 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.]]
+        _, _, state = self.setup_native(m)
+        result = self.measure([.003, -.002, 0.], height=.005*t, normal=(-t, t, 0.),
+                              anchor_normal=(-t, t, 0.), state=state)
+        self.assertAlmostEqual(result['error_model_um'], 3000.)
+        self.assertAlmostEqual(result['signed_world_m'], -.002)
+
+    def test_sea_holes_mixed_surfaces_and_producer_hashes_stay_adverse(self):
+        raw, cases, _ = self.setup_native()
+        surface = raw['header']['surfaces'][0]
+        surface['kind'] = 'sea_clamped'
+        surface['selection'].update(height='max_raw_sea', normal='branch', sea_level=0.)
+        state = metric.validate_raw_observation(raw, cases)
+        request = metric.native_request(state, 0, 0, .5, .25.hex(), 'mapped', 0, [0., -.1, 0.])
+        response = oracle(request)
+        response['raw_height'] = {'precision': 'binary32', 'bits': '7fc00000'}
+        response['status'], response['reason'] = 'HOLE', 'native terrain hole; runtime used sea'
+        sample = metric.native_sample(response, request, state)
+        self.assertFalse(sample['covered'])
+        self.assertIsNone(sample['height_error'])
+        self.assertIsNone(sample['normal_error'])
+        self.assertIn('surface_unavailable', sample['missing'])
+        response['status'], response['reason'] = 'OK', None
+        with self.assertRaisesRegex(ValueError, 'nonfinite raw observation requires unavailable status'):
+            metric.native_sample(response, request, state)
+        response = oracle(request)
+        response['raw_height'] = None
+        with self.assertRaisesRegex(ValueError, 'missing unavailable query reason'):
+            metric.native_sample(response, request, state)
+        response = oracle(request, 0., (-1., 1., 0.))
+        response['used_normal'] = {'precision': 'binary64', 'bits': [struct.pack('>d', x).hex() for x in (0., 1., 0.)]}
+        sample = metric.native_sample(response, request, state)
+        self.assertFalse(sample['covered'], 'switch normal is ambiguous')
+        self.assertIsNone(sample['normal_error'])
+        self.assertIsNotNone(sample['height_error'])
+        self.assertIn('surface_switch_normal', sample['missing'])
+        measured = metric.native_measure([0., -.1, 0.], request, response, request, response, state)
+        self.assertEqual(measured['signed_world_m'], -.1)
+        self.assertIsNone(measured['signed_interval_world_m'])
+        self.assertIsNone(measured['slip_interval_world_m'])
+        self.assertIsNotNone(measured['vertical_interval_world_m'])
+        raw['header']['uncertainty']['synthetic']['height']['value'] = .01
+        state = metric.validate_raw_observation(raw, cases)
+        for height, crosses in ((.005, True), (.1, False)):
+            sample = metric.native_sample(oracle(request, height, (-1., 1., 0.)), request, state)
+            self.assertEqual(sample['normal_error'] is None, crosses)
+            self.assertIsNotNone(sample['height_error'])
+        raw['header']['surfaces'][0]['resources']['after']['sha256'] = 'a'*64
+        with self.assertRaises(ValueError):
+            metric.validate_raw_observation(raw, cases)
+
+    def test_neighbourhood_lipschitz_and_unknown_vertical_separation(self):
+        raw, cases, _ = self.setup_native()
+        b = raw['header']['uncertainty']['synthetic']
+        b['position']['value'] = .01
+        b['height_lipschitz']['value'] = 2.
+        b['normal_lipschitz']['value'] = .5
+        state = metric.validate_raw_observation(raw, cases)
+        request = metric.native_request(state, 0, 0, .5, .25.hex(), 'mapped', 0, [1.+2**-24, .9, 0.])
+        sample = metric.native_sample(oracle(request), request, state)
+        self.assertGreater(sample['height_error'], .02)
+        self.assertGreater(sample['normal_error'], .005)
+        b['normal'].update(value=None, reason='unbounded normal')
+        state = metric.validate_raw_observation(raw, cases)
+        result = self.measure([1., .9, 0.], state=state)
+        self.assertEqual(result['vertical_world_m'], .9)
+        self.assertIsNotNone(result['vertical_interval_world_m'])
+        self.assertIsNone(result['signed_interval_world_m'])
+        self.assertIsNone(result['upper_bound_model_um'])
+
+    def test_raw_words_rounding_and_echo_tampering(self):
+        _, _, state = self.setup_native()
+        req = metric.native_request(state, 0, 0, .5, .25.hex(), 'source', 0, [1.+2**-24, 0., -0.])
+        self.assertEqual(req['query_xz_f32'], ['3f800000', '00000000'])
+        self.assertEqual(req['intended_xz_f64'], ['3ff0000010000000', '0000000000000000'])
+        self.assertEqual(req['phase_hex'], .5.hex())
+        for key, value in [('ordinal', 1), ('phase_hex', 0.0.hex()), ('source_phase_id', 0.0.hex()),
+                           ('surface_sha256', 'f'*64), ('query_xz_f32', ['3f800001', '80000000'])]:
+            response = oracle(req)
+            response['request'][key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                metric.native_sample(response, req, state)
+        response = oracle(req)
+        response['normal_surface_id'] = 'sea'
+        self.assertFalse(metric.native_sample(response, req, state)['covered'])
+        response = oracle(req); response['used_height']['bits'] = struct.pack('>d', 2.).hex()
+        # raw_height and used_height are independently mutable in real JSON.
+        response['raw_height'] = {'precision': 'binary64', 'bits': struct.pack('>d', 0.).hex()}
+        with self.assertRaises(ValueError):
+            metric.native_sample(response, req, state)
+        with self.assertRaises((ValueError, OverflowError)):
+            metric.native_request(state, 0, 0, .5, .25.hex(), 'source', 0, [1e50, 0., 0.])
+
+
+class NativeRunTest(unittest.TestCase):
+    def run_requests(self, state, path):
+        points = {label: [[1., .9, 0.]] for label in ('source', 'reference', 'mapped')}
+        with metric.NativeRun(state, 1, query_output=path) as run:
+            for phase in (0., .5, 1.):
+                run.frame(points, 0, phase, float(phase/2).hex())
+            return run.finish()
+
+    def test_full_order_anchors_outgoing_and_stream_binding(self):
+        self.assertTrue(hasattr(metric, 'NativeRun'), 'C native stream integration missing')
+        raw, cases = native_control()
+        raw['header']['cases'][0]['patches'] = [
+            dict(raw['header']['cases'][0]['patches'][0], id='old', end=.5, anchors=[[-1., 0., 0.]]),
+            dict(raw['header']['cases'][0]['patches'][0], id='new', start=.5, anchors=[[1., 1., 0.]])]
+        state = metric.validate_raw_observation(raw, cases)
+        with tempfile.TemporaryDirectory() as tmp:
+            q, r = Path(tmp)/'queries', Path(tmp)/'responses'
+            report = self.run_requests(state, q)
+            self.assertEqual(report['vertex_count'], 9)
+            self.assertEqual(report['anchor_count'], 2)
+            with q.open('rb') as source:
+                stream = metric.QueryStream(source, 'requests', metric.query_header(state))
+                requests = list(stream)
+            self.assertEqual([x['variant'] for x in requests[:6]], ['source', 'reference', 'mapped']*2)
+            self.assertEqual([x['anchor_id'] for x in requests[9:]], ['old', 'new'])
+            self.assertEqual(requests[9]['interval_hex'], [0.0.hex(), .5.hex()])
+            responses = [oracle(req, 1. if struct.unpack('>d', bytes.fromhex(req['position_f64'][0]))[0] > 0 else 0.,
+                                (-1., 1., 0.) if struct.unpack('>d', bytes.fromhex(req['position_f64'][0]))[0] > 0 else (0., 1., 0.))
+                         for req in requests]
+            header = dict(metric.query_header(state), request_stream_sha256=stream.footer['stream_sha256'])
+            with r.open('wb') as output:
+                metric.write_query_stream(output, 'responses', header, responses)
+            points = {label: [[1., .9, 0.]] for label in ('source', 'reference', 'mapped')}
+            with metric.NativeRun(state, 1, query_responses=r) as run:
+                frames = [run.frame(points, 0, phase, float(phase/2).hex()) for phase in (0., .5, 1.)]
+                result = run.finish()
+            self.assertEqual(result['vertex_count'], 9)
+            self.assertEqual(result['anchor_count'], 2)
+            self.assertEqual(result['uncertainty_status'], 'BOUNDED')
+            self.assertEqual(result['unknown_terms'], [])
+            mid = frames[1]['mapped']
+            self.assertAlmostEqual(mid['exit_patches'][0]['max_slip_world_m'], 2.)
+            self.assertEqual(mid['patches'][0]['id'], 'new')
+            self.assertEqual(mid['exit_patches'][0]['anchor_requests'], {'first_ordinal': 9, 'row_count': 1})
+            self.assertEqual(mid['patches'][0]['anchor_requests'], {'first_ordinal': 10, 'row_count': 1})
+            self.assertEqual(frames[-1]['mapped']['exit_patches'][0]['id'], 'new')
+            self.assertAlmostEqual(mid['whole_mesh_min_signed_world_m'], -.1/math.sqrt(2))
+            self.assertEqual(mid['patches'][0]['budget_status'], 'PENDING')
+            # Full stream digest recomputation cannot excuse identity changes.
+            responses[0]['request']['phase_hex'] = .25.hex()
+            with r.open('wb') as output:
+                metric.write_query_stream(output, 'responses', header, responses)
+            with self.assertRaises(ValueError), metric.NativeRun(state, 1, query_responses=r) as run:
+                run.frame(points, 0, 0., 0.0.hex())
+
+    def test_same_vertex_differences_coverage_and_budget_fail_closed(self):
+        raw, cases = native_control()
+        ref = raw['header']['inputs']['terrain']
+        raw['header']['budget'] = {'contact_um': 10000000, 'authority': 'synthetic threshold only', 'source_sha256': ref['sha256']}
+        points = {'source': [[1., .9, 0.], [1., .2, 0.]],
+                  'reference': [[1., .9, 0.], [1., .2, 0.]],
+                  'mapped': [[1., .3, 0.], [1., 1., 0.]]}
+        with tempfile.TemporaryDirectory() as tmp:
+            q, r = Path(tmp)/'q', Path(tmp)/'r'
+            for mode in ('finite', 'hole', 'unknown', 'placement_fail'):
+                observation = copy.deepcopy(raw)
+                if mode == 'unknown':
+                    observation['header']['uncertainty']['synthetic']['normal'].update(value=None, reason='missing bound')
+                if mode == 'placement_fail':
+                    placement = observation['header']['placement']
+                    placement['matrix'][0][1] = .01
+                    placement['matrix_bits'][0][1] = struct.pack('>d', .01).hex()
+                state = metric.validate_raw_observation(observation, cases)
+                with metric.NativeRun(state, 2, query_output=q) as run:
+                    for phase in (0., .5, 1.):
+                        run.frame(points, 0, phase, float(phase/2).hex())
+                    run.finish()
+                with q.open('rb') as source:
+                    reader = metric.QueryStream(source, 'requests', metric.query_header(state))
+                    requests = list(reader)
+                responses = [oracle(req, None if mode == 'hole' and req['role'] == 'vertex' and req['vertex_id'] == 1 else 0.) for req in requests]
+                with r.open('wb') as output:
+                    metric.write_query_stream(output, 'responses', dict(metric.query_header(state), request_stream_sha256=reader.footer['stream_sha256']), responses)
+                with metric.NativeRun(state, 2, query_responses=r) as run:
+                    frames = [run.frame(points, 0, phase, float(phase/2).hex()) for phase in (0., .5, 1.)]
+                    run.finish()
+                measured = frames[0]['mapped']
+                self.assertEqual(measured['patches'][0]['budget_status'],
+                    {'finite': 'WITHIN_FINITE_SAMPLES', 'hole': 'PENDING', 'unknown': 'PENDING', 'placement_fail': 'INELIGIBLE_PLACEMENT'}[mode])
+                if mode == 'finite':
+                    diff = measured['source_relative_world_m']['vertical']
+                    self.assertAlmostEqual(diff['min'], -.6)
+                    self.assertAlmostEqual(diff['max'], .8)
+                    self.assertEqual([diff['min_vertex'], diff['max_vertex']], [0, 1])
+                    self.assertIsNotNone(measured['extrema_intervals_world_m']['vertical'])
+                if mode == 'hole':
+                    self.assertEqual(measured['coverage']['uncovered_vertices'], 1)
+                    self.assertIsNone(measured['extrema_intervals_world_m']['vertical'])
+                # Response header digest must match regeneration, even if all rows match.
+                bad_header = dict(metric.query_header(state), request_stream_sha256='a'*64)
+                with r.open('wb') as output:
+                    metric.write_query_stream(output, 'responses', bad_header, responses)
+                with self.assertRaises(ValueError), metric.NativeRun(state, 2, query_responses=r) as run:
+                    for phase in (0., .5, 1.):
+                        run.frame(points, 0, phase, float(phase/2).hex())
+                    run.finish()
+
+    def test_unproven_domain_propagates_to_extrema_and_run_uncertainty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            q, r = Path(tmp)/'q', Path(tmp)/'r'
+            for role in ('vertex', 'anchor'):
+                raw, cases = native_control()
+                raw['header']['uncertainty']['synthetic'][
+                    'position' if role == 'vertex' else 'anchor']['value'] = .01
+                if role == 'anchor':
+                    raw['header']['cases'][0]['patches'][0]['anchors'] = [[9.999, 0., 0.]]
+                state = metric.validate_raw_observation(raw, cases)
+                points = {label: [[9.999 if role == 'vertex' else 0., -.1, 0.]]
+                          for label in ('source', 'reference', 'mapped')}
+                with metric.NativeRun(state, 1, query_output=q) as run:
+                    for phase in (0., .5, 1.):
+                        run.frame(points, 0, phase, float(phase/2).hex())
+                    run.finish()
+                with q.open('rb') as source:
+                    reader = metric.QueryStream(source, 'requests', metric.query_header(state))
+                    responses = [oracle(req) for req in reader]
+                with r.open('wb') as output:
+                    metric.write_query_stream(output, 'responses', dict(metric.query_header(state),
+                        request_stream_sha256=reader.footer['stream_sha256']), responses)
+                with metric.NativeRun(state, 1, query_responses=r) as run:
+                    frames = [run.frame(points, 0, phase, float(phase/2).hex()) for phase in (0., .5, 1.)]
+                    result = run.finish()
+                self.assertEqual(result.get('uncertainty_status'), 'UNKNOWN')
+                term = 'surface_domain' if role == 'vertex' else 'anchor:surface_domain'
+                self.assertIn(term, result['unknown_terms'])
+                self.assertIn('native uncertainty: '+term, result['blockers'])
+                for frame in frames:
+                    for value in frame.values():
+                        self.assertEqual(value['whole_mesh_min_signed_world_m'], -.1)
+                        self.assertEqual(value['coverage']['status'], 'UNCOVERED')
+                        for interval in value['extrema_intervals_world_m'].values():
+                            if role == 'vertex':
+                                self.assertIsNone(interval)
+                            else:
+                                self.assertIsNotNone(interval)
+                        for patch in value['patches']+value['exit_patches']:
+                            self.assertIsNone(patch['upper_bound_model_um'])
+
+    def test_manifest_preserves_ineligible_placement_with_supplied_budget(self):
+        m = copy.deepcopy(I); m[0][1] = .01
+        raw, cases = native_control(m)
+        raw['header']['budget'] = {'contact_um': 10**9, 'authority': 'synthetic threshold only',
+                                  'source_sha256': raw['header']['inputs']['terrain']['sha256']}
+        state = metric.validate_raw_observation(raw, cases)
+        with tempfile.TemporaryDirectory() as tmp:
+            report = self.run_requests(state, Path(tmp)/'queries')
+        self.assertEqual(report.get('budget_status'), 'INELIGIBLE_PLACEMENT')
+
+    def test_truncated_input_does_not_publish_request_output(self):
+        self.assertTrue(hasattr(metric, 'NativeRun'), 'C native stream integration missing')
+        raw, cases = native_control(); state = metric.validate_raw_observation(raw, cases)
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)/'queries'
+            target.write_bytes(b'previous evidence')
+            with self.assertRaises(ValueError), metric.NativeRun(state, 1, query_output=target) as run:
+                run.finish()
+            self.assertEqual(target.read_bytes(), b'previous evidence')
+
+
+class QueryStreamTest(unittest.TestCase):
+    def test_bounded_roundtrip_counts_and_empty(self):
+        self.assertTrue(hasattr(metric, 'write_query_stream'), 'C bounded stream writer missing')
+        for count in (0, 1, 4097):
+            out = io.BytesIO()
+            header = {'observation_header_sha256': 'a'*64, 'fixture_sha256': metric.FIXTURE_SHA256,
+                      'surface_manifest_sha256': 'b'*64, 'evidence': {}}
+            footer = metric.write_query_stream(out, 'requests', header,
+                                               ({'ordinal': i} for i in range(count)))
+            reader = metric.QueryStream(io.BytesIO(out.getvalue()), 'requests', header)
+            self.assertEqual(list(reader), [{'ordinal': i} for i in range(count)])
+            self.assertEqual(reader.footer, footer)
+            self.assertEqual(footer['row_count'], count)
+            self.assertEqual(footer['chunk_count'], (count+4095)//4096)
+            self.assertEqual(reader.file_sha256, hashlib.sha256(out.getvalue()).hexdigest())
+
+    def test_byte_cap_canonical_rows_footer_and_restart(self):
+        header = {'observation_header_sha256': 'a'*64, 'fixture_sha256': metric.FIXTURE_SHA256,
+                  'surface_manifest_sha256': 'b'*64, 'evidence': {}}
+        out = io.BytesIO()
+        footer = metric.write_query_stream(out, 'requests', header,
+            ({'ordinal': i, 'payload': 'x'*(9*1024*1024)} for i in range(2)))
+        self.assertEqual(footer['chunk_count'], 2)
+        reader = metric.QueryStream(io.BytesIO(out.getvalue()), 'requests', header)
+        self.assertEqual(sum(1 for _ in reader), 2)
+        with self.assertRaises(ValueError):
+            list(reader)
+        writer = metric.QueryWriter(io.BytesIO(), 'requests', header)
+        writer.finish()
+        with self.assertRaises(ValueError):
+            writer.add({'ordinal': 0})
+        for data in (b'{"ordinal": 0}\n', b'{"ordinal":0,"ordinal":0}\n', b'{"ordinal":1}\n',
+                     b'{"ordinal":0}\n{"ordinal":0}\n', b'{"ordinal":NaN}\n'):
+            chunk = {'chunk_index': 0, 'first_ordinal': 0, 'row_count': data.count(b'\n'),
+                     'decoded_bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest(),
+                     'data_base64': base64.b64encode(zlib.compress(data)).decode()}
+            fake = metric.stream_prefix('requests', header)+b'"chunks":[\n'+metric.compact(chunk)+b'\n'
+            fake += b'],"footer":'+metric.compact({'chunk_count': 1, 'row_count': data.count(b'\n'),
+                       'decoded_bytes': len(data), 'stream_sha256': hashlib.sha256(data).hexdigest()})+b'}\n'
+            with self.subTest(data=data), self.assertRaises(ValueError):
+                list(metric.QueryStream(io.BytesIO(fake), 'requests', header))
+
+    def test_stream_rejects_tamper_truncation_restart_limits_and_noncanonical(self):
+        self.assertTrue(hasattr(metric, 'write_query_stream'), 'C bounded stream writer missing')
+        header = {'observation_header_sha256': 'a'*64, 'fixture_sha256': metric.FIXTURE_SHA256,
+                  'surface_manifest_sha256': 'b'*64, 'evidence': {}}
+        out = io.BytesIO()
+        metric.write_query_stream(out, 'requests', header, ({'ordinal': i} for i in range(2)))
+        raw = out.getvalue()
+        lines = raw.splitlines(keepends=True)
+        # Digests are recomputed too: integrity alone cannot excuse malformed rows/ordering.
+        def changed_chunk(field, value):
+            chunk = json.loads(lines[2].rstrip(b',\n'))
+            chunk[field] = value
+            return b''.join(lines[:2]+[metric.compact(chunk)+b'\n']+lines[3:])
+        mutations = [raw[:-2], raw+raw, raw.replace(b'"row_count":2', b'"row_count":3'),
+                     changed_chunk('chunk_index', 1), changed_chunk('first_ordinal', 1),
+                     changed_chunk('row_count', 4097), changed_chunk('decoded_bytes', 16*1024*1024+1),
+                     changed_chunk('data_base64', base64.b64encode(zlib.compress(b'x'*(16*1024*1024+1))).decode()),
+                     changed_chunk('data_base64', json.loads(lines[2])['data_base64']+'!!!!'),
+                     changed_chunk('data_base64', base64.b64encode(zlib.compress(b'{"ordinal":0}\n')+b'trailing').decode()),
+                     b' '* (32*1024*1024+1)+b'\n', raw.replace(b'"ordinal"', b'"ordinal"', 1)]
+        mutations.pop()  # The unchanged control must remain accepted.
+        for value in mutations:
+            with self.subTest(size=len(value)), self.assertRaises((ValueError, KeyError, TypeError, zlib.error)):
+                list(metric.QueryStream(io.BytesIO(value), 'requests', header))
+
+
+def native_full_check():
+    """Execute the entire finite geometry and transport workload; never native terrain proof."""
+    started = time.monotonic()
+    data = metric.load_frozen()
+    cases = data['round1_arc_combined/inputs.json']['cases']
+    raw, _ = native_control()
+    prototype = raw['header']['cases'][0]
+    raw['header']['cases'] = []
+    for case in cases:
+        op = case['op']
+        row = copy.deepcopy(prototype)
+        row.update(turn_udeg=op['turn_udeg'], duration_q=op['duration_q'],
+                   entry_phase_id=float(op['march_entry_phase']).hex(), exit_phase_id=float(op['march_exit_phase']).hex(),
+                   phase_ids=[float(u).hex() for u in case['phases']])
+        raw['header']['cases'].append(row)
+    state = metric.validate_raw_observation(raw, cases)
+    root = Path('.superpowers')
+    root.mkdir(exist_ok=True)
+    path = root/'pivot-native-requests.json'
+    rss_unit = 1 if sys.platform == 'darwin' else 1024
+    baseline_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss*rss_unit
+    print('NATIVE_FULL generating all 81,432,000 vertex requests, five independent synthetic anchors, and every frozen edge', flush=True)
+    report = metric.evaluate(data, raw_observation=raw, query_output=path)
+    generated_at = time.monotonic()
+    native = report['raw_observation']['native_queries']
+    assert native['vertex_count'] == 81432000 and native['anchor_count'] == 5
+    assert native['row_count'] == 81432005 and native['frame_count'] == 1300
+    assert report['absolute_edge_phase_flags'] == {'source': 652, 'reference': 563, 'mapped': 471}
+    assert report['introduced_edge_phase_flags'] == {'reference': 103, 'mapped': 45, 'mapping_only': 1}
+    assert report['whole_mesh_sha256'] == {
+        'source': 'c7b8a5f208c69d0c30b32098a1e4f1c36906b85826d48d8290a9357fc5d8df7e',
+        'reference': '086193886028a3d2f0ec7814dde4c0f523beda0da31d50c5fb320fc960b57954',
+        'mapped': '94540ff4eb6ff5a616ec699a814cfda2cee56ae8d4070bceeeba816f97815651'}
+    assert report['raw_observation']['measurement_status'] == 'PENDING_RESPONSES'
+    assert report['raw_observation']['budget_status'] == 'PENDING'
+    assert report['coverage']['edges'] == 33427 and len(report['frames']) == 1300
+    assert report['source_endpoint_edge23264']['flagged']
+    assert report['raw_observation']['coverage']['active_patches']['expected'] == 3900
+    assert report['raw_observation']['coverage']['outgoing_patches']['expected'] == 15
+    print('NATIVE_FULL generation complete; validating every serialized request and footer', flush=True)
+    with path.open('rb') as source:
+        stream = metric.QueryStream(source, 'requests', metric.query_header(state))
+        count = sum(1 for _ in stream)
+    assert count == 81432005 and stream.footer == native['footer']
+    assert stream.file_sha256 == native['request_file_sha256']
+    assert hashlib.sha256(frozen.FIXTURE.read_bytes()).hexdigest() == metric.FIXTURE_SHA256
+    peak_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss*rss_unit
+    # Frozen inputs are resident already; extra request memory must not grow with 81M rows.
+    assert peak_rss-baseline_rss < 256*1024*1024, (baseline_rss, peak_rss)
+    summary = {'vertex_count': 81432000, 'anchor_count': 5, 'rows': count, 'edges_per_frame': 33427,
+        'frames_per_variant': 1300, 'generation_seconds': generated_at-started,
+        'read_seconds': time.monotonic()-generated_at, 'baseline_peak_rss_bytes': baseline_rss,
+        'peak_rss_bytes': peak_rss, 'encoded_bytes': path.stat().st_size, **native,
+        'fixture_sha256': metric.FIXTURE_SHA256, 'whole_mesh_sha256': report['whole_mesh_sha256'],
+        'scope': 'complete frozen geometry/request transport; synthetic header, no native terrain observation'}
+    (root/'pivot-native-full-summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True))
+    (root/'pivot-native-metrics-report.json').write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False))
+    print('NATIVE_FULL_MATCH '+json.dumps(summary, sort_keys=True), flush=True)
+
+
 def full_check():
     before = hashlib.sha256(frozen.FIXTURE.read_bytes()).hexdigest()
     outputs = []
@@ -481,6 +1028,9 @@ def full_check():
 
 
 if __name__ == '__main__':
+    native_full = '--native-full' in sys.argv
+    if native_full:
+        sys.argv.remove('--native-full')
     full = '--full' in sys.argv
     if full:
         sys.argv.remove('--full')
@@ -489,3 +1039,5 @@ if __name__ == '__main__':
         sys.exit(1)
     if full:
         full_check()
+    if native_full:
+        native_full_check()
