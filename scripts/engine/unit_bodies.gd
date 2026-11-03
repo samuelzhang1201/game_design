@@ -605,6 +605,8 @@ static func validate_battle_candidate(repo: DataRepository, source: GameState, b
 		var digest := _battle_result_hash(repo, source)
 		if digest.is_empty() or digest != outer.result: return _failure("Battle endpoint proof mismatch")
 	if physical.status != "complete": return physical
+	if tx.has("body_battle") and source.military_migration.has("body_motion") \
+		and not BodyMotion._battle_saved_source_ok(repo, source, source.military_migration.body_motion): return _failure("Invalid battle movement physical proof")
 	if kind == "safe" and not tx.is_empty(): return _result("deferred", "Frozen day prevents safe battle operation")
 	for battle: Dictionary in source.battles:
 		if _live(battle) and (not battle.get("pending_round", {}).is_empty() or battle.has("body_round")):
@@ -645,9 +647,15 @@ static func _battle_raw_error(source: GameState) -> String:
 		if not error.is_empty(): return error
 	if source.military_migration.has("body_motion"):
 		var motion: Variant = source.military_migration.body_motion
-		if not BodyMotion._saved_ok(motion) and not BodyMotion._loco_saved_ok(motion): return "Invalid saved movement control"
-		# The future B-TIME entrance must certify its own physical/result projection.
-		if tx.has("body_battle"): return "Active movement requires the battle TIME consumer"
+		if tx.has("body_battle"):
+			if not BodyMotion._loco_saved_ok(motion, true): return "Invalid battle movement control"
+			var moved: Dictionary = motion.plan.cursor.boundary
+			var control: Dictionary = tx.body_battle
+			var receipt: Dictionary = source.military_migration.get("body_battle", {})
+			if control.stage != "contact" or receipt.is_empty() or moved.sequence != receipt.sequence \
+				or moved.abs_day != control.abs_day or moved.substep != control.next_substep:
+				return "Active battle movement disagrees with consumed move"
+		elif not BodyMotion._saved_ok(motion) and not BodyMotion._loco_saved_ok(motion): return "Invalid saved movement control"
 	var outer: Dictionary = source.military_migration.get("body_battle", {})
 	var closed: Dictionary = outer.get("closed_motion", {})
 	if not closed.is_empty():

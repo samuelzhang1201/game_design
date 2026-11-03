@@ -2472,14 +2472,20 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 			step = budget / count + (1 if slice < budget % count else 0)
 			if int(boundary.version) == 1 and slice == count - 1: step = maxi(step, budget - int(saved.get("day_walked_m", 0)))
 			if step > 0 and UnitGait.pays_run(repo, candidate, code, current, count): step = UnitGait.run_step_m(repo, step)
-			var walked := BattleTaskSystem.pursuit_walk(repo, candidate, code, current, Vector2i(here[0], here[1]), _path_of(saved), step)
-			if bool(walked.limited):
-				path = [here]
-				for point: Vector2i in walked.passed: path.append([point.x, point.y])
-				path.append([walked.at.x, walked.at.y])
-				if int(boundary.version) == 1: step = mini(step, BodyMotion._length(path))
-				if not String(walked.pursuit_reason).is_empty():
-					pursuit_limits[code] = {"at": path.back(), "reason": walked.pursuit_reason}
+			if int(boundary.version) == 2:
+				var contribution := march_intent_candidate(repo, candidate, code, step)
+				if contribution.status != "complete": return {"error": contribution.error}
+				path = contribution.path_m
+				if not contribution.reason.is_empty(): pursuit_limits[code] = {"at": path.back(), "reason": contribution.reason}
+			else:
+				var walked := BattleTaskSystem.pursuit_walk(repo, candidate, code, current, Vector2i(here[0], here[1]), _path_of(saved), step)
+				if bool(walked.limited):
+					path = [here]
+					for point: Vector2i in walked.passed: path.append([point.x, point.y])
+					path.append([walked.at.x, walked.at.y])
+					if int(boundary.version) == 1: step = mini(step, BodyMotion._length(path))
+					if not String(walked.pursuit_reason).is_empty():
+						pursuit_limits[code] = {"at": path.back(), "reason": walked.pursuit_reason}
 		if step < 0 or step > BodyMotion.LOCAL_LIMIT: return {"error": "Unsafe slice budget"}
 		for body: Dictionary in UnitBodies.rows(repo, candidate, code):
 			var translated: Array = []
@@ -2528,39 +2534,7 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 				common = prefix
 		if common.is_empty(): common = [path[0]]
 		row.anchor_path_m = common
-		var at: Array = common.back()
-		var remaining: Array = _body_remaining(path, common, int(boundary.version) == 2)
-		var changed: bool = int(current.get("order_id", 0)) != int(saved.get("order_id", 0)) \
-			or current.get("order") != saved.get("order") or current.dest_x_m != saved.dest_x_m or current.dest_y_m != saved.dest_y_m
-		saved.x_m = int(at[0])
-		saved.y_m = int(at[1])
-		saved.route_m = remaining
-		saved.day_walked_m = int(saved.get("day_walked_m", 0)) + int(row.used_m)
-		saved.march_step = [int(boundary.abs_day), slice]
-		if int(row.used_m) > 0:
-			current.moved_day = int(boundary.abs_day)
-			saved.moved_day = int(boundary.abs_day)
-			_release_camp_on_movement(current)
-			_release_camp_on_movement(saved)
-		if remaining.is_empty() and int(row.step_budget_m) > 0 and not UnitBodies.rows(repo, after, code).is_empty() and saved.order == ORDER_MARCH:
-			saved.order = ORDER_GARRISON
-			_clear_route(saved)
-			arrivals.append(code)
-		if not changed: _publish_march_state(current, saved)
-		else:
-			current.x_m = int(at[0])
-			current.y_m = int(at[1])
-			if current.order == ORDER_GARRISON:
-				current.dest_x_m = int(at[0])
-				current.dest_y_m = int(at[1])
-			# A later received order keeps its destination and begins from the actual anchor.
-			if current.order == ORDER_MARCH:
-				current.route_m = MarchRoute.to_pairs(route_m_of(repo, Vector2i(current.x_m, current.y_m),
-					MarchRoute.from_pairs(current.get("waypoints_m", [])), Vector2i(current.dest_x_m, current.dest_y_m)))
-		if not bool(current.get("battle_retreat", false)) and int(current.get("disengaging", 0)) != 1:
-			var limit: Dictionary = pursuit_limits.get(code, {})
-			var reason: String = limit.reason if not limit.is_empty() and common.back() == limit.at else ""
-			if BattleTaskSystem.credit_pursuit(repo, after, code, int(row.used_m), reason): _retire_saved_march(saved, current)
+		_body_settle_route(repo, after, row, path, common, boundary, pursuit_limits.get(code, {}), arrivals, int(boundary.version) == 2)
 		row.entry_after = current.duplicate(true)
 		row.saved_entry_after = saved.duplicate(true)
 		var anchor_error := _body_path_terrain(MarchPath.of_pack(repo), common, 0)
@@ -2568,6 +2542,47 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 	var plan := {"version": int(boundary.version), "abs_day": int(boundary.abs_day), "substep": slice,
 		"basis": _body_basis(repo, source, MarchPath.of_pack(repo)), "motion": motion, "units": units, "arrivals": arrivals}
 	return {"candidate": candidate, "plan": plan, "tasks": after.unit_tasks}
+
+
+## Shared settlement follows actual body route credit, never the requested endpoint.
+static func _body_settle_route(repo: DataRepository, after: GameState, row: Dictionary, path: Array,
+		common: Array, boundary: Dictionary, limit: Dictionary, arrivals: Array[String], rounded: bool) -> void:
+	var code: String = row.unit
+	var current := _entry_of(after, code)
+	var saved: Dictionary = row.saved_entry_after
+	var slice := int(boundary.substep)
+	var at: Array = common.back()
+	var remaining: Array = _body_remaining(path, common, rounded)
+	var changed: bool = int(current.get("order_id", 0)) != int(saved.get("order_id", 0)) \
+		or current.get("order") != saved.get("order") or current.dest_x_m != saved.dest_x_m or current.dest_y_m != saved.dest_y_m
+	saved.x_m = int(at[0])
+	saved.y_m = int(at[1])
+	saved.route_m = remaining
+	saved.day_walked_m = int(saved.get("day_walked_m", 0)) + int(row.used_m)
+	saved.march_step = [int(boundary.abs_day), slice]
+	if int(row.used_m) > 0:
+		current.moved_day = int(boundary.abs_day)
+		saved.moved_day = int(boundary.abs_day)
+		_release_camp_on_movement(current)
+		_release_camp_on_movement(saved)
+	if remaining.is_empty() and int(row.step_budget_m) > 0 and not UnitBodies.rows(repo, after, code).is_empty() and saved.order == ORDER_MARCH:
+		saved.order = ORDER_GARRISON
+		_clear_route(saved)
+		arrivals.append(code)
+	if not changed: _publish_march_state(current, saved)
+	else:
+		current.x_m = int(at[0])
+		current.y_m = int(at[1])
+		if current.order == ORDER_GARRISON:
+			current.dest_x_m = int(at[0])
+			current.dest_y_m = int(at[1])
+		# A later received order keeps its destination and begins from the actual anchor.
+		if current.order == ORDER_MARCH:
+			current.route_m = MarchRoute.to_pairs(route_m_of(repo, Vector2i(current.x_m, current.y_m),
+				MarchRoute.from_pairs(current.get("waypoints_m", [])), Vector2i(current.dest_x_m, current.dest_y_m)))
+	if not bool(current.get("battle_retreat", false)) and int(current.get("disengaging", 0)) != 1:
+		var reason: String = limit.reason if not limit.is_empty() and common.back() == limit.at else ""
+		if BattleTaskSystem.credit_pursuit(repo, after, code, int(row.used_m), reason): _retire_saved_march(saved, current)
 
 ## Clip only the requested slice; the full received route remains frozen separately.
 static func _body_locomotion_slice(repo: DataRepository, state: GameState, code: String, row: Dictionary, path: Array, budget: int) -> Array:
@@ -2743,3 +2758,31 @@ static func _body_enemies(repo: DataRepository, state: GameState, a: String, b: 
 	return _hostile({"player": repo.resolve_realm("player_realm"), "raider": repo.resolve_realm("raider_realm"),
 		"diplomacy": repo.world_table("political", "diplomacy"), "hostile": {}},
 		str(state.army_roster[a].get("kingdom_code", "")), str(state.army_roster[b].get("kingdom_code", "")))
+
+## Pure received-route contribution; the union caller owns gait payment and poses.
+static func march_intent_candidate(repo: DataRepository, source: GameState, unit: String, budget_m: int) -> Dictionary:
+	var failure := {"status": "error", "reason": "Invalid received march contribution", "error": "Invalid received march contribution", "unit": unit, "path_m": []}
+	if repo == null or source == null or budget_m < 0 or budget_m > BodyMotion.LOCAL_LIMIT: return failure
+	var entry := _entry_of(source, unit)
+	var saved: Dictionary = source.day_resolution.get("march_entries", {}).get(unit, {})
+	if not _body_entry_ok(entry) or not _body_entry_ok(saved): return failure
+	var here: Array = [int(entry.x_m), int(entry.y_m)]
+	var result := {"status": "complete", "reason": "", "error": "", "unit": unit, "path_m": [here]}
+	if saved.order != ORDER_MARCH or bool(entry.get("captured", false)) or not BattleSystem.may_withdraw(source, unit) \
+		or not CampSystem.can_march_entry(entry, source.absolute_day()) or is_naval(repo, source, unit) \
+		or BattleTaskSystem.current(source, unit).get("status", "") == "bounded":
+		result.reason = "Received march waits for capability, packing or pursuit permission"
+		return result
+	var path: Array = [here]
+	for point: Vector2i in _path_of(saved): path.append([point.x, point.y])
+	for point: Array in path:
+		if absf(BodyMotion._difference(point[0], here[0])) > BodyMotion.LOCAL_LIMIT or absf(BodyMotion._difference(point[1], here[1])) > BodyMotion.LOCAL_LIMIT: return failure
+	var walked := BattleTaskSystem.pursuit_walk(repo, source, unit, entry, Vector2i(here[0], here[1]), _path_of(saved), budget_m)
+	if bool(walked.limited):
+		path = [here]
+		for point: Vector2i in walked.passed: path.append([point.x, point.y])
+		path.append([walked.at.x, walked.at.y])
+		result.reason = walked.pursuit_reason
+	result.path_m = path
+	if path.size() == 1 and result.reason.is_empty(): result.reason = "Received march holds at its endpoint"
+	return result
