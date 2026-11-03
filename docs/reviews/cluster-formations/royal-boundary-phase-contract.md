@@ -295,6 +295,7 @@ A copied `boundary_kinematics` packet has a closed versioned schema:
 | exit | pivot's left limit **and** following op's right limit |
 | each side | exact admitted op/cursor/receipt/index or explicit endpoint-only classification; S and duration; H and H_S; native phase/lift/winding and source branch; native affine/skin values and derivatives/enclosures |
 | neighboring binding | copied operation bytes, admission proof identity, continuity with current op, source of each side; no hidden future orders |
+| shared boundary | chronological left/right identities; rule version and selected branch; both native-reference jets; one shared world sole/material target jet and its digest, independent of which pivot requests it |
 | domain | exact parameter cell, active terrain/seat/native branches, arithmetic uncertainty, covered/unavailable reasons |
 
 For the pivot-inside side, the native reference jet is not the solved limb jet:
@@ -306,22 +307,99 @@ may display a value; it cannot prepare a boundary-matched motion or authorize
 rewind. Observed hostile current poses cannot supply future operations through
 this API. Standalone evidence uses the same copied admission boundary.
 
-For each boundary and sole frame, with `a` the adjacent side and `p` pivot:
+### Shared world jet: native neighbors and solved pivot neighbors
+
+Derive the side classification from its admitted operation kind: move/active
+hold uses the native reference output in section 2; pivot uses a solved output.
+At a common boundary b, label sides L (earlier operation, left limit) and R
+(later operation, right limit). First require the same world carrier/native
+endpoint value C_b, including exact local/skin C0 at original precision. Native
+keys and terrain cuts retain distinct one-sided derivatives even with equal
+values. Define each side's **reference**, not necessarily actual output, jet:
 
 ```text
-C_a   = H_a * M_a
-C_a,S = H_a,S*M_a + H_a*M_a,phi*rho
-M_p,u = D * inverse(H_p) * (C_a,S - H_p,S*M_p)
+J_ref,i = H_i,S*M_i + H_i*M_i,phi*rho         # i=L,R, sole affine
+j_ref,i = H_i,S*[p_i,1] + H_i*[p_i,phi*rho,0] # actual raw-weight material point
 ```
 
-Require C0 values first: identical world carrier/native endpoints at the
-boundary, as well as exact native local/skin endpoint agreement at original
-precision. Inverse derivatives are not omitted: the last equation already
-contains the effect of the changing inverse through the subtraction term.
-Perform the analogous product rule on each actual material point:
-`x_S=H_S*[p_model,1]+H*[p_model,phi*rho,0]`. H's translation is added once,
+H's translation is added once,
 even when the raw packed weights do not sum to one. Never normalize those
 weights or apply carrier translation once per influence.
+
+Choose **one** shared target by this closed branch table, independently for
+each full sole affine and each required material point, using the same rule:
+
+| Left/right output kinds | Shared target J_b (and analogous material j_b) |
+|---|---|
+| native / pivot | J_ref,L, the unmodified native side's actual jet |
+| pivot / native | J_ref,R, the unmodified native side's actual jet |
+| pivot / pivot | (J_ref,L + J_ref,R)/2, a prescribed shared target, not either pivot's measured solved jet |
+| native / native | actual jets must already agree for a C1 claim; averaging cannot change native output |
+| either endpoint-only or unavailable | no motion-join claim; keep the named unavailable classification |
+
+The pivot/pivot arithmetic mean is this contract's deterministic, symmetric
+boundary condition, not an error tolerance or a selectable fitting weight.
+Average derivatives at their common C0 value in the **same world coordinates
+and S units**, never quaternion poses, normalized-u derivatives or contact
+errors. Preserve both source branch identities and outward rounding enclosures;
+do not discard a native derivative discontinuity by reporting the mean as a
+native jet. Native C0 discontinuities still reject. The common target may be
+unattainable under the protected limb constraints; this rule does not assert
+feasibility and is not changed per cell to obtain a pass.
+
+Both pivots consume the exact same boundary record. Its canonical identity is
+`(rule_version,unit,slot,S_b,left_id,right_id,law_identity,source_identity,
+placement_identity,terrain_identity)`, where the placement/terrain identities
+are ordered pairs of the two sides' provenance, not whichever caller runs first.
+Each side id contains `(abs_day,substep,receipt,op_index)` plus its copied
+operation digest. Order the
+sides by their validated time intervals, not receipt lexicography or the
+requesting caller's entry/exit label. Include both H/H_S, source/material
+branches and reference jets, the derived target and arithmetic enclosures in
+the shared digest. The containing per-pivot packet additionally binds its own
+op; that does not change the nested shared record. Missing/swapped/stale side
+identities or differing target/digest copies reject `shared_boundary_mismatch`.
+
+BOUNDARY computes this record from the two admitted operation copies, PHASE,
+JETS and CARRIER **before either provider is prepared**. It never asks a pivot
+provider for the other provider's solved derivative, iterates a fixed point,
+uses a preceding sampled frame or reads a future order. A standalone caller can
+retain copies of two successive accepted BodyMotion commits and their public
+admission/receipt evidence, then build both packets from those frozen inputs;
+this needs neither a production renderer nor eventual activation. A live caller
+must likewise supply both actual admitted copies before preparing this join.
+An unavailable next receipt remains `UNAVAILABLE_NEIGHBOR`; predicting it or
+retrospectively changing an already prepared trajectory is not authorized.
+This availability rule does not exclude the pivot/pivot branch from the
+required proof/acceptance domain: fixtures and certification must cover it.
+
+For **each** pivot side i, constrain its solved one-sided derivative using its
+own positive duration D_i and carrier jet:
+
+```text
+M_i,u = D_i * inverse(H_i) * (J_b - H_i,S*M_i)
+p_i,u = D_i * inverse(H_i.basis) * (j_b - XYZ(H_i,S*[p_i,1]))
+```
+
+Consequently `H_i,S*M_i + H_i*M_i,u/D_i = J_b` on both sides; the corresponding
+material equation returns j_b. This replaces the erroneous rule of taking a
+solved neighboring pivot's native-reference jet as its actual output. The
+inverse's change is included by the subtracted carrier term. Duration factors
+are independent on the two sides; equality of normalized-u derivatives is
+neither required nor generally correct.
+
+R2's physical trajectory endpoint derivative is `D_i*J_b` (and `D_i*j_b`),
+then the section-6 pullback includes that side's own H_k,u and Y_u. The actual
+returned pose/skin trajectory must have those one-sided world jets, proved
+through its permitted reconstruction branch and native arithmetic enclosure.
+A common input target alone is not an actual-output C1 certificate. Distinguish
+`infeasible_boundary_jet` (witnessed incompatibility with allowed locals/limits),
+`solved_boundary_jet_mismatch` (returned derivatives disagree), and an unproved
+derivative enclosure (UNRESOLVED). Keep the two reference jets, common target,
+both actual solved jets and residual provenance. Do not replace the target by
+either solved result, widen a threshold or remove the case. Infeasibility of
+this selected condition is not a proof that every possible boundary law fails.
+
 The root remains its committed piecewise motion. Required contact C1 is a
 constraint on permitted local derivatives, not permission to smooth the root,
 change seat, bend other bones or insert time outside the pivot.
@@ -342,7 +420,9 @@ The future builder performs this sequence on detached data and publishes once:
    placement and terrain provenance. Recompute phase/winding from S; reject
    stale or caller-invented values rather than accepting a plausible rate.
 3. Select all native and terrain one-sided branches. Recompute both sides'
-   H/H_S and native/material jets. Validate C0 at entry and exit independently.
+   H/H_S and native/material reference jets. Validate C0 at entry and exit,
+   classify the actual output kinds and derive/compare their canonical shared
+   world-jet records before preparing either pivot.
 4. Form the chain-rule constraints, preserve branch uncertainty, and validate
    the kernel representation/pullback over the entire pivot. Endpoint checks
    alone do not establish a constant carrier inside it or bound a chart fit.
@@ -367,6 +447,51 @@ Mandatory hand cases, to be transcribed into the registered components' tests:
 | footprint tie of f1=2S and f2=-S at S=0 | max has left derivative -1 and right derivative 2; averaging .5 is wrong |
 | terrain h=.1x, sample X speed 3, no rotation, fixed clearance | seat y_S=.3; omitting it breaks the chain rule |
 
+**Reachable pivot/pivot controls:** Q=turn_q=1,000,000, row start/final heading
+90 degrees, B=100 and each path a 50-metre +X leg give operations
+`pivot -90 [0,250000]`, `move [250000,750000]`, `pivot +90 [750000,Q]`.
+There is no trailing hold. The next receipt starts at the preceding endpoint
+with the same row heading, so a final +90 pivot meets an initial -90 pivot.
+This satisfies the accepted planner's same start/final row-facing rule.
+
+On flat terrain at a smooth native phase, let J be the common native material
+contribution in world units/S and A=`UP cross r`, with r the world lever arm.
+The carrier rates are omega_L=-2*pi and omega_R=+2*pi per S, so reference jets
+are `J-2*pi*A` and `J+2*pi*A`. The prescribed shared jet is **J**. In the common
+boundary basis, left/right required local corrections per S are respectively
+`+2*pi*A` and `-2*pi*A`; at D_L=D_R=1/4 their normalized corrections are
+`+(pi/2)*A` and `-(pi/2)*A`. Adding each carrier term and dividing its local
+derivative by its own D gives J on both sides. The old mutual-reference rule
+instead produces a `4*pi*A` mismatch. This calculation holds for arbitrary J,
+not only a constant native pose; apply it to full sole affine and material jets.
+
+Mirror the headings/turns (row 270 degrees with the same +X legs): the angular
+rates and local corrections exchange signs, but both world jets still equal J.
+For a same-sign join, retain row 90, take a +X leg then a -X leg: the joining
+pack turns are +90/+90, so both world angular rates are -2*pi and the shared
+jet is `J-2*pi*A`, not zero or J. No averaging of the actor's committed yaw
+is performed in either case.
+
+Unequal-duration control with the same turn_q: row heading 90 on both sides;
+the left leg is (10,10), ceil length 15 with B=20, giving -45/.125, move/.75,
++45/.125. The right leg is (7,-7), ceil length 10 with B=40, giving -135/.375,
+move/.25, +135/.375. Place their join across a day boundary if the frozen daily
+budgets differ; both schedules close exactly and keep row heading 90. The
+joining angular rates remain -2*pi/+2*pi, so J_b=J, but normalized corrections
+are `+(pi/4)*A` and `-(3*pi/4)*A`. Equalizing those corrections breaks C1.
+These are scheduling/algebra controls, not installed royal policy or a native
+physical success claim.
+
+At a native or seat derivative cut, keep arbitrary references J_ref,L and
+J_ref,R in the mean; the scalar control 2 and 6 gives a shared 4. Each pivot
+must compensate its own carrier/reference branch or report the exact physical
+constraint failure. For native/pivot or pivot/native the same 2/6 inputs select
+2 or 6 respectively, never their mean. Test unchanged shared-record bytes when
+preparing left then right, right then left, after JSON restoration of admitted
+operations, and on repeated receipts; use the one-sided branch at each side's
+own endpoint. Changing a duration/receipt/terrain branch must invalidate both
+old shared-record copies. Neither sample order nor load may select a new jet.
+
 Also require both turn signs, +/-1 microdegree, near/+180 tie,
 76.000012 to 256.000012 degrees, 350 to 10 and reverse, duration 1 and Q,
 all source keys/off-keys/.73/seams, receipt/day crossings and arbitrary sample
@@ -380,7 +505,10 @@ source/import identity, law T/N/L/seed, branch/side, scale/A, seat sample, terra
 method/hole/sea override and derivative. Every mismatch must reject atomically.
 Include stale cache reuse with identical phi but different carrier/rate/branch,
 unknown next receipt, malformed absent-row admission, unobserved hostile future
-data, invalid initial phase and STEP/seam jumps. Retain native rounding bounds
+data, invalid initial phase and STEP/seam jumps. Add a pivot falsely labelled
+native, a shared record containing only one side, mismatched duplicate shared
+records and provider outputs whose actual material jets miss their common
+target despite exact native endpoint values. Retain native rounding bounds
 near all comparisons; EPS is not a physical budget.
 
 ## 6. Variable carrier: obstruction and selected pullback
@@ -576,7 +704,11 @@ Implement the detached caller packet/chain rule/rejection procedure in sections
 upright terrain/scale inputs. A standalone test/fixture calls this same public
 builder before any runtime activation. It receives the admitted current and
 neighbor projections, not a Game/state query; it cannot manufacture a missing
-next receipt. Require native component receipts and full-domain identity in
+next receipt. It owns the chronological shared-boundary record and native/pivot
+branch table, including pivot/pivot means; preparing either side first must
+produce identical shared bytes without calling a provider. Include both complete
+consecutive-receipt schedules, unequal durations, signs, JSON and stale-record
+controls above. Require native component receipts and full-domain identity in
 addition to synthetic arithmetic tests. This makes the data interface callable
 without depending on the eventual renderer/consumer or on CERT success.
 
@@ -584,7 +716,10 @@ without depending on the eventual renderer/consumer or on CERT success.
 contract, before R2 may consume a variable-height carrier. Implement section 6
 with unchanged protected source/seat/root/scale/R/error limits, separate physical
 support and numerical targets, world residual bounds, exact native endpoint,
-seat-kink derivative and complete reconstruction restriction tests. Exact paths:
+seat-kink derivative and complete reconstruction restriction tests. Exercise
+the shared pivot/pivot target with separate D_i/H_i,S/Y_i,u on each side; R2/CERT
+must compare actual solved sole/material jets against that target and each
+other, retaining nonrepresentable cases without changing limits. Exact paths:
 
 ```text
 scripts/map3d/map3d_royal_carrier_pullback.gd
