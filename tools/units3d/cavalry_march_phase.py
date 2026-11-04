@@ -8,7 +8,7 @@ import argparse
 import ast
 import csv
 from bisect import bisect_right
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction as Q
 from functools import lru_cache
 import hashlib
@@ -198,8 +198,10 @@ class Budget:
     used: int = 0
     planning: bool = False
     arithmetic: object = None
+    norm_records: dict = field(default_factory=dict)
 
 
+NORM_BASELINE_SHA = '17c771a3d3254557c5663e169d53ad46129e3a730505b2a7b37ba5da948fcc07'
 BASELINE_SHA = '2d7ebd7ba5c2c6e3127c9f94fb2b1c5b775c76b6b3eb95a8568bc376d7648e67'
 ARITHMETIC_VERIFIER_SHA = '37f34e84334c12ed9194539d4e16505e461927ad17fd84553931f2e60ff9dc4f'
 
@@ -229,6 +231,158 @@ def float_box(interval):
 
 def box_interval(box):
     return rational(box.lo.item()), rational(box.hi.item())
+
+
+@dataclass(frozen=True)
+class QuaternionBranch:
+    box: object
+    norm_squared: tuple
+    certificate: dict
+    binding: str
+
+    def validate(self):
+        require(self.binding == canonical_digest((self.box.lo, self.box.hi,
+                self.norm_squared, self.certificate)), 'Corrupted quaternion certificate/component identity')
+        require(0 <= self.norm_squared[0] <= self.norm_squared[1], 'Invalid quaternion norm certificate')
+
+
+class QuaternionSpan(native.Float32Box):
+    """Branches are hulled for linear consumers only, never before a denominator."""
+    def __init__(self, branches):
+        require(branches, 'Missing quaternion certificate branches')
+        self.branches = tuple(branches)
+        for branch in self.branches:
+            branch.validate()
+        super().__init__(np.minimum.reduce([b.box.lo for b in branches]),
+                         np.maximum.reduce([b.box.hi for b in branches]))
+
+    def validate(self):
+        require(self.branches, 'Missing quaternion certificate branches')
+        for branch in self.branches:
+            branch.validate()
+        require(np.array_equal(self.lo, np.minimum.reduce([b.box.lo for b in self.branches]))
+                and np.array_equal(self.hi, np.maximum.reduce([b.box.hi for b in self.branches])),
+                'Quaternion branch hull changed')
+
+
+def norm_branch(box, norm, certificate):
+    require(certificate['norm_squared'] == norm, 'Quaternion certificate norm differs')
+    lower = sum(Q(0) if x <= 0 <= y else min(abs(rational(x)), abs(rational(y)))**2
+                for x, y in zip(box.lo, box.hi))
+    upper = sum(max(abs(rational(x)), abs(rational(y)))**2 for x, y in zip(box.lo, box.hi))
+    require(max(lower, norm[0]) <= min(upper, norm[1]), 'Inconsistent quaternion norm/component intervals')
+    return QuaternionBranch(box, norm, certificate,
+        canonical_digest((box.lo, box.hi, norm, certificate)))
+
+
+def perturbed_norm(norm, error):
+    # ||e||_2 <= ||e||_1. Never replace an unproved lower bound by epsilon.
+    radius = sum(error)
+    lo, hi = sqrt_bounds(norm[0])[0], sqrt_bounds(norm[1])[1]
+    return max(Q(0), lo-radius)**2, (hi+radius)**2
+
+
+def affine_quaternion(a, b, weight, error, identity, component_box=None):
+    a, b, weight, error = [tuple(map(rational, values)) for values in (a, b, weight, error)]
+    require(len(a) == len(b) == len(error) == 4 and len(weight) == 2
+            and weight[0] <= weight[1] and all(e >= 0 for e in error), 'Affine quaternion domain')
+    A, B, C = sum(v*v for v in a), sum(v*v for v in b), sum(x*y for x, y in zip(a, b))
+    curvature = A-2*C+B
+    require(A >= 0 and B >= 0 and C*C <= A*B and curvature >= 0, 'Invalid finite Gram matrix')
+    points = list(weight)
+    if curvature and weight[0] <= (A-C)/curvature <= weight[1]:
+        points.append((A-C)/curvature)
+    values = [A*(1-w)**2+2*C*w*(1-w)+B*w*w for w in points]
+    norm = perturbed_norm((min(values), max(values[:2])), error) if any(error) else (min(values), max(values[:2]))
+    endpoints = [[x+(y-x)*w for x, y in zip(a, b)] for w in weight]
+    box = native.Float32Box.outward([float(min(x, y)-e) for x, y, e in zip(*endpoints, error)],
+                                     [float(max(x, y)+e) for x, y, e in zip(*endpoints, error)])
+    if component_box is not None:
+        lower, upper = np.maximum(box.lo, component_box.lo), np.minimum(box.hi, component_box.hi)
+        require((lower <= upper).all(), 'Inconsistent quaternion certificate/component intervals')
+        box = native.Float32Box(lower, upper)
+    certificate = {'identity': identity, 'a': a, 'b': b, 'weight': weight, 'component_error': error,
+                   'gram': (A, B, C), 'norm_squared': norm}
+    return QuaternionSpan([norm_branch(box, norm, certificate)])
+
+
+def roundoff_sum(magnitudes):
+    """Every source term ordering, with optional multiply-add contraction and FTZ."""
+    total = sum(magnitudes)
+    error = sum(scalar.rnd(magnitude, 24) for magnitude in magnitudes)
+    # Source Hamilton rows add their terms in different orders. Each partial
+    # sum is bounded by the full absolute sum, including contracted FMAs.
+    for _ in range(len(magnitudes)-1):
+        error += scalar.rnd(total+error, 24)
+    return error
+
+
+def box_magnitudes(box):
+    return tuple(max(abs(rational(x)), abs(rational(y))) for x, y in zip(box.lo, box.hi))
+
+
+def hamilton_coefficients(rest):
+    x, y, z, w = map(rational, rest)
+    return ((w, -z, y, x), (z, w, -x, y), (-y, x, w, z), (-x, -y, -z, w))
+
+
+def hamilton_branch(rest, branch):
+    branch.validate()
+    coefficients = hamilton_coefficients(rest)
+    cert = branch.certificate
+    require('normalization_inverse' not in cert, 'Normalized quaternion is not an affine input')
+    magnitudes = box_magnitudes(branch.box)
+    errors = tuple(sum(abs(c)*e for c, e in zip(row, cert['component_error']))
+                   +roundoff_sum([abs(c)*v for c, v in zip(row, magnitudes)]) for row in coefficients)
+    a, b = [tuple(sum(c*v for c, v in zip(row, key)) for row in coefficients)
+            for key in (cert['a'], cert['b'])]
+    # The exact-real component expression is enclosed before its explicit rounding budget.
+    raw = native.quaternion_product_box(native.Float32Box(rest), branch.box)
+    rounding = [roundoff_sum([abs(c)*v for c, v in zip(row, magnitudes)]) for row in coefficients]
+    component = native.Float32Box.outward(raw.lo-np.array(list(map(float, rounding))),
+                                          raw.hi+np.array(list(map(float, rounding))))
+    result = affine_quaternion(a, b, cert['weight'], errors, cert['identity'], component).branches[0]
+    certificate = {**result.certificate,
+        'hamilton_roundoff': cert.get('hamilton_roundoff', [])+[{'rest': tuple(map(rational, rest)),
+            'operation_error': tuple(rounding), 'propagated_component_error': errors}]}
+    return norm_branch(result.box, result.norm_squared, certificate)
+
+
+def rounded_norm(branch, stage):
+    branch.validate()
+    magnitudes = box_magnitudes(branch.box)
+    error = roundoff_sum([v*v for v in magnitudes])
+    lo, hi = branch.norm_squared
+    rounded = (lo-error, hi+error)
+    if rounded[0] <= 0:
+        raise Unclosed(stage+'_quaternion_norm_contains_zero', norm_squared_interval=json_value(rounded),
+                       certificate=json_value(branch.certificate), quaternion_interval=[branch.box.lo.tolist(), branch.box.hi.tolist()])
+    return rounded, error
+
+
+def normalize_branch(branch, rest_norm):
+    rounded, dot_error = rounded_norm(branch, 'mixer')
+    sqrt_interval = (sqrt_bounds(rounded[0])[0], sqrt_bounds(rounded[1])[1])
+    sqrt_error = scalar.rnd(sqrt_interval[1], 24)
+    root = (sqrt_interval[0]-sqrt_error, sqrt_interval[1]+sqrt_error)
+    inverse = interval_quotient((Q(1), Q(1)), root, 24)
+    if root[0] <= 0 or inverse[0] <= 0:
+        raise Unclosed('mixer_normalization_rounding_contains_zero', root=json_value(root), inverse=json_value(inverse))
+    # D=N+delta: retain the N/D correlation rather than multiplying unrelated ranges.
+    lower = branch.norm_squared[0]
+    ratio = (lower/(lower+dot_error), lower/(lower-dot_error))
+    inv_error = sqrt_error/(sqrt_interval[0]*root[0])+scalar.rnd(1/root[0], 24)
+    magnitudes = box_magnitudes(branch.box)
+    mul_error = tuple(scalar.rnd(v*max(map(abs, inverse)), 24) for v in magnitudes)
+    radial_error = sqrt_bounds(branch.norm_squared[1])[1]*inv_error+sum(mul_error)
+    norm = perturbed_norm(ratio, (radial_error,))
+    components = [interval_product(box_interval(branch.box[i]), inverse, 24) for i in range(4)]
+    box = native.Float32Box.outward([float(v[0]) for v in components], [float(v[1]) for v in components])
+    certificate = {**branch.certificate, 'rest_squared_norm': rest_norm,
+        'mixer_real_norm_squared': branch.norm_squared, 'mixer_dot_error': dot_error,
+        'mixer_rounded_norm_squared': rounded, 'normalization_sqrt': root,
+        'normalization_inverse': inverse, 'normalization_radial_error': radial_error, 'norm_squared': norm}
+    return norm_branch(box, norm, certificate)
 
 
 @lru_cache(maxsize=8192)
@@ -342,13 +496,60 @@ class ScalarAuthority:
                                     native.Float32Box(track['keys'][i+1]['value']), track['path'], i)
                     self.domains[track['path']+':'+str(i)]['key_seconds'] = [track['keys'][i]['time'], track['keys'][i+1]['time']]
 
+    def quaternion(self, a, b, weight, scale0, scale1, branch, track, key_index):
+        """Native scales differ from (1-w,w) by proved Taylor + machine residuals.
+
+        |sin(v*omega)-v*sin(omega)| <= (|v|^3+|v|)*|omega|^3/6.
+        This retains ONE w in the fixed-key Gram polynomial even when the scale
+        rectangles independently contain zero. No unit-key or norm=1 assumption.
+        """
+        wlo, whi = box_interval(weight)
+        vmag, wmag = max(abs(1-whi), abs(1-wlo)), max(abs(wlo), abs(whi))
+        if not branch['nonlinear']:
+            errors = (scalar.rnd(vmag, 24), Q(0))
+        else:
+            omega = max(map(abs, branch['omega_interval']))
+            denominator = branch['denominator_interval'][0]
+            require(denominator > 0, 'Nonpositive scalar denominator')
+            den_error = Q(self.receipt['theorems']['sinf']['outward_absolute_error'])
+            v_error = scalar.rnd(vmag, 53)
+            arg_errors = (omega*v_error+scalar.rnd((vmag+v_error)*omega, 53),
+                          scalar.rnd(wmag*omega, 24))
+            errors = []
+            for index, (magnitude, arg_error, scale) in enumerate(zip((vmag, wmag), arg_errors, (scale0, scale1))):
+                sine_error = Q(self.receipt['theorems']['sin' if index == 0 else 'sinf']['outward_absolute_error'])
+                remainder = (magnitude**3+magnitude)*omega**3/6
+                error = (arg_error+sine_error+remainder+magnitude*den_error)/denominator
+                # Division then (for scale0) binary64->binary32 conversion.
+                quotient_bound = max(map(abs, box_interval(scale)))
+                if index == 0:
+                    division_error = scalar.rnd(quotient_bound, 53)
+                    error += division_error+scalar.rnd(quotient_bound+division_error, 24)
+                else:
+                    error += scalar.rnd(quotient_bound, 24)
+                errors.append(error)
+        alpha, beta = max(map(abs, box_interval(scale0))), max(map(abs, box_interval(scale1)))
+        av, bv = tuple(map(rational, a.lo)), tuple(map(rational, b.lo))
+        require(np.array_equal(a.lo, a.hi) and np.array_equal(b.lo, b.hi), 'Nonconstant quaternion keys')
+        rounding = tuple(roundoff_sum([abs(x)*alpha, abs(y)*beta]) for x, y in zip(av, bv))
+        residual = tuple(abs(x)*errors[0]+abs(y)*errors[1]+r for x, y, r in zip(av, bv, rounding))
+        raw = a*scale0+b*scale1
+        component = native.Float32Box.outward(raw.lo-np.array(list(map(float, rounding))),
+                                              raw.hi+np.array(list(map(float, rounding))))
+        identity = {'track': track, 'key_index': key_index, 'negative': branch['negative'],
+                    'nonlinear': branch['nonlinear'], 'scalar_branch': branch, 'source_keys': (av, bv),
+                    'scale_error_from_shared_affine_weight': tuple(errors)}
+        return affine_quaternion(av, bv, (wlo, whi), residual, identity, component)
+
     def slerp(self, a, b, weight, track, key_index):
         f, outputs = native.Float32Box, []
         record = self.key_domain(a, b, track, key_index)
         for branch in record['branches']:
             target = -b if branch['negative'] else b
             if not branch['nonlinear']:
-                outputs.append(a*(f(1)-weight)+target*weight)
+                outputs.append(self.quaternion(a, target, weight,
+                    float_box(rounded_interval(1-box_interval(weight)[1], 1-box_interval(weight)[0], 24)),
+                    weight, branch, track, key_index))
                 continue
             if 'unknown' in branch:
                 raise Unclosed(branch['unknown'], track=track, key_index=key_index,
@@ -369,7 +570,7 @@ class ScalarAuthority:
                 'negative': branch['negative'], **ranges})
             for name, (low, high) in ranges.items():
                 previous[name] = (min(low, previous[name][0]), max(high, previous[name][1]))
-            outputs.append(a*scale0+target*scale1)
+            outputs.append(self.quaternion(a, target, weight, scale0, scale1, branch, track, key_index))
             self.work['weight_interval_compositions'] += 1
             self.work['basic_interval_operations'] += 6
         return hull(outputs)
@@ -386,6 +587,9 @@ def key_float(key):
 
 
 def hull(boxes):
+    if all(isinstance(b, QuaternionSpan) for b in boxes):
+        return QuaternionSpan([branch for b in boxes for branch in b.branches])
+    require(not any(isinstance(b, QuaternionSpan) for b in boxes), 'Lost quaternion branch certificate')
     return native.Float32Box(np.minimum.reduce([b.lo for b in boxes]), np.maximum.reduce([b.hi for b in boxes]))
 
 
@@ -410,6 +614,10 @@ def track_span_box(track, lo, hi, length, functions, budget):
             return f(track['keys'][0]['value'])
         return native.native_track_box(track, lo, length, functions)
     if len(times) == 1:
+        if track['type'] == 2 and budget.arithmetic is not None:
+            value = f(track['keys'][0]['value']).lo
+            return affine_quaternion(value, value, (Q(0), Q(0)), (Q(0),)*4,
+                                     {'track': track['path'], 'key_index': 0, 'direct_key': True})
         return f(track['keys'][0]['value'])
     outputs = []
     for i, key in enumerate(track['keys']):
@@ -421,19 +629,22 @@ def track_span_box(track, lo, hi, length, functions, budget):
             continue
         a = f(key['value']); b = f(track['keys'][(i+1) % len(times)]['value'])
         if track['interpolation'] == 0 or i == len(times)-1:
-            outputs.append(a); continue
+            outputs.append(affine_quaternion(a.lo, a.lo, (Q(0), Q(0)), (Q(0),)*4,
+                {'track': track['path'], 'key_index': i, 'direct_key': True})
+                if track['type'] == 2 and budget.arithmetic is not None else a)
+            continue
         require(length <= 1, 'Variable native search epsilon needs a separate branch proof')
         delta = np.float32(times[i+1]-times[i])
         weight = f.outward(max(lo, lower)-times[i], min(hi, upper)-times[i])/f(delta)
         if track['type'] != 2:
             outputs.append(a+(b-a)*weight); continue
+        if budget.arithmetic is not None:
+            outputs.append(budget.arithmetic.slerp(a, b, weight, track['path'], i)); continue
         dot = native.box_dot(a, b, 4)
         # The whole near-identical-key branch is affine in weight.
         if dot.lo*dot.hi > 0 and np.float32(1)-np.float32(min(abs(float(dot.lo)), abs(float(dot.hi)))) <= np.float32(1e-5):
             target = -b if dot.hi < 0 else b
             outputs.append(a*(f(1)-weight)+target*weight); continue
-        if budget.arithmetic is not None:
-            outputs.append(budget.arithmetic.slerp(a, b, weight, track['path'], i)); continue
         first, last = float_key(weight.lo), float_key(weight.hi)
         required = last-first+1
         if required > budget.weight_values-budget.used:
@@ -452,6 +663,28 @@ def track_span_box(track, lo, hi, length, functions, budget):
 
 def mixer_span_box(rest, target):
     f = native.Float32Box
+    if isinstance(target, QuaternionSpan):
+        target.validate()
+        rest = tuple(map(rational, f(rest).lo))
+        conjugate = tuple(-v if i < 3 else v for i, v in enumerate(rest))
+        rest_norm = sum(v*v for v in rest)
+        outputs = []
+        for branch in target.branches:
+            relative = hamilton_branch(conjugate, branch)
+            signs = [-1] if relative.box.hi[3] < 0 else ([1] if relative.box.lo[3] >= 0 else [1, -1])
+            for sign in signs:
+                cert = relative.certificate
+                signed = affine_quaternion([sign*v for v in cert['a']], [sign*v for v in cert['b']],
+                    cert['weight'], cert['component_error'], {**cert['identity'], 'mixer_sign': sign},
+                    relative.box if sign == 1 else -relative.box).branches[0]
+                signed = norm_branch(signed.box, signed.norm_squared,
+                    {**signed.certificate, 'hamilton_roundoff': cert['hamilton_roundoff']})
+                mixed = hamilton_branch(rest, signed)
+                require(mixed.certificate['a'] == tuple(sign*rest_norm*v for v in branch.certificate['a'])
+                        and mixed.certificate['b'] == tuple(sign*rest_norm*v for v in branch.certificate['b']),
+                        'Two-Hamilton exact identity changed')
+                outputs.append(normalize_branch(mixed, rest_norm))
+        return QuaternionSpan(outputs)
     rest = f(rest)
     relative = native.quaternion_product_box(rest*f([-1, -1, -1, 1]), target)
     # Only Basis consumes this representative. At mixer weight 1, the two
@@ -468,9 +701,18 @@ def mixer_span_box(rest, target):
 
 
 def basis_span_box(position, q, scale):
+    if isinstance(q, QuaternionSpan):
+        q.validate()
+        return hull([basis_span_box(position, b, scale) for b in q.branches])
     f = native.Float32Box
+    if isinstance(q, QuaternionBranch):
+        denominator, _ = rounded_norm(q, 'basis')
+        components, denominator = q.box, float_box(denominator)
+    else:
+        components, denominator = q, native.box_dot(q, q, 4)
+    q = components
     x, y, z, w = [q[i] for i in range(4)]
-    s = f(2)/native.box_dot(q, q, 4)
+    s = f(2)/denominator
     xs, ys, zs = x*s, y*s, z*s
     wx, wy, wz, xx, xy, xz, yy, yz, zz = w*xs, w*ys, w*zs, x*xs, x*ys, x*zs, y*ys, y*zs, z*zs
     b = native.box_stack([native.box_stack([f(1)-(yy+zz), xy-wz, xz+wy]),
@@ -522,6 +764,10 @@ def surface_span_box(capture, surface, binds, lo, hi, functions, budget):
                 error.detail['bone'] = bone['name']; raise
         require((bone['name'], 3) not in tracks, 'Animated scale mixer unaccounted')
         local = basis_span_box(position, rotation, bone['default_scale'])
+        if isinstance(rotation, QuaternionSpan):
+            budget.norm_records[lo, hi, bone['name']] = [
+                {**b.certificate, 'basis_rounded_norm_squared': rounded_norm(b, 'basis')[0]}
+                for b in rotation.branches]
         parent = bone['parent']
         require(-1 <= parent < i, 'Bone hierarchy')
         globals_.append(local if parent < 0 else native.affine_box(globals_[parent], local))
@@ -817,12 +1063,12 @@ def verify_partition(closed, unclosed, length):
 
 
 def validate_diagnostic(report):
-    require(type(report['version']) is int and report['version'] in (1, 2, 3), 'Report version')
-    if report['version'] in (2, 3):
+    require(type(report['version']) is int and report['version'] in (1, 2, 3, 4), 'Report version')
+    if report['version'] in (2, 3, 4):
         binding = report['input_binding']
         require(binding['kind'] == 'native-reacquired-v1' and type(binding['version']) is int
                 and binding['version'] == 1, 'Input binding version')
-        require(report['step_id'] == ('CAV-CONTACT-PHASE-SLERP-BOUNDS' if report['version'] == 3 else 'CAV-CONTACT-PHASE-INPUT-BINDING')
+        require(report['step_id'] == ('CAV-CONTACT-PHASE-QUATERNION-NORM' if report['version'] == 4 else ('CAV-CONTACT-PHASE-SLERP-BOUNDS' if report['version'] == 3 else 'CAV-CONTACT-PHASE-INPUT-BINDING'))
                 and report['atlas_input_packet']['input_binding'] == binding
                 and report['atlas']['input_sha256'] == canonical_digest(report['atlas_input_packet'])
                 and report['inputs']['manifest'] == binding['manifest_sha256']
@@ -833,7 +1079,7 @@ def validate_diagnostic(report):
     else:
         require(not any(k in report for k in ('input_binding', 'atlas_input_packet', 'input_locations')),
                 'Mixed legacy/new provenance')
-    if report['version'] == 3:
+    if report['version'] in (3, 4):
         require('arithmetic_proof' in report and report['atlas_input_packet'].get('arithmetic_proof') == report['arithmetic_proof']
                 and report['arithmetic_proof']['verifier_sha256'] == ARITHMETIC_VERIFIER_SHA
                 and report['inputs']['arithmetic_capture'] == report['arithmetic_proof']['capture_file_sha256']
@@ -844,6 +1090,27 @@ def validate_diagnostic(report):
                 'Arithmetic proof/atlas binding differs')
         require(len(report['baseline_accounting']['coordinate_boxes']) == 69
                 and len(report['baseline_accounting']['shape_cases']) == 18, 'Incomplete prior unknown accounting')
+    if report['version'] == 4:
+        require(report['inputs']['norm_baseline_report'] == NORM_BASELINE_SHA
+                and report['atlas_input_packet']['norm_baseline_report_sha256'] == NORM_BASELINE_SHA,
+                'Norm proof/accepted255 binding differs')
+        require(len(report['previous_operation_accounting']['coordinate_boxes']) == 19
+                and len(report['previous_operation_accounting']['shape_cases']) == 3028
+                and len(report['norm_target_replays']) == 8, 'Incomplete accepted255 accounting')
+        certificates = report['continuous_native']['quaternion_norm_certificates']
+        require(certificates, 'Missing quaternion norm certificates')
+        for target in report['norm_target_replays']:
+            if target['outcome'] == 'COORDINATE_CLOSED':
+                require(any(r['seconds'] == target['original_seconds'] and r['bone'] == target['original_bone']
+                            for r in certificates), 'Missing target quaternion certificate')
+        for record in certificates:
+            require(record['branches'], 'Missing norm proof branches')
+            for branch in record['branches']:
+                def lower(name):
+                    v = branch[name][0]
+                    return Q(*v) if isinstance(v, list) else rational(v)
+                require(lower('mixer_rounded_norm_squared') > 0 and lower('basis_rounded_norm_squared') > 0
+                        and len(branch['hamilton_roundoff']) == 2, 'Unproved norm denominator')
     require(report['status'] == 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY', 'Diagnostic status changed')
     validate_atlas(report['atlas'])
     require(canonical_digest(report['atlas']) == report['atlas_sha256'], 'Atlas coefficients/digest changed')
@@ -970,29 +1237,33 @@ def baseline_accounting(baseline, closed, unclosed):
                                'original_local_triangle_index': index, 'native_triangle_id': face,
                                'outcome': 'UNKNOWN' if reasons else 'CLOSED', 'reasons': sorted(set(reasons))})
     return {'coordinate_boxes': coordinates, 'shape_cases': shapes,
-            'scope': 'Every original69 weight-budget box and18 material shape cases retained; uncertainty is not an inversion/impossibility witness.'}
+            'scope': f'Every previous {len(coordinates)} coordinate and {len(shapes)} material shape case retained; uncertainty is not an inversion/impossibility witness.'}
 
 
 def build(review_path, *, native_manifest=None, bundle_root=None,
-          arithmetic_capture=None, arithmetic_receipt=None, baseline_report=None):
+          arithmetic_capture=None, arithmetic_receipt=None, baseline_report=None, norm_baseline_report=None):
     proof_mode = arithmetic_capture is not None
     require((arithmetic_capture is None) == (arithmetic_receipt is None) == (baseline_report is None),
             'Arithmetic capture, receipt and baseline required together')
     require(not proof_mode or native_manifest is not None, 'Arithmetic mode requires explicit accepted native inputs')
+    require(proof_mode == (norm_baseline_report is not None), 'Norm mode requires accepted255 baseline')
 
     manifest, capture, surface, binds, patches, supports, functions, witness, context = load_inputs(
         review_path, native_manifest=native_manifest, bundle_root=bundle_root)
-    arithmetic = baseline = None
+    arithmetic = baseline = norm_baseline = None
     if proof_mode:
         baseline = native.read_bound(baseline_report, BASELINE_SHA)
         validate_diagnostic(baseline)
         require(baseline['version'] == 2, 'Expected accepted252 baseline')
+        norm_baseline = native.read_bound(norm_baseline_report, NORM_BASELINE_SHA)
+        validate_diagnostic(norm_baseline)
+        require(norm_baseline['version'] == 3, 'Expected accepted255 baseline')
         arithmetic = ScalarAuthority(reacquired.read_json(arithmetic_capture), reacquired.read_json(arithmetic_receipt),
                                      capture, context['binding']['platform_math'])
         arithmetic.binding.update(capture_file_sha256=native.sha256(arithmetic_capture),
                                   receipt_file_sha256=native.sha256(arithmetic_receipt))
         context['locations'].update(arithmetic_capture=str(arithmetic_capture), arithmetic_receipt=str(arithmetic_receipt),
-                                    baseline_report=str(baseline_report))
+                                    baseline_report=str(baseline_report), norm_baseline_report=str(norm_baseline_report))
     phases = sorted({Q(0), Q(1), Q('.137'), Q('.25')}
                     | {Q(k['time'])/Q(capture['length']) for t in capture['tracks'] for k in t['keys']}
                     | {v for pair in supports.values() for v in pair})
@@ -1013,7 +1284,8 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         input_packet = {'input_binding': context['binding'], 'data_sha256': canonical_digest(data_packet)}
         samples_path = context['roles']['samples']
     if arithmetic is not None:
-        input_packet.update(arithmetic_proof=arithmetic.binding, baseline_report_sha256=BASELINE_SHA)
+        input_packet.update(arithmetic_proof=arithmetic.binding, baseline_report_sha256=BASELINE_SHA,
+                            norm_baseline_report_sha256=NORM_BASELINE_SHA)
     atlas = make_atlas(phases, distances, canonical_digest(input_packet), capture['length'])
     samples, sampled, obstruction = captured_obstructions(capture, surface, binds, patches, supports,
                                                          samples_path, witness)
@@ -1026,6 +1298,26 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         arithmetic.prepare(capture)
         budget.arithmetic = arithmetic
     closed, unclosed, used = continuous_verify(capture, surface, binds, atlas, functions, budget)
+    norm_targets = []
+    if arithmetic is not None:
+        targets = [r for r in norm_baseline['continuous_native']['unclosed_boxes']
+                   if r['reason'] == 'mixer_quaternion_norm_contains_zero']
+        require(len(targets) == 8, 'Accepted255 norm target cardinality')
+        for target in targets:
+            lo, hi = target['seconds']
+            try:
+                replay = surface_span_box(capture, surface, binds, lo, hi, functions, budget)
+                outside = []
+                for time in [lo, (lo+hi)/2, hi]:
+                    bad = np.argwhere(~replay.contains(sampled_points(capture, surface, binds, time)))
+                    if len(bad):
+                        outside.append({'seconds': time, 'vertex_components': bad[:16].tolist()})
+                require(not outside, 'Norm target replay outside full raw geometry box')
+                disposition = {'outcome': 'COORDINATE_CLOSED', 'vertices': len(replay.lo), 'refutation_rows': 3}
+            except Unclosed as error:
+                disposition = {'outcome': 'UNKNOWN', **error.detail}
+            norm_targets.append({'original_seconds': target['seconds'], 'original_bone': target['bone'],
+                                 'original_reason': target['reason'], **disposition})
     birth_boxes = {hoof: boxes[phases.index(start)][patches[hoof]['native_sole_vertices']]
                    for hoof, (start, _) in supports.items()}
     names = [b['name'] for b in capture['bones']]
@@ -1060,7 +1352,7 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
     unclosed.extend(rejected)
     verify_partition(closed, unclosed, capture['length'])
     records, diameter, body_world = closed_metrics(closed, atlas, patches, supports, birth_boxes, body_mask, scale)
-    evaluations = len(phases)+used['independent_track_evaluations']+len(samples)
+    evaluations = len(phases)+used['independent_track_evaluations']+len(samples)+sum(r.get('refutation_rows', 0) for r in norm_targets)
     require(evaluations <= LIMITS['proposal_evaluations'], 'Declared proposal evaluation budget exhausted')
     lower = obstruction['strongest_sampled_transverse_endpoint']['bounds_m']['entry_drift_xz'][0]
     physical_unknowns = [
@@ -1085,12 +1377,21 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
     if arithmetic is not None:
         inputs.update(arithmetic_capture=arithmetic.binding['capture_file_sha256'],
                       arithmetic_receipt=arithmetic.binding['receipt_file_sha256'], baseline_report=BASELINE_SHA,
-                      arithmetic_verifier=ARITHMETIC_VERIFIER_SHA)
+                      arithmetic_verifier=ARITHMETIC_VERIFIER_SHA, norm_baseline_report=NORM_BASELINE_SHA)
         key_pairs = sum(len(t['keys'])-1 for t in capture['tracks'] if t['type'] == 2 and t['interpolation'] != 0)
         bound = LIMITS['continuous_boxes']*key_pairs*4
         require(arithmetic.work['weight_interval_compositions'] <= bound
                 and arithmetic.work['sine_ranges'] <= 3*bound+2*key_pairs
                 and arithmetic.work['basic_interval_operations'] <= 6*bound, 'Interval composition work bound')
+        require(len(budget.norm_records) <= (LIMITS['continuous_boxes']+len(norm_targets)+1)*len(capture['bones']),
+                'Quaternion proof branch-work bound')
+        branch_bound = (LIMITS['continuous_boxes']+len(norm_targets)+1)*8*sum(
+            len(t['keys']) for t in capture['tracks'] if t['type'] == 2)
+        require(sum(len(v) for v in budget.norm_records.values()) <= branch_bound, 'Quaternion fixed-branch work bound')
+        used['quaternion_norm'] = {'finite_branch_bound': branch_bound, 'bone_span_records': len(budget.norm_records), 'target_replays': len(norm_targets),
+            'branches': sum(len(v) for v in budget.norm_records.values()),
+            'finite_bone_span_bound': (LIMITS['continuous_boxes']+len(norm_targets)+1)*len(capture['bones']),
+            'scope': 'Fixed search/key/scalar/mixer-sign branches only; original box/refinement/weight/proposal limits unchanged.'}
         used['scalar_composition'] = {**arithmetic.work, 'fixed_key_pairs': key_pairs,
             'dot_states_across_all_key_pairs': sum(len(r['dot_states']) for r in arithmetic.domains.values()),
             'finite_composition_bound': bound,
@@ -1104,8 +1405,10 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
     return json_value({
         **({'input_binding': context['binding'], 'input_locations': context['locations'],
             'atlas_input_packet': input_packet} if context else {}),
-        'version': 3 if arithmetic else (2 if context else 1), 'step_id': 'CAV-CONTACT-PHASE-SLERP-BOUNDS' if arithmetic else ('CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE'), 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
-        **({'arithmetic_proof': arithmetic.binding, 'baseline_accounting': baseline_accounting(baseline, records, unclosed)} if arithmetic else {}),
+        'version': 4 if arithmetic else (2 if context else 1), 'step_id': 'CAV-CONTACT-PHASE-QUATERNION-NORM' if arithmetic else ('CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE'), 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
+        **({'arithmetic_proof': arithmetic.binding, 'baseline_accounting': baseline_accounting(baseline, records, unclosed),
+            'previous_operation_accounting': baseline_accounting(norm_baseline, records, unclosed),
+            'norm_target_replays': norm_targets} if arithmetic else {}),
         'inputs': inputs, 'work_budget_declared_before_fit': LIMITS, 'work_used': {**used, 'proposal_evaluations': evaluations},
         'accepted_anatomy': {'manifest_status_preserved': manifest['status'], 'independent_component_verdict': context['binding']['verdict'] if context else str(review_path),
                              'four_patches': {h: {'vertices': len(p['native_sole_vertices']), 'triangles': len(p['native_sole_triangles'])} for h, p in patches.items()}},
@@ -1122,10 +1425,12 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
             'diameter_m': {'lower': lower, 'upper': None, 'scope': 'Two required endpoints; free-anchor radius lower is half, never entry drift.'},
             'penetration_m': None, 'hover_m': None, 'normal_rad': None, 'envelope_m': None},
         'continuous_native': {**({'scalar_domain_records': list(arithmetic.domains.values()),
-                                  'weight_domain_records': list(arithmetic.weight_domains.values())} if arithmetic else {}),
+                                  'weight_domain_records': list(arithmetic.weight_domains.values()),
+                                  'quaternion_norm_certificates': [{'seconds': [lo, hi], 'bone': bone, 'branches': branches}
+                                      for (lo, hi, bone), branches in budget.norm_records.items()]} if arithmetic else {}),
                               'closed_boxes': records, 'unclosed_boxes': unclosed,
                               'closed_subset_diameter_upper_m': diameter, 'closed_subset_body_world_sphere_upper_m': body_world,
-                              'method': ('Exact rational monotone Taylor sine/acos ranges plus recomputed accepted244 scalar errors, binary64 scale0/binary32 scale1 rounding and FTZ; fixed-dot states all enumerated, full weights enclosed through mixer/Basis/FK/true-bind/raw LBS. Out-of-domain constant acos stays UNKNOWN.' if arithmetic else 'Outward binary32 track/search/mixer/Basis/FK/true-bind/unnormalized LBS boxes; every finite binary32 slerp weight is enumerated with pinned acosf/sinf/double sin. Exhausted domains stay UNKNOWN. No assumed libm ULP bound, sampled residual allowance, or fast-math reassociation.'),
+                              'method': ('Shared-weight exact fixed-key Gram quadratic plus explicit interpolation/Taylor, two-Hamilton/FMA/FTZ and normalization/Basis norm certificates; machine sign branches retained through Basis. Exact rational monotone Taylor sine/acos ranges plus recomputed accepted244 scalar errors, binary64 scale0/binary32 scale1 rounding and FTZ; fixed-dot states all enumerated, full weights enclosed through mixer/Basis/FK/true-bind/raw LBS. Out-of-domain constant acos stays UNKNOWN.' if arithmetic else 'Outward binary32 track/search/mixer/Basis/FK/true-bind/unnormalized LBS boxes; every finite binary32 slerp weight is enumerated with pinned acosf/sinf/double sin. Exhausted domains stay UNKNOWN. No assumed libm ULP bound, sampled residual allowance, or fast-math reassociation.'),
                               'loop': 'Player exact terminal maps to phase 0; direct terminal query and one-sided epsilon-search branches remain separate in closed interval checks.'},
         'full_geometry': {'vertices': len(surface['vertices']), 'triangles': len(surface['indices'])//3,
                           'body_vertices': int(np.count_nonzero(body_mask)), 'attack_only_vertices': int(np.count_nonzero(~body_mask)),
@@ -1138,8 +1443,8 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         'claims': {'verified_physical_candidate': False, 'success_dependency': False, 'contact_certificate': False,
                    'policy_E': None, 'phase_runtime_unblocked': False, 'surface_unblocked': False,
                    'original_12_gates_preserved': True, 'native_recapture': False, 'live_window_or_FPS_acceptance': False},
-        'reproduction': ({'build': 'python3 tools/units3d/cavalry_march_phase.py build --native-manifest MANIFEST_JSON --bundle-root BUNDLE_ROOT --review-record ACTUAL_RECEIPT_JSON --out REPORT_JSON'+(' --arithmetic-capture SCALAR_CAPTURE --arithmetic-receipt SCALAR_RECEIPT --baseline-report ACCEPTED252_REPORT' if arithmetic else ''),
-                          'verify': 'python3 tools/units3d/cavalry_march_phase.py verify REPORT_JSON --native-manifest MANIFEST_JSON --bundle-root BUNDLE_ROOT --review-record ACTUAL_RECEIPT_JSON'+(' --arithmetic-capture SCALAR_CAPTURE --arithmetic-receipt SCALAR_RECEIPT --baseline-report ACCEPTED252_REPORT' if arithmetic else ''),
+        'reproduction': ({'build': 'python3 tools/units3d/cavalry_march_phase.py build --native-manifest MANIFEST_JSON --bundle-root BUNDLE_ROOT --review-record ACTUAL_RECEIPT_JSON --out REPORT_JSON'+(' --arithmetic-capture SCALAR_CAPTURE --arithmetic-receipt SCALAR_RECEIPT --baseline-report ACCEPTED252_REPORT --norm-baseline-report ACCEPTED255_REPORT' if arithmetic else ''),
+                          'verify': 'python3 tools/units3d/cavalry_march_phase.py verify REPORT_JSON --native-manifest MANIFEST_JSON --bundle-root BUNDLE_ROOT --review-record ACTUAL_RECEIPT_JSON'+(' --arithmetic-capture SCALAR_CAPTURE --arithmetic-receipt SCALAR_RECEIPT --baseline-report ACCEPTED252_REPORT --norm-baseline-report ACCEPTED255_REPORT' if arithmetic else ''),
                           'exit_status': '2 is diagnostic/unknown, never physical acceptance; malformed/tampered input exits 1.'} if context else {'build': 'python3 tools/units3d/cavalry_march_phase.py build --review-record REVIEW_COMPLETE_JSON --out REPORT_JSON',
                          'verify': 'python3 tools/units3d/cavalry_march_phase.py verify REPORT_JSON --review-record REVIEW_COMPLETE_JSON',
                          'exit_status': '2 is the expected truthful diagnostic/unknown result, never physical acceptance. A malformed/tampered input exits 1.'})})
@@ -1157,6 +1462,7 @@ def main():
         p.add_argument('--arithmetic-capture', type=Path)
         p.add_argument('--arithmetic-receipt', type=Path)
         p.add_argument('--baseline-report', type=Path)
+        p.add_argument('--norm-baseline-report', type=Path)
     args = parser.parse_args()
     try:
         existing = None
@@ -1169,13 +1475,14 @@ def main():
         require(proof_mode == (args.arithmetic_receipt is not None) == (args.baseline_report is not None),
                 'Arithmetic capture, receipt and baseline required together')
         if existing is not None:
-            require(existing['version'] == (3 if proof_mode else (2 if fresh else 1)), 'Report/input mode mismatch')
+            require(existing['version'] == (4 if proof_mode else (2 if fresh else 1)), 'Report/input mode mismatch')
         report = build(args.review_record.resolve(),
                        native_manifest=args.native_manifest.resolve() if fresh else None,
                        bundle_root=args.bundle_root.resolve() if fresh else None,
                        arithmetic_capture=args.arithmetic_capture.resolve() if proof_mode else None,
                        arithmetic_receipt=args.arithmetic_receipt.resolve() if proof_mode else None,
-                       baseline_report=args.baseline_report.resolve() if proof_mode else None)
+                       baseline_report=args.baseline_report.resolve() if proof_mode else None,
+                       norm_baseline_report=args.norm_baseline_report.resolve() if args.norm_baseline_report else None)
         validate_diagnostic(report)
         if args.command == 'build':
             args.out.write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False)+'\n')
