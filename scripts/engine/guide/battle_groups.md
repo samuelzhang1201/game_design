@@ -145,3 +145,31 @@ public day driver. Latest exact-plan direct/JSON retries validate the saved
 endpoint and return a detached no-op; stale or changed inputs reject. The
 existing hash context still requires its accepted per-arm policy binding;
 isolated injected test policies certify neither installed art nor live play.
+
+## Candidate deployment
+
+`BattleGroups.deployment_intent_candidate` contributes only the existing unit's
+anchor path to `BodyBattleMotion`'s exclusive deployment writer. It requires an
+admitted move boundary, current measured bodies and supported locomotion policy;
+missing rows or invalid controls error without refresh, seeding or repair. The
+provider reads a detached copy of the sealed source; shared gait payment stays
+in the transaction's staging copy. Planning changes no source or RNG.
+
+Occupied-line targets project actual body offsets and measured radii, using
+local scalar coordinates without narrowing world points. Internal homes, counts,
+roles and identities never become tactical formation slots. Captured, seated,
+packing, empty and reserved units hold with a reason; actual lawful contact holds.
+Ranged standoff retains its existing reach policy. At the line, an eligible melee
+unit can close toward an opponent already at its line using actual surface reach;
+a moving, charging or flanking opponent keeps its own writer. Closed swept ground
+holds rather than substituting an unsafe straight fallback.
+
+The collector installs this provider by default and caps it by the same daily
+walk quotient and deployment quotient. All battlefield members and stationary
+peers enter one full-Q TIME reservation, with their real circles, pivots and
+terrain checks; an empty disc gap is not a unit rectangle. The existing outer
+commit settles only actual common route-prefix anchor progress and seals the
+complete endpoint. Direct/JSON retries add no preparation, movement or cost.
+Ordinary `translate`, `follow_anchor` and day dispatch retain their production
+entrances until the later atomic activation. Isolated test policies certify
+candidate arithmetic only, not installed animation or live play.
