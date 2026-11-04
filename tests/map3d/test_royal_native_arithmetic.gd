@@ -12,7 +12,7 @@ func test_exact_rational_hand_cases_and_tamper_controls() -> void:
 
 
 func test_actual_selected_godot_process_math_imports_have_closed_proof() -> void:
-	var base: String = ProjectSettings.globalize_path("res://.godot/royal-native-arithmetic-" + str(OS.get_process_id()))
+	var base: String = ProjectSettings.globalize_path("res://.godot/royal-native-arithmetic-" + str(ResourceUID.create_id()))
 	var output: Array = []
 	var result: int = OS.execute("python3", [ProjectSettings.globalize_path(TOOL),
 		"--capture", OS.get_executable_path(), "--scratch", base,
@@ -21,6 +21,8 @@ func test_actual_selected_godot_process_math_imports_have_closed_proof() -> void
 	assert_eq(result, 0, str(output))
 	if result != 0:
 		return
+	print("ROYAL_NATIVE_ARITHMETIC_CAPTURE ", FileAccess.get_file_as_string(base.path_join("capture.json")))
+	print("ROYAL_NATIVE_ARITHMETIC_RECEIPT ", FileAccess.get_file_as_string(base + "-receipt.json"))
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(base + "-receipt.json"))
 	assert_true(parsed is Dictionary)
 	if parsed is Dictionary:

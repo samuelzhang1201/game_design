@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #include "gdextension_interface.h"
 #include <dlfcn.h>
+#include <assert.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -48,6 +49,102 @@ static void hex(const void *p, size_t count) {
 }
 
 static void address(uintptr_t p) { fprintf(out, "\"0x%" PRIxPTR "\"", p); }
+
+#if defined(__linux__)
+static int readonly_span(const void *base, uintptr_t offset, size_t count) {
+    const Elf64_Ehdr *h = base;
+    const Elf64_Phdr *p = (const void *)((const char *)base + h->e_phoff);
+    if (count > 4096 || offset + count < offset) return 0;
+    for (unsigned i = 0; i < h->e_phnum; ++i)
+        if (p[i].p_type == PT_LOAD && (p[i].p_flags & (PF_R | PF_W)) == PF_R &&
+                offset >= p[i].p_vaddr && offset + count <= p[i].p_vaddr + p[i].p_memsz) return 1;
+    return 0;
+}
+
+/* Acquisition only: recognized scalar VEX RIP operands, never instruction semantics. */
+static int rip_operand(const unsigned char *b, size_t available, uintptr_t pc,
+        uintptr_t *target, size_t *count) {
+    if (available < 8) return 0;
+    unsigned op, modrm, pp, wide = 0, map = 1;
+    if (b[0] == 0xc5) { op = 2; pp = b[1] & 3; }
+    else if (b[0] == 0xc4 && available >= 9) {
+        op = 3; pp = b[2] & 3; wide = b[2] >> 7; map = b[1] & 31;
+    } else return 0;
+    modrm = op + 1;
+    if ((b[modrm] & 0xc7) != 5) return 0;
+    if (map == 2 && (b[op] == 0x99 || b[op] == 0xa9 || b[op] == 0xb9 ||
+                     b[op] == 0x9d || b[op] == 0xad || b[op] == 0xbd)) *count = wide ? 8 : 4;
+    else if (map == 1) {
+        switch (b[op]) {
+            case 0x54: case 0x28: *count = 16; break;
+            case 0x7e: *count = 8; break;
+            case 0x2e: *count = pp == 1 ? 8 : 4; break;
+            case 0x10: case 0x59: case 0x58: case 0x5c: case 0x5e: case 0x51: case 0xc2:
+                *count = pp == 3 ? 8 : pp == 2 ? 4 : 16; break;
+            default: return 0;
+        }
+    } else return 0;
+    size_t size = modrm + 5 + (b[op] == 0xc2);
+    if (available < size) return 0;
+    int32_t displacement;
+    memcpy(&displacement, b + modrm + 1, 4);
+    intptr_t result = (intptr_t)pc + (intptr_t)size + displacement;
+    if (result < 0) return 0;
+    *target = (uintptr_t)result;
+    return 1;
+}
+
+static void operand_self_check(void) {
+    const unsigned char move[] = {0xc5,0xfb,0x10,0x05,0x78,0x56,0x34,0x12};
+    const unsigned char fma[] = {0xc4,0xe2,0xf1,0xa9,0x05,0x78,0x56,0x34,0x12};
+    const unsigned char compare[] = {0xc5,0xfb,0xc2,0x05,0,0,0,0,1};
+    uintptr_t target; size_t count;
+    assert(rip_operand(move, sizeof(move), 0x100, &target, &count) && target == 0x12345780 && count == 8);
+    assert(rip_operand(fma, sizeof(fma), 0x100, &target, &count) && target == 0x12345781 && count == 8);
+    assert(rip_operand(compare, sizeof(compare), 0x100, &target, &count) && target == 0x109 && count == 8);
+    assert(!rip_operand(move, 7, 0x100, &target, &count));
+}
+
+struct operand_pool { uintptr_t offset[256]; size_t count[256], used; };
+
+static void add_operand(struct operand_pool *pool, const void *base, uintptr_t offset, size_t count) {
+    if (!readonly_span(base, offset, count)) return;
+    for (size_t i = 0; i < pool->used; ++i)
+        if (pool->offset[i] == offset && pool->count[i] == count) return;
+    assert(pool->used < 256);
+    pool->offset[pool->used] = offset; pool->count[pool->used++] = count;
+}
+
+static void scan_operands(struct operand_pool *pool, const void *base, uintptr_t offset, size_t size) {
+    const unsigned char *bytes = (const unsigned char *)base + offset;
+    for (size_t i = 0; i < size; ++i) {
+        uintptr_t target; size_t count;
+        if (rip_operand(bytes + i, size - i, offset + i, &target, &count)) add_operand(pool, base, target, count);
+    }
+}
+
+static void linux_operands(unsigned index, const void *base, uintptr_t entry) {
+    struct operand_pool pool = {0};
+    scan_operands(&pool, base, entry, 512);
+    const uintptr_t expected[] = {0x6dc10, 0x80670, 0x17ff0};
+    const uintptr_t extra[] = {0x6e010, 0x80860, 0x78180};
+    const size_t sizes[] = {0x90, 0x30, 0x330};
+    fprintf(out, ",\"extra_code\":[");
+    if (entry == expected[index] && readonly_span(base, extra[index], sizes[index])) {
+        fprintf(out, "{\"offset\":%" PRIuPTR ",\"bytes\":", extra[index]);
+        hex((const char *)base + extra[index], sizes[index]); fputc('}', out);
+        scan_operands(&pool, base, extra[index], sizes[index]);
+        if (index == 0) add_operand(&pool, base, 0xd2be0, 49 * 32);
+    }
+    fprintf(out, "],\"operands\":[");
+    for (size_t i = 0; i < pool.used; ++i) {
+        if (i) fputc(',', out);
+        fprintf(out, "{\"offset\":%" PRIuPTR ",\"count\":%zu,\"bytes\":", pool.offset[i], pool.count[i]);
+        hex((const char *)base + pool.offset[i], pool.count[i]); fputc('}', out);
+    }
+    fputc(']', out);
+}
+#endif
 
 #if defined(__APPLE__)
 static void image_id(const void *base) {
@@ -108,7 +205,10 @@ static void binding(unsigned index, const void *slot, const void *target) {
     /* Unknown profiles retain a bounded executable witness, never an acceptance. */
     fprintf(out, ",\"entry_offset\":%" PRIuPTR, (uintptr_t)target - (uintptr_t)info.dli_fbase);
     fprintf(out, ",\"code_offset\":%" PRIuPTR ",\"code\":", (uintptr_t)target - (uintptr_t)info.dli_fbase);
-    hex(target, 512);
+    if (readonly_span(info.dli_fbase, (uintptr_t)target - (uintptr_t)info.dli_fbase, 512)) {
+        hex(target, 512);
+        linux_operands(index, info.dli_fbase, (uintptr_t)target - (uintptr_t)info.dli_fbase);
+    } else quoted("");
 #endif
     fputc('}', out);
 }
@@ -214,6 +314,9 @@ static void deinitialize(void *data, GDExtensionInitializationLevel level) { (vo
 GDExtensionBool royal_native_arithmetic_init(GDExtensionInterfaceGetProcAddress get_proc,
         GDExtensionClassLibraryPtr library, GDExtensionInitialization *init) {
     (void)library;
+#if defined(__linux__)
+    operand_self_check();
+#endif
     init->minimum_initialization_level = GDEXTENSION_INITIALIZATION_SCENE;
     init->userdata = NULL; init->initialize = initialize; init->deinitialize = deinitialize;
     const char *path = getenv("ROYAL_NATIVE_CAPTURE");

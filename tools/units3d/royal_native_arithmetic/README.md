@@ -30,6 +30,11 @@ the engine's `sin` and quaternion `slerp` math imports. The collector reads main
 executable indirect-symbol pointer slots on Mach-O, or main executable
 `JUMP_SLOT`/`GLOB_DAT` relocations on ELF. A same-named `dlsym` lookup is only a
 cross-check of the **actual slot target**, never the source of that target.
+Linux acquisition retains bounded kernel code and recognized RIP-relative
+scalar operands from readable, non-writable segments of that same loaded image.
+The operand reader has independent instruction-length/displacement self-checks;
+it does not establish instruction semantics or a mathematical theorem. The
+proof must independently bind each required operand to the reviewed profile.
 
 `capture.json` includes the native PID, C API version, engine image UUID/build
 ID, slot/target/image addresses, loaded math image identity and code/constants;
@@ -114,5 +119,11 @@ its own derivative/FK/raw-skin errors and satisfy its unchanged full-domain gate
 Linux x86_64 is captured through the actual selected CI engine, but remains an
 unknown rejected profile until its own instructions, constants, resolved IFUNC
 targets and whole-interval error proof have been incorporated and independently
-reviewed. Mac evidence never covers Ubuntu. Required current-HEAD CI cannot be
+reviewed. The observed Ubuntu image has libm build ID
+`cfae91b4a956116b64e2a41607671c1eeb3cc292`: `sin` enters at `0x6dc10`, `sinf`
+at `0x80670`, and Godot's compatibility-version `acosf` import enters at
+`0x17ff0`, whose admitted positive path jumps to kernel `0x78180`. Its default
+`dlsym` target differs, which is retained rather than substituted for the import.
+These observations alone are **not** a Linux arithmetic proof.
+Mac evidence never covers Ubuntu. Required current-HEAD CI cannot be
 claimed passed while that profile remains unknown.
