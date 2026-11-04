@@ -318,6 +318,43 @@ class SlerpRangeTests(unittest.TestCase):
         with self.assertRaisesRegex(phase.Unclosed, 'acos_constant_authority_missing'):
             phase.track_span_box(track, 0., 0., .5, functions, budget)
 
+    def test_scalar_track_certificate_preserves_sign_key_weight_and_both_hamilton_errors(self):
+        authority = self.authority(); f = capture.Float32Box
+        functions = capture.system_math()
+        for cosine in [.95, -.95, .999999]:
+            a, b = f([0, 0, 0, 1]), f([0, 0, math.sqrt(1-cosine*cosine), cosine])
+            span = authority.slerp(a, b, f(-.0003, 1.0003), 'root', 7)
+            self.assertIsInstance(span, phase.QuaternionSpan)
+            for branch in span.branches:
+                self.assertEqual(branch.certificate['identity']['track'], 'root')
+                self.assertEqual(branch.certificate['identity']['key_index'], 7)
+                self.assertEqual(branch.certificate['weight'], (Q(f(-.0003).lo.item()), Q(f(1.0003).lo.item())))
+            mixed = phase.mixer_span_box([.1, 0, 0, 2], span)
+            box = phase.basis_span_box(f([0, 0, 0]), mixed, [1, 1, 1])
+            for w in np.linspace(-.0003, 1.0003, 11):
+                oracle = capture.slerp_box(a, b, np.float32(w), functions)
+                self.assertTrue(span.contains(oracle.lo).all() and span.contains(oracle.hi).all())
+                self.assertTrue(np.isfinite(box.lo).all())
+            for branch in mixed.branches:
+                self.assertEqual(len(branch.certificate['hamilton_roundoff']), 2)
+                self.assertGreater(phase.rounded_norm(branch, 'basis')[0][0], 0)
+
+    def test_neighboring_key_union_keeps_certificates_until_basis(self):
+        track = {'path': 'Rig:joint', 'type': 2, 'interpolation': 1, 'keys': [
+            {'time': 0., 'value': [0, 0, 0, 1]},
+            {'time': .5, 'value': [0, 0, .1, -.995]},
+            {'time': 1., 'value': [0, 0, .2, -.98]}]}
+        span = phase.track_span_box(track, .49999, .50001, 1., capture.system_math(),
+                                    phase.Budget(arithmetic=self.authority()))
+        self.assertEqual({b.certificate['identity']['key_index'] for b in span.branches}, {0, 1})
+        self.assertEqual({b.certificate['identity']['negative'] for b in span.branches}, {False, True})
+        result = phase.basis_span_box(capture.Float32Box([0, 0, 0]),
+            phase.mixer_span_box([0, 0, 0, 1], span), [1, 1, 1])
+        for t in np.linspace(.49999, .50001, 17):
+            q = capture.native_track_box(track, float(t), 1., capture.system_math())
+            for point in [q.lo, q.hi]:
+                self.assertTrue(result.contains(capture.trs([0, 0, 0], point, [1, 1, 1])[:3]).all())
+
     def test_outside_acos_domain_never_calls_an_ideal_or_point_replacement(self):
         authority = self.authority()
         f = capture.Float32Box
@@ -376,6 +413,80 @@ class SlerpRangeTests(unittest.TestCase):
         self.assertGreater(single[1]-single[0], Q(1, 10**8))
         lo, hi = phase.rounded_interval(Q(1, 2**149), Q(1, 2**149), 24)
         self.assertLessEqual(lo, 0); self.assertGreaterEqual(hi, Q(1, 2**149))
+
+
+class QuaternionNormTests(unittest.TestCase):
+    def test_shared_parameter_half_bound_survives_mixer_and_second_basis_norm(self):
+        # Removing the shared weight makes the [0,1]^2 rectangle contain zero.
+        span = phase.affine_quaternion([1, 0, 0, 0], [0, 1, 0, 0],
+            (Q(0), Q(1)), (Q(0),)*4, {'track': 'hand', 'key_index': 0})
+        self.assertEqual(span.branches[0].norm_squared, (Q(1, 2), Q(1)))
+        self.assertTrue((span.lo <= 0).all() and (span.hi >= 0).all())
+        mixed = phase.mixer_span_box([0, 0, 0, 1], span)
+        self.assertGreater(mixed.branches[0].certificate['mixer_rounded_norm_squared'][0], 0)
+        self.assertGreater(mixed.branches[0].norm_squared[0], 0)
+        basis = phase.basis_span_box(capture.Float32Box([0, 0, 0]), mixed, [1, 1, 1])
+        for u in np.linspace(0, 1, 17):
+            self.assertTrue(basis.contains(capture.trs([0, 0, 0], [1-u, u, 0, 0], [1, 1, 1])[:3]).all())
+
+    def test_genuine_zero_is_unknown_and_nonunit_rest_is_not_assumed_unit(self):
+        zero = phase.affine_quaternion([-1, 1, 0, 0], [1, -1, 0, 0],
+            (Q(0), Q(1)), (Q(0),)*4, {'track': 'zero'})
+        with self.assertRaises(phase.Unclosed):
+            phase.mixer_span_box([0, 0, 0, 1], zero)
+        constant = phase.affine_quaternion([0, 0, 0, 2], [0, 0, 0, 2],
+            (Q(-1, 100), Q(101, 100)), (Q(0),)*4, {'track': 'scaled'})
+        self.assertEqual(constant.branches[0].norm_squared, (Q(4), Q(4)))
+        mixed = phase.mixer_span_box([0, 0, 0, 3], constant)
+        cert = mixed.branches[0].certificate
+        self.assertEqual(cert['rest_squared_norm'], Q(9))
+        self.assertLess(cert['mixer_real_norm_squared'][0], 324)
+        self.assertGreater(cert['mixer_real_norm_squared'][1], 324)
+        self.assertLess(mixed.branches[0].norm_squared[0], 1)
+        self.assertGreater(mixed.branches[0].norm_squared[1], 1)
+
+    def test_corrupt_missing_or_inconsistent_certificate_cannot_emit_pose(self):
+        span = phase.affine_quaternion([1, 0, 0, 0], [0, 1, 0, 0],
+            (Q(0), Q(1)), (Q(0),)*4, {'track': 'hand'})
+        for mutation in [lambda b: b.certificate.update(norm_squared=(Q(1), Q(1))),
+                         lambda b: b.certificate['identity'].update(track='changed'),
+                         lambda b: b.certificate.update(weight=(Q(1), Q(1))),
+                         lambda b: b.box.lo.fill(2)]:
+            bad = copy.deepcopy(span); mutation(bad.branches[0])
+            with self.assertRaises(ValueError):
+                phase.mixer_span_box([0, 0, 0, 1], bad)
+        bad = copy.deepcopy(span); bad.branches = ()
+        with self.assertRaises(ValueError):
+            phase.mixer_span_box([0, 0, 0, 1], bad)
+        with self.assertRaises(ValueError):
+            phase.affine_quaternion([float('nan'), 0, 0, 0], [0, 1, 0, 0],
+                (Q(0), Q(1)), (Q(0),)*4, {})
+
+    def test_inconsistent_component_and_removed_rounding_proof_reject(self):
+        f = capture.Float32Box
+        with self.assertRaisesRegex(ValueError, 'Inconsistent quaternion norm/component'):
+            phase.affine_quaternion([1, 0, 0, 0], [0, 1, 0, 0],
+                (Q(0), Q(1)), (Q(0),)*4, {}, f([0, 0, 0, 0]))
+        span = phase.affine_quaternion([0, 0, 0, 1], [0, 0, 0, 1],
+            (Q(0), Q(1)), (Q(0),)*4, {})
+        mixed = phase.mixer_span_box([0, 0, 0, 1], span)
+        for mutation in [lambda c: c.update(hamilton_roundoff=[]),
+                         lambda c: c.update(mixer_dot_error=Q(0)),
+                         lambda c: c.update(normalization_radial_error=Q(0)),
+                         lambda c: c.update(gram=(Q(0), Q(0), Q(0)))]:
+            bad = copy.deepcopy(mixed); mutation(bad.branches[0].certificate)
+            with self.assertRaises(ValueError):
+                phase.basis_span_box(f([0, 0, 0]), bad, [1, 1, 1])
+
+    def test_machine_residual_changes_norm_bound_and_ftz_zero_stays_unknown(self):
+        a, b, w = [1, 0, 0, 0], [0, 1, 0, 0], (Q(0), Q(1))
+        exact = phase.affine_quaternion(a, b, w, (Q(0),)*4, {})
+        perturbed = phase.affine_quaternion(a, b, w, (Q(1, 100),)*4, {})
+        self.assertLess(perturbed.branches[0].norm_squared[0], exact.branches[0].norm_squared[0])
+        tiny = phase.affine_quaternion([0, 0, 0, 2**-140], [0, 0, 0, 2**-140],
+            w, (Q(2)**-126,)*4, {})
+        with self.assertRaises(phase.Unclosed):
+            phase.mixer_span_box([0, 0, 0, 1], tiny)
 
 
 class BindingTests(unittest.TestCase):
@@ -600,6 +711,40 @@ class AcceptedScalarTests(unittest.TestCase):
     def authority(self):
         return phase.ScalarAuthority(self.scalar_capture, self.scalar_receipt, self.native,
             self.manifest['component_result']['numerical_accounting']['platform_math'])
+
+    def test_eight_frozen_norm_failures_replay_full_raw_geometry_with_positive_denominators(self):
+        baseline_path = os.environ.get('CAV_NORM_BASELINE')
+        if not baseline_path:
+            self.skipTest('explicit accepted255 report required')
+        old = capture.read_bound(Path(baseline_path), phase.NORM_BASELINE_SHA)
+        targets = [r for r in old['continuous_native']['unclosed_boxes']
+                   if r['reason'] == 'mixer_quaternion_norm_contains_zero']
+        self.assertEqual(len(targets), 8)
+        authority = self.authority(); authority.prepare(self.native)
+        surface = dict(self.native['surfaces'][0])
+        surface['joints'] = np.asarray(surface['joints']).reshape(-1, 4)
+        surface['weights'] = np.asarray(surface['weights']).reshape(-1, 4)
+        binds = [capture.matrix(b['pose']) for b in self.native['skin']]
+        budget = phase.Budget(arithmetic=authority)
+        outcomes = []
+        for target in targets:
+            lo, hi = target['seconds']
+            try:
+                result = phase.surface_span_box(self.native, surface, binds, lo, hi, capture.system_math(), budget)
+            except phase.Unclosed as error:
+                self.assertNotIn('norm', error.detail['reason'])
+                outcomes.append(error.detail['reason'])
+            else:
+                self.assertEqual(result.lo.shape, (21175, 3))
+                for t in np.linspace(lo, hi, 5):
+                    self.assertTrue(result.contains(phase.sampled_points(self.native, surface, binds, float(t))).all())
+                outcomes.append('CLOSED')
+            records = budget.norm_records[lo, hi, target['bone']]
+            for record in records:
+                self.assertGreater(record['mixer_rounded_norm_squared'][0], 0)
+                self.assertGreater(record['basis_rounded_norm_squared'][0], 0)
+                self.assertEqual(len(record['hamilton_roundoff']), 2)
+        self.assertEqual(len(outcomes), 8)
 
     def test_actual_terminal_wrap_contains_receipt_backed_zero_without_point_replay(self):
         authority = self.authority(); authority.prepare(self.native)
