@@ -33,3 +33,38 @@ Incoming shock counts only mounted fit personnel in the impacting front groups,
 and only against the actually contacted lawful opponent. Rear ranks and units
 outside that contact keep their ordinary casualty context. The existing arm
 share threshold still determines whether shock dominates that incoming exchange.
+
+## Candidate earned charge
+
+`BattleCharge.intent_candidate` is the opt-in received-charge provider for
+`BodyBattleMotion`. Its closed five-field contribution contains only the desired
+anchor route. It validates the saved boundary, charge state, actual body rows and
+policy, reads a detached source, and neither refreshes groups nor moves or pays
+anything. Unsupported or malformed input errors; incapacity, reserves, packing,
+insufficient supplies, absent lawful mounted targets and closed swept ground hold
+with a reason. Existing measured surface reach bounds the forward corridor;
+whole-metre diagonal endpoints are checked against actual circles. The union
+transaction alone applies the shared allowance, full-Q reservations and terrain
+checks, including stationary and protected peers.
+
+The shared commit settles charge after all actual body paths and the minimum
+reached anchor prefix are known. Only its own forward committed prefix earns
+run-up, floored to whole metres and capped by displacement from the saved
+approach origin; side legs and timed whole-degree pivots reset unfinished credit.
+A changed target, heading or external
+anchor also starts fresh. Enough run-up without actual forward lawful open-ground
+contact stays an approach. Short contact becomes disengagement, and movement
+never settles personnel or consumes the same day's pending impact. The complete
+outer endpoint digest includes charge, and exact direct/JSON receipt retries are
+no-ops. Changed charge, controls, terrain, policy or other frozen inputs reject.
+
+After an impact, actual movement away must open the existing disengagement gap.
+An already-open gap still needs a bounded own disengagement move.
+Candidate `charge.regroup_day` records that day; the next whole day holds before
+a new approach is eligible. This optional field accompanies the existing charge
+record and follows its existing whole-number save encoding. Candidate admission
+rejects malformed fields and unknown charge keys. Existing production movement,
+impact consumption, save version and ordinary day callers retain their entrances;
+future candidate personnel settlement remains responsible for consuming impact
+only on complete success. Numerical test policies certify candidate arithmetic,
+not installed animation, live activation or the twelve final acceptance gates.

@@ -79,6 +79,11 @@ func test_one_share_and_writer() -> void:
 		assert_eq(collected.intents.size(), 10)
 		shares.append(collected.units[0].budget_m)
 	assert_eq(shares, [2, 2, 2, 2, 2, 2, 2, 2, 2, 2])
+	var installed: Dictionary = api.call("collect_candidate", f.repo, f.state, _boundary(f.state))
+	assert_eq(installed.status, "complete", installed.reason)
+	assert_eq(installed.units[0].writer, "charge")
+	assert_eq(installed.units[0].anchor_path_m, [[50000, 50000]], "a charge without a lawful mounted target holds")
+	f.state.battles[0].actions.att.kind = "retreat"
 	var missing: Dictionary = api.call("collect_candidate", f.repo, f.state, _boundary(f.state))
 	assert_eq(missing.status, "error", "unimplemented tactical provider never silently holds")
 	assert_eq(missing.intents, [])
