@@ -41,3 +41,40 @@ without calling ordinary `BattleGroups.refresh` or changing production lifecycle
 Its explicit reconciliation handles staged personnel only on detached current
 worlds; a strictly validated pending descriptor requests future placement.
 Neither partial candidates nor frozen deferred results are live battle inputs.
+
+## Pure physical metrics
+
+`BattleGroupGeometry` supplies read-only metrics for legacy rows; production
+placement, movement and combat do not opt in merely by loading this class.
+`footprint` resolves `MapObjects.army_piece` against `unit_footprints.csv` and
+returns a detached radius/pitch record. Missing pieces or a pitch smaller than
+the diameter reject; there is no substitute radius or candidate-body dependency.
+
+`pair` compares squared integer centre distance with the squared sum of the two
+radii: strict overlap, inclusive edge-distance reach (radii plus caller-supplied
+configured reach). Encounter discovery remains a separate policy. `segment_disc`
+tests a heterogeneous blocking disc against an open shot segment: interior
+tangency blocks, endpoint-only tangency does not, endpoint overlap does. Its
+`tangent_blocks=false` mode tests swept occupied space, allowing tangency.
+A zero-length segment tests strict endpoint overlap.
+
+`envelope` expands the actual rounded row centres by their piece radius and
+returns world-axis extrema, width and depth, never a nominal slot count.
+`rigid_step` checks a straight translation's inclusive distance budget, existing
+internal separation, and every swept row disc against supplied stationary
+blocking discs. It returns the translated envelope but never writes anchors,
+rows, paths or snapshots. It does not establish terrain clearance, a route,
+concurrent obstacle motion, animation fit or production admission.
+
+Points use two-element Arrays and row dictionaries (`x_m`, `y_m`), retaining
+64-bit whole metres rather than narrowing world positions through `Vector2i`.
+Whole finite JSON numbers are accepted; fractions and malformed rows reject.
+Every query returns `ok`; invalid geometry or an unrepresentable intermediate
+integer yields `ok=false` with a reason, never an apparently clear result.
+Callers must reject that result. Signed sums, differences, squared lengths,
+dot/cross products and their comparison products are checked before evaluation;
+a mathematically representable final comparison can still reject when an
+intermediate exceeds int64 (including negating its minimum). No float square
+root or approximate fallback changes a boundary. These are arithmetic limits,
+not configurable physical distances. Existing footprint calibration remains its
+own input contract; this helper does not certify assets or animations.

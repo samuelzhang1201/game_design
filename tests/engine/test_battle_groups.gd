@@ -2,6 +2,7 @@ extends GutTest
 ## P4.4d1: representative 100-person groups and their saved whole-metre positions.
 ## Hand-computed: spacing 50 m, depth 40 m (data/battle/balance.csv).
 const SuiteData := preload("res://tests/suite_data.gd")
+const Geometry := preload("res://scripts/engine/battle_group_geometry.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture() -> Dictionary:
@@ -214,3 +215,128 @@ func test_legacy_rows_cannot_gain_contact_through_closed_ground() -> void:
 	MarchPath.use(f.repo, MarchPath.build(f.repo, 3, 1, 10, PackedByteArray([0, 0, 0])))
 	assert_eq(BattleGroups.engaged_counts(f.repo, f.state, f.battle, f.a), Vector2i(50, 50))
 	MarchPath.forget()
+
+
+func test_physical_metrics_use_heterogeneous_radii_and_exact_boundaries() -> void:
+	# Radii 3 + 7, reach 5: occupied tangent at 10, reach inclusive at 15.
+	for distance: int in [9, 10, 11, 14, 15, 16]:
+		var result: Dictionary = Geometry.pair([0, 0], 3, [distance, 0], 7, 5)
+		assert_true(result.ok)
+		assert_eq(result.overlap, distance < 10)
+		assert_eq(result.in_reach, distance <= 15)
+	assert_true(Geometry.pair([0, 0], 3, [9, 12], 7, 5).in_reach, "9²+12²=15²")
+	assert_false(Geometry.pair([0, 0], 3, [10, 12], 7, 5).in_reach)
+
+
+func test_physical_blockers_include_tangency_and_endpoint_overlap() -> void:
+	assert_true(Geometry.segment_disc([0, 0], [10, 0], [5, 3], 3).blocked)
+	assert_false(Geometry.segment_disc([0, 0], [10, 0], [5, 4], 3).blocked)
+	assert_true(Geometry.segment_disc([0, 0], [10, 0], [-2, 0], 3).blocked)
+	assert_false(Geometry.segment_disc([0, 0], [10, 0], [-3, 0], 3).blocked,
+		"endpoint-only tangency leaves the open shot clear")
+	assert_true(Geometry.segment_disc([0, 0], [10, 0], [12, 0], 3).blocked)
+	assert_false(Geometry.segment_disc([0, 0], [10, 0], [13, 0], 3).blocked)
+	assert_true(Geometry.segment_disc([0, 0], [0, 0], [0, 0], 1).blocked)
+	assert_false(Geometry.segment_disc([0, 0], [0, 0], [1, 0], 1).blocked)
+	# Diagonal: cross²=100, radius²*length²=200, so the radius-one disc blocks.
+	assert_true(Geometry.segment_disc([0, 0], [10, 10], [4, 5], 1).blocked)
+
+
+func test_physical_envelope_and_rigid_step_are_pure_and_bounded() -> void:
+	var rows: Array = [{"x_m": -4, "y_m": 2, "count": 100, "path_m": [[-4, 2]]},
+		{"x_m": 6, "y_m": 12, "count": 1}]
+	var blockers: Array = [{"x_m": 0, "y_m": 5, "radius_m": 1}]
+	var before := JSON.stringify([rows, blockers])
+	assert_eq(Geometry.envelope(rows, 3), {"ok": true, "min_x_m": -7,
+		"min_y_m": -1, "max_x_m": 9, "max_y_m": 15, "width_m": 16, "depth_m": 16})
+	var moved: Dictionary = Geometry.rigid_step(rows, 3, [3, 4], 5, [])
+	assert_true(moved.ok)
+	assert_true(moved.allowed, "3²+4²=5², inclusive step bound")
+	assert_eq(moved.envelope.min_x_m, -4)
+	assert_eq(moved.envelope.max_y_m, 19)
+	assert_false(Geometry.rigid_step(rows, 3, [3, 5], 5, []).allowed)
+	assert_false(Geometry.rigid_step(rows, 3, [8, 0], 8, blockers).allowed,
+		"swept radius 3+1 blocks even when endpoints are clear")
+	assert_true(Geometry.rigid_step(rows, 3, [3, 4], 5, []).allowed)
+	assert_eq(JSON.stringify([rows, blockers]), before)
+	var repo := SuiteData.repo()
+	var fixture := _fixture()
+	var regiment: Dictionary = fixture.state.regiments[fixture.a]
+	regiment.is_royal = "1"
+	assert_eq(Geometry.footprint(repo, regiment).radius_m, 749)
+	var footprint: Dictionary = Geometry.footprint(repo, {"is_naval": "1"})
+	assert_false(footprint.ok, "missing footprint never silently shrinks a piece")
+
+
+func test_physical_metrics_reject_invalid_and_overflowing_inputs() -> void:
+	var maximum: int = 9223372036854775807
+	assert_false(Geometry.pair([maximum, 0], 1, [-1, 0], 1, 0).ok)
+	assert_false(Geometry.pair([0, 0], maximum, [0, 0], 1, 0).ok)
+	assert_false(Geometry.pair([0, 0], 1, [3037000500, 0], 1, 0).ok)
+	assert_false(Geometry.pair([0, 0], -1, [0, 0], 1, 0).ok)
+	assert_false(Geometry.pair([0.5, 0], 1, [0, 0], 1, 0).ok)
+	assert_false(Geometry.pair([0, 0], 1, [0, 0], 1, -1).ok)
+	assert_false(Geometry.segment_disc([0, 0], [100000, 100000], [0, 100000], 1).ok,
+		"cross-product square overflow is rejected before multiplication")
+	assert_false(Geometry.envelope([{"x_m": maximum, "y_m": 0}], 1).ok)
+	assert_false(Geometry.envelope([], 1).ok)
+	assert_false(Geometry.rigid_step([{"x_m": maximum, "y_m": 0}], 0, [1, 0], 1, []).ok)
+
+
+func test_physical_installed_footprints_and_large_world_coordinates() -> void:
+	var repo := SuiteData.repo()
+	var infantry: Dictionary = repo.unit_footprints.infantry
+	var archers: Dictionary = repo.unit_footprints.archers
+	# 927 + 932 + 30 = 1889. World coordinates exceed Vector2i's int32 range.
+	for distance: int in [1888, 1889, 1890]:
+		var result := Geometry.pair([5000000000, -5000000000], infantry.radius_m,
+			[5000000000 + distance, -5000000000], archers.radius_m, 30)
+		assert_true(result.ok)
+		assert_eq(result.in_reach, distance <= 1889)
+	assert_true(Geometry.pair([0, 0], 0, [3037000499, 0], 0, 0).ok)
+	assert_false(Geometry.pair([0, 0], 0, [2147483648, 2147483648], 0, 0).ok,
+		"both squares fit individually, their sum does not")
+	assert_true(Geometry.pair([1.0, 2.0], 3, [11.0, 2.0], 7, 0).in_reach,
+		"whole JSON numbers are accepted without truncating fractions")
+
+
+func test_physical_rounded_formation_envelope_uses_actual_rows() -> void:
+	var repo := SuiteData.repo()
+	var pitch: int = repo.unit_footprints.infantry.pitch_m
+	var radius: int = repo.unit_footprints.infantry.radius_m
+	# Existing three-slot line at 45 degrees: +/-3708/sqrt(2) rounds to +/-2622.
+	var rows: Array = []
+	for slot: Vector2 in BattleFormation.slots("line", 3):
+		var offset := (Vector2(-1, 1).normalized() * slot.x * pitch).round()
+		rows.append({"x_m": int(offset.x), "y_m": int(offset.y)})
+	assert_eq(rows, [{"x_m": 2622, "y_m": -2622}, {"x_m": 0, "y_m": 0},
+		{"x_m": -2622, "y_m": 2622}])
+	var bounds := Geometry.envelope(rows, radius)
+	assert_eq(bounds.width_m, 7098, "5244 centre extent + 1854 diameter")
+	assert_eq(bounds.depth_m, 7098)
+	assert_true(Geometry.rigid_step(rows, radius, [0, 0], 0, []).allowed)
+	var packed: Array = [{"x_m": 0, "y_m": 0}, {"x_m": 1853, "y_m": 0}]
+	assert_false(Geometry.rigid_step(packed, radius, [0, 0], 0, []).allowed)
+	packed[1].x_m = 1854
+	assert_true(Geometry.rigid_step(packed, radius, [0, 0], 0, []).allowed,
+		"occupied tangency is legal")
+	assert_true(Geometry.rigid_step([{ "x_m": 0, "y_m": 0}], 3, [10, 0], 10,
+		[{"x_m": 5, "y_m": 4, "radius_m": 1}]).allowed,
+		"swept occupied tangency is legal, unlike shot tangency")
+
+
+func test_physical_queries_reject_malformed_rows_and_preserve_repository() -> void:
+	var repo := SuiteData.repo()
+	var before := JSON.stringify(repo.unit_footprints)
+	var regiment := {"is_royal": "1"}
+	var footprint := Geometry.footprint(repo, regiment)
+	footprint.radius_m = 1
+	assert_eq(JSON.stringify(repo.unit_footprints), before, "returned footprint is detached")
+	assert_eq(regiment, {"is_royal": "1"})
+	repo.unit_footprints.royal.pitch_m = 1
+	assert_false(Geometry.footprint(repo, regiment).ok)
+	assert_false(Geometry.envelope([{"x_m": 1}], 3).ok)
+	assert_false(Geometry.envelope([{"x_m": 1.5, "y_m": 0}], 3).ok)
+	assert_false(Geometry.rigid_step([{ "x_m": 0, "y_m": 0}], 3, [0, 0], 0,
+		[{"x_m": 5, "y_m": 4, "radius_m": -1}]).ok)
+	assert_false(Geometry.segment_disc([0, 0], [10, 0], [5, 0], -1).ok)
