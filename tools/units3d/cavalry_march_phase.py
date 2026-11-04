@@ -885,11 +885,26 @@ def skin_vertex_residual(context, vertex_id):
     Matrix entries are the actual already-rounded native values. roundoff_sum
     covers every term ordering/contraction; rnd includes directed rounding/FTZ.
     """
-    if vertex_id in context['cache']:
-        return context['cache'][vertex_id]
     position, joints, weights = context['raw'][vertex_id]
+    require(len(position) == 3 and len(joints) == len(weights) == 4
+            and all(type(j) is int and 0 <= j < len(context['transforms'].lo) for j in joints),
+            'Missing/invalid native vertex influence')
     position, weights = tuple(map(rational, position)), tuple(map(rational, weights))
+    require(min(weights) >= 0, 'Negative native vertex weight')
     matrices = context['transforms']
+    intervals = tuple((j, tuple(tuple(map(float, row)) for row in matrices.lo[j]),
+                           tuple(tuple(map(float, row)) for row in matrices.hi[j])) for j in sorted(set(joints)))
+    # Cache only arithmetic operands, never a context, certificate or validation result.
+    return _skin_vertex_residual(position, tuple(joints), weights, intervals, 24,
+                                 'ordered-dot-origin-weight-four-accumulations-fma-ftz-v1')
+
+
+@lru_cache(maxsize=LIMITS['max_constraints'], typed=True)
+def _skin_vertex_residual(position, joints, weights, intervals, precision, profile):
+    require(type(precision) is int and precision == 24 and type(profile) is str
+            and profile == 'ordered-dot-origin-weight-four-accumulations-fma-ftz-v1',
+            'Unsupported native residual arithmetic profile')
+    matrices = {j: native.Float32Box(lo, hi) for j, lo, hi in intervals}
     answer = []
     tiny = scalar.minnormal(24)
     for axis in range(3):
@@ -908,7 +923,6 @@ def skin_vertex_residual(context, vertex_id):
         for _ in range(4):
             error += scalar.rnd(sum(magnitudes)+error, 24)+2*tiny
         answer.append(error)
-    context['cache'][vertex_id] = tuple(answer)
     return tuple(answer)
 
 
@@ -1032,6 +1046,258 @@ def correlated_triangle(box, surface, face):
 
 
 
+CENTERED_METHOD = 'exact-rational-centered-shared-wedge-native-residual-v1'
+CENTERED_BASELINE_SHA = 'f8ff342a3ae20fdb0985cba30552c3b72ce6cddbe62460ec5ff87f189ef405f3'
+
+
+def centered_quadratic(terms, domains):
+    """Enclose the same reference polynomial; this never reassociates native LBS."""
+    canonical = {}
+    for a, b, value in terms:
+        a, b = sorted((a, b))
+        canonical[a, b] = canonical.get((a, b), Q(0))+rational(value)
+    monomials = tuple((a, b, value) for (a, b), value in sorted(canonical.items()) if value)
+    variables = sorted({v for a, b, _ in monomials for v in (a, b)})
+    centers, radii = {}, {}
+    for v in variables:
+        lo, hi = map(rational, domains[v])
+        require(lo <= hi, 'Negative centered radius')
+        centers[v], radii[v] = (lo+hi)/2, (hi-lo)/2
+    linear = dict.fromkeys(variables, Q(0))
+    constant = lower = upper = Q(0)
+    for a, b, value in monomials:
+        constant += value*centers[a]*centers[b]
+        linear[a] += value*centers[b]
+        linear[b] += value*centers[a]
+        radius = value*radii[a]*radii[b]
+        lower += min(Q(0), radius) if a == b else -abs(radius)
+        upper += max(Q(0), radius) if a == b else abs(radius)
+    spread = sum(abs(linear[v])*radii[v] for v in variables)
+    return {'monomials': monomials, 'centers_radii': [(v, centers[v], radii[v]) for v in variables],
+        'constant': constant, 'linear': list(linear.items()), 'linear_range': (-spread, spread),
+        'quadratic_range': (lower, upper), 'interval': (constant-spread+lower, constant+spread+upper)}
+
+
+@lru_cache(maxsize=LIMITS['max_constraints'])
+def centered_monomials(coefficients):
+    return tuple(tuple(((j, a, k), (l, b, m), c) for j, k, l, m, c in triangle_wedge(coefficients))
+                 for a, b in ((1, 2), (2, 0), (0, 1)))
+
+
+@lru_cache(maxsize=LIMITS['max_constraints'])
+def centered_component(terms, domain_items):
+    # A face's immutable polynomial/rectangle reappears in area, birth and replay.
+    component = centered_quadratic(terms, {v: (lo, hi) for v, lo, hi in domain_items})
+    return {**{k: v for k, v in component.items() if k not in ('monomials', 'centers_radii', 'linear')},
+        **{k+'_sha256': canonical_digest(component[k]) for k in ('monomials', 'centers_radii', 'linear')},
+        'canonical_monomials': len(component['monomials'])}
+
+
+def intersect_normal(old, new):
+    lo, hi = np.maximum(old.lo, new.lo), np.minimum(old.hi, new.hi)
+    require(np.isfinite(lo).all() and np.isfinite(hi).all() and (lo <= hi).all(), 'Empty normal intersection/refutation')
+    return native.Float32Box(lo, hi)
+
+
+@lru_cache(maxsize=LIMITS['max_constraints'])
+def _centered_domain(digest, encoded_identity):
+    # The full canonical preimage is the key; a mutable object/digest alone is not.
+    require(hashlib.sha256(encoded_identity.encode()).hexdigest() == digest, 'Stale centered matrix context')
+    identity = json.loads(encoded_identity)
+    require(set(identity) == {'method', 'seconds', 'source_sha256', 'matrix_interval'}
+            and identity['method'] == SHAPE_METHOD, 'Stale centered matrix context')
+    matrices = native.Float32Box(*identity['matrix_interval'])
+    require(matrices.lo.ndim == 3 and matrices.lo.shape[1:] == (3, 4), 'Malformed centered matrix domain')
+    bounds = tuple(tuple(tuple(tuple(float(v) for v in row) for row in joint) for joint in side)
+                   for side in (matrices.lo, matrices.hi))
+    return digest, encoded_identity, bounds
+
+
+def centered_domains(certificates):
+    return {digest: _centered_domain(digest, json.dumps(json_value(identity), sort_keys=True,
+        separators=(',', ':'), allow_nan=False)) for digest, identity in certificates.items()}
+
+
+@lru_cache(maxsize=LIMITS['max_constraints'])
+def _centered_branch(coefficients, context, residuals):
+    matrices = native.Float32Box(*context[2]); f = native.Float32Box
+    domains = {v: (matrices.lo[v], matrices.hi[v]) for terms in centered_monomials(coefficients)
+               for a, b, _ in terms for v in (a, b)}
+    components = [centered_component(terms, tuple((v, float(domains[v][0]), float(domains[v][1]))
+        for v in sorted({v for a, b, _ in terms for v in (a, b)}))) for terms in centered_monomials(coefficients)]
+    reference = native.box_stack([float_box(c['interval']) for c in components])
+    references = []
+    for edge in coefficients:
+        value = f([0., 0., 0.])
+        for joint, h in edge:
+            for k, coefficient in enumerate(h):
+                if coefficient:
+                    value = value+matrices[joint][:, k]*float_box((coefficient, coefficient))
+        references.append(value)
+    errors = [[residuals[0][k]+residuals[e][k] for k in range(3)] for e in (1, 2)]
+    delta = [f.outward(-np.array(list(map(float, e))), np.array(list(map(float, e)))) for e in errors]
+    residual = cross_box(references[0], delta[1])+cross_box(delta[0], references[1])+cross_box(delta[0], delta[1])
+    normal = reference+residual
+    return (tuple(tuple(sorted(c.items())) for c in components),
+        (tuple(residual.lo), tuple(residual.hi)), (tuple(normal.lo), tuple(normal.hi)),
+        sum(c['canonical_monomials'] for c in components))
+
+
+def centered_triangle(original, certificates):
+    domains = centered_domains({k: certificates[k] for k in original['shared_transform_certificates']})
+    return _centered_triangle(original, domains)
+
+
+def _centered_triangle(original, domains):
+    raw = tuple(tuple(tuple(v) for v in row) for row in original['raw_vertices_joints_weights'])
+    coefficients = triangle_coefficients(raw)
+    require(json_value([[{'bind_index': j, 'homogeneous': h} for j, h in e] for e in coefficients])
+            == json_value(original['edge_coefficients']), 'Changed centered polynomial/source identity')
+    branches, normals = [], []
+    f = native.Float32Box
+    for digest, previous in zip(original['shared_transform_certificates'], original['branches']):
+        residuals = tuple(tuple(Q(*e) if isinstance(e, list) else rational(e) for e in row)
+                          for row in previous['vertex_native_residual_absolute'])
+        require(len(residuals) == 3 and all(len(e) == 3 and min(e) >= 0 for e in residuals),
+                'Missing centered native residual')
+        components, residual, normal, monomials = _centered_branch(coefficients, domains[digest], residuals)
+        normals.append(f(*normal))
+        branches.append({'shared_transform_sha256': digest,
+            'native_residual_sha256': canonical_digest(previous),
+            'components': [dict(c) for c in components], 'canonical_monomials': monomials,
+            'residual_cross_interval': list(residual), 'native_centered_cross_interval': list(normal)})
+    require(len(branches) == len(original['branches']) == len(original['shared_transform_certificates'])
+            and 1 <= len(branches) <= 2, 'Missing centered terminal branch')
+    normal = intersect_normal(f(*original['cross_interval']), hull(normals))
+    minimum = np.where((normal.lo <= 0) & (normal.hi >= 0), 0., np.minimum(abs(normal.lo), abs(normal.hi)))
+    maximum = np.maximum(abs(normal.lo), abs(normal.hi))
+    squared = f.outward(minimum*minimum, maximum*maximum)
+    total = squared[0]+squared[1]+squared[2]
+    area = f(np.maximum(total.lo, 0), total.hi).sqrt()
+    lower, upper = max(original['twice_area_interval'][0], float(max(area.lo, 0))), min(original['twice_area_interval'][1], float(area.hi))
+    require(lower <= upper, 'Empty area intersection/refutation')
+    return {'method': CENTERED_METHOD, 'original_certificate_sha256': canonical_digest(original),
+        'branches': branches, 'cross_interval': [normal.lo, normal.hi], 'twice_area_interval': [lower, upper]}
+
+
+def validate_centered_certificate(proof, original, certificates):
+    expected = centered_triangle(original, certificates)
+    require(json_value(proof) == json_value(expected), 'Centered coefficient/domain/residual/intersection replay differs')
+
+
+def centered_overlay(report, observations=()):
+    """Original targets remain primary; the two existing children are subordinate."""
+    certificates, originals = {}, {}
+    domains = centered_domains(report['shape_proof']['shared_skin_certificates'])
+    def stronger(original):
+        digest = canonical_digest(original)
+        if digest not in certificates:
+            certificates[digest] = json_value(_centered_triangle(original, domains))
+            originals[digest] = original
+        return digest, certificates[digest]
+    def row_targets(row):
+        areas, births = [], []
+        if 'reason' in row:
+            return {'seconds': row['seconds'], 'reason': row['reason'], 'area_targets': [], 'birth_targets': []}
+        for hoof, area in row['triangle_area'].items():
+            require(len(area['native_triangle_ids']) == len(area['certificates']), 'Missing centered material face')
+            for index, face in enumerate(area['native_triangle_ids']):
+                old = area['certificates'][index]
+                digest, current = stronger(old)
+                lower = current['twice_area_interval'][0]
+                identity = {'seconds': row['seconds'], 'hoof': hoof, 'native_triangle_id': face,
+                    'original_local_triangle_index': index, 'current_sha256': digest}
+                areas.append({**identity, 'before': 'CLOSED' if old['twice_area_interval'][0] > 0 else 'UNKNOWN',
+                    'lower_bound': lower,
+                    'outcome': 'CLOSED' if lower > 0 else 'UNKNOWN',
+                    'reasons': [] if lower > 0 else ['area_interval_contains_zero']})
+                if hoof in row['triangle_shape']:
+                    shape = row['triangle_shape'][hoof]
+                    require(shape['native_triangle_ids'] == area['native_triangle_ids']
+                            and len(shape['certificates']) == len(area['certificates']), 'Missing centered birth face')
+                    anchor = shape['certificates'][index]
+                    require(anchor['current'] == old, 'Centered current face mismatch')
+                    birth_digest, birth = stronger(anchor['birth'])
+                    dot = native.box_dot(native.Float32Box(*current['cross_interval']),
+                                         native.Float32Box(*birth['cross_interval']), 3)
+                    dot_lower, dot_upper = max(float(dot.lo), anchor['orientation_interval'][0]), min(float(dot.hi), anchor['orientation_interval'][1])
+                    require(dot_lower <= dot_upper, 'Empty original birth dot intersection/refutation')
+                    births.append({**identity, 'before': 'CLOSED' if min(old['twice_area_interval'][0], anchor['orientation_interval'][0]) > 0 else 'UNKNOWN',
+                        'original_birth_sha256': birth_digest,
+                        'area_lower_bound': lower, 'dot_interval': [dot_lower, dot_upper],
+                        'outcome': 'CLOSED' if min(lower, dot_lower) > 0 else 'UNKNOWN',
+                        'reasons': sorted(set(([] if lower > 0 else ['area_interval_contains_zero'])+
+                            ([] if dot_lower > 0 else ['birth_dot_interval_nonpositive'])))})
+        return {'seconds': row['seconds'], 'area_targets': areas, 'birth_targets': births}
+    rows = [row_targets(r) for r in report['continuous_native']['closed_boxes']]
+    refinement = report['shape_refinement']
+    parent = next(r for r in report['continuous_native']['closed_boxes'] if r['seconds'] == REFINEMENT_PARENT)
+    # Reuse the accepted exact partition/source/anchor checks before combining stronger bounds.
+    require(all(refinement[k] == v for k, v in aggregate_refined_shape(parent, refinement['children']).items()),
+            'Changed accepted child partition/anchor aggregation')
+    children = [row_targets(r) for r in refinement['children']]
+    def identity(t):
+        return t['hoof'], t['native_triangle_id'], t['original_local_triangle_index']
+    for kind in ('area_targets', 'birth_targets'):
+        baseline = {identity(t): t for t in refinement[kind]}
+        maps = [{identity(t): t for t in c[kind]} for c in children]
+        selected = next(r for r in rows if r['seconds'] == REFINEMENT_PARENT)
+        for target in selected[kind]:
+            key = identity(target); old = baseline[key]
+            target['before'] = old['outcome']
+            pieces = [m.get(key) for m in maps]
+            if kind == 'area_targets':
+                bounds = [p['lower_bound'] if p else None for p in pieces]
+                target['lower_bound'] = max(target['lower_bound'], old['lower_bound'], min(bounds) if None not in bounds else 0.)
+                target['child_lower_bounds'] = bounds
+                lower = target['lower_bound']
+                target['reasons'] = [] if lower > 0 else ['area_interval_contains_zero']
+            else:
+                require(all(p is None or p['original_birth_sha256'] == target['original_birth_sha256'] for p in pieces),
+                        'Changed centered original birth anchor')
+                bounds = [p['area_lower_bound'] if p else None for p in pieces]
+                dots = [p['dot_interval'][0] if p else None for p in pieces]
+                target['area_lower_bound'] = max(target['area_lower_bound'], old['area_lower_bound'], min(bounds) if None not in bounds else 0.)
+                dot = max(target['dot_interval'][0], old['dot_lower_bound'], min(dots) if None not in dots else old['dot_lower_bound'])
+                # The aggregated lower bound can exceed the parent's coarse upper enclosure;
+                # report it as a coverage lower bound, not an interval intersection.
+                target['dot_lower_bound'] = dot
+                target['child_area_lower_bounds'], target['child_dot_lower_bounds'] = bounds, dots
+                lower = min(target['area_lower_bound'], dot)
+                target['reasons'] = sorted(set(([] if target['area_lower_bound'] > 0 else ['area_interval_contains_zero'])+
+                    ([] if dot > 0 else ['birth_dot_interval_nonpositive'])))
+            target['outcome'] = 'CLOSED' if lower > 0 else 'UNKNOWN'
+    areas = [t for r in rows for t in r['area_targets']]
+    births = [t for r in rows for t in r['birth_targets']]
+    for target in births:
+        target.setdefault('dot_lower_bound', target['dot_interval'][0])
+    comparisons = []
+    row_map = {tuple(r['seconds']): r for r in rows+children}
+    for kind, seconds, time, vertices in observations:
+        row = row_map[tuple(seconds)]
+        for hoof in sorted({t['hoof'] for t in row['area_targets']}):
+            targets = [t for t in row['area_targets'] if t['hoof'] == hoof]
+            faces = [originals[t['current_sha256']]['vertex_ids'] for t in targets]
+            bad = shape_refutation([certificates[t['current_sha256']] for t in targets], vertices, faces)
+            require(not bad, f'Centered native normal refutation: {hoof} {time} {bad}')
+            comparisons.append({'kind': kind, 'box_seconds': seconds, 'seconds': time,
+                'hoof': hoof, 'faces_checked': len(faces), 'violated_native_triangle_ids': []})
+    branches = [b for p in certificates.values() for b in p['branches']]
+    term_count = sum(b['canonical_monomials'] for b in branches)
+    bound = len(certificates)*2*report['work_used']['correlated_triangles']['per_cross_monomial_bound']
+    require(term_count <= bound and all(b['canonical_monomials'] <= 6912 for b in branches), 'Centered finite monomial bound')
+    return {'method': CENTERED_METHOD, 'certificates': certificates, 'area_targets': areas, 'birth_targets': births,
+        'children': children, 'native_cross_refutations': comparisons,
+        'before_counts': {k: {'CLOSED': sum(t['before'] == 'CLOSED' for t in v),
+                             'UNKNOWN': sum(t['before'] == 'UNKNOWN' for t in v)} for k, v in [('area', areas), ('birth', births)]},
+        'counts': {k: {'CLOSED': sum(t['outcome'] == 'CLOSED' for t in v),
+                      'UNKNOWN': sum(t['outcome'] == 'UNKNOWN' for t in v)} for k, v in [('area', areas), ('birth', births)]},
+        'work': {'unique_face_context_certificates': len(certificates), 'context_branches': len(branches),
+            'component_ranges': 3*len(branches), 'canonical_monomials': term_count, 'finite_monomial_bound': bound,
+            'finite_component_range_bound': 6*len(certificates)},
+        'scope': 'Exact centered quadratic reference ranges plus the full unchanged native ordered residual; existing normal intersection and original birth start/winding. All original spans and both existing children; no acquisition or physical acceptance.'}
+
+
 def shape_refutation(proofs, vertices, faces):
     """Actual rows/interiors can refute a bound; they never establish it."""
     triangles = np.asarray(vertices)[np.asarray(faces)]
@@ -1135,7 +1401,7 @@ def aggregate_refined_shape(parent, children):
     return {'area_targets': areas, 'birth_targets': births}
 
 
-def refine_selected_shape(capture, surface, binds, functions, budget, used, parent, patches, birth_boxes, samples, matrices):
+def refine_selected_shape(capture, surface, binds, functions, budget, used, parent, patches, birth_boxes, samples, matrices, observations=None):
     require(parent['seconds'] == REFINEMENT_PARENT, 'Wrong selected shape parent')
     require(used['attempts']+2 <= LIMITS['continuous_boxes']
             and used['refinement_splits']+1 <= LIMITS['refinement_splits']
@@ -1159,6 +1425,8 @@ def refine_selected_shape(capture, surface, binds, functions, budget, used, pare
             points.append(('adversarial_binary64_interior', time, value))
         points += [('frozen_native_ordered_vertices', s['time'], s['skinned_skeleton_local'][0])
                    for s in samples if lo <= s['time'] <= hi]
+        if observations is not None:
+            observations.extend((kind, [lo, hi], time, vertices) for kind, time, vertices in points)
         child = {'seconds': [lo, hi], 'triangle_area': {}, 'triangle_shape': {}}
         for hoof, patch in patches.items():
             proofs = [correlated_triangle(box, surface, face) for face in patch['native_triangles']]
@@ -1246,6 +1514,61 @@ def validate_refined_shape(report):
             'Child operation work budget exhausted')
     require(refinement['native_cross_refutations'] == [r for r in report['shape_proof']['native_cross_refutations']
             if r['box_seconds'] in [c['seconds'] for c in refinement['children']]], 'Missing child refutation work')
+
+def preserved_shape_science(report):
+    keys = ('shape_refinement', 'shape_proof', 'work_used', 'full_geometry', 'fit',
+        'source_support_constraints', 'metric_bounds', 'finite_endpoint_necessary_conditions',
+        'missing_physical_context', 'claims', 'accepted_anatomy', 'dense_native_comparison',
+        'baseline_accounting', 'previous_operation_accounting', 'previous_norm_accounting',
+        'previous_shape_accounting', 'accepted256_input_bindings', 'accepted257_input_bindings',
+        'accepted258_input_bindings', 'norm_target_replays', 'acos_target_replays', 'work_budget_declared_before_fit')
+    aliases, scientific_proofs = {}, []
+    for proof in report['continuous_native']['finite_acos_constants']:
+        body = {k: v for k, v in proof.items() if k not in ('sha256', 'track', 'key_index', 'source_keys')}
+        require(proof['sha256'] == canonical_digest(body)
+                and proof['consumer_algorithm_sha256'] == report['inputs']['tools/units3d/cavalry_march_phase.py'],
+                'Unvalidated consumer provenance in preserved science')
+        science = {k: v for k, v in proof.items() if k not in ('sha256', 'consumer_algorithm_sha256')}
+        aliases[proof['sha256']] = canonical_digest(science)
+        scientific_proofs.append(science)
+    def scientific_references(value):
+        if isinstance(value, dict):
+            return {k: scientific_references(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [scientific_references(v) for v in value]
+        return aliases.get(value, value) if isinstance(value, str) else value
+    continuous = {k: scientific_references(v) if k in ('acos_target_norm_certificates',
+        'quaternion_norm_certificates', 'scalar_domain_records') else v
+        for k, v in report['continuous_native'].items() if k != 'finite_acos_constants'}
+    return {**{k: report[k] for k in keys}, 'knots': report['atlas']['knots'],
+        'continuous': continuous, 'finite_acos_science': scientific_proofs}
+
+
+def validate_centered_overlay(report):
+    require(report['inputs']['centered_baseline_report'] == CENTERED_BASELINE_SHA
+            and report['atlas_input_packet']['centered_baseline_report_sha256'] == CENTERED_BASELINE_SHA,
+            'Lost accepted260 stronger-range binding')
+    baseline = native.read_bound(Path(report['input_locations']['centered_baseline_report']), CENTERED_BASELINE_SHA)
+    require(baseline['version'] == 7 and report['accepted260_input_bindings'] == baseline['inputs']
+            and len(baseline['inputs']) == 804 and set(baseline['inputs']) <= set(report['inputs'])
+            and {k for k, v in baseline['inputs'].items() if report['inputs'][k] != v} <=
+                {'tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py'}
+            and preserved_shape_science(report) == preserved_shape_science(baseline),
+            'Accepted260 original bindings/certificates/history changed')
+    actual = report['centered_wedge']
+    expected = centered_overlay(report)
+    require({k: v for k, v in actual.items() if k != 'native_cross_refutations'} ==
+            {k: v for k, v in expected.items() if k != 'native_cross_refutations'},
+            'Centered full-inventory/anchor/range/effective target replay differs')
+    require(len(actual['area_targets']) == 7760 and len(actual['birth_targets']) == 2797
+            and len(actual['children']) == 2
+            and (report['work_used']['attempts'], report['work_used']['refinement_splits'],
+                 report['work_used']['proposal_evaluations'], report['work_used']['float32_weight_values']) == (42, 1, 329, 1118),
+            'Centered original inventory/acquisition work changed')
+    require(sorted(actual['native_cross_refutations'], key=canonical_digest) ==
+            sorted(report['shape_proof']['native_cross_refutations'], key=canonical_digest),
+            'Missing centered native refutation observation/face')
+
 
 def surface_span_box(capture, surface, binds, lo, hi, functions, budget):
     f = native.Float32Box
@@ -1591,12 +1914,12 @@ def verify_partition(closed, unclosed, length):
 
 
 def validate_diagnostic(report):
-    require(type(report['version']) is int and report['version'] in (1, 2, 3, 4, 5, 6, 7), 'Report version')
-    if report['version'] in (2, 3, 4, 5, 6, 7):
+    require(type(report['version']) is int and report['version'] in (1, 2, 3, 4, 5, 6, 7, 8), 'Report version')
+    if report['version'] in (2, 3, 4, 5, 6, 7, 8):
         binding = report['input_binding']
         require(binding['kind'] == 'native-reacquired-v1' and type(binding['version']) is int
                 and binding['version'] == 1, 'Input binding version')
-        require(report['step_id'] == ('CAV-CONTACT-PHASE-SHAPE-REFINEMENT' if report['version'] == 7 else 'CAV-CONTACT-PHASE-TRIANGLE-BOUNDS' if report['version'] == 6 else 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if report['version'] == 5 else 'CAV-CONTACT-PHASE-QUATERNION-NORM' if report['version'] == 4 else ('CAV-CONTACT-PHASE-SLERP-BOUNDS' if report['version'] == 3 else 'CAV-CONTACT-PHASE-INPUT-BINDING'))
+        require(report['step_id'] == ('CAV-CONTACT-PHASE-CENTERED-WEDGE-RANGE' if report['version'] == 8 else 'CAV-CONTACT-PHASE-SHAPE-REFINEMENT' if report['version'] == 7 else 'CAV-CONTACT-PHASE-TRIANGLE-BOUNDS' if report['version'] == 6 else 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if report['version'] == 5 else 'CAV-CONTACT-PHASE-QUATERNION-NORM' if report['version'] == 4 else ('CAV-CONTACT-PHASE-SLERP-BOUNDS' if report['version'] == 3 else 'CAV-CONTACT-PHASE-INPUT-BINDING'))
                 and report['atlas_input_packet']['input_binding'] == binding
                 and report['atlas']['input_sha256'] == canonical_digest(report['atlas_input_packet'])
                 and report['inputs']['manifest'] == binding['manifest_sha256']
@@ -1607,7 +1930,7 @@ def validate_diagnostic(report):
     else:
         require(not any(k in report for k in ('input_binding', 'atlas_input_packet', 'input_locations')),
                 'Mixed legacy/new provenance')
-    if report['version'] in (3, 4, 5, 6, 7):
+    if report['version'] in (3, 4, 5, 6, 7, 8):
         require('arithmetic_proof' in report and report['atlas_input_packet'].get('arithmetic_proof') == report['arithmetic_proof']
                 and report['arithmetic_proof']['verifier_sha256'] == ARITHMETIC_VERIFIER_SHA
                 and report['inputs']['arithmetic_capture'] == report['arithmetic_proof']['capture_file_sha256']
@@ -1618,7 +1941,7 @@ def validate_diagnostic(report):
                 'Arithmetic proof/atlas binding differs')
         require(len(report['baseline_accounting']['coordinate_boxes']) == 69
                 and len(report['baseline_accounting']['shape_cases']) == 18, 'Incomplete prior unknown accounting')
-    if report['version'] in (4, 5, 6, 7):
+    if report['version'] in (4, 5, 6, 7, 8):
         require(report['inputs']['norm_baseline_report'] == NORM_BASELINE_SHA
                 and report['atlas_input_packet']['norm_baseline_report_sha256'] == NORM_BASELINE_SHA,
                 'Norm proof/accepted255 binding differs')
@@ -1639,7 +1962,7 @@ def validate_diagnostic(report):
                     return Q(*v) if isinstance(v, list) else rational(v)
                 require(lower('mixer_rounded_norm_squared') > 0 and lower('basis_rounded_norm_squared') > 0
                         and len(branch['hamilton_roundoff']) == 2, 'Unproved norm denominator')
-    if report['version'] in (5, 6, 7):
+    if report['version'] in (5, 6, 7, 8):
         require(report['inputs']['acos_baseline_report'] == ACOS_BASELINE_SHA
                 and report['atlas_input_packet']['acos_baseline_report_sha256'] == ACOS_BASELINE_SHA,
                 'Finite acos/accepted256 binding differs')
@@ -1674,7 +1997,7 @@ def validate_diagnostic(report):
                     omega = float_box((min(Q(*p['omega_interval'][0]) for p in matched),
                                        max(Q(*p['omega_interval'][1]) for p in matched)))
                     require(branch['omega_interval'] == json_value(list(box_interval(omega))), 'Stale finite acos omega hull')
-    if report['version'] in (6, 7):
+    if report['version'] in (6, 7, 8):
         require(all(report['claims'][k] is False for k in ['success_dependency', 'verified_physical_candidate',
                 'phase_runtime_unblocked', 'surface_unblocked', 'contact_certificate'])
                 and report['claims']['policy_E'] is None and report['claims']['original_12_gates_preserved'] is True,
@@ -1700,7 +2023,7 @@ def validate_diagnostic(report):
         require(len({f for p in patches.values() for f in p['native_sole_triangles']}) == 194,
                 'Duplicated/dropped original material face')
         child_rows = ([c for c in report['shape_refinement']['children'] if 'reason' not in c]
-                      if report['version'] == 7 else [])
+                      if report['version'] in (7, 8) else [])
         for row in report['continuous_native']['closed_boxes']+child_rows:
             require(set(row['triangle_area']) == set(patches), 'Missing full-cycle material area patch')
             for hoof, area in row['triangle_area'].items():
@@ -1749,8 +2072,10 @@ def validate_diagnostic(report):
                 and report['work_used']['correlated_triangles']['area_targets'] == 7760
                 and report['work_used']['correlated_triangles']['birth_orientation_targets'] == 2797,
                 'Incomplete full-cycle area/original birth target coverage')
-    if report['version'] == 7:
+    if report['version'] in (7, 8):
         validate_refined_shape(report)
+    if report['version'] == 8:
+        validate_centered_overlay(report)
     require(report['status'] == 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY', 'Diagnostic status changed')
     validate_atlas(report['atlas'])
     require(canonical_digest(report['atlas']) == report['atlas_sha256'], 'Atlas coefficients/digest changed')
@@ -1885,7 +2210,7 @@ def baseline_accounting(baseline, closed, unclosed):
 
 def build(review_path, *, native_manifest=None, bundle_root=None,
           arithmetic_capture=None, arithmetic_receipt=None, baseline_report=None, norm_baseline_report=None,
-          acos_baseline_report=None, triangle_baseline_report=None):
+          acos_baseline_report=None, triangle_baseline_report=None, centered_baseline_report=None):
     proof_mode = arithmetic_capture is not None
     require((arithmetic_capture is None) == (arithmetic_receipt is None) == (baseline_report is None),
             'Arithmetic capture, receipt and baseline required together')
@@ -1894,6 +2219,12 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
     require(proof_mode == (acos_baseline_report is not None), 'Finite acos mode requires accepted256 baseline')
 
     require(triangle_baseline_report is None or proof_mode, 'Shape refinement requires accepted arithmetic mode')
+    require(centered_baseline_report is None or triangle_baseline_report is not None,
+            'Centered range requires accepted260 refinement inputs')
+    centered_baseline = None
+    if centered_baseline_report is not None:
+        centered_baseline = native.read_bound(centered_baseline_report, CENTERED_BASELINE_SHA)
+        require(centered_baseline['version'] == 7, 'Expected accepted260 baseline')
     triangle_baseline = None
     if triangle_baseline_report is not None:
         # The accepted file is hash-bound; its original rows are independently rebuilt below.
@@ -1932,6 +2263,8 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
     require(triangle_baseline is None or shape_baseline is not None, 'Shape refinement requires accepted257 triangle inputs')
     if triangle_baseline is not None:
         context['locations']['triangle_baseline_report'] = str(triangle_baseline_report)
+    if centered_baseline is not None:
+        context['locations']['centered_baseline_report'] = str(centered_baseline_report)
     phases = sorted({Q(0), Q(1), Q('.137'), Q('.25')}
                     | {Q(k['time'])/Q(capture['length']) for t in capture['tracks'] for k in t['keys']}
                     | {v for pair in supports.values() for v in pair})
@@ -1958,6 +2291,8 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         input_packet.update(shape_baseline_report_sha256=SHAPE_BASELINE_SHA, shape_method=SHAPE_METHOD)
     if triangle_baseline is not None:
         input_packet['triangle_baseline_report_sha256'] = TRIANGLE_BASELINE_SHA
+    if centered_baseline is not None:
+        input_packet['centered_baseline_report_sha256'] = CENTERED_BASELINE_SHA
     atlas = make_atlas(phases, distances, canonical_digest(input_packet), capture['length'])
     samples, sampled, obstruction = captured_obstructions(capture, surface, binds, patches, supports,
                                                          samples_path, witness)
@@ -2050,7 +2385,7 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
     unclosed.extend(rejected)
     verify_partition(closed, unclosed, capture['length'])
     records, diameter, body_world = closed_metrics(closed, atlas, patches, supports, birth_boxes, body_mask, scale)
-    shape_contexts, shape_comparisons = {}, []
+    shape_contexts, shape_comparisons, centered_observations = {}, [], []
     if shape_baseline is not None:
         require([r['seconds'] for r in records] == [r['seconds'] for r in shape_baseline['continuous_native']['closed_boxes']]
                 and not unclosed, 'Accepted257 coordinate partition changed')
@@ -2065,6 +2400,8 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
             points = [('adversarial_binary64_interior', t, p) for t, p in item['refutation_points']]
             points += [('frozen_native_ordered_vertices', sample_['time'], sample_['skinned_skeleton_local'][0])
                        for sample_ in samples if lo <= sample_['time'] <= hi]
+            if centered_baseline is not None:
+                centered_observations.extend((kind, [lo, hi], time, vertices) for kind, time, vertices in points)
             for kind, time, vertices in points:
                 for hoof, patch in patches.items():
                     proofs = record['triangle_area'][hoof]['certificates']
@@ -2163,16 +2500,23 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         require(json_value(used) == triangle_baseline['work_used'], 'Accepted258 original work counters changed')
         parent = next(r for r in records if r['seconds'] == REFINEMENT_PARENT)
         refinement = refine_selected_shape(capture, surface, binds, functions, budget, used,
-            parent, patches, birth_boxes, samples, shape_contexts)
+            parent, patches, birth_boxes, samples, shape_contexts,
+            centered_observations if centered_baseline is not None else None)
         refinement['original_rows_sha256'] = canonical_digest(records)
         shape_comparisons.extend(refinement['native_cross_refutations'])
         evaluations = used['proposal_evaluations']
         inputs['triangle_baseline_report'] = TRIANGLE_BASELINE_SHA
-    return json_value({
+    if centered_baseline is not None:
+        require(len(centered_baseline['inputs']) == 804 and set(centered_baseline['inputs']) <= set(inputs)
+                and {k for k, v in centered_baseline['inputs'].items() if inputs[k] != v} <=
+                    {'tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py'},
+                'Accepted260 input custody changed')
+        inputs['centered_baseline_report'] = CENTERED_BASELINE_SHA
+    report = json_value({
         **({'shape_refinement': refinement, 'accepted258_input_bindings': triangle_baseline['inputs']} if refinement else {}),
         **({'input_binding': context['binding'], 'input_locations': context['locations'],
             'atlas_input_packet': input_packet} if context else {}),
-        'version': 7 if refinement else 6 if shape_baseline is not None else 5 if arithmetic else (2 if context else 1), 'step_id': 'CAV-CONTACT-PHASE-SHAPE-REFINEMENT' if refinement else 'CAV-CONTACT-PHASE-TRIANGLE-BOUNDS' if shape_baseline is not None else 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if arithmetic else ('CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE'), 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
+        'version': 8 if centered_baseline is not None else 7 if refinement else 6 if shape_baseline is not None else 5 if arithmetic else (2 if context else 1), 'step_id': 'CAV-CONTACT-PHASE-CENTERED-WEDGE-RANGE' if centered_baseline is not None else 'CAV-CONTACT-PHASE-SHAPE-REFINEMENT' if refinement else 'CAV-CONTACT-PHASE-TRIANGLE-BOUNDS' if shape_baseline is not None else 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if arithmetic else ('CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE'), 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
         **({'arithmetic_proof': arithmetic.binding, 'baseline_accounting': baseline_accounting(baseline, records, unclosed),
             'previous_operation_accounting': baseline_accounting(norm_baseline, records, unclosed),
             'norm_target_replays': norm_targets, 'acos_target_replays': acos_targets,
@@ -2227,6 +2571,15 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
                          'verify': 'python3 tools/units3d/cavalry_march_phase.py verify REPORT_JSON --review-record REVIEW_COMPLETE_JSON',
                          'exit_status': '2 is the expected truthful diagnostic/unknown result, never physical acceptance. A malformed/tampered input exits 1.'})})
 
+    if centered_baseline is not None:
+        require(preserved_shape_science(report) == preserved_shape_science(centered_baseline),
+                'Accepted260 certificates/history/scientific results changed')
+        report['accepted260_input_bindings'] = centered_baseline['inputs']
+        report['centered_wedge'] = centered_overlay(report, centered_observations)
+        report['reproduction']['build'] += ' --centered-baseline-report ACCEPTED260_REPORT'
+        report['reproduction']['verify'] += ' --centered-baseline-report ACCEPTED260_REPORT'
+    return report
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -2243,6 +2596,7 @@ def main():
         p.add_argument('--norm-baseline-report', type=Path)
         p.add_argument('--acos-baseline-report', type=Path,
             help='Accepted256 v4 for v5 replay, or accepted257 v5 for correlated-triangle proof.')
+        p.add_argument('--centered-baseline-report', type=Path, help='Hash-bound accepted260 v7 for the stronger centered range overlay.')
         p.add_argument('--triangle-baseline-report', type=Path, help='Hash-bound accepted258 v6 for one selected-parent midpoint refinement.')
     args = parser.parse_args()
     try:
@@ -2256,8 +2610,9 @@ def main():
         require(proof_mode == (args.arithmetic_receipt is not None) == (args.baseline_report is not None),
                 'Arithmetic capture, receipt and baseline required together')
         if existing is not None:
-            require(existing['version'] in ((5, 6, 7) if proof_mode else ((2,) if fresh else (1,)))
-                    and (existing['version'] == 7) == (args.triangle_baseline_report is not None), 'Report/input mode mismatch')
+            require(existing['version'] in ((5, 6, 7, 8) if proof_mode else ((2,) if fresh else (1,)))
+                    and (existing['version'] in (7, 8)) == (args.triangle_baseline_report is not None)
+                    and (existing['version'] == 8) == (args.centered_baseline_report is not None), 'Report/input mode mismatch')
         report = build(args.review_record.resolve(),
                        native_manifest=args.native_manifest.resolve() if fresh else None,
                        bundle_root=args.bundle_root.resolve() if fresh else None,
@@ -2266,7 +2621,8 @@ def main():
                        baseline_report=args.baseline_report.resolve() if proof_mode else None,
                        norm_baseline_report=args.norm_baseline_report.resolve() if args.norm_baseline_report else None,
                        acos_baseline_report=args.acos_baseline_report.resolve() if args.acos_baseline_report else None,
-                       triangle_baseline_report=args.triangle_baseline_report.resolve() if args.triangle_baseline_report else None)
+                       triangle_baseline_report=args.triangle_baseline_report.resolve() if args.triangle_baseline_report else None,
+                       centered_baseline_report=args.centered_baseline_report.resolve() if args.centered_baseline_report else None)
         validate_diagnostic(report)
         if args.command == 'build':
             args.out.write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False)+'\n')

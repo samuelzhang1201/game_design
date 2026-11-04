@@ -364,6 +364,317 @@ class CorrelatedTriangleTests(unittest.TestCase):
 
 
 
+class NativeResidualCacheTests(unittest.TestCase):
+    def context(self):
+        matrices = np.tile(np.eye(4)[:3], (2, 1, 1))
+        matrices[1, :, 3] = [2., 3., 4.]
+        surface = {'vertices': [[2.**20, -2., 3.]], 'joints': [[0, 1, 0, 1]],
+                   'weights': [[.25, .5, 0., 0.]]}
+        return phase.skin_context(capture.Float32Box(matrices), surface, [np.eye(4)]*2, 0., 1.)
+
+    def setUp(self):
+        phase._skin_vertex_residual.cache_clear()
+
+    def test_exact_immutable_numeric_value_reused_across_fresh_contexts(self):
+        context = self.context()
+        with patch.object(phase, '_skin_vertex_residual', wraps=phase._skin_vertex_residual) as kernel:
+            first = phase.skin_vertex_residual(context, 0)
+            args = kernel.call_args.args
+        self.assertEqual(first, phase._skin_vertex_residual.__wrapped__(*args))
+        second = phase.skin_vertex_residual(self.context(), 0)
+        self.assertEqual(first, second)
+        self.assertEqual(phase._skin_vertex_residual.cache_info().hits, 1)
+        self.assertEqual(phase._skin_vertex_residual.cache_info().maxsize, phase.LIMITS['max_constraints'])
+        self.assertTrue(type(first) is tuple and len(first) == 3 and all(type(x) is Q for x in first))
+        with self.assertRaises(TypeError):
+            second[0] = Q(0)
+        context['cache'][0] = (Q(0),)*3
+        self.assertEqual(phase.skin_vertex_residual(context, 0), first)
+
+    def test_all_ordered_slots_raw_values_and_consumed_endpoints_key_the_value(self):
+        original = self.context()
+        phase.skin_vertex_residual(original, 0)
+        variants = []
+        for field, index, value in [(0, 0, 2.**20+1), (1, 2, 1), (2, 2, .125)]:
+            changed = copy.deepcopy(original)
+            raw = [list(row) for row in changed['raw'][0]]; raw[field][index] = value
+            changed['raw'] = (tuple(tuple(row) for row in raw),)
+            variants.append(changed)
+        changed = copy.deepcopy(original)
+        p, j, w = changed['raw'][0]
+        changed['raw'] = ((p, tuple(reversed(j)), tuple(reversed(w))),)
+        variants.append(changed)
+        # Including zero-weight slots and both endpoints: equal magnitudes must not alias keys.
+        for endpoint in ('lo', 'hi'):
+            for axis in range(3):
+                for column in range(4):
+                    changed = copy.deepcopy(original)
+                    getattr(changed['transforms'], endpoint)[1, axis, column] += (-.125 if endpoint == 'lo' else .125)
+                    variants.append(changed)
+        for changed in variants:
+            before = phase._skin_vertex_residual.cache_info().misses
+            with patch.object(phase, '_skin_vertex_residual', wraps=phase._skin_vertex_residual) as kernel:
+                actual = phase.skin_vertex_residual(changed, 0)
+                args = kernel.call_args.args
+            self.assertEqual(actual, phase._skin_vertex_residual.__wrapped__(*args))
+            self.assertEqual(phase._skin_vertex_residual.cache_info().misses, before+1)
+        self.assertEqual(phase.skin_vertex_residual(original, 0), phase.skin_vertex_residual(self.context(), 0))
+
+    def test_zero_weight_slot_still_consumes_matrix_and_all_four_accumulations(self):
+        context = self.context()
+        p, j, _ = context['raw'][0]
+        context['raw'] = ((p, j, (Q(1), Q(0), Q(0), Q(0))),)
+        before = phase.skin_vertex_residual(context, 0)
+        context['transforms'].hi[1, 0, 3] = 2.**20
+        after = phase.skin_vertex_residual(context, 0)
+        self.assertGreater(after[0], before[0])
+        self.assertEqual(phase._skin_vertex_residual.cache_info().misses, 2)
+
+    def test_precision_profile_and_malformed_raw_never_obtain_warm_value(self):
+        context = self.context()
+        with patch.object(phase, '_skin_vertex_residual', wraps=phase._skin_vertex_residual) as kernel:
+            phase.skin_vertex_residual(context, 0)
+            args = kernel.call_args.args
+        for precision, profile in [(True, args[-1]), (24., args[-1]), (53, args[-1]), (24, 'other-profile')]:
+            with self.subTest(precision=precision, profile=profile), self.assertRaises(ValueError):
+                phase._skin_vertex_residual(*args[:-2], precision, profile)
+        for field, index, value in [(0, 0, True), (0, 0, float('nan')), (1, 0, True),
+                                     (1, 0, -1), (1, 0, 2), (2, 0, True), (2, 0, -.25)]:
+            changed = copy.deepcopy(context)
+            raw = [list(row) for row in changed['raw'][0]]; raw[field][index] = value
+            changed['raw'] = (tuple(tuple(row) for row in raw),)
+            with self.subTest(raw=(field, index, value)), self.assertRaises(ValueError):
+                phase.skin_vertex_residual(changed, 0)
+
+    def test_warm_primitive_does_not_replace_historical_proof_or_identity_checks(self):
+        fixture = CorrelatedTriangleTests(); surface = fixture.surface()
+        box = fixture.span(surface)
+        proof = phase.json_value(phase.correlated_triangle(box, surface, [0, 1, 2]))
+        certificates = {c['sha256']: phase.json_value(c['identity']) for c in box.skin_contexts}
+        calls = []
+        for _ in range(2):
+            with patch.object(phase, 'validate_skin_context', wraps=phase.validate_skin_context) as validate:
+                phase.validate_shape_certificate(proof, certificates)
+                calls.append(validate.call_count)
+        self.assertGreater(calls[0], 0)
+        self.assertEqual(calls[0], calls[1])
+        self.assertGreater(phase._skin_vertex_residual.cache_info().hits, 0)
+        for field, value in [('method', 'other'), ('seconds', [0., 1.]), ('source_sha256', '0'*64)]:
+            changed = copy.deepcopy(certificates)
+            changed[next(iter(changed))][field] = value
+            with self.subTest(identity=field), self.assertRaises(ValueError):
+                phase.validate_shape_certificate(proof, changed)
+        changed = copy.deepcopy(proof)
+        changed['branches'][0]['vertex_native_residual_absolute'][0][0] = [0, 1]
+        with self.assertRaises(ValueError):
+            phase.validate_shape_certificate(changed, certificates)
+        for field, index, value in [(0, 0, True), (1, 0, True), (2, 0, True)]:
+            changed = copy.deepcopy(proof)
+            changed['raw_vertices_joints_weights'][0][field][index] = value
+            with self.subTest(raw_type=field), self.assertRaises(ValueError):
+                phase.validate_shape_certificate(changed, certificates)
+
+
+class CenteredWedgeTests(unittest.TestCase):
+    x, y = (0, 0, 0), (0, 1, 0)
+
+    def test_exact_shared_variable_hand_control_and_endpoints(self):
+        self.assertTrue(hasattr(phase, 'centered_quadratic'), 'Missing centered exact quadratic enclosure')
+        terms = [(self.x, self.x, Q(1)), (self.x, self.y, Q(-1))]
+        result = phase.centered_quadratic(terms, {self.x: (1, 2), self.y: (1, 2)})
+        self.assertEqual(result['constant'], 0)
+        self.assertEqual(result['linear'], [(self.x, Q(3, 2)), (self.y, Q(-3, 2))])
+        self.assertEqual(result['interval'], (Q(-7, 4), Q(2)))
+        for x in (Q(1), Q(3, 2), Q(2)):
+            for y in (Q(1), Q(3, 2), Q(2)):
+                self.assertTrue(result['interval'][0] <= x*x-x*y <= result['interval'][1])
+
+    def test_signed_duplicate_cancellation_squares_and_degenerate_domains(self):
+        self.assertTrue(hasattr(phase, 'centered_quadratic'), 'Missing centered exact quadratic enclosure')
+        domains = {self.x: (-2, 2), self.y: (-3, -3)}
+        for coefficient, expected in [(Q(1), (Q(0), Q(4))), (Q(-1), (Q(-4), Q(0)))]:
+            result = phase.centered_quadratic([(self.x, self.x, coefficient)], domains)
+            self.assertEqual(result['interval'], expected)
+        result = phase.centered_quadratic([(self.x, self.y, Q(2)), (self.y, self.x, Q(-2))], domains)
+        self.assertEqual(result['monomials'], ())
+        self.assertEqual(result['interval'], (0, 0))
+        self.assertEqual(phase.centered_quadratic([(self.y, self.y, Q(1))], domains)['interval'], (9, 9))
+        for invalid in [(2, 1), (float('nan'), 1), (0, float('inf'))]:
+            with self.assertRaises(ValueError):
+                phase.centered_quadratic([(self.x, self.x, Q(1))], {self.x: invalid})
+
+    def test_wider_range_intersects_old_sound_bound_and_empty_is_refutation(self):
+        self.assertTrue(hasattr(phase, 'intersect_normal'), 'Missing sound normal intersection')
+        f = capture.Float32Box
+        # x*y centered at 1.5 gives [-.75,4]; direct [1,4] remains stronger.
+        result = phase.centered_quadratic([(self.x, self.y, Q(1))], {self.x: (1, 2), self.y: (1, 2)})
+        self.assertLess(result['interval'][0], 1)
+        old = f([1., 1., 1.], [4., 4., 4.])
+        new = f([float(result['interval'][0])]*3, [float(result['interval'][1])]*3)
+        self.assertTrue(np.array_equal(phase.intersect_normal(old, new).lo, old.lo))
+        with self.assertRaisesRegex(ValueError, 'Empty normal intersection'):
+            phase.intersect_normal(old, f([5., 5., 5.], [6., 6., 6.]))
+
+    def test_outward_conversion_contains_exact_endpoints_and_bind_identities_do_not_alias(self):
+        # Midpoint cancellation in binary64 must never round an exact lower upward.
+        exact = Q(1)+Q(1, 2**80)
+        box = phase.float_box((exact, exact))
+        self.assertLessEqual(Q(float(box.lo)), exact)
+        self.assertGreaterEqual(Q(float(box.hi)), exact)
+        other_bind = (1, 0, 0)
+        result = phase.centered_quadratic([(self.x, self.x, Q(1)), (self.x, other_bind, Q(-1))],
+            {self.x: (1, 2), other_bind: (-2, -1)})
+        self.assertEqual(len(result['centers_radii']), 2)
+        self.assertTrue(result['interval'][0] <= 8 <= result['interval'][1])
+
+    def test_partial_centered_mode_rejects_before_opening_native_inputs(self):
+        with patch.object(phase, 'load_inputs', side_effect=AssertionError('must not load native')):
+            with self.assertRaisesRegex(ValueError, 'Centered range requires accepted260'):
+                phase.build(Path('/unused'), centered_baseline_report=Path('/unused'))
+
+    def test_centered_certificate_preserves_native_residual_and_rejects_tamper(self):
+        self.assertTrue(hasattr(phase, 'centered_triangle'), 'Missing stronger certificate overlay')
+        fixture = CorrelatedTriangleTests(); surface = fixture.surface()
+        box = fixture.span(surface)
+        old = phase.json_value(phase.correlated_triangle(box, surface, [0, 1, 2]))
+        matrices = {c['sha256']: phase.json_value(c['identity']) for c in box.skin_contexts}
+        proof = phase.json_value(phase.centered_triangle(old, matrices))
+        self.assertEqual(proof['original_certificate_sha256'], phase.canonical_digest(old))
+        self.assertEqual(proof['branches'][0]['native_residual_sha256'], phase.canonical_digest(old['branches'][0]))
+        self.assertEqual(phase.shape_refutation([proof], surface['vertices'], [[0, 1, 2]]), [])
+        phase.validate_centered_certificate(proof, old, matrices)
+        self.assertEqual(phase.shape_refutation([proof], [[0, 0, 0], [2, 0, 0], [0, 1, 0]], [[0, 1, 2]]), [0])
+        for mutate in [lambda p: p['branches'][0]['components'][0].update(constant=[1, 1]),
+                lambda p: p['branches'][0]['components'][0].update(centers_radii_sha256='0'*64),
+                lambda p: p['branches'][0]['components'][0].update(monomials_sha256='0'*64),
+                lambda p: p['branches'][0]['components'][0].update(linear_sha256='0'*64),
+                lambda p: p['branches'][0].update(native_residual_sha256='0'*64),
+                lambda p: p.update(original_certificate_sha256='0'*64),
+                lambda p: p['twice_area_interval'].__setitem__(0, 2.),
+                lambda p: p['cross_interval'][0].__setitem__(0, 2.)]:
+            bad = copy.deepcopy(proof); mutate(bad)
+            with self.assertRaises(ValueError):
+                phase.validate_centered_certificate(bad, old, matrices)
+
+
+    def test_mixed_binds_unequal_raw_weights_retain_translation_and_native_points(self):
+        fixture = CorrelatedTriangleTests()
+        surface = fixture.surface(weights=[[.5, .25, 0, 0], [.5, .5, 0, 0], [.25, .75, 0, 0]],
+            joints=[[0, 1, 0, 0]]*3)
+        transforms = np.tile(np.eye(4)[:3], (2, 1, 1)); transforms[1, 2, 3] = 1.
+        lo, hi = transforms.copy(), transforms.copy(); lo[:, 0, 3] = -10.; hi[:, 0, 3] = 10.
+        ctx = phase.skin_context(capture.Float32Box(lo, hi), surface, [np.eye(4)]*2, 0., 1.)
+        box = phase.SkinSpan(capture.Float32Box(np.zeros((3, 3))), [ctx])
+        old = phase.json_value(phase.correlated_triangle(box, surface, [0, 1, 2]))
+        new = phase.centered_triangle(old, {ctx['sha256']: phase.json_value(ctx['identity'])})
+        self.assertNotEqual(sum(Q(*c['homogeneous'][3]) for c in old['edge_coefficients'][0]), 0)
+        for translation in (-10., .1, 10.):
+            actual = transforms.astype(np.float32); actual[:, 0, 3] = translation
+            points = []
+            for vertex, joints, weights in zip(surface['vertices'], surface['joints'], surface['weights']):
+                value = np.zeros(3, dtype=np.float32)
+                for joint, weight in zip(joints, weights):
+                    matrix = actual[joint]; v = np.asarray(vertex, dtype=np.float32)
+                    point = matrix[:, 0]*v[0]
+                    point = point+matrix[:, 1]*v[1]; point = point+matrix[:, 2]*v[2]
+                    point = point+matrix[:, 3]
+                    value = value+point*np.float32(weight)
+                points.append(value)
+            self.assertEqual(phase.shape_refutation([new], points, [[0, 1, 2]]), [])
+
+    def test_complete_context_cache_rejects_all_mutations_and_keys_valid_changes(self):
+        self.assertTrue(hasattr(phase, '_centered_domain'), 'Missing complete immutable context cache')
+        self.assertTrue(hasattr(phase, '_centered_branch'), 'Missing exact branch derivation cache')
+        fixture = CorrelatedTriangleTests(); surface = fixture.surface(); box = fixture.span(surface)
+        old = phase.json_value(phase.correlated_triangle(box, surface, [0, 1, 2]))
+        matrices = {c['sha256']: phase.json_value(c['identity']) for c in box.skin_contexts}
+        phase._centered_domain.cache_clear(); phase._centered_branch.cache_clear()
+        expected = phase.json_value(phase.centered_triangle(old, matrices))
+        for mutate in [lambda i: i['matrix_interval'][0][0][0].__setitem__(0, .5),
+                lambda i: i['matrix_interval'][0][0][2].__setitem__(3, .5),
+                lambda i: i['seconds'].__setitem__(0, .125),
+                lambda i: i.update(source_sha256='0'*64), lambda i: i.update(method='other'),
+                lambda i: i.update(extra='unbound'),
+                lambda i: i['matrix_interval'][0][0][0].__setitem__(0, True)]:
+            altered = copy.deepcopy(matrices); mutate(altered[old['shared_transform_certificates'][0]])
+            with self.assertRaises(ValueError):
+                phase.centered_triangle(old, altered)
+        with self.assertRaises((KeyError, ValueError)):
+            phase.centered_triangle(old, {'0'*64: next(iter(matrices.values()))})
+        for mutate in [lambda i: i['seconds'].__setitem__(0, .125),
+                lambda i: i.update(source_sha256='0'*64),
+                lambda i: i['matrix_interval'][1][0][2].__setitem__(3, .5)]:
+            changed = copy.deepcopy(next(iter(matrices.values()))); mutate(changed)
+            digest = phase.canonical_digest(changed)
+            changed_old = copy.deepcopy(old); changed_old['shared_transform_certificates'][0] = digest
+            before = phase._centered_branch.cache_info().misses
+            phase.centered_triangle(changed_old, {digest: changed})
+            self.assertGreater(phase._centered_branch.cache_info().misses, before)
+        original_identity = next(iter(matrices.values())); original_identity['seconds'][0] = .125
+        with self.assertRaises(ValueError):
+            phase.centered_triangle(old, matrices)
+        original_identity['seconds'][0] = 0.
+        self.assertTrue(phase.json_value(phase.centered_triangle(old, matrices)) == expected)
+
+    def test_branch_cache_keys_coefficients_residuals_and_cannot_be_poisoned(self):
+        self.assertTrue(hasattr(phase, '_centered_branch'), 'Missing exact branch derivation cache')
+        fixture = CorrelatedTriangleTests(); surface = fixture.surface(); box = fixture.span(surface)
+        old = phase.json_value(phase.correlated_triangle(box, surface, [0, 1, 2]))
+        matrices = {c['sha256']: phase.json_value(c['identity']) for c in box.skin_contexts}
+        expected = phase.json_value(phase.centered_triangle(old, matrices))
+        bad = copy.deepcopy(old); bad['raw_vertices_joints_weights'][1][2][0] = .5
+        with self.assertRaises(ValueError):
+            phase.centered_triangle(bad, matrices)
+        bad = copy.deepcopy(old); bad['branches'][0]['vertex_native_residual_absolute'][0][0] = [0, 1]
+        before = phase._centered_branch.cache_info().misses
+        with self.assertRaises(ValueError):
+            phase.validate_centered_certificate(expected, bad, matrices)
+        self.assertGreater(phase._centered_branch.cache_info().misses, before)
+        other = fixture.surface(vertices=[[0, 0, 0], [2, 0, 0], [0, 1, 0]])
+        other_box = fixture.span(other)
+        other_old = phase.json_value(phase.correlated_triangle(other_box, other, [0, 1, 2]))
+        other_matrices = {c['sha256']: phase.json_value(c['identity']) for c in other_box.skin_contexts}
+        before = phase._centered_branch.cache_info().misses
+        phase.centered_triangle(other_old, other_matrices)
+        self.assertGreater(phase._centered_branch.cache_info().misses, before)
+        returned = phase.centered_triangle(old, matrices)
+        returned['branches'][0]['components'][0]['constant'] = Q(999)
+        returned['branches'][0]['native_centered_cross_interval'][0] = (999., 999., 999.)
+        self.assertTrue(phase.json_value(phase.centered_triangle(old, matrices)) == expected)
+        with patch.object(phase, '_centered_domain', phase._centered_domain.__wrapped__), \
+                patch.object(phase, '_centered_branch', phase._centered_branch.__wrapped__), \
+                patch.object(phase, 'centered_component', phase.centered_component.__wrapped__):
+            uncached = phase.json_value(phase.centered_triangle(old, matrices))
+        self.assertTrue(uncached == expected)
+
+    def test_overlay_keeps_original_anchor_denominators_and_childwise_fallback(self):
+        self.assertTrue(hasattr(phase, 'centered_overlay'), 'Missing full-inventory overlay')
+        fixture = CorrelatedTriangleTests(); surface = fixture.surface(); box = fixture.span(surface, (0., 0.))
+        proof = phase.json_value(phase.correlated_triangle(box, surface, [0, 1, 2]))
+        def row(seconds):
+            return {'seconds': seconds, 'triangle_area': {'hoof': {'native_triangle_ids': [7], 'certificates': [proof]}},
+                'triangle_shape': {'hoof': {'native_triangle_ids': [7], 'certificates': [
+                    {'current': proof, 'birth': proof, 'orientation_interval': [.99, 1.01]}]}}}
+        a, b = phase.REFINEMENT_PARENT; m = (a+b)/2
+        parent, children = row([a, b]), [row([a, m]), row([m, b])]
+        report = {'work_used': {'correlated_triangles': {'per_cross_monomial_bound': 6912}},
+            'continuous_native': {'closed_boxes': [parent]}, 'shape_refinement': {
+            'children': children, **phase.aggregate_refined_shape(parent, children)},
+            'shape_proof': {'shared_skin_certificates': {c['sha256']: phase.json_value(c['identity']) for c in box.skin_contexts}}}
+        result = phase.centered_overlay(report)
+        self.assertEqual(len(result['area_targets']), 1)
+        self.assertEqual(len(result['birth_targets']), 1)
+        self.assertEqual(result['birth_targets'][0]['original_birth_sha256'], phase.canonical_digest(proof))
+        self.assertEqual(result['birth_targets'][0]['outcome'], 'CLOSED')
+        bad = copy.deepcopy(report); bad['shape_refinement']['children'].pop()
+        with self.assertRaises(ValueError):
+            phase.centered_overlay(bad)
+        bad = copy.deepcopy(report)
+        bad['shape_refinement']['children'][1]['triangle_shape']['hoof']['certificates'][0]['birth'] = dict(proof, changed=True)
+        with self.assertRaises(ValueError):
+            phase.centered_overlay(bad)
+
+
 class ShapeRefinementTests(unittest.TestCase):
     def parent_children(self):
         # n=(1,2t,0), then n=(2-2t,1,0); each closed half has area^2 >= 1.
@@ -1295,6 +1606,48 @@ class AcceptedTriangleReportTests(unittest.TestCase):
 @unittest.skipUnless(os.environ.get('CAV_REFINEMENT_REPORT') and os.environ.get('CAV_TRIANGLE_REPORT'),
                      'explicit final refinement and accepted258 reports required')
 class AcceptedShapeRefinementTests(unittest.TestCase):
+    def test_scientific_preservation_allows_only_validated_consumer_provenance_changes(self):
+        original = json.loads(Path(os.environ['CAV_REFINEMENT_REPORT']).read_text())
+        changed = dict(original); changed['continuous_native'] = dict(original['continuous_native'])
+        changed['inputs'] = {**original['inputs'], 'tools/units3d/cavalry_march_phase.py': 'a'*64}
+        aliases, proofs = {}, []
+        for proof in original['continuous_native']['finite_acos_constants']:
+            replacement = dict(proof, consumer_algorithm_sha256='a'*64)
+            replacement['sha256'] = phase.canonical_digest({k: v for k, v in replacement.items()
+                if k not in ('sha256', 'track', 'key_index', 'source_keys')})
+            aliases[proof['sha256']] = replacement['sha256']; proofs.append(replacement)
+        changed['continuous_native']['finite_acos_constants'] = proofs
+        def replace(v):
+            if isinstance(v, dict):
+                return {k: replace(x) for k, x in v.items()}
+            if isinstance(v, list):
+                return [replace(x) for x in v]
+            return aliases.get(v, v) if isinstance(v, str) else v
+        for key in ('acos_target_norm_certificates', 'quaternion_norm_certificates', 'scalar_domain_records'):
+            changed['continuous_native'][key] = replace(original['continuous_native'][key])
+        expected = phase.preserved_shape_science(original)
+        self.assertTrue(phase.preserved_shape_science(changed) == expected)
+        proofs[0]['omega_interval'] = [[0, 1], [1, 1]]
+        with self.assertRaises(ValueError):
+            phase.preserved_shape_science(changed)
+        valid_sha = proofs[0]['sha256']
+        proofs[0]['sha256'] = phase.canonical_digest({k: v for k, v in proofs[0].items()
+            if k not in ('sha256', 'track', 'key_index', 'source_keys')})
+        aliases = {valid_sha: proofs[0]['sha256']}
+        for key in ('acos_target_norm_certificates', 'quaternion_norm_certificates', 'scalar_domain_records'):
+            changed['continuous_native'][key] = replace(changed['continuous_native'][key])
+        self.assertTrue(phase.preserved_shape_science(changed) != expected)
+        aliases = {proofs[0]['sha256']: valid_sha}
+        proofs[0]['omega_interval'] = original['continuous_native']['finite_acos_constants'][0]['omega_interval']
+        proofs[0]['sha256'] = valid_sha
+        for key in ('acos_target_norm_certificates', 'quaternion_norm_certificates', 'scalar_domain_records'):
+            changed['continuous_native'][key] = replace(changed['continuous_native'][key])
+        self.assertTrue(phase.preserved_shape_science(changed) == expected)
+        branches = changed['continuous_native']['scalar_domain_records']
+        branch = next(b for r in branches for b in r['branches'] if 'constant_proof_sha256' in b)
+        branch['constant_proof_sha256'][0] = '0'*64
+        self.assertTrue(phase.preserved_shape_science(changed) != expected)
+
     def test_original_inventory_both_children_bindings_histories_and_negative_controls(self):
         report = json.loads(Path(os.environ['CAV_REFINEMENT_REPORT']).read_text())
         baseline = capture.read_bound(Path(os.environ['CAV_TRIANGLE_REPORT']), phase.TRIANGLE_BASELINE_SHA)
@@ -1343,6 +1696,41 @@ class AcceptedShapeRefinementTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             phase.validate_refined_shape(report)
         refinement['area_targets'][0]['outcome'] = before
+
+
+@unittest.skipUnless(os.environ.get('CAV_CENTERED_REPORT'), 'explicit final centered report required')
+class AcceptedCenteredReportTests(unittest.TestCase):
+    def test_frozen_inventory_original_anchors_effective_fallback_and_negative_controls(self):
+        report = json.loads(Path(os.environ['CAV_CENTERED_REPORT']).read_text())
+        phase.validate_centered_overlay(report)
+        overlay = report['centered_wedge']
+        self.assertEqual(report['version'], 8)
+        self.assertEqual(len(report['accepted260_input_bindings']), 804)
+        self.assertEqual(len(report['inputs']), 805)
+        self.assertEqual(overlay['before_counts'], {'area': {'CLOSED': 4997, 'UNKNOWN': 2763},
+            'birth': {'CLOSED': 1972, 'UNKNOWN': 825}})
+        for kind, count in [('area_targets', 7760), ('birth_targets', 2797)]:
+            targets = overlay[kind]
+            self.assertEqual(len(targets), count)
+            self.assertEqual(len({(tuple(t['seconds']), t['hoof'], t['native_triangle_id']) for t in targets}), count)
+            self.assertTrue(all(t['outcome'] == 'CLOSED' for t in targets if t['before'] == 'CLOSED'))
+        for child in overlay['children']:
+            self.assertEqual(len(child['area_targets']), 194)
+            self.assertEqual(len(child['birth_targets']), 148)
+        row = report['shape_refinement']['children'][0]['triangle_area']['FrontHoof.L']
+        original = row['certificates'][row['native_triangle_ids'].index(14039)]
+        proof = overlay['certificates'][phase.canonical_digest(original)]
+        self.assertEqual(original['vertex_ids'], [11699, 19060, 19066])
+        self.assertEqual(original['shared_transform_certificates'][0],
+            '91a8e45f5e88b1e550c6dd73211883f0a9e4bb1b0f20bef02ce65e20d32a69d8')
+        self.assertEqual([c['canonical_monomials'] for c in proof['branches'][0]['components']], [56]*3)
+        self.assertGreater(Q(*proof['branches'][0]['components'][1]['interval'][0]), Q('0.0000039928939'))
+        self.assertGreater(proof['cross_interval'][0][1], 0)
+        for key in ('area_targets', 'children'):
+            removed = overlay[key].pop()
+            with self.assertRaises(ValueError):
+                phase.validate_centered_overlay(report)
+            overlay[key].append(removed)
 
 
 if __name__ == '__main__':
