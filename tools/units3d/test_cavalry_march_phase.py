@@ -363,6 +363,132 @@ class CorrelatedTriangleTests(unittest.TestCase):
         self.assertTrue(capture.Float32Box(*proof['cross_interval']).contains([-.25, -.5, 1.]).all())
 
 
+
+class ShapeRefinementTests(unittest.TestCase):
+    def parent_children(self):
+        # n=(1,2t,0), then n=(2-2t,1,0); each closed half has area^2 >= 1.
+        def proof(cross, area):
+            return {'cross_interval': cross, 'twice_area_interval': area}
+        parent_proof = proof([[0., 0., 0.], [1., 1., 0.]], [0., 2.])
+        anchor = {'original_birth': 'unchanged support start'}
+        def row(seconds, current, dot):
+            return {'seconds': seconds, 'triangle_area': {'hoof': {'native_triangle_ids': [7],
+                'certificates': [current], 'unclosed_area': [0] if current['twice_area_interval'][0] <= 0 else []}},
+                'triangle_shape': {'hoof': {'native_triangle_ids': [7], 'certificates': [
+                    {'current': current, 'birth': anchor, 'orientation_interval': dot}],
+                    'unclosed_area_or_orientation': [0] if min(current['twice_area_interval'][0], dot[0]) <= 0 else []}}}
+        parent = row([0., 1.], parent_proof, [0., 2.])
+        children = [row([0., .5], proof([[1., 0., 0.], [1., 1., 0.]], [1., 2.]), [1., 2.]),
+                    row([.5, 1.], proof([[0., 1., 0.], [1., 1., 0.]], [1., 2.]), [1., 2.])]
+        return parent, children
+
+    def test_childwise_minimum_keeps_area_and_original_birth_dot(self):
+        parent, children = self.parent_children()
+        for child in children:
+            lo, hi = child['triangle_area']['hoof']['certificates'][0]['cross_interval']
+            exact_area_squared_lower = sum(Q(0) if a <= 0 <= b else min(Q(a)**2, Q(b)**2) for a, b in zip(lo, hi))
+            self.assertEqual(exact_area_squared_lower, 1)
+            self.assertEqual(sum(Q(a) for a in lo[:2]), 1)  # original n_birth=(1,1,0)
+        result = phase.aggregate_refined_shape(parent, children)
+        self.assertEqual(result['area_targets'][0]['child_lower_bounds'], [1., 1.])
+        self.assertEqual(result['area_targets'][0]['lower_bound'], 1.)
+        self.assertEqual(result['birth_targets'][0]['dot_lower_bound'], 1.)
+        self.assertEqual(result['birth_targets'][0]['outcome'], 'CLOSED')
+        self.assertEqual(parent['triangle_area']['hoof']['certificates'][0]['twice_area_interval'][0], 0.)
+
+    def test_zero_shared_midpoint_or_nonpositive_dot_cannot_close(self):
+        for area, dot in [(0., 1.), (1., 0.), (1., -1.)]:
+            parent, children = self.parent_children()
+            children[1]['triangle_area']['hoof']['certificates'][0]['twice_area_interval'][0] = area
+            children[1]['triangle_shape']['hoof']['certificates'][0]['orientation_interval'][0] = dot
+            result = phase.aggregate_refined_shape(parent, children)
+            self.assertEqual(result['birth_targets'][0]['outcome'], 'UNKNOWN')
+
+    def test_exact_closed_partition_and_original_anchor_face_required(self):
+        for mutate in [lambda c: c.pop(), lambda c: c[0]['seconds'].__setitem__(1, .4),
+                lambda c: c[1]['seconds'].__setitem__(0, .4),
+                lambda c: c[1]['triangle_shape']['hoof']['certificates'][0].update(birth={'new': 'anchor'}),
+                lambda c: c[1]['triangle_area']['hoof'].update(native_triangle_ids=[8])]:
+            parent, children = self.parent_children(); mutate(children)
+            with self.assertRaises(ValueError):
+                phase.aggregate_refined_shape(parent, children)
+
+    def test_failed_child_retains_unknown_and_original_closed_fallback(self):
+        parent, children = self.parent_children()
+        children[1] = {'seconds': [.5, 1.], 'reason': 'normalization_unclosed'}
+        result = phase.aggregate_refined_shape(parent, children)
+        self.assertEqual(result['birth_targets'][0]['outcome'], 'UNKNOWN')
+        self.assertIn('normalization_unclosed', result['birth_targets'][0]['reasons'])
+        parent['triangle_area']['hoof']['certificates'][0]['twice_area_interval'][0] = .25
+        parent['triangle_shape']['hoof']['certificates'][0]['orientation_interval'][0] = .5
+        result = phase.aggregate_refined_shape(parent, children)
+        self.assertEqual(result['area_targets'][0]['lower_bound'], .25)
+        self.assertEqual(result['birth_targets'][0]['outcome'], 'CLOSED')
+
+    def test_two_enclosures_share_counters_including_failed_work(self):
+        surface = CorrelatedTriangleTests().surface()
+        native = {'length': 1., 'bones': [{'name': 'root', 'parent': -1,
+            'default_position': [0, 0, 0], 'rest': np.eye(4)[:3].ravel().tolist(),
+            'default_rotation': [0, 0, 0, 1], 'default_scale': [1, 1, 1]}], 'tracks': []}
+        patches = {'hoof': {'native_sole_vertices': [0, 1, 2], 'native_triangles': [[0, 1, 2]], 'native_sole_triangles': [7]}}
+        f = phase.surface_span_box
+        birth = f(native, surface, [np.eye(4)], 0., 0., {}, phase.Budget())
+        a, b = phase.REFINEMENT_PARENT
+        box = f(native, surface, [np.eye(4)], a, b, {}, phase.Budget())
+        proof = phase.correlated_triangle(box, surface, [0, 1, 2])
+        parent = {'seconds': [a, b], 'triangle_area': {'hoof': {'native_triangle_ids': [7], 'certificates': [proof]}},
+            'triangle_shape': {'hoof': {**phase.correlated_shape(box, birth, [[0, 1, 2]]), 'native_triangle_ids': [7]}}}
+        from types import SimpleNamespace
+        for fail in (False, True):
+            budget = phase.Budget(used=1118, arithmetic=SimpleNamespace(work={'basic_interval_operations': 10}))
+            used = {'attempts': 40, 'refinement_splits': 0, 'proposal_evaluations': 323,
+                'float32_weight_values': 1118, 'independent_track_evaluations': 120,
+                'scalar_composition': {'basic_interval_operations': 10}, 'quaternion_norm': {},
+                'correlated_triangles': {'cross_refutation_faces': 0}}
+            calls = []
+            def enclosure(c, s, binds, lo, hi, funcs, shared):
+                self.assertIs(shared, budget); calls.append([lo, hi])
+                shared.used += 1; shared.arithmetic.work['basic_interval_operations'] += 2
+                if fail and len(calls) == 1:
+                    raise phase.Unclosed('test_nonpositive_denominator')
+                return f(c, s, binds, lo, hi, funcs, shared)
+            matrices = {}
+            with patch.object(phase, 'surface_span_box', enclosure):
+                result = phase.refine_selected_shape(native, surface, [np.eye(4)], {}, budget, used,
+                    parent, patches, {'hoof': birth}, [], matrices)
+            self.assertEqual(calls, [[a, (a+b)/2], [(a+b)/2, b]])
+            self.assertEqual((used['attempts'], used['refinement_splits']), (42, 1))
+            self.assertEqual(used['proposal_evaluations'], 326 if fail else 329)
+            self.assertEqual(used['float32_weight_values'], 1120)
+            self.assertEqual(used['scalar_composition']['basic_interval_operations'], 14)
+            self.assertEqual(result['work_before']['proposal_evaluations'], 323)
+            self.assertEqual(used['correlated_triangles']['child_area_targets'], 1 if fail else 2)
+            self.assertEqual(used['correlated_triangles']['child_birth_orientation_targets'], 1 if fail else 2)
+            if not fail:
+                for child in result['children']:
+                    self.assertEqual(child['triangle_shape']['hoof']['certificates'][0]['birth'],
+                                     parent['triangle_shape']['hoof']['certificates'][0]['birth'])
+            # No budget is reset or enclosure attempted once the shared limit cannot fit both children.
+            with patch.object(phase, 'surface_span_box', side_effect=AssertionError('must not evaluate')):
+                used['attempts'] = phase.LIMITS['continuous_boxes']-1
+                with self.assertRaisesRegex(ValueError, 'shared budget exhausted'):
+                    phase.refine_selected_shape(native, surface, [np.eye(4)], {}, budget, used,
+                        parent, patches, {'hoof': birth}, [], matrices)
+
+    def test_raw_weights_face_and_missing_child_certificate_cannot_be_aggregated(self):
+        for mutation in [lambda p: p.update(raw_vertices_joints_weights=[['altered']]),
+                lambda p: p.update(vertex_ids=[2, 1, 0]), lambda p: p.clear()]:
+            parent, children = self.parent_children()
+            mutation(children[1]['triangle_area']['hoof']['certificates'][0])
+            with self.assertRaises((ValueError, KeyError)):
+                phase.aggregate_refined_shape(parent, children)
+
+    def test_partial_refinement_mode_fails_before_opening_accepted_inputs(self):
+        with patch.object(phase, 'load_inputs', side_effect=AssertionError('must not load native')):
+            with self.assertRaisesRegex(ValueError, 'Shape refinement requires accepted arithmetic mode'):
+                phase.build(Path('/unused'), triangle_baseline_report=Path('/unused'))
+
+
 class FiniteAcosTests(unittest.TestCase):
     @staticmethod
     def directed(x, precision, upper):
@@ -1163,6 +1289,60 @@ class AcceptedTriangleReportTests(unittest.TestCase):
             report['claims'] = original_claims; report['shape_proof'] = original_shape
             report['previous_shape_accounting']['shape_cases'] = original_cases
             rows[0]['triangle_area'] = original_area
+
+
+
+@unittest.skipUnless(os.environ.get('CAV_REFINEMENT_REPORT') and os.environ.get('CAV_TRIANGLE_REPORT'),
+                     'explicit final refinement and accepted258 reports required')
+class AcceptedShapeRefinementTests(unittest.TestCase):
+    def test_original_inventory_both_children_bindings_histories_and_negative_controls(self):
+        report = json.loads(Path(os.environ['CAV_REFINEMENT_REPORT']).read_text())
+        baseline = capture.read_bound(Path(os.environ['CAV_TRIANGLE_REPORT']), phase.TRIANGLE_BASELINE_SHA)
+        phase.validate_refined_shape(report)
+        self.assertEqual(report['version'], 7)
+        self.assertEqual(len(report['inputs']), 804)
+        self.assertEqual(report['accepted258_input_bindings'], baseline['inputs'])
+        rows = report['continuous_native']['closed_boxes']
+        self.assertEqual(rows, baseline['continuous_native']['closed_boxes'])
+        self.assertEqual(sum(len(a['certificates']) for r in rows for a in r['triangle_area'].values()), 7760)
+        self.assertEqual(sum(len(s['certificates']) for r in rows for s in r['triangle_shape'].values()), 2797)
+        for key in ('baseline_accounting', 'previous_operation_accounting', 'previous_norm_accounting',
+                'previous_shape_accounting', 'source_support_constraints', 'accepted_anatomy', 'fit',
+                'finite_endpoint_necessary_conditions', 'full_geometry', 'metric_bounds', 'claims', 'missing_physical_context'):
+            self.assertEqual(report[key], baseline[key], key)
+        self.assertEqual(report['atlas']['knots'], baseline['atlas']['knots'])
+        self.assertEqual(report['work_budget_declared_before_fit'], baseline['work_budget_declared_before_fit'])
+        refinement = report['shape_refinement']
+        self.assertEqual(refinement['work_before'], baseline['work_used'])
+        self.assertEqual(len(refinement['area_targets']), 194)
+        self.assertEqual(len(refinement['birth_targets']), 148)
+        for child in refinement['children']:
+            self.assertNotIn('reason', child)
+            self.assertEqual(sum(len(a['certificates']) for a in child['triangle_area'].values()), 194)
+            self.assertEqual(sum(len(a['certificates']) for a in child['triangle_shape'].values()), 148)
+        for key in ('area_targets', 'birth_targets'):
+            self.assertTrue(all(c['outcome'] == 'CLOSED' for c in refinement[key] if c['before'] == 'CLOSED'))
+        for key in ('attempts', 'refinement_splits', 'proposal_evaluations'):
+            old = report['work_used'][key]; report['work_used'][key] = 0
+            with self.assertRaises(ValueError):
+                phase.validate_refined_shape(report)
+            report['work_used'][key] = old
+        child = refinement['children'][0]
+        hoof = next(iter(child['triangle_area']))
+        proof = child['triangle_area'][hoof]['certificates'][0]
+        matrices = report['shape_proof']['shared_skin_certificates']
+        identity = matrices[proof['shared_transform_certificates'][0]]
+        old = identity['source_sha256']; identity['source_sha256'] = '0'*64
+        with self.assertRaises(ValueError):
+            phase.validate_refined_shape(report)
+        with self.assertRaises(ValueError):
+            phase.validate_shape_certificate(proof, matrices)
+        identity['source_sha256'] = old
+        before = refinement['area_targets'][0]['outcome']
+        refinement['area_targets'][0]['outcome'] = 'FORGED'
+        with self.assertRaises(ValueError):
+            phase.validate_refined_shape(report)
+        refinement['area_targets'][0]['outcome'] = before
 
 
 if __name__ == '__main__':
