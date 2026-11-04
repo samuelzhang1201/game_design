@@ -413,7 +413,12 @@ def validate_receipt(record, manifest, manifest_sha, pair, published):
     matched = re.fullmatch(r'https://github.com/samuelzhang1201/game_design/pull/([1-9][0-9]*)', pair['pr_url'])
     require(matched is not None, 'Invalid registered PR')
     number = int(matched[1])
-    require(comment == published and isinstance(comment['id'], int) and comment['id'] > 0,
+    # Reactions/profile/update metadata may change without changing the published verdict.
+    identity = ('id', 'node_id', 'html_url', 'issue_url', 'created_at', 'body')
+    require(all(comment.get(key) == published.get(key) for key in identity) and
+            comment['user']['id'] == published['user']['id'] and
+            comment['user'].get('node_id') == published['user'].get('node_id') and
+            isinstance(comment['id'], int) and comment['id'] > 0,
             'Receipt differs from actual published GitHub record')
     require(comment['issue_url'] == f'https://api.github.com/repos/samuelzhang1201/game_design/issues/{number}'
             and comment['html_url'] == f'{pair["pr_url"]}#issuecomment-{comment["id"]}',

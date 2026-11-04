@@ -202,14 +202,40 @@ class BundleTests(unittest.TestCase):
                    'pr_number': 999, 'continuous_contact_certified': False,
                    'unresolved': ['continuous contact and phase remain unaccepted']}
         body = 'Independent verdict\n```json\n' + json.dumps(binding) + '\n```'
-        published = {'id': 42, 'html_url': 'https://github.com/samuelzhang1201/game_design/pull/999#issuecomment-42',
+        published = {'id': 42, 'node_id': 'IC_42',
+                     'html_url': 'https://github.com/samuelzhang1201/game_design/pull/999#issuecomment-42',
                      'issue_url': 'https://api.github.com/repos/samuelzhang1201/game_design/issues/999',
                      'body': body, 'user': {'id': 123, 'login': 'reviewer'}, 'created_at': '2026-11-04T00:00:00Z',
-                     'updated_at': '2026-11-04T00:00:00Z'}
+                     'updated_at': '2026-11-04T00:00:00Z', 'reactions': {'total_count': 0, '+1': 0}}
         record = {'comment': published, 'body_sha256': hashlib.sha256(body.encode()).hexdigest(), 'binding': binding}
         pair = {'implementation_session_id': 'implementation-1', 'review_session_id': 'review-1',
                 'pr_url': 'https://github.com/samuelzhang1201/game_design/pull/999'}
         self.assertEqual(fresh.validate_receipt(record, manifest, 'c' * 64, pair, published), binding)
+        live = copy.deepcopy(published)
+        live['reactions'].update({'total_count': 1, '+1': 1})
+        with self.subTest(metadata='reaction-only'):
+            self.assertEqual(fresh.validate_receipt(record, manifest, 'c'*64, pair, live), binding)
+        self.assertEqual(record['comment']['reactions'], {'total_count': 0, '+1': 0}, 'Preserve the full frozen snapshot')
+        live['user']['avatar_url'] = 'https://example.invalid/new-avatar'
+        live['updated_at'] = '2026-11-04T01:00:00Z'
+        with self.subTest(metadata='unrelated-live-profile-and-update-time'):
+            self.assertEqual(fresh.validate_receipt(record, manifest, 'c'*64, pair, live), binding)
+        for key, value in [('id', 43), ('node_id', 'IC_43'),
+                           ('html_url', 'https://github.com/samuelzhang1201/game_design/pull/234#issuecomment-42'),
+                           ('issue_url', 'https://api.github.com/repos/samuelzhang1201/game_design/issues/234'),
+                           ('created_at', '2026-11-03T00:00:00Z')]:
+            live = copy.deepcopy(published)
+            live[key] = value
+            with self.subTest(changed_identity=key), self.assertRaises(ValueError):
+                fresh.validate_receipt(record, manifest, 'c'*64, pair, live)
+        live = copy.deepcopy(published)
+        live['user']['id'] += 1
+        with self.subTest(changed_identity='author-id'), self.assertRaises(ValueError):
+            fresh.validate_receipt(record, manifest, 'c'*64, pair, live)
+        fabricated = copy.deepcopy(record)
+        fabricated['comment']['user']['id'] += 1
+        with self.subTest(changed_identity='fabricated-preserved-author'), self.assertRaises(ValueError):
+            fresh.validate_receipt(fabricated, manifest, 'c'*64, pair, published)
         for key, value in [('producer_head', 'd'*40), ('manifest_sha256', 'd'*64),
                            ('bundle_sha256', 'd'*64), ('review_session_id', 'implementation-1'),
                            ('pr_number', 234), ('continuous_contact_certified', True)]:
