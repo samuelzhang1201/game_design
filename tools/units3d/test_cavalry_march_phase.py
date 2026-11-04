@@ -475,6 +475,281 @@ class NativeResidualCacheTests(unittest.TestCase):
                 phase.validate_shape_certificate(changed, certificates)
 
 
+def frozen_correlated_triangle(box, surface, face):
+    # Frozen pre-extraction operation graph; independent of the new cached kernel.
+    native = capture
+    SkinSpan, require = phase.SkinSpan, phase.require
+    triangle_coefficients, triangle_wedge = phase.triangle_coefficients, phase.triangle_wedge
+    validate_skin_context, skin_vertex_residual = phase.validate_skin_context, phase.skin_vertex_residual
+    float_box, cross_box, hull = phase.float_box, phase.cross_box, phase.hull
+    SHAPE_METHOD = phase.SHAPE_METHOD
+    require(isinstance(box, SkinSpan), 'Missing shared native skin matrices')
+    contexts, crosses, edges_output, residual_output = [], [], [], []
+    ids = [int(box.skin_contexts[0]['vertex_ids'][i]) for i in face]
+    raw = tuple(box.skin_contexts[0]['raw'][i] for i in ids)
+    if surface is not None:
+        supplied = tuple((tuple(map(float, native.Float32Box(surface['vertices'][i]).lo)), tuple(map(int, surface['joints'][i])),
+                          tuple(map(float, native.Float32Box(surface['weights'][i]).lo))) for i in ids)
+        require(supplied == raw, 'Source/bind/raw influence differs from correlation certificate')
+    require(len(raw) == 3 and all(len(p) == 3 and len(j) == len(w) == 4
+            and np.isfinite(p).all() and np.isfinite(w).all() and min(w) >= 0
+            for p, j, w in raw), 'Missing/invalid native triangle influence')
+    coefficients = triangle_coefficients(raw)
+    for context in box.skin_contexts:
+        validate_skin_context(context)
+        require(tuple(context['raw'][i] for i in ids) == raw, 'Loop source influence mismatch')
+    cache_key = ('triangle', tuple(ids), tuple(c['sha256'] for c in box.skin_contexts))
+    cache = box.skin_contexts[0]['cache']
+    if cache_key in cache:
+        return cache[cache_key]
+    for context in box.skin_contexts:
+        validate_skin_context(context)
+        require(tuple(context['raw'][i] for i in ids) == raw, 'Loop source influence mismatch')
+        matrices = context['transforms']; f = native.Float32Box
+        require(all(type(joint) is int and 0 <= joint < len(matrices.lo) for _, joints, _ in raw for joint in joints),
+                'Missing native bind influence')
+        residuals = [skin_vertex_residual(context, i) for i in ids]
+        errors = [tuple(residuals[0][k]+residuals[e][k] for k in range(3)) for e in (1, 2)]
+        references = []
+        for edge in coefficients:
+            value = f([0., 0., 0.])
+            for joint, h in edge:
+                for k, coefficient in enumerate(h):
+                    if coefficient:
+                        value = value+matrices[joint][:, k]*float_box((coefficient, coefficient))
+            references.append(value)
+        # Expand the wedge BEFORE interval evaluation. Both edge terms use the
+        # same matrix variable; antisymmetric exact coefficients cancel first.
+        terms = triangle_wedge(coefficients)
+        if terms:
+            j, k, l, m, coefficients_ = zip(*terms)
+            a, b = np.array([1, 2, 0])[:, None], np.array([2, 0, 1])[:, None]
+            first = f(matrices.lo[np.array(j)[None, :], a, np.array(k)[None, :]],
+                      matrices.hi[np.array(j)[None, :], a, np.array(k)[None, :]])
+            second = f(matrices.lo[np.array(l)[None, :], b, np.array(m)[None, :]],
+                       matrices.hi[np.array(l)[None, :], b, np.array(m)[None, :]])
+            exact_coefficients = np.asarray(list(map(float, coefficients_)))
+            products = first*second*f.outward(exact_coefficients, exact_coefficients)
+            reference_cross = f([0., 0., 0.])
+            for i in range(len(terms)):
+                reference_cross = reference_cross+products[:, i]
+        else:
+            reference_cross = f([0., 0., 0.])
+        delta = [native.Float32Box.outward(-np.array(list(map(float, e))), np.array(list(map(float, e)))) for e in errors]
+        cross = reference_cross+cross_box(references[0], delta[1])+cross_box(delta[0], references[1])+cross_box(delta[0], delta[1])
+        actual_edges = [r+d for r, d in zip(references, delta)]
+        direct = cross_box(*actual_edges)
+        cross = f(np.maximum(cross.lo, direct.lo), np.minimum(cross.hi, direct.hi))
+        crosses.append(cross)
+        contexts.append(context['sha256'])
+        edges_output.append([{'interval': [e.lo, e.hi], 'native_residual_absolute': error}
+                             for e, error in zip(actual_edges, errors)])
+        residual_output.append(residuals)
+    cross = hull(crosses)
+    minimum = np.where((cross.lo <= 0) & (cross.hi >= 0), 0., np.minimum(abs(cross.lo), abs(cross.hi)))
+    maximum = np.maximum(abs(cross.lo), abs(cross.hi))
+    squares = native.Float32Box.outward(minimum*minimum, maximum*maximum)
+    total = squares[0]+squares[1]+squares[2]
+    area = native.Float32Box(np.maximum(total.lo, 0), total.hi).sqrt()
+    result = {'method': SHAPE_METHOD, 'vertex_ids': ids, 'raw_vertices_joints_weights': raw,
+            'shared_transform_certificates': contexts,
+            'edge_coefficients': [[{'bind_index': joint, 'homogeneous': h} for joint, h in edge] for edge in coefficients],
+            'branches': [{'edges': edges, 'vertex_native_residual_absolute': residual}
+                         for edges, residual in zip(edges_output, residual_output)],
+            'edges': edges_output[0], 'cross_interval': [cross.lo, cross.hi],
+            'twice_area_interval': [float(max(area.lo, 0)), float(area.hi)]}
+    cache[cache_key] = result
+    return result
+
+class CorrelatedBranchReuseTests(unittest.TestCase):
+    def setUp(self):
+        phase._correlated_branch_numeric.cache_clear()
+
+    @staticmethod
+    def bits(value):
+        if isinstance(value, np.ndarray):
+            return (value.shape, value.dtype.str, value.tobytes())
+        if isinstance(value, (float, np.floating)):
+            return struct.pack('>d', float(value))
+        if isinstance(value, Q):
+            return ('Q', value.numerator, value.denominator)
+        if isinstance(value, dict):
+            return tuple((k, CorrelatedBranchReuseTests.bits(v)) for k, v in sorted(value.items()))
+        if isinstance(value, (tuple, list)):
+            return tuple(CorrelatedBranchReuseTests.bits(v) for v in value)
+        return value
+
+    @staticmethod
+    def fixture(two=False, zero=False):
+        surface = {'vertices': [[-2., 0., -0.], [1., -1., 0.], [0., 2., 1.]],
+            'joints': [[0, 2, 5, 2]]*3,
+            'weights': ([[0., 0., 0., 0.]]*3 if zero else
+                        [[.25, .5, 0., 0.], [.5, .5, 0., 0.], [.75, .125, 0., .125]])}
+        lo = np.tile(np.eye(4)[:3], (6, 1, 1)); hi = lo.copy()
+        lo[:, :, 3] = [-.5, -.25, -1.]; hi[:, :, 3] = [.75, .5, 1.]
+        lo[2, 0, 1] = -.125; hi[2, 0, 1] = .25
+        contexts = [phase.skin_context(capture.Float32Box(lo, hi), surface,
+                                      [np.eye(4)]*6, 0., 1.)]
+        if two:
+            contexts.append(phase.skin_context(capture.Float32Box(np.tile(np.eye(4)[:3], (6, 1, 1))),
+                                               surface, [np.eye(4)]*6, 0., 0.))
+        return surface, phase.SkinSpan(capture.Float32Box(np.zeros((3, 3))), contexts)
+
+    @staticmethod
+    def refresh(context):
+        context['identity']['matrix_interval'] = [context['transforms'].lo, context['transforms'].hi]
+        context['sha256'] = phase.canonical_digest(context['identity'])
+        context['cache'] = {}
+
+    def test_cold_and_warm_entire_proof_matches_frozen_operation_graph_bits(self):
+        for two, zero in [(False, False), (True, False), (False, True)]:
+            with self.subTest(two=two, zero=zero):
+                surface, box = self.fixture(two, zero)
+                expected = frozen_correlated_triangle(copy.deepcopy(box), surface, [0, 1, 2])
+                cold = phase.correlated_triangle(copy.deepcopy(box), surface, [0, 1, 2])
+                hits = phase._correlated_branch_numeric.cache_info().hits
+                warm = phase.correlated_triangle(copy.deepcopy(box), surface, [0, 1, 2])
+                self.assertEqual(self.bits(cold), self.bits(expected))
+                self.assertEqual(self.bits(warm), self.bits(expected))
+                self.assertGreater(phase._correlated_branch_numeric.cache_info().hits, hits)
+        self.assertEqual(phase._correlated_branch_numeric.cache_info().maxsize, phase.LIMITS['max_constraints'])
+
+    def test_all_matrix_endpoints_including_zero_slots_have_independent_keys(self):
+        surface, box = self.fixture()
+        phase.correlated_triangle(copy.deepcopy(box), surface, [0, 1, 2])
+        for joint in (0, 2, 5):
+            for side in ('lo', 'hi'):
+                for axis in range(3):
+                    for column in range(4):
+                        changed = copy.deepcopy(box)
+                        getattr(changed.skin_contexts[0]['transforms'], side)[joint, axis, column] += (-.125 if side == 'lo' else .125)
+                        self.refresh(changed.skin_contexts[0])
+                        before = phase._correlated_branch_numeric.cache_info().misses
+                        expected = frozen_correlated_triangle(copy.deepcopy(changed), surface, [0, 1, 2])
+                        actual = phase.correlated_triangle(changed, surface, [0, 1, 2])
+                        self.assertEqual(self.bits(actual), self.bits(expected))
+                        self.assertEqual(phase._correlated_branch_numeric.cache_info().misses, before+1)
+
+    def test_signed_zero_slots_coefficients_residuals_and_profile_are_complete_operands(self):
+        surface, box = self.fixture()
+        with patch.object(phase, '_correlated_branch_numeric', wraps=phase._correlated_branch_numeric) as kernel:
+            phase.correlated_triangle(box, surface, [0, 1, 2])
+            args = kernel.call_args.args
+        # A zero-weight joint slot is still part of the ordered native operands.
+        changed = list(args); slots = [list(row) for row in args[1]]; slots[0][2] = 2
+        changed[1] = tuple(map(tuple, slots))
+        before = phase._correlated_branch_numeric.cache_info().misses
+        self.assertEqual(phase._correlated_branch_numeric(*changed), phase._correlated_branch_numeric(*args))
+        self.assertEqual(phase._correlated_branch_numeric.cache_info().misses, before+1)
+        for vertex in range(3):
+            for axis in range(3):
+                changed = list(args); residuals = [list(row) for row in args[3]]
+                residuals[vertex][axis] += Q(1, 16); changed[3] = tuple(map(tuple, residuals))
+                before = phase._correlated_branch_numeric.cache_info().misses
+                self.assertNotEqual(phase._correlated_branch_numeric(*changed), phase._correlated_branch_numeric(*args))
+                self.assertEqual(phase._correlated_branch_numeric.cache_info().misses, before+1)
+        # Isolate signed-zero key identity without changing any other endpoint.
+        changed_box = copy.deepcopy(box); context = changed_box.skin_contexts[0]
+        context['transforms'].lo[5, 0, 1] = -0.
+        self.refresh(context)
+        before = phase._correlated_branch_numeric.cache_info().misses
+        actual = phase.correlated_triangle(changed_box, surface, [0, 1, 2])
+        expected = frozen_correlated_triangle(copy.deepcopy(changed_box), surface, [0, 1, 2])
+        self.assertEqual(self.bits(actual), self.bits(expected))
+        self.assertEqual(phase._correlated_branch_numeric.cache_info().misses, before+1)
+        altered = copy.deepcopy(surface); altered['vertices'][1][0] = 2.
+        changed_box.skin_contexts[0]['cache'] = {}
+        fresh = phase.skin_context(context['transforms'], altered, [np.eye(4)]*6, 0., 1.)
+        changed_box.skin_contexts = [fresh]
+        before = phase._correlated_branch_numeric.cache_info().misses
+        actual = phase.correlated_triangle(changed_box, altered, [0, 1, 2])
+        self.assertEqual(self.bits(actual), self.bits(frozen_correlated_triangle(copy.deepcopy(changed_box), altered, [0, 1, 2])))
+        self.assertEqual(phase._correlated_branch_numeric.cache_info().misses, before+1)
+        for precision, profile in [(True, args[-1]), (24., args[-1]), (53, args[-1]), (24, 'other')]:
+            with self.subTest(precision=precision, profile=profile), self.assertRaises(ValueError):
+                phase._correlated_branch_numeric(*args[:-2], precision, profile)
+
+    def test_warm_numeric_reuse_preserves_all_context_and_native_residual_calls(self):
+        surface, box = self.fixture(two=True)
+        proof = phase.json_value(phase.correlated_triangle(box, surface, [0, 1, 2]))
+        certificates = {c['sha256']: phase.json_value(c['identity']) for c in box.skin_contexts}
+        for _ in range(2):
+            with patch.object(phase, 'validate_skin_context', wraps=phase.validate_skin_context) as validate, \
+                 patch.object(phase, 'skin_vertex_residual', wraps=phase.skin_vertex_residual) as residual:
+                phase.validate_shape_certificate(proof, certificates)
+                self.assertEqual(validate.call_count, 4)
+                self.assertEqual(residual.call_count, 6)
+        for field, value in [('method', 'other'), ('seconds', [.1, .9]), ('source_sha256', '0'*64)]:
+            changed = copy.deepcopy(certificates); changed[next(iter(changed))][field] = value
+            with self.subTest(identity=field), self.assertRaises(ValueError):
+                phase.validate_shape_certificate(proof, changed)
+        for field in ('vertex_native_residual_absolute', 'edges'):
+            changed = copy.deepcopy(proof)
+            if field == 'edges':
+                changed['branches'][0]['edges'][0]['interval'][0][0] = -100.
+            else:
+                changed['branches'][0][field][0][0] = [0, 1]
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                phase.validate_shape_certificate(changed, certificates)
+        for key in ('shared_transform_certificates', 'branches'):
+            changed = copy.deepcopy(proof); changed[key].pop()
+            with self.subTest(drop=key), self.assertRaises(ValueError):
+                phase.validate_shape_certificate(changed, certificates)
+        for field, index, value in [(0, 0, True), (0, 0, float('nan')), (1, 0, True),
+                                     (1, 0, -1), (1, 0, 6), (2, 0, True), (2, 0, -.25)]:
+            changed = copy.deepcopy(proof); changed['raw_vertices_joints_weights'][0][field][index] = value
+            with self.subTest(raw=(field, index, value)), self.assertRaises(ValueError):
+                phase.validate_shape_certificate(changed, certificates)
+        for change in ('source', 'matrix', 'raw'):
+            altered = copy.deepcopy(box); context = altered.skin_contexts[0]; context['cache'] = {}
+            if change == 'source': context['identity']['source_sha256'] = '0'*64
+            elif change == 'matrix': context['transforms'].lo[0, 0, 0] = .5
+            else:
+                raw = list(context['raw']); row = list(raw[0]); row[0] = (3., 0., 0.)
+                raw[0] = tuple(row); context['raw'] = tuple(raw)
+            with self.subTest(context=change), self.assertRaises(ValueError):
+                phase.correlated_triangle(altered, surface, [0, 1, 2])
+
+    def test_new_numeric_values_do_not_share_mutable_proof_or_endpoint_arrays(self):
+        surface, box = self.fixture()
+        expected = frozen_correlated_triangle(copy.deepcopy(box), surface, [0, 1, 2])
+        proof = phase.correlated_triangle(copy.deepcopy(box), surface, [0, 1, 2])
+        proof['cross_interval'][0][0] = -1e9
+        proof['edges'][0]['interval'][1][0] = 1e9
+        proof['branches'][0]['vertex_native_residual_absolute'][0] = (Q(0),)*3
+        fresh = phase.correlated_triangle(copy.deepcopy(box), surface, [0, 1, 2])
+        self.assertEqual(self.bits(fresh), self.bits(expected))
+        with patch.object(phase, '_correlated_branch_numeric', wraps=phase._correlated_branch_numeric) as kernel:
+            phase.correlated_triangle(copy.deepcopy(box), surface, [0, 1, 2]); args = kernel.call_args.args
+        def immutable(value):
+            return type(value) is bytes or (type(value) is tuple and all(immutable(v) for v in value)) or type(value) is int
+        self.assertTrue(immutable(phase._correlated_branch_numeric(*args)))
+
+    def test_numeric_exceptions_propagate_and_are_not_cached(self):
+        surface, box = self.fixture()
+        with patch.object(phase, '_correlated_branch_numeric', wraps=phase._correlated_branch_numeric) as kernel:
+            phase.correlated_triangle(box, surface, [0, 1, 2]); args = kernel.call_args.args
+        for exception in (ValueError('numeric failure'), SystemExit(9), KeyboardInterrupt()):
+            phase._correlated_branch_numeric.cache_clear()
+            with patch.object(phase, 'cross_box', side_effect=exception), self.assertRaises(type(exception)) as caught:
+                phase._correlated_branch_numeric(*args)
+            self.assertIs(caught.exception, exception)
+            self.assertEqual(phase._correlated_branch_numeric.cache_info().currsize, 0)
+
+    def test_eviction_recomputes_same_frozen_branch_without_changing_results(self):
+        from functools import lru_cache
+        surface, box = self.fixture()
+        with patch.object(phase, '_correlated_branch_numeric', wraps=phase._correlated_branch_numeric) as kernel:
+            phase.correlated_triangle(box, surface, [0, 1, 2]); args = kernel.call_args.args
+        bounded = lru_cache(maxsize=1, typed=True)(phase._correlated_branch_numeric.__wrapped__)
+        first = bounded(*args); changed = list(args)
+        residuals = [list(row) for row in args[3]]; residuals[0][0] += Q(1, 16)
+        changed[3] = tuple(map(tuple, residuals)); bounded(*changed)
+        self.assertEqual(first, bounded(*args))
+        self.assertEqual(bounded.cache_info().misses, 3)
+        self.assertEqual(bounded.cache_info().currsize, 1)
+
+
 class CenteredWedgeTests(unittest.TestCase):
     x, y = (0, 0, 0), (0, 1, 0)
 
@@ -673,6 +948,225 @@ class CenteredWedgeTests(unittest.TestCase):
         bad['shape_refinement']['children'][1]['triangle_shape']['hoof']['certificates'][0]['birth'] = dict(proof, changed=True)
         with self.assertRaises(ValueError):
             phase.centered_overlay(bad)
+
+
+class NormalProjectionTests(unittest.TestCase):
+    x, one = (0, 0, 0), (0, 2, 2)
+
+    def triangle(self):
+        # E1=(0,0,1), E2=(1-x,-x,0): N=(x,1-x,0).
+        return (((self.x, self.one, Q(1)),),
+                ((self.one, self.one, Q(1)), (self.x, self.one, Q(-1))), ())
+
+    def scalar(self, vector=(Q(1), Q(1), Q(0)), residual=((0, 0, 0), (0, 0, 0))):
+        return phase.projection_scalar(self.triangle(),
+            ((self.x, 0., 1.), (self.one, 1., 1.)), vector, residual)
+
+    def test_shared_variable_cancellation_proves_exact_half_area_squared(self):
+        self.assertTrue(hasattr(phase, 'projection_scalar'), 'Missing shared scalar contraction')
+        scalar = self.scalar()
+        self.assertEqual(scalar['projection_interval'], (Q(1), Q(1)))
+        self.assertEqual(scalar['scalar']['canonical_monomials'], 1)
+        area = phase.projection_area_lower(scalar)
+        self.assertEqual(area['squared_lower'], Q(1, 2))
+        self.assertLessEqual(Q(area['lower'])**2, Q(1, 2))
+        self.assertGreater(area['lower'], .7071067)
+
+    def test_original_birth_uncertainty_subtraction_is_exact_four_fifths(self):
+        self.assertTrue(hasattr(phase, 'projection_birth_lower'), 'Missing original anchor uncertainty')
+        current = ((Q(0), Q(0), Q(0)), (Q(1), Q(1), Q(0)))
+        anchor = ((Q(9, 10), Q(9, 10), Q(0)), (Q(11, 10), Q(11, 10), Q(0)))
+        result = phase.projection_birth_lower(self.scalar(), current, anchor)
+        self.assertEqual(result['uncertainty_subtraction'], Q(1, 5))
+        self.assertEqual(result['dot_lower'], Q(4, 5))
+        fixed = ((1, 1, 0), (1, 1, 0))
+        self.assertEqual(phase.projection_birth_lower(self.scalar(), current, fixed)['dot_lower'], 1)
+        wide = ((-1, -1, 0), (3, 3, 0))
+        self.assertLessEqual(phase.projection_birth_lower(self.scalar(), current, wide)['dot_lower'], 0)
+        zero = ((0, 0, 0), (0, 0, 0))
+        self.assertEqual(phase.projection_birth_lower(self.scalar((0, 0, 0)), current, zero)['dot_lower'], 0)
+        with self.assertRaises(ValueError):
+            phase.projection_birth_lower(self.scalar((2, 1, 0)), current, fixed)
+
+    def test_signed_projection_keeps_full_residual_and_zero_is_not_forced_positive(self):
+        self.assertTrue(hasattr(phase, 'projection_scalar'), 'Missing shared scalar contraction')
+        result = self.scalar((Q(-1), Q(2), Q(0)), ((Q(-1, 10), Q(-1, 5), 0), (Q(3, 10), Q(2, 5), 0)))
+        self.assertEqual(result['native_residual_interval'], (Q(-7, 10), Q(9, 10)))
+        self.assertEqual(result['projection_interval'], (Q(-17, 10), Q(29, 10)))
+        self.assertEqual(phase.projection_area_lower(result)['squared_lower'], 0)
+        components = (((self.x, self.one, Q(1)),), ((self.x, self.one, Q(-1)),), ())
+        zero = phase.projection_scalar(components, ((self.x, -1., 1.), (self.one, 1., 1.)),
+            (0, 0, 0), ((0, 0, 0), (0, 0, 0)))
+        self.assertEqual(phase.projection_area_lower(zero)['squared_lower'], 0)
+
+    def test_shared_bind_identity_and_scalar_cache_operands_cannot_alias(self):
+        self.assertTrue(hasattr(phase, 'projection_scalar'), 'Missing shared scalar contraction')
+        expected = phase.json_value(self.scalar())
+        returned = self.scalar(); returned['scalar']['constant'] = Q(999)
+        self.assertEqual(phase.json_value(self.scalar()), expected)
+        with patch.object(phase, '_projection_scalar', phase._projection_scalar.__wrapped__):
+            self.assertEqual(phase.json_value(self.scalar()), expected)
+        other = (1, 0, 0)
+        terms = (((self.x, self.one, Q(1)),), ((other, self.one, Q(-1)),), ())
+        separate = phase.projection_scalar(terms,
+            ((self.x, 0., 1.), (other, 0., 1.), (self.one, 1., 1.)), (1, 1, 0), ((0, 0, 0), (0, 0, 0)))
+        self.assertEqual(separate['projection_interval'], (-1, 1))
+        changed = self.scalar(residual=((-2, 0, 0), (2, 0, 0)))
+        self.assertLess(changed['projection_interval'][0], 0)
+        with self.assertRaises(ValueError):
+            self.scalar((True, 1, 0))
+
+
+    def overlay_fixture(self, surface=None, box=None):
+        fixture = CorrelatedTriangleTests(); surface = surface or fixture.surface(); box = box or fixture.span(surface, (0., 0.))
+        proof = phase.json_value(phase.correlated_triangle(box, surface, [0, 1, 2]))
+        dot = capture.box_dot(capture.Float32Box(*proof['cross_interval']), capture.Float32Box(*proof['cross_interval']), 3)
+        def row(seconds):
+            return {'seconds': seconds, 'triangle_area': {'hoof': {'native_triangle_ids': [7], 'certificates': [proof]}},
+                'triangle_shape': {'hoof': {'native_triangle_ids': [7], 'certificates': [
+                    {'current': proof, 'birth': proof, 'orientation_interval': [float(dot.lo), float(dot.hi)]}]}}}
+        a, b = phase.REFINEMENT_PARENT; m = (a+b)/2
+        parent, children = row([a, b]), [row([a, m]), row([m, b])]
+        report = {'work_used': {'correlated_triangles': {'per_cross_monomial_bound': 6912}},
+            'continuous_native': {'closed_boxes': [parent]}, 'shape_refinement': {
+            'children': children, **phase.aggregate_refined_shape(parent, children)},
+            'shape_proof': {'shared_skin_certificates': {c['sha256']: phase.json_value(c['identity']) for c in box.skin_contexts}}}
+        report['centered_wedge'] = phase.centered_overlay(report)
+        # Use the frozen inventory's existing capacities, not this tiny fixture's capacities.
+        report['centered_wedge']['work'].update(finite_component_range_bound=50052, finite_monomial_bound=115319808)
+        return report
+
+    def test_overlay_preserves_every_original_target_children_anchor_and_work_limits(self):
+        self.assertTrue(hasattr(phase, 'projection_overlay'), 'Missing whole-inventory projection overlay')
+        report = self.overlay_fixture(); old = copy.deepcopy(report)
+        result = phase.projection_overlay(report)
+        self.assertEqual(report, old)
+        self.assertEqual(result['before_counts'], report['centered_wedge']['counts'])
+        self.assertEqual(result['counts'], report['centered_wedge']['counts'])
+        self.assertEqual(len(result['children']), 2)
+        self.assertEqual(result['birth_targets'][0]['original_birth_sha256'],
+            report['centered_wedge']['birth_targets'][0]['original_birth_sha256'])
+        for child in result['children']:
+            self.assertEqual(len(child['area_targets']), 1)
+            self.assertEqual(len(child['birth_targets']), 1)
+        self.assertLessEqual(result['work']['scalar_ranges'], result['work']['finite_component_range_bound'])
+        self.assertLessEqual(result['work']['canonical_monomials'], result['work']['finite_monomial_bound'])
+        for mutate in [lambda r: r['centered_wedge']['certificates'].pop(next(iter(r['centered_wedge']['certificates']))),
+                lambda r: r['shape_refinement']['children'].pop(),
+                lambda r: r['centered_wedge']['children'][1]['area_targets'].pop(),
+                lambda r: r['centered_wedge']['children'][1]['birth_targets'][0].update(original_birth_sha256='0'*64),
+                lambda r: r['centered_wedge']['work'].update(finite_component_range_bound=0),
+                lambda r: r['centered_wedge']['work'].update(finite_monomial_bound=0)]:
+            bad = copy.deepcopy(report); mutate(bad)
+            with self.subTest(mutate=mutate), self.assertRaises((ValueError, KeyError)):
+                phase.projection_overlay(bad)
+
+    def test_projection_certificate_replays_covector_domain_raw_residual_and_anchor(self):
+        self.assertTrue(hasattr(phase, 'projection_overlay'), 'Missing projection certificate replay')
+        report = self.overlay_fixture(); expected = phase.json_value(phase.projection_overlay(report))
+        phase.validate_projection_certificates(expected, report)
+        digest = next(iter(expected['certificates'])); birth_digest = next(iter(expected['birth_certificates']))
+        for mutate in [lambda p: p['certificates'][digest]['branches'][0]['projection']['covector'].__setitem__(0, [9, 1]),
+                lambda p: p['certificates'][digest]['branches'][0]['projection']['scalar'].update(monomials_sha256='0'*64),
+                lambda p: p['certificates'][digest]['branches'][0]['projection'].update(native_residual_interval=[[0, 1], [0, 1]]),
+                lambda p: p['certificates'][digest].update(lower_bound=999.),
+                lambda p: p['birth_certificates'][birth_digest]['uncertainty']['anchor_radii'].__setitem__(0, [0, 1]),
+                lambda p: p['birth_certificates'][birth_digest]['uncertainty']['current_magnitudes'].__setitem__(0, [0, 1]),
+                lambda p: p['birth_certificates'][birth_digest]['uncertainty'].update(uncertainty_subtraction=[999, 1]),
+                lambda p: p['birth_certificates'][birth_digest].update(original_birth_sha256='0'*64),
+                lambda p: p['area_targets'][0].update(outcome='FORGED')]:
+            bad = copy.deepcopy(expected); mutate(bad)
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError):
+                phase.validate_projection_certificates(bad, report)
+        for mutate in [lambda r: next(iter(r['shape_proof']['shared_skin_certificates'].values()))['seconds'].__setitem__(0, .1),
+                lambda r: next(iter(r['shape_proof']['shared_skin_certificates'].values())).update(source_sha256='0'*64),
+                lambda r: r['continuous_native']['closed_boxes'][0]['triangle_area']['hoof']['certificates'][0]['raw_vertices_joints_weights'][1][2].__setitem__(0, .5),
+                lambda r: r['continuous_native']['closed_boxes'][0]['triangle_area']['hoof']['certificates'][0]['branches'][0]['vertex_native_residual_absolute'][0][0].__setitem__(0, 0)]:
+            bad = copy.deepcopy(report); mutate(bad)
+            with self.subTest(mutate=mutate), self.assertRaises((ValueError, KeyError)):
+                phase.validate_projection_certificates(expected, bad)
+
+    def test_separate_terminal_branches_choose_fixed_signs_and_keep_zero_birth_unknown(self):
+        fixture = CorrelatedTriangleTests(); surface = fixture.surface()
+        first = np.eye(4)[:3].reshape(1, 3, 4); second = first.copy(); second[0, 1, 1] = -1.
+        contexts = [phase.skin_context(capture.Float32Box(m), surface, [np.eye(4)], *seconds)
+                    for m, seconds in [(first, (0., 1.)), (second, (0., 0.))]]
+        box = phase.SkinSpan(capture.Float32Box(np.zeros((3, 3))), contexts)
+        report = self.overlay_fixture(surface, box)
+        result = phase.projection_overlay(report)
+        proof = next(iter(result['certificates'].values()))
+        self.assertEqual(len(proof['branches']), 2)
+        self.assertEqual([b['projection']['covector'][2] for b in proof['branches']], [[1, 1], [-1, 1]])
+        self.assertGreater(proof['lower_bound'], .99)
+        self.assertEqual(result['area_targets'][0]['outcome'], 'CLOSED')
+        self.assertEqual(result['birth_targets'][0]['outcome'], 'UNKNOWN')
+        self.assertEqual(next(iter(result['birth_certificates'].values()))['uncertainty']['anchor_center'], [[0, 1]]*3)
+        bad = copy.deepcopy(report); current = bad['continuous_native']['closed_boxes'][0]['triangle_area']['hoof']['certificates'][0]
+        current['branches'].pop()
+        with self.assertRaises((ValueError, KeyError)):
+            phase.validate_projection_certificates(result, bad)
+
+    def test_zero_center_and_mixed_raw_translation_retain_actual_native_adverse_bounds(self):
+        fixture = CorrelatedTriangleTests()
+        collinear = fixture.surface(vertices=[[0, 0, 0], [1, 0, 0], [2, 0, 0]])
+        result = phase.projection_overlay(self.overlay_fixture(collinear))
+        self.assertTrue(all(b['zero_center'] for p in result['certificates'].values() for b in p['branches']))
+        self.assertEqual(result['area_targets'][0]['outcome'], 'UNKNOWN')
+        surface = fixture.surface(weights=[[.5, .25, 0, 0], [.5, .5, 0, 0], [.25, .75, 0, 0]],
+            joints=[[0, 1, 0, 0]]*3)
+        matrices = np.tile(np.eye(4)[:3], (2, 1, 1)); matrices[1, 2, 3] = 1.
+        lo, hi = matrices.copy(), matrices.copy(); lo[:, 0, 3] = -10.; hi[:, 0, 3] = 10.
+        context = phase.skin_context(capture.Float32Box(lo, hi), surface, [np.eye(4)]*2, 0., 1.)
+        box = phase.SkinSpan(capture.Float32Box(np.zeros((3, 3))), [context])
+        report = self.overlay_fixture(surface, box); original = report['continuous_native']['closed_boxes'][0]['triangle_area']['hoof']['certificates'][0]
+        self.assertNotEqual(sum(Q(*c['homogeneous'][3]) for c in original['edge_coefficients'][0]), 0)
+        proof = next(iter(phase.projection_overlay(report)['certificates'].values()))
+        residual = proof['branches'][0]['projection']['native_residual_interval']
+        self.assertLess(Q(*residual[0]), 0); self.assertGreater(Q(*residual[1]), 0)
+        phase.validate_shape_certificate(original, report['shape_proof']['shared_skin_certificates'])
+        altered = copy.deepcopy(original); altered['branches'][0]['vertex_native_residual_absolute'][0][0] = [0, 1]
+        with self.assertRaises(ValueError):
+            phase.validate_shape_certificate(altered, report['shape_proof']['shared_skin_certificates'])
+
+    def test_parent_uses_both_child_minima_and_never_restarts_birth(self):
+        fixture = CorrelatedTriangleTests(); surface = fixture.surface()
+        a, b = phase.REFINEMENT_PARENT; mid = (a+b)/2
+        def triangle(xlo, xhi, seconds):
+            lo = np.eye(4)[:3].reshape(1, 3, 4); hi = lo.copy()
+            lo[0, 0, 0], hi[0, 0, 0] = xlo, xhi
+            context = phase.skin_context(capture.Float32Box(lo, hi), surface, [np.eye(4)], *seconds)
+            box = phase.SkinSpan(capture.Float32Box(np.zeros((3, 3))), [context])
+            return phase.json_value(phase.correlated_triangle(box, surface, [0, 1, 2])), context
+        anchor, anchor_context = triangle(1., 1., (0., 0.))
+        contexts = {anchor_context['sha256']: phase.json_value(anchor_context['identity'])}
+        def row(xlo, xhi, seconds):
+            proof, context = triangle(xlo, xhi, seconds)
+            contexts[context['sha256']] = phase.json_value(context['identity'])
+            dot = capture.box_dot(capture.Float32Box(*proof['cross_interval']), capture.Float32Box(*anchor['cross_interval']), 3)
+            return {'seconds': seconds, 'triangle_area': {'hoof': {'native_triangle_ids': [7], 'certificates': [proof]}},
+                'triangle_shape': {'hoof': {'native_triangle_ids': [7], 'certificates': [
+                    {'current': proof, 'birth': anchor, 'orientation_interval': [float(dot.lo), float(dot.hi)]}]}}}
+        parent = row(-1., 1., [a, b]); children = [row(-1., -.5, [a, mid]), row(.75, 1., [mid, b])]
+        report = {'work_used': {'correlated_triangles': {'per_cross_monomial_bound': 6912}},
+            'continuous_native': {'closed_boxes': [parent]}, 'shape_refinement': {
+            'children': children, **phase.aggregate_refined_shape(parent, children)},
+            'shape_proof': {'shared_skin_certificates': contexts}}
+        report['centered_wedge'] = phase.centered_overlay(report)
+        report['centered_wedge']['work'].update(finite_component_range_bound=50052, finite_monomial_bound=115319808)
+        result = phase.projection_overlay(report)
+        target = result['area_targets'][0]
+        self.assertEqual(target['lower_bound'], min(target['child_lower_bounds']))
+        self.assertGreater(target['lower_bound'], .49)
+        birth = result['birth_targets'][0]
+        self.assertEqual(birth['outcome'], 'UNKNOWN')
+        self.assertLess(birth['child_dot_lower_bounds'][0], 0)
+        self.assertGreater(birth['child_dot_lower_bounds'][1], 0)
+        self.assertTrue(all(c['birth_targets'][0]['original_birth_sha256'] == phase.canonical_digest(anchor) for c in result['children']))
+
+    def test_partial_projection_mode_rejects_before_loading_native(self):
+        with patch.object(phase, 'load_inputs', side_effect=AssertionError('must not load native')):
+            with self.assertRaisesRegex(ValueError, 'Projection requires accepted263'):
+                phase.build(Path('/unused'), projection_baseline_report=Path('/unused'))
 
 
 class ShapeRefinementTests(unittest.TestCase):
@@ -1731,6 +2225,57 @@ class AcceptedCenteredReportTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 phase.validate_centered_overlay(report)
             overlay[key].append(removed)
+
+
+@unittest.skipUnless(os.environ.get('CAV_PROJECTION_REPORT'), 'explicit final normal projection report required')
+class AcceptedProjectionReportTests(unittest.TestCase):
+    def test_all_targets_predecessor_custody_history_and_rehashed_science_rejection(self):
+        report = json.loads(Path(os.environ['CAV_PROJECTION_REPORT']).read_text())
+        baseline = capture.read_bound(Path(report['input_locations']['projection_baseline_report']), phase.PROJECTION_BASELINE_SHA)
+        phase.validate_projection_predecessor(report, baseline)
+        phase.validate_projection_certificates(report['normal_projection'], report)
+        projection = report['normal_projection']
+        self.assertEqual(report['version'], 9)
+        self.assertEqual(len(report['inputs']), 806)
+        self.assertEqual(len(report['accepted263_input_bindings']), 805)
+        self.assertEqual(report['centered_wedge'], baseline['centered_wedge'])
+        self.assertEqual(projection['before_counts'], {'area': {'CLOSED': 5046, 'UNKNOWN': 2714},
+            'birth': {'CLOSED': 1983, 'UNKNOWN': 814}})
+        self.assertEqual(set(projection['certificates']), set(baseline['centered_wedge']['certificates']))
+        for kind, count in [('area_targets', 7760), ('birth_targets', 2797)]:
+            self.assertEqual(len(projection[kind]), count)
+            self.assertEqual([(t['seconds'], t['hoof'], t['native_triangle_id'], t['original_local_triangle_index']) for t in projection[kind]],
+                [(t['seconds'], t['hoof'], t['native_triangle_id'], t['original_local_triangle_index']) for t in baseline['centered_wedge'][kind]])
+            self.assertTrue(all(t['outcome'] == 'CLOSED' for t in projection[kind] if t['before'] == 'CLOSED'))
+        for child, old in zip(projection['children'], baseline['centered_wedge']['children']):
+            self.assertEqual(child['seconds'], old['seconds'])
+            self.assertEqual(len(child['area_targets']), 194); self.assertEqual(len(child['birth_targets']), 148)
+            self.assertEqual([t['original_birth_sha256'] for t in child['birth_targets']],
+                [t['original_birth_sha256'] for t in old['birth_targets']])
+        work = projection['work']
+        self.assertEqual((work['preflight_scalar_ranges'], work['preflight_canonical_monomials']), (40330, 103137600))
+        self.assertEqual((work['finite_component_range_bound'], work['finite_monomial_bound']), (50052, 115319808))
+        self.assertLessEqual(work['scalar_ranges'], 50052); self.assertLessEqual(work['canonical_monomials'], 115319808)
+        self.assertTrue(all(report['claims'][key] is False for key in ('success_dependency', 'verified_physical_candidate',
+            'phase_runtime_unblocked', 'surface_unblocked', 'contact_certificate', 'live_window_or_FPS_acceptance')))
+        self.assertIsNone(report['claims']['policy_E'])
+        # Rehashing an altered proof cannot create a valid predecessor science alias.
+        proofs = report['continuous_native']['finite_acos_constants']; proof = proofs[0]
+        old = proof.copy(); proof['omega_interval'] = [[0, 1], [1, 1]]
+        proof['sha256'] = phase.canonical_digest({k: v for k, v in proof.items()
+            if k not in ('sha256', 'track', 'key_index', 'source_keys')})
+        with self.assertRaises(ValueError):
+            phase.validate_projection_predecessor(report, baseline)
+        proof.clear(); proof.update(old)
+        for key in ('area_targets', 'children'):
+            removed = projection[key].pop()
+            with self.assertRaises(ValueError):
+                phase.validate_projection_certificates(projection, report)
+            projection[key].append(removed)
+        original = report['inputs']['projection_baseline_report']; report['inputs']['projection_baseline_report'] = '0'*64
+        with self.assertRaises(ValueError):
+            phase.validate_projection_overlay(report)
+        report['inputs']['projection_baseline_report'] = original
 
 
 if __name__ == '__main__':

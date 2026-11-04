@@ -964,6 +964,61 @@ def cross_box(a, b):
                              a[0]*b[1]-a[1]*b[0]])
 
 
+def _branch_endpoints(box):
+    # Byte keys retain signed zero; cached values never own mutable arrays.
+    return (box.lo.shape, box.lo.astype('>f8').tobytes(), box.hi.astype('>f8').tobytes())
+
+
+def _branch_box(encoded):
+    shape, lo, hi = encoded
+    return native.Float32Box(np.frombuffer(lo, dtype='>f8').reshape(shape),
+                             np.frombuffer(hi, dtype='>f8').reshape(shape))
+
+
+@lru_cache(maxsize=LIMITS['max_constraints'], typed=True)
+def _correlated_branch_numeric(coefficients, joint_slots, intervals, residuals, precision, profile):
+    require(type(precision) is int and precision == 24 and type(profile) is str
+            and profile == 'binary32-outward-wedge-ordered-residual-cross-direct-intersection-v1',
+            'Unsupported native triangle arithmetic profile')
+    lo = np.zeros((max(joint for slots in joint_slots for joint in slots)+1, 3, 4))
+    hi = lo.copy()
+    for joint, encoded in intervals:
+        matrix = _branch_box(encoded); lo[joint], hi[joint] = matrix.lo, matrix.hi
+    matrices = native.Float32Box(lo, hi); f = native.Float32Box
+    errors = [tuple(residuals[0][k]+residuals[e][k] for k in range(3)) for e in (1, 2)]
+    references = []
+    for edge in coefficients:
+        value = f([0., 0., 0.])
+        for joint, h in edge:
+            for k, coefficient in enumerate(h):
+                if coefficient:
+                    value = value+matrices[joint][:, k]*float_box((coefficient, coefficient))
+        references.append(value)
+    # Expand the wedge BEFORE interval evaluation. Both edge terms use the
+    # same matrix variable; antisymmetric exact coefficients cancel first.
+    terms = triangle_wedge(coefficients)
+    if terms:
+        j, k, l, m, coefficients_ = zip(*terms)
+        a, b = np.array([1, 2, 0])[:, None], np.array([2, 0, 1])[:, None]
+        first = f(matrices.lo[np.array(j)[None, :], a, np.array(k)[None, :]],
+                  matrices.hi[np.array(j)[None, :], a, np.array(k)[None, :]])
+        second = f(matrices.lo[np.array(l)[None, :], b, np.array(m)[None, :]],
+                   matrices.hi[np.array(l)[None, :], b, np.array(m)[None, :]])
+        exact_coefficients = np.asarray(list(map(float, coefficients_)))
+        products = first*second*f.outward(exact_coefficients, exact_coefficients)
+        reference_cross = f([0., 0., 0.])
+        for i in range(len(terms)):
+            reference_cross = reference_cross+products[:, i]
+    else:
+        reference_cross = f([0., 0., 0.])
+    delta = [native.Float32Box.outward(-np.array(list(map(float, e))), np.array(list(map(float, e)))) for e in errors]
+    cross = reference_cross+cross_box(references[0], delta[1])+cross_box(delta[0], references[1])+cross_box(delta[0], delta[1])
+    actual_edges = [r+d for r, d in zip(references, delta)]
+    direct = cross_box(*actual_edges)
+    cross = f(np.maximum(cross.lo, direct.lo), np.minimum(cross.hi, direct.hi))
+    return _branch_endpoints(cross), tuple(_branch_endpoints(edge) for edge in actual_edges)
+
+
 def correlated_triangle(box, surface, face):
     require(isinstance(box, SkinSpan), 'Missing shared native skin matrices')
     contexts, crosses, edges_output, residual_output = [], [], [], []
@@ -992,36 +1047,12 @@ def correlated_triangle(box, surface, face):
                 'Missing native bind influence')
         residuals = [skin_vertex_residual(context, i) for i in ids]
         errors = [tuple(residuals[0][k]+residuals[e][k] for k in range(3)) for e in (1, 2)]
-        references = []
-        for edge in coefficients:
-            value = f([0., 0., 0.])
-            for joint, h in edge:
-                for k, coefficient in enumerate(h):
-                    if coefficient:
-                        value = value+matrices[joint][:, k]*float_box((coefficient, coefficient))
-            references.append(value)
-        # Expand the wedge BEFORE interval evaluation. Both edge terms use the
-        # same matrix variable; antisymmetric exact coefficients cancel first.
-        terms = triangle_wedge(coefficients)
-        if terms:
-            j, k, l, m, coefficients_ = zip(*terms)
-            a, b = np.array([1, 2, 0])[:, None], np.array([2, 0, 1])[:, None]
-            first = f(matrices.lo[np.array(j)[None, :], a, np.array(k)[None, :]],
-                      matrices.hi[np.array(j)[None, :], a, np.array(k)[None, :]])
-            second = f(matrices.lo[np.array(l)[None, :], b, np.array(m)[None, :]],
-                       matrices.hi[np.array(l)[None, :], b, np.array(m)[None, :]])
-            exact_coefficients = np.asarray(list(map(float, coefficients_)))
-            products = first*second*f.outward(exact_coefficients, exact_coefficients)
-            reference_cross = f([0., 0., 0.])
-            for i in range(len(terms)):
-                reference_cross = reference_cross+products[:, i]
-        else:
-            reference_cross = f([0., 0., 0.])
-        delta = [native.Float32Box.outward(-np.array(list(map(float, e))), np.array(list(map(float, e)))) for e in errors]
-        cross = reference_cross+cross_box(references[0], delta[1])+cross_box(delta[0], references[1])+cross_box(delta[0], delta[1])
-        actual_edges = [r+d for r, d in zip(references, delta)]
-        direct = cross_box(*actual_edges)
-        cross = f(np.maximum(cross.lo, direct.lo), np.minimum(cross.hi, direct.hi))
+        joint_slots = tuple(tuple(joints) for _, joints, _ in raw)
+        intervals = tuple((joint, _branch_endpoints(matrices[joint]))
+                          for joint in sorted({j for slots in joint_slots for j in slots}))
+        encoded_cross, encoded_edges = _correlated_branch_numeric(coefficients, joint_slots, intervals,
+            tuple(residuals), 24, 'binary32-outward-wedge-ordered-residual-cross-direct-intersection-v1')
+        cross, actual_edges = _branch_box(encoded_cross), [_branch_box(edge) for edge in encoded_edges]
         crosses.append(cross)
         contexts.append(context['sha256'])
         edges_output.append([{'interval': [e.lo, e.hi], 'native_residual_absolute': error}
@@ -1296,6 +1327,260 @@ def centered_overlay(report, observations=()):
             'component_ranges': 3*len(branches), 'canonical_monomials': term_count, 'finite_monomial_bound': bound,
             'finite_component_range_bound': 6*len(certificates)},
         'scope': 'Exact centered quadratic reference ranges plus the full unchanged native ordered residual; existing normal intersection and original birth start/winding. All original spans and both existing children; no acquisition or physical acceptance.'}
+
+
+PROJECTION_METHOD = 'exact-rational-shared-normal-projection-native-residual-v1'
+PROJECTION_BASELINE_SHA = 'cea3db10bf4437d5925c6bcc82a6ec92fce7429de4574f71a6a03f6c1b29546c'
+
+
+def projection_scalar(components, domain_items, covector, residual):
+    vector = tuple(map(rational, covector))
+    errors = tuple(tuple(map(rational, side)) for side in residual)
+    require(len(components) == len(vector) == 3 and len(errors) == 2
+            and all(len(side) == 3 for side in errors)
+            and all(a <= b for a, b in zip(*errors)), 'Malformed projection covector/residual')
+    scalar, error, interval = _projection_scalar(components, domain_items, vector, errors)
+    return {'covector': vector, 'scalar': dict(scalar),
+            'native_residual_interval': error, 'projection_interval': interval}
+
+
+@lru_cache(maxsize=LIMITS['max_constraints'])
+def _projection_scalar(components, domain_items, vector, residual):
+    # Shared (bind,row,column) identities survive contraction before range evaluation.
+    terms = tuple((a, b, c*v) for component, v in zip(components, vector)
+                  for a, b, c in component if c*v)
+    scalar = centered_component(terms, domain_items)
+    error = tuple(sum((min if side == 0 else max)(v*a, v*b)
+        for v, a, b in zip(vector, *residual)) for side in (0, 1))
+    interval = tuple(a+b for a, b in zip(scalar['interval'], error))
+    return tuple(sorted(scalar.items())), error, interval
+
+
+def projection_area_lower(projection):
+    ell = projection['projection_interval'][0]
+    norm = sum(v*v for v in projection['covector'])
+    squared = ell*ell/norm if ell > 0 and norm > 0 else Q(0)
+    lower = float(float_box(sqrt_bounds(squared)).lo) if squared else 0.
+    return {'squared_lower': squared, 'lower': lower}
+
+
+def projection_birth_lower(projection, current, anchor):
+    current, anchor = [tuple(tuple(map(rational, side)) for side in box) for box in (current, anchor)]
+    require(all(len(box) == 2 and all(len(side) == 3 for side in box)
+                and all(a <= b for a, b in zip(*box)) for box in (current, anchor)), 'Malformed original anchor/current box')
+    center = tuple((a+b)/2 for a, b in zip(*anchor))
+    beta = tuple((b-a)/2 for a, b in zip(*anchor))
+    require(center == projection['covector'], 'Changed original birth center')
+    magnitudes = tuple(max(abs(a), abs(b)) for a, b in zip(*current))
+    subtraction = sum(m*b for m, b in zip(magnitudes, beta))
+    return {'anchor_box': anchor, 'anchor_center': center, 'anchor_radii': beta,
+        'current_magnitudes': magnitudes, 'uncertainty_subtraction': subtraction,
+        'dot_lower': projection['projection_interval'][0]-subtraction}
+
+
+def projection_overlay(report):
+    """Contract shared normals; retain the accepted overlay and original anchor boxes."""
+    previous = report['centered_wedge']
+    old_work = previous['work']
+    area_bound = sum(len(p['branches']) for p in previous['certificates'].values())
+    birth_bound = 2*(len(previous['birth_targets'])+sum(len(c['birth_targets']) for c in previous['children']))
+    require(old_work['component_ranges']+area_bound+birth_bound <= old_work['finite_component_range_bound']
+            and old_work['canonical_monomials']+6912*(area_bound+birth_bound) <= old_work['finite_monomial_bound'],
+            'Projection existing finite range/monomial preflight bound exhausted')
+    matrices = report['shape_proof']['shared_skin_certificates']
+    domains = centered_domains(matrices)
+    rows = report['continuous_native']['closed_boxes']
+    refinement = report['shape_refinement']
+    parent = next(r for r in rows if r['seconds'] == REFINEMENT_PARENT)
+    require(all(refinement[k] == v for k, v in aggregate_refined_shape(parent, refinement['children']).items())
+            and len(previous['children']) == len(refinement['children']) == 2,
+            'Changed projection child partition/anchor')
+    originals = {}
+    for row in rows+refinement['children']:
+        if 'reason' not in row:
+            for area in row['triangle_area'].values():
+                for proof in area['certificates']:
+                    originals[canonical_digest(proof)] = proof
+            for shape in row['triangle_shape'].values():
+                for proof in shape['certificates']:
+                    originals[canonical_digest(proof['birth'])] = proof['birth']
+    require(set(originals) == set(previous['certificates']), 'Missing projection original/anchor certificate')
+    coefficients, rectangles, centered = {}, {}, {}
+    for digest, original in originals.items():
+        expected = json_value(_centered_triangle(original, domains))
+        require(expected == previous['certificates'][digest], 'Changed projection predecessor polynomial/residual')
+        centered[digest] = expected
+        raw = tuple(tuple(tuple(v) for v in row) for row in original['raw_vertices_joints_weights'])
+        components = centered_monomials(triangle_coefficients(raw))
+        coefficients[digest] = components
+        variables = sorted({v for terms in components for a, b, _ in terms for v in (a, b)})
+        rectangles[digest] = [tuple((v, context[2][0][v[0]][v[1]][v[2]], context[2][1][v[0]][v[1]][v[2]])
+            for v in variables) for context in (domains[b['shared_transform_sha256']] for b in expected['branches'])]
+    range_count, term_count = 0, 0
+    def scalar(digest, index, vector):
+        nonlocal range_count, term_count
+        branch = centered[digest]['branches'][index]
+        result = projection_scalar(coefficients[digest], rectangles[digest][index], vector, branch['residual_cross_interval'])
+        range_count += 1; term_count += result['scalar']['canonical_monomials']
+        require(result['scalar']['canonical_monomials'] <= 6912, 'Projection per-scalar finite monomial bound')
+        return {'shared_transform_sha256': branch['shared_transform_sha256'],
+                'native_residual_sha256': branch['native_residual_sha256'], 'projection': result}
+    certificates = {}
+    for digest, old in centered.items():
+        branches = []
+        for index, branch in enumerate(old['branches']):
+            constants = tuple(Q(*c['constant']) for c in branch['components'])
+            largest = max(map(abs, constants))
+            if largest:
+                proof = scalar(digest, index, tuple(c/largest for c in constants))
+                branches.append({**proof, 'area': projection_area_lower(proof['projection'])})
+            else:
+                branches.append({'shared_transform_sha256': branch['shared_transform_sha256'],
+                    'native_residual_sha256': branch['native_residual_sha256'],
+                    'zero_center': True, 'area': {'squared_lower': Q(0), 'lower': 0.}})
+        lower = max(old['twice_area_interval'][0], min(b['area']['lower'] for b in branches))
+        require(lower <= old['twice_area_interval'][1], 'Empty projection area intersection/refutation')
+        certificates[digest] = {'original_certificate_sha256': digest,
+            'centered_certificate_sha256': canonical_digest(old), 'branches': branches, 'lower_bound': lower}
+    birth_certificates = {}
+    def birth_proof(current_digest, anchor_digest):
+        key = canonical_digest([current_digest, anchor_digest])
+        if key not in birth_certificates:
+            current, anchor = centered[current_digest], centered[anchor_digest]
+            anchor_box = tuple(tuple(map(rational, side)) for side in anchor['cross_interval'])
+            vector = tuple((a+b)/2 for a, b in zip(*anchor_box))
+            branches = []; uncertainty = None
+            for index in range(len(current['branches'])):
+                proof = scalar(current_digest, index, vector)
+                result = projection_birth_lower(proof['projection'], current['cross_interval'], anchor_box)
+                uncertainty = {k: v for k, v in result.items() if k != 'dot_lower'}
+                branches.append({**proof, 'dot_lower': result['dot_lower']})
+            lower = min(b['dot_lower'] for b in branches)
+            birth_certificates[key] = {'current_sha256': current_digest, 'original_birth_sha256': anchor_digest,
+                'centered_current_sha256': canonical_digest(current), 'centered_birth_sha256': canonical_digest(anchor),
+                'branches': branches, 'uncertainty': uncertainty, 'dot_lower': lower}
+        return key, birth_certificates[key]
+    def identity(t):
+        return t['hoof'], t['native_triangle_id'], t['original_local_triangle_index']
+    def targets(row, old_areas, old_births):
+        areas, births = [], []
+        if 'reason' in row:
+            require(not old_areas and not old_births, 'Unexpected projection unclosed-row targets')
+            return {'seconds': row['seconds'], 'reason': row['reason'], 'area_targets': [], 'birth_targets': []}
+        area_map, birth_map = [{identity(t): t for t in ts} for ts in (old_areas, old_births)]
+        require(len(area_map) == len(old_areas) and len(birth_map) == len(old_births), 'Duplicate projection target')
+        for hoof, area in row['triangle_area'].items():
+            require(len(area['native_triangle_ids']) == len(area['certificates']), 'Missing projection material face')
+            for index, face in enumerate(area['native_triangle_ids']):
+                key = hoof, face, index; old = area_map.pop(key)
+                digest = canonical_digest(area['certificates'][index])
+                require(old['seconds'] == row['seconds'] and old['current_sha256'] == digest, 'Changed projection target identity')
+                lower = max(old['lower_bound'], certificates[digest]['lower_bound'])
+                areas.append({**old, 'before': old['outcome'], 'lower_bound': lower,
+                    'outcome': 'CLOSED' if lower > 0 else 'UNKNOWN',
+                    'reasons': [] if lower > 0 else ['area_interval_contains_zero']})
+                if hoof in row['triangle_shape']:
+                    shape = row['triangle_shape'][hoof]
+                    require(shape['native_triangle_ids'] == area['native_triangle_ids']
+                            and len(shape['certificates']) == len(area['certificates']), 'Missing projection birth face')
+                    anchor = shape['certificates'][index]; old = birth_map.pop(key)
+                    anchor_digest = canonical_digest(anchor['birth'])
+                    require(anchor['current'] == area['certificates'][index] and old['current_sha256'] == digest
+                            and old['seconds'] == row['seconds'] and old['original_birth_sha256'] == anchor_digest,
+                            'Changed projection original birth/current identity')
+                    proof_digest, proof = birth_proof(digest, anchor_digest)
+                    dot = max(old.get('dot_lower_bound', old['dot_interval'][0]),
+                              float(float_box((proof['dot_lower'], proof['dot_lower'])).lo))
+                    births.append({**old, 'before': old['outcome'], 'birth_projection_sha256': proof_digest,
+                        'area_lower_bound': lower, 'dot_lower_bound': dot,
+                        'outcome': 'CLOSED' if min(lower, dot) > 0 else 'UNKNOWN',
+                        'reasons': sorted(([] if lower > 0 else ['area_interval_contains_zero'])+
+                                          ([] if dot > 0 else ['birth_dot_interval_nonpositive']))})
+        require(not area_map and not birth_map, 'Extra projection target/anchor')
+        return {'seconds': row['seconds'], 'area_targets': areas, 'birth_targets': births}
+    projected = [targets(r, [t for t in previous['area_targets'] if t['seconds'] == r['seconds']],
+                           [t for t in previous['birth_targets'] if t['seconds'] == r['seconds']]) for r in rows]
+    children = []
+    for row, old in zip(refinement['children'], previous['children']):
+        require(row['seconds'] == old['seconds'], 'Changed projection child domain')
+        children.append(targets(row, old['area_targets'], old['birth_targets']))
+    selected = next(r for r in projected if r['seconds'] == REFINEMENT_PARENT)
+    for kind in ('area_targets', 'birth_targets'):
+        maps = [{identity(t): t for t in child[kind]} for child in children]
+        for target in selected[kind]:
+            pieces = [m.get(identity(target)) for m in maps]
+            if kind == 'area_targets':
+                bounds = [p['lower_bound'] if p else None for p in pieces]
+                target['lower_bound'] = max(target['lower_bound'], min(bounds) if None not in bounds else 0.)
+                target['child_lower_bounds'] = bounds
+                lower = target['lower_bound']
+                target['reasons'] = [] if lower > 0 else ['area_interval_contains_zero']
+            else:
+                require(all(p is None or p['original_birth_sha256'] == target['original_birth_sha256'] for p in pieces),
+                        'Changed projection child birth anchor')
+                bounds = [p['area_lower_bound'] if p else None for p in pieces]
+                dots = [p['dot_lower_bound'] if p else None for p in pieces]
+                target['area_lower_bound'] = max(target['area_lower_bound'], min(bounds) if None not in bounds else 0.)
+                target['dot_lower_bound'] = max(target['dot_lower_bound'], min(dots) if None not in dots else target['dot_lower_bound'])
+                target['child_area_lower_bounds'], target['child_dot_lower_bounds'] = bounds, dots
+                lower = min(target['area_lower_bound'], target['dot_lower_bound'])
+                target['reasons'] = sorted(([] if target['area_lower_bound'] > 0 else ['area_interval_contains_zero'])+
+                                          ([] if target['dot_lower_bound'] > 0 else ['birth_dot_interval_nonpositive']))
+            target['outcome'] = 'CLOSED' if lower > 0 else 'UNKNOWN'
+    areas = [t for row in projected for t in row['area_targets']]
+    births = [t for row in projected for t in row['birth_targets']]
+    ranges = old_work['component_ranges']+range_count
+    terms = old_work['canonical_monomials']+term_count
+    require(old_work['component_ranges']+area_bound+birth_bound <= old_work['finite_component_range_bound']
+            and old_work['canonical_monomials']+6912*(area_bound+birth_bound) <= old_work['finite_monomial_bound']
+            and ranges <= old_work['finite_component_range_bound'] and terms <= old_work['finite_monomial_bound'],
+            'Projection existing finite range/monomial work bound exhausted')
+    return json_value({'method': PROJECTION_METHOD, 'certificates': certificates, 'birth_certificates': birth_certificates,
+        'area_targets': areas, 'birth_targets': births, 'children': children,
+        'before_counts': previous['counts'],
+        'counts': {k: {'CLOSED': sum(t['outcome'] == 'CLOSED' for t in ts),
+                       'UNKNOWN': sum(t['outcome'] == 'UNKNOWN' for t in ts)} for k, ts in [('area', areas), ('birth', births)]},
+        'work': {'scalar_ranges': ranges, 'canonical_monomials': terms, 'area_projection_bound': area_bound,
+            'birth_projection_bound': birth_bound, 'projection_scalar_ranges': range_count, 'projection_canonical_monomials': term_count,
+            'preflight_scalar_ranges': old_work['component_ranges']+area_bound+birth_bound,
+            'preflight_canonical_monomials': old_work['canonical_monomials']+6912*(area_bound+birth_bound),
+            'finite_component_range_bound': old_work['finite_component_range_bound'], 'finite_monomial_bound': old_work['finite_monomial_bound']},
+        'scope': 'One fixed rational center covector per existing native branch; full signed native residual. Original birth box center minus ALL anchor uncertainty. All original targets and both existing children; no new acquisition or physical acceptance.'})
+
+
+def validate_projection_certificates(proof, report):
+    previous = report['centered_wedge']
+    require(all(len(proof[k]) == len(previous[k]) for k in ('area_targets', 'birth_targets', 'children'))
+            and set(proof['certificates']) == set(previous['certificates']), 'Missing projection target/child/certificate')
+    require(proof == projection_overlay(report), 'Projection scalar/covector/residual/anchor/coverage replay differs')
+
+
+def validate_projection_predecessor(report, baseline):
+    require(baseline['version'] == 8 and len(baseline['inputs']) == 805
+            and report['accepted263_input_bindings'] == baseline['inputs']
+            and set(report['inputs']) == set(baseline['inputs']) | {'projection_baseline_report'}
+            and {k for k, v in baseline['inputs'].items() if report['inputs'][k] != v} <=
+                {'tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py'}
+            and report['centered_wedge'] == baseline['centered_wedge']
+            and report['accepted260_input_bindings'] == baseline['accepted260_input_bindings']
+            and report['accepted258_input_bindings'] == baseline['accepted258_input_bindings']
+            and preserved_shape_science(report) == preserved_shape_science(baseline),
+            'Accepted263 original inputs/centered proofs/anchors/history changed')
+
+
+def validate_projection_overlay(report):
+    require(report['inputs']['projection_baseline_report'] == PROJECTION_BASELINE_SHA
+            and report['atlas_input_packet']['projection_baseline_report_sha256'] == PROJECTION_BASELINE_SHA,
+            'Lost accepted263 projection binding')
+    baseline = native.read_bound(Path(report['input_locations']['projection_baseline_report']), PROJECTION_BASELINE_SHA)
+    validate_projection_predecessor(report, baseline)
+    validate_projection_certificates(report['normal_projection'], report)
+    actual = report['normal_projection']
+    require(len(actual['area_targets']) == 7760 and len(actual['birth_targets']) == 2797
+            and len(actual['children']) == 2
+            and (report['work_used']['attempts'], report['work_used']['refinement_splits'],
+                 report['work_used']['proposal_evaluations'], report['work_used']['float32_weight_values']) == (42, 1, 329, 1118),
+            'Projection original inventory/acquisition work changed')
 
 
 def shape_refutation(proofs, vertices, faces):
@@ -1914,12 +2199,12 @@ def verify_partition(closed, unclosed, length):
 
 
 def validate_diagnostic(report):
-    require(type(report['version']) is int and report['version'] in (1, 2, 3, 4, 5, 6, 7, 8), 'Report version')
-    if report['version'] in (2, 3, 4, 5, 6, 7, 8):
+    require(type(report['version']) is int and report['version'] in (1, 2, 3, 4, 5, 6, 7, 8, 9), 'Report version')
+    if report['version'] in (2, 3, 4, 5, 6, 7, 8, 9):
         binding = report['input_binding']
         require(binding['kind'] == 'native-reacquired-v1' and type(binding['version']) is int
                 and binding['version'] == 1, 'Input binding version')
-        require(report['step_id'] == ('CAV-CONTACT-PHASE-CENTERED-WEDGE-RANGE' if report['version'] == 8 else 'CAV-CONTACT-PHASE-SHAPE-REFINEMENT' if report['version'] == 7 else 'CAV-CONTACT-PHASE-TRIANGLE-BOUNDS' if report['version'] == 6 else 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if report['version'] == 5 else 'CAV-CONTACT-PHASE-QUATERNION-NORM' if report['version'] == 4 else ('CAV-CONTACT-PHASE-SLERP-BOUNDS' if report['version'] == 3 else 'CAV-CONTACT-PHASE-INPUT-BINDING'))
+        require(report['step_id'] == ('CAV-CONTACT-PHASE-NORMAL-PROJECTION' if report['version'] == 9 else 'CAV-CONTACT-PHASE-CENTERED-WEDGE-RANGE' if report['version'] == 8 else 'CAV-CONTACT-PHASE-SHAPE-REFINEMENT' if report['version'] == 7 else 'CAV-CONTACT-PHASE-TRIANGLE-BOUNDS' if report['version'] == 6 else 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if report['version'] == 5 else 'CAV-CONTACT-PHASE-QUATERNION-NORM' if report['version'] == 4 else ('CAV-CONTACT-PHASE-SLERP-BOUNDS' if report['version'] == 3 else 'CAV-CONTACT-PHASE-INPUT-BINDING'))
                 and report['atlas_input_packet']['input_binding'] == binding
                 and report['atlas']['input_sha256'] == canonical_digest(report['atlas_input_packet'])
                 and report['inputs']['manifest'] == binding['manifest_sha256']
@@ -1930,7 +2215,7 @@ def validate_diagnostic(report):
     else:
         require(not any(k in report for k in ('input_binding', 'atlas_input_packet', 'input_locations')),
                 'Mixed legacy/new provenance')
-    if report['version'] in (3, 4, 5, 6, 7, 8):
+    if report['version'] in (3, 4, 5, 6, 7, 8, 9):
         require('arithmetic_proof' in report and report['atlas_input_packet'].get('arithmetic_proof') == report['arithmetic_proof']
                 and report['arithmetic_proof']['verifier_sha256'] == ARITHMETIC_VERIFIER_SHA
                 and report['inputs']['arithmetic_capture'] == report['arithmetic_proof']['capture_file_sha256']
@@ -1941,7 +2226,7 @@ def validate_diagnostic(report):
                 'Arithmetic proof/atlas binding differs')
         require(len(report['baseline_accounting']['coordinate_boxes']) == 69
                 and len(report['baseline_accounting']['shape_cases']) == 18, 'Incomplete prior unknown accounting')
-    if report['version'] in (4, 5, 6, 7, 8):
+    if report['version'] in (4, 5, 6, 7, 8, 9):
         require(report['inputs']['norm_baseline_report'] == NORM_BASELINE_SHA
                 and report['atlas_input_packet']['norm_baseline_report_sha256'] == NORM_BASELINE_SHA,
                 'Norm proof/accepted255 binding differs')
@@ -1962,7 +2247,7 @@ def validate_diagnostic(report):
                     return Q(*v) if isinstance(v, list) else rational(v)
                 require(lower('mixer_rounded_norm_squared') > 0 and lower('basis_rounded_norm_squared') > 0
                         and len(branch['hamilton_roundoff']) == 2, 'Unproved norm denominator')
-    if report['version'] in (5, 6, 7, 8):
+    if report['version'] in (5, 6, 7, 8, 9):
         require(report['inputs']['acos_baseline_report'] == ACOS_BASELINE_SHA
                 and report['atlas_input_packet']['acos_baseline_report_sha256'] == ACOS_BASELINE_SHA,
                 'Finite acos/accepted256 binding differs')
@@ -1997,7 +2282,7 @@ def validate_diagnostic(report):
                     omega = float_box((min(Q(*p['omega_interval'][0]) for p in matched),
                                        max(Q(*p['omega_interval'][1]) for p in matched)))
                     require(branch['omega_interval'] == json_value(list(box_interval(omega))), 'Stale finite acos omega hull')
-    if report['version'] in (6, 7, 8):
+    if report['version'] in (6, 7, 8, 9):
         require(all(report['claims'][k] is False for k in ['success_dependency', 'verified_physical_candidate',
                 'phase_runtime_unblocked', 'surface_unblocked', 'contact_certificate'])
                 and report['claims']['policy_E'] is None and report['claims']['original_12_gates_preserved'] is True,
@@ -2023,7 +2308,7 @@ def validate_diagnostic(report):
         require(len({f for p in patches.values() for f in p['native_sole_triangles']}) == 194,
                 'Duplicated/dropped original material face')
         child_rows = ([c for c in report['shape_refinement']['children'] if 'reason' not in c]
-                      if report['version'] in (7, 8) else [])
+                      if report['version'] in (7, 8, 9) else [])
         for row in report['continuous_native']['closed_boxes']+child_rows:
             require(set(row['triangle_area']) == set(patches), 'Missing full-cycle material area patch')
             for hoof, area in row['triangle_area'].items():
@@ -2072,10 +2357,12 @@ def validate_diagnostic(report):
                 and report['work_used']['correlated_triangles']['area_targets'] == 7760
                 and report['work_used']['correlated_triangles']['birth_orientation_targets'] == 2797,
                 'Incomplete full-cycle area/original birth target coverage')
-    if report['version'] in (7, 8):
+    if report['version'] in (7, 8, 9):
         validate_refined_shape(report)
-    if report['version'] == 8:
+    if report['version'] in (8, 9):
         validate_centered_overlay(report)
+    if report['version'] == 9:
+        validate_projection_overlay(report)
     require(report['status'] == 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY', 'Diagnostic status changed')
     validate_atlas(report['atlas'])
     require(canonical_digest(report['atlas']) == report['atlas_sha256'], 'Atlas coefficients/digest changed')
@@ -2210,7 +2497,7 @@ def baseline_accounting(baseline, closed, unclosed):
 
 def build(review_path, *, native_manifest=None, bundle_root=None,
           arithmetic_capture=None, arithmetic_receipt=None, baseline_report=None, norm_baseline_report=None,
-          acos_baseline_report=None, triangle_baseline_report=None, centered_baseline_report=None):
+          acos_baseline_report=None, triangle_baseline_report=None, centered_baseline_report=None, projection_baseline_report=None):
     proof_mode = arithmetic_capture is not None
     require((arithmetic_capture is None) == (arithmetic_receipt is None) == (baseline_report is None),
             'Arithmetic capture, receipt and baseline required together')
@@ -2221,6 +2508,12 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
     require(triangle_baseline_report is None or proof_mode, 'Shape refinement requires accepted arithmetic mode')
     require(centered_baseline_report is None or triangle_baseline_report is not None,
             'Centered range requires accepted260 refinement inputs')
+    require(projection_baseline_report is None or centered_baseline_report is not None,
+            'Projection requires accepted263 centered inputs')
+    projection_baseline = None
+    if projection_baseline_report is not None:
+        projection_baseline = native.read_bound(projection_baseline_report, PROJECTION_BASELINE_SHA)
+        require(projection_baseline['version'] == 8, 'Expected accepted263 baseline')
     centered_baseline = None
     if centered_baseline_report is not None:
         centered_baseline = native.read_bound(centered_baseline_report, CENTERED_BASELINE_SHA)
@@ -2265,6 +2558,8 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         context['locations']['triangle_baseline_report'] = str(triangle_baseline_report)
     if centered_baseline is not None:
         context['locations']['centered_baseline_report'] = str(centered_baseline_report)
+    if projection_baseline is not None:
+        context['locations']['projection_baseline_report'] = str(projection_baseline_report)
     phases = sorted({Q(0), Q(1), Q('.137'), Q('.25')}
                     | {Q(k['time'])/Q(capture['length']) for t in capture['tracks'] for k in t['keys']}
                     | {v for pair in supports.values() for v in pair})
@@ -2293,6 +2588,8 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         input_packet['triangle_baseline_report_sha256'] = TRIANGLE_BASELINE_SHA
     if centered_baseline is not None:
         input_packet['centered_baseline_report_sha256'] = CENTERED_BASELINE_SHA
+    if projection_baseline is not None:
+        input_packet['projection_baseline_report_sha256'] = PROJECTION_BASELINE_SHA
     atlas = make_atlas(phases, distances, canonical_digest(input_packet), capture['length'])
     samples, sampled, obstruction = captured_obstructions(capture, surface, binds, patches, supports,
                                                          samples_path, witness)
@@ -2512,11 +2809,13 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
                     {'tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py'},
                 'Accepted260 input custody changed')
         inputs['centered_baseline_report'] = CENTERED_BASELINE_SHA
+    if projection_baseline is not None:
+        inputs['projection_baseline_report'] = PROJECTION_BASELINE_SHA
     report = json_value({
         **({'shape_refinement': refinement, 'accepted258_input_bindings': triangle_baseline['inputs']} if refinement else {}),
         **({'input_binding': context['binding'], 'input_locations': context['locations'],
             'atlas_input_packet': input_packet} if context else {}),
-        'version': 8 if centered_baseline is not None else 7 if refinement else 6 if shape_baseline is not None else 5 if arithmetic else (2 if context else 1), 'step_id': 'CAV-CONTACT-PHASE-CENTERED-WEDGE-RANGE' if centered_baseline is not None else 'CAV-CONTACT-PHASE-SHAPE-REFINEMENT' if refinement else 'CAV-CONTACT-PHASE-TRIANGLE-BOUNDS' if shape_baseline is not None else 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if arithmetic else ('CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE'), 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
+        'version': 9 if projection_baseline is not None else 8 if centered_baseline is not None else 7 if refinement else 6 if shape_baseline is not None else 5 if arithmetic else (2 if context else 1), 'step_id': 'CAV-CONTACT-PHASE-NORMAL-PROJECTION' if projection_baseline is not None else 'CAV-CONTACT-PHASE-CENTERED-WEDGE-RANGE' if centered_baseline is not None else 'CAV-CONTACT-PHASE-SHAPE-REFINEMENT' if refinement else 'CAV-CONTACT-PHASE-TRIANGLE-BOUNDS' if shape_baseline is not None else 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if arithmetic else ('CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE'), 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
         **({'arithmetic_proof': arithmetic.binding, 'baseline_accounting': baseline_accounting(baseline, records, unclosed),
             'previous_operation_accounting': baseline_accounting(norm_baseline, records, unclosed),
             'norm_target_replays': norm_targets, 'acos_target_replays': acos_targets,
@@ -2578,6 +2877,12 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         report['centered_wedge'] = centered_overlay(report, centered_observations)
         report['reproduction']['build'] += ' --centered-baseline-report ACCEPTED260_REPORT'
         report['reproduction']['verify'] += ' --centered-baseline-report ACCEPTED260_REPORT'
+    if projection_baseline is not None:
+        report['accepted263_input_bindings'] = projection_baseline['inputs']
+        validate_projection_predecessor(report, projection_baseline)
+        report['normal_projection'] = projection_overlay(report)
+        report['reproduction']['build'] += ' --projection-baseline-report ACCEPTED263_REPORT'
+        report['reproduction']['verify'] += ' --projection-baseline-report ACCEPTED263_REPORT'
     return report
 
 
@@ -2596,6 +2901,7 @@ def main():
         p.add_argument('--norm-baseline-report', type=Path)
         p.add_argument('--acos-baseline-report', type=Path,
             help='Accepted256 v4 for v5 replay, or accepted257 v5 for correlated-triangle proof.')
+        p.add_argument('--projection-baseline-report', type=Path, help='Hash-bound accepted263 v8 for the shared scalar normal projection overlay.')
         p.add_argument('--centered-baseline-report', type=Path, help='Hash-bound accepted260 v7 for the stronger centered range overlay.')
         p.add_argument('--triangle-baseline-report', type=Path, help='Hash-bound accepted258 v6 for one selected-parent midpoint refinement.')
     args = parser.parse_args()
@@ -2610,9 +2916,10 @@ def main():
         require(proof_mode == (args.arithmetic_receipt is not None) == (args.baseline_report is not None),
                 'Arithmetic capture, receipt and baseline required together')
         if existing is not None:
-            require(existing['version'] in ((5, 6, 7, 8) if proof_mode else ((2,) if fresh else (1,)))
-                    and (existing['version'] in (7, 8)) == (args.triangle_baseline_report is not None)
-                    and (existing['version'] == 8) == (args.centered_baseline_report is not None), 'Report/input mode mismatch')
+            require(existing['version'] in ((5, 6, 7, 8, 9) if proof_mode else ((2,) if fresh else (1,)))
+                    and (existing['version'] in (7, 8, 9)) == (args.triangle_baseline_report is not None)
+                    and (existing['version'] in (8, 9)) == (args.centered_baseline_report is not None)
+                    and (existing['version'] == 9) == (args.projection_baseline_report is not None), 'Report/input mode mismatch')
         report = build(args.review_record.resolve(),
                        native_manifest=args.native_manifest.resolve() if fresh else None,
                        bundle_root=args.bundle_root.resolve() if fresh else None,
@@ -2622,7 +2929,8 @@ def main():
                        norm_baseline_report=args.norm_baseline_report.resolve() if args.norm_baseline_report else None,
                        acos_baseline_report=args.acos_baseline_report.resolve() if args.acos_baseline_report else None,
                        triangle_baseline_report=args.triangle_baseline_report.resolve() if args.triangle_baseline_report else None,
-                       centered_baseline_report=args.centered_baseline_report.resolve() if args.centered_baseline_report else None)
+                       centered_baseline_report=args.centered_baseline_report.resolve() if args.centered_baseline_report else None,
+                       projection_baseline_report=args.projection_baseline_report.resolve() if args.projection_baseline_report else None)
         validate_diagnostic(report)
         if args.command == 'build':
             args.out.write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False)+'\n')
