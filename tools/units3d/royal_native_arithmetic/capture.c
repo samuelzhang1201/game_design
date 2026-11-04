@@ -11,6 +11,12 @@
 #if !(defined(__APPLE__) && defined(__aarch64__)) && !(defined(__linux__) && defined(__x86_64__))
 #error Unsupported diagnostic architecture
 #endif
+#ifndef ROYAL_NATIVE_HEADER_SHA256
+#error The selected engine ABI header digest must be bound at build time
+#endif
+#ifndef ROYAL_NATIVE_ENGINE_SHA256
+#error The selected engine file digest must be bound at build time
+#endif
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
 #include <mach-o/loader.h>
@@ -221,6 +227,8 @@ GDExtensionBool royal_native_arithmetic_init(GDExtensionInterfaceGetProcAddress 
     fprintf(out, "{\"schema\":1,\"pid\":%ld,\"engine_path\":", (long)getpid()); quoted(engine.dli_fname);
     fprintf(out, ",\"engine_version\":"); quoted(version.string);
     fprintf(out, ",\"engine_version_components\":[%u,%u,%u]", version.major, version.minor, version.patch);
+    fprintf(out, ",\"header_sha256\":"); quoted(ROYAL_NATIVE_HEADER_SHA256);
+    fprintf(out, ",\"selected_engine_sha256\":"); quoted(ROYAL_NATIVE_ENGINE_SHA256);
 #if defined(__APPLE__)
     fprintf(out, ",\"platform\":\"macos-arm64\",\"engine_image_id\":");
 #else

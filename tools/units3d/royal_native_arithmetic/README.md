@@ -34,7 +34,12 @@ cross-check of the **actual slot target**, never the source of that target.
 `capture.json` includes the native PID, C API version, engine image UUID/build
 ID, slot/target/image addresses, loaded math image identity and code/constants;
 the GDScript side independently records the same PID, executable hash and
-version. The acquisition envelope includes executable, generated header,
+version. The header and selected executable SHA256s are embedded when compiling
+the collector; GDScript also hashes the loaded collector. A Linux executable
+with no GNU build ID retains that explicit absence and is identified by its
+whole-file SHA256, matching native path/PID/version and generated ABI header;
+this does not waive the loaded math library's build ID or instruction proof.
+The acquisition envelope includes executable, generated header,
 compiled collector and both diagnostic-source hashes. Captures are retained;
 the C output is created exclusively rather than overwritten.
 

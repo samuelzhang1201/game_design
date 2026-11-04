@@ -139,6 +139,7 @@ def binary_image_ids(path):
     else:
         images.append(raw)
     ids = []
+    valid_elf = False
     for image in images:
         if image[:4] == b"\xcf\xfa\xed\xfe":
             count = struct.unpack_from("<I", image, 16)[0]
@@ -150,6 +151,7 @@ def binary_image_ids(path):
                     ids.append(image[offset + 8:offset + 24].hex())
                 offset += size
         elif image[:6] == b"\x7fELF\x02\x01":
+            valid_elf = True
             offset = struct.unpack_from("<Q", image, 32)[0]
             entry_size, count = struct.unpack_from("<HH", image, 54)
             for i in range(count):
@@ -165,7 +167,7 @@ def binary_image_ids(path):
                     if name == b"GNU\x00" and kind == 3:
                         ids.append(image[start:start + ds].hex())
                     cursor = start + ((ds + 3) & ~3)
-    require(bool(ids), "missing_selected_binary_image_id")
+    require(bool(ids) or valid_elf, "missing_selected_binary_image_id")
     return ids
 
 
@@ -318,17 +320,24 @@ def mac_bounds(profiles):
 
 
 def prove(capture):
+    require(isinstance(capture, dict), "capture_object")
+    require(isinstance(capture.get("native", {}), dict), "native_object")
     require(capture.get("native", {}).get("platform") == "macos-arm64", "unknown_profile")
     require(capture.get("schema") == SCHEMA, "capture_schema")
+    require(all(isinstance(capture.get(key), dict) for key in ("engine", "acquisition")), "identity_envelope_object")
     native, engine, acquisition = capture["native"], capture["engine"], capture["acquisition"]
-    require(native.get("schema") == 1, "native_schema")
-    require(native.get("pid") == engine.get("pid") and type(native.get("pid")) is int, "process_identity")
+    require(type(native.get("schema")) is int and native["schema"] == 1, "native_schema")
+    require(type(native.get("pid")) is int and native["pid"] > 0 and native["pid"] == engine.get("pid"), "process_identity")
     require(native.get("engine_path") == engine.get("executable"), "engine_path_identity")
     require(engine.get("architecture") == "arm64", "engine_architecture")
+    require(isinstance(engine.get("version"), dict), "engine_version_object")
     require(native.get("engine_version_components") == [engine.get("version", {}).get(key) for key in ("major", "minor", "patch")], "engine_version_identity")
     require(native.get("engine_image_id") == acquisition.get("engine_image_id"), "engine_image_identity")
     require(native.get("engine_image_id") in acquisition.get("selected_binary_image_ids", []), "selected_engine_image_identity")
     require(engine.get("executable_sha256") == acquisition.get("engine_sha256"), "engine_hash_identity")
+    require(native.get("selected_engine_sha256") == acquisition.get("engine_sha256"), "native_engine_hash_identity")
+    require(native.get("header_sha256") == acquisition.get("header_sha256"), "abi_header_identity")
+    require(engine.get("collector_sha256") == acquisition.get("collector_sha256"), "collector_binary_identity")
     for field in ("header_sha256", "collector_sha256", "source_sha256", "script_sha256", "engine_sha256"):
         value = acquisition.get(field)
         require(isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value), "missing_acquisition_" + field)
@@ -375,11 +384,18 @@ def run(command, directory, env=None):
     return result.stdout
 
 
+def require_ignored(path):
+    result = subprocess.run(["git", "check-ignore", "--quiet", str(path.resolve())],
+                            cwd=ROOT.parents[2], capture_output=True, timeout=60)
+    require(result.returncode == 0, "output_not_ignored: " + str(path))
+
+
 def acquire(engine, scratch):
     engine = str(Path(engine).resolve(strict=True))
     engine_hash = file_hash(engine)
     engine_ids = binary_image_ids(engine)
     scratch = scratch.resolve()
+    require_ignored(scratch)
     scratch.mkdir(parents=True, exist_ok=False)
     (scratch / "project.godot").write_text('config_version=5\n[application]\nconfig/name="Native arithmetic diagnostic"\n[rendering]\nrenderer/rendering_method="gl_compatibility"\n')
     shutil.copyfile(ROOT / "capture.gd", scratch / "capture.gd")
@@ -389,18 +405,21 @@ def acquire(engine, scratch):
     compiler = shutil.which("cc")
     require(compiler is not None, "missing_existing_system_c_compiler")
     library = scratch / ("capture.dylib" if sys.platform == "darwin" else "capture.so")
-    command = [compiler, "-std=c11", "-Wall", "-Wextra", "-Werror", "-fPIC", "-I", str(scratch), str(ROOT / "capture.c")]
+    header_hash = file_hash(header)
+    command = [compiler, "-std=c11", "-Wall", "-Wextra", "-Werror", "-fPIC", "-I", str(scratch),
+               '-DROYAL_NATIVE_HEADER_SHA256="' + header_hash + '"',
+               '-DROYAL_NATIVE_ENGINE_SHA256="' + engine_hash + '"', str(ROOT / "capture.c")]
     command += ["-dynamiclib"] if sys.platform == "darwin" else ["-shared", "-ldl"]
     run(command + ["-o", str(library)], scratch)
     descriptor = scratch / "capture.gdextension"
     descriptor.write_text('[configuration]\nentry_symbol="royal_native_arithmetic_init"\ncompatibility_minimum="4.7"\n[libraries]\n' + ('macos.arm64' if sys.platform == "darwin" else 'linux.x86_64') + '="' + str(library) + '"\n')
     native_path = scratch / "native.json"
-    env = dict(os.environ, ROYAL_NATIVE_CAPTURE=str(native_path), ROYAL_NATIVE_EXTENSION=str(descriptor))
+    env = dict(os.environ, ROYAL_NATIVE_CAPTURE=str(native_path), ROYAL_NATIVE_EXTENSION=str(descriptor), ROYAL_NATIVE_LIBRARY=str(library))
     log = run([engine, "--headless", "--path", str(scratch), "--script", "res://capture.gd"], scratch, env)
     (scratch / "capture.log").write_text(log)
     require(file_hash(engine) == engine_hash, "engine_changed_during_capture")
     native = json.loads(native_path.read_text())
-    require(native.get("engine_image_id") in engine_ids, "loaded_engine_not_selected_binary")
+    require(native.get("engine_image_id") in engine_ids if engine_ids else native.get("engine_image_id") == "", "loaded_engine_not_selected_binary")
     capture = {"schema": SCHEMA, "native": native,
                "engine": json.loads(Path(str(native_path) + ".engine.json").read_text()),
                "acquisition": {"engine_sha256": engine_hash,
@@ -429,7 +448,9 @@ def main():
         else:
             capture = json.loads(args.verify.read_text())
         receipt = prove(capture)
-        args.receipt.write_text(json.dumps(receipt, indent=2) + "\n")
+        require_ignored(args.receipt)
+        with args.receipt.open("x") as stream:
+            stream.write(json.dumps(receipt, indent=2) + "\n")
         print(json.dumps(receipt, sort_keys=True))
         return 0
     except (Rejected, OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as error:

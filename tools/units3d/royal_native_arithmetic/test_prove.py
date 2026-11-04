@@ -29,9 +29,11 @@ def fixture():
             "native": {"schema": 1, "platform": "macos-arm64", "pid": 17,
                        "engine_path": "/fixture/Godot", "engine_version": "Godot Engine v4.7.2.stable.official",
                        "engine_version_components": [4, 7, 2],
-                       "engine_image_id": "01" * 16, "imports": records},
+                       "engine_image_id": "01" * 16, "imports": records,
+                       "header_sha256": "02" * 32, "selected_engine_sha256": "01" * 32},
             "engine": {"pid": 17, "executable": "/fixture/Godot", "architecture": "arm64",
-                       "version": {"string": "4.7.2-stable (official)", "major": 4, "minor": 7, "patch": 2}, "executable_sha256": "01" * 32},
+                       "version": {"string": "4.7.2-stable (official)", "major": 4, "minor": 7, "patch": 2},
+                       "executable_sha256": "01" * 32, "collector_sha256": "03" * 32},
             "acquisition": {"engine_sha256": "01" * 32, "engine_image_id": "01" * 16,
                             "selected_binary_image_ids": ["01" * 16],
                             "header_sha256": "02" * 32, "collector_sha256": "03" * 32,
@@ -40,6 +42,11 @@ def fixture():
 
 
 class NativeArithmeticTests(unittest.TestCase):
+    def test_generated_output_must_be_ignored_scratch(self):
+        proof.require_ignored(proof.ROOT.parents[2] / ".superpowers/royal-native-arithmetic/test-output")
+        with self.assertRaisesRegex(proof.Rejected, "output_not_ignored"):
+            proof.require_ignored(TOOL.with_name("unignored-output"))
+
     def test_selected_disk_uuid_and_build_id_are_independent_of_process_claim(self):
         macho = bytearray(56)
         struct.pack_into("<I", macho, 0, 0xfeedfacf)
@@ -59,6 +66,10 @@ class NativeArithmeticTests(unittest.TestCase):
             for raw in (macho, elf):
                 path.write_bytes(raw)
                 self.assertEqual(proof.binary_image_ids(path), [bytes(range(16)).hex()])
+            # Official Linux editor builds can have no GNU build-ID note.
+            struct.pack_into("<H", elf, 56, 0)
+            path.write_bytes(elf)
+            self.assertEqual(proof.binary_image_ids(path), [])
             path.write_bytes(b"unknown binary")
             with self.assertRaisesRegex(proof.Rejected, "missing_selected_binary"):
                 proof.binary_image_ids(path)
@@ -87,6 +98,19 @@ class NativeArithmeticTests(unittest.TestCase):
             self.assertEqual(F(theorem["outward_absolute_error"]), upper)
         self.assertEqual(receipt["theorems"]["acosf"]["domain"], ["9/10", "1"])
 
+    def test_malformed_envelopes_are_atomic_rejections(self):
+        for section, value in [("native", []), ("engine", None), ("acquisition", "untrusted")]:
+            bad = fixture()
+            bad[section] = value
+            with self.assertRaises(proof.Rejected, msg=section):
+                proof.prove(bad)
+        for field, value in [("imports", []), ("schema", True), ("pid", -1),
+                             ("engine_version_components", [4, 7, 99])]:
+            bad = fixture()
+            bad["native"][field] = value
+            with self.assertRaises(proof.Rejected, msg=field):
+                proof.prove(bad)
+
     def test_each_instruction_constant_and_import_identity_mutation_rejected(self):
         original = fixture()
         # Alter actual coefficient bits, a branch opcode, entry identity and resolution.
@@ -112,7 +136,8 @@ class NativeArithmeticTests(unittest.TestCase):
                                       ("native", "engine_image_id", "00" * 16),
                                       ("engine", "architecture", "x86_64"),
                                       ("engine", "executable_sha256", "ff" * 32),
-                                      ("acquisition", "header_sha256", ""),
+                                      ("acquisition", "header_sha256", "ff" * 32),
+                                      ("acquisition", "collector_sha256", "ff" * 32),
                                       ("acquisition", "source_sha256", "ff" * 32),
                                       ("acquisition", "script_sha256", "ff" * 32)]:
             bad = fixture()

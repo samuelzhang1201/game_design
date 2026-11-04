@@ -30,6 +30,7 @@ func _initialize() -> void:
 		"executable": OS.get_executable_path(),
 		"executable_sha256": FileAccess.get_sha256(OS.get_executable_path()),
 		"version": Engine.get_version_info(), "architecture": Engine.get_architecture_name(),
+		"collector_sha256": FileAccess.get_sha256(OS.get_environment("ROYAL_NATIVE_LIBRARY")),
 		"warmup": [sine, interpolated.x, interpolated.y, interpolated.z, interpolated.w]}))
 	file.close()
 	quit(0)
