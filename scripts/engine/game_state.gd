@@ -730,7 +730,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 					and fit == float(int(fit)) else fit
 	s.battle_aliases = _whole(d.get("battle_aliases", {}))   # older saves: none merged
 	s.battle_orders = _whole(d.get("battle_orders", {}))
-	s.unit_tasks = _whole(d.get("unit_tasks", {}))
+	s.unit_tasks = _raw_battle_value(d.get("unit_tasks", {})) if d.get("military_migration", {}).has("body_version") else _whole(d.get("unit_tasks", {}))
 	s.army_tasks = _whole(d.get("army_tasks", {}))
 	s.army_task_next_id = int(d.get("army_task_next_id", 0))
 	s.battle_events = _decode_values(d.get("battle_events", {}))
