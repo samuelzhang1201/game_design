@@ -232,3 +232,89 @@ func test_closed_descriptor_raw_json_and_same_older_cursors() -> void:
 			var begun := TickEngine.new(f.repo).begin_body_march_candidate(state) if version == 1 else TickEngine.new(f.repo).begin_locomotion_march_candidate(state)
 			assert_eq(begun.status, "error", "standalone march cannot begin behind closed movement")
 			assert_null(begun.candidate)
+
+func _safe_closed(api: GDScript, counts: Array = [200]) -> Dictionary:
+	var f := _fixture(counts)
+	var moved := _move(f)
+	if moved.is_empty(): return {}
+	var closed := _close(api, f.repo, moved.state)
+	assert_eq(closed.status, "complete", closed.reason)
+	if closed.candidate == null: return {}
+	f.state = closed.candidate
+	f.state.day_resolution = {}
+	f.state.military_migration.body_battle.sequence = "1"
+	f.state.military_migration.body_battle.receipt = BodyMotion._hash(["test safe enclosing transaction"])
+	f.state.military_migration.body_battle.result = UnitBodies._battle_result_hash(f.repo, f.state)
+	return f
+
+func test_standalone_later_cursor_authenticates_closed_proof() -> void:
+	var api := _api()
+	if api == null: return
+	var f := _safe_closed(api)
+	if f.is_empty(): return
+	var intents: Array = []
+	for row: Dictionary in UnitBodies.rows(f.repo, f.state, f.code):
+		intents.append({"unit": f.code, "slot": row.slot, "path_m": [[row.x_m, row.y_m], [row.x_m + 100, row.y_m]], "budget_m": 100, "hostile": false})
+	for change: String in ["valid", "priority", "closed_receipt", "outer_result", "unsealed"]:
+		var state := UnitBodies._copy(f.state)
+		match change:
+			"priority": state.military_migration.body_battle.closed_motion.priority.reverse()
+			"closed_receipt": state.military_migration.body_battle.closed_motion.receipt = "c".repeat(64)
+			"outer_result": state.military_migration.body_battle.result = "c".repeat(64)
+			"unsealed": state.military_migration.body_battle.sequence = "0"
+		for source: GameState in [state, _json(state)]:
+			var before := BodyMotion._hash(source.to_dict())
+			var v1 := BodyMotion.plan(f.repo, source, intents, source.absolute_day(), 1)
+			var v2 := BodyMotion.plan_locomotion_candidate(f.repo, source, intents, source.absolute_day(), 1)
+			assert_eq(v1.cursor.is_empty(), change != "valid", change + " v1 admission")
+			assert_eq(v2.cursor.is_empty(), change != "valid", change + " v2 admission")
+			for version: int in [1, 2]:
+				var plan: Dictionary = v1 if version == 1 else v2
+				if change != "valid":
+					# A forged numerical plan must not bypass public commit admission.
+					plan = BodyMotion._plan(f.repo, source, intents, source.absolute_day(), 1, {}, false) if version == 1 else BodyMotion._plan_locomotion(f.repo, source, intents, source.absolute_day(), 1, {}, false)
+				assert_false(plan.cursor.is_empty(), "complete numerical plan for admission check")
+				if plan.cursor.is_empty(): continue
+				var detached := UnitBodies._copy(source)
+				var result := BodyMotion.commit(f.repo, detached, plan) if version == 1 else BodyMotion.commit_locomotion_candidate(f.repo, detached, plan)
+				assert_eq(result.status, "complete" if change == "valid" else "error", change + " commit")
+				if change == "valid" and result.status == "complete":
+					var endpoint: GameState = detached if version == 1 else result.candidate
+					assert_eq(endpoint.regiments[f.code].body_groups[0].x_m, 50200, "legitimate later cursor moves once")
+				else: assert_eq(BodyMotion._hash(detached.to_dict()), before, "rejected commit preserves source")
+			assert_eq(BodyMotion._hash(source.to_dict()), before, change + " preserves source")
+
+func test_march_authenticates_closed_proof_before_private_staging() -> void:
+	var api := _api()
+	if api == null: return
+	var f := _safe_closed(api, [1000])
+	if f.is_empty(): return
+	var helper: GutTest = load("res://tests/engine/test_body_marches.gd").new()
+	helper.call("_runner", f, 1000)
+	assert_eq(helper.get_fail_count(), 0)
+	helper.free()
+	f.state.day += 1
+	f.state.military_migration.body_battle.result = UnitBodies._battle_result_hash(f.repo, f.state)
+	for version: int in [1, 2]:
+		for change: String in ["valid", "priority", "closed_receipt", "outer_result"]:
+			var state := _json(f.state)
+			match change:
+				"priority": state.military_migration.body_battle.closed_motion.priority.reverse()
+				"closed_receipt": state.military_migration.body_battle.closed_motion.receipt = "c".repeat(64)
+				"outer_result": state.military_migration.body_battle.result = "c".repeat(64)
+			var before := BodyMotion._hash(state.to_dict())
+			var begun := TickEngine.new(f.repo).begin_body_march_candidate(state) if version == 1 else TickEngine.new(f.repo).begin_locomotion_march_candidate(state)
+			assert_eq(begun.status, "complete" if change == "valid" else "error", change + " march begin")
+			assert_eq(BodyMotion._hash(state.to_dict()), before)
+			if change != "valid" or begun.candidate == null: continue
+			var candidate: GameState = begun.candidate
+			for slice: int in 2:
+				var planned := ArmySystem.plan_body_march_candidate(f.repo, candidate) if version == 1 else ArmySystem.plan_locomotion_march_candidate(f.repo, candidate)
+				assert_eq(planned.status, "complete", planned.reason)
+				if planned.plan.is_empty(): break
+				var applied := ArmySystem.commit_body_march_candidate(f.repo, candidate, planned.plan) if version == 1 else ArmySystem.commit_locomotion_march_candidate(f.repo, candidate, planned.plan)
+				assert_eq(applied.status, "complete", applied.reason)
+				if applied.candidate == null: break
+				candidate = _json(applied.candidate)
+				assert_eq(candidate.day_resolution.body_march.next_substep, str(slice + 1))
+				assert_eq(candidate.regiments[f.code].supplies, 990 - slice * 10, "private run staging pays ten per slice once")

@@ -8,6 +8,8 @@ const INT_MIN: int = -9223372036854775807 - 1
 const INT_MAX: int = 9223372036854775807
 
 static func plan(repo: DataRepository, state: GameState, intents: Array, abs_day: int, substep: int, march_boundary: Dictionary = {}) -> Dictionary:
+	var error := UnitBodies._closed_motion_source_error(repo, state)
+	if not error.is_empty(): return _error(error)
 	return _plan(repo, state, intents, abs_day, substep, march_boundary, false)
 
 static func _plan(repo: DataRepository, state: GameState, intents: Array, abs_day: int, substep: int, march_boundary: Dictionary, battle: bool) -> Dictionary:
@@ -131,6 +133,11 @@ static func _plan(repo: DataRepository, state: GameState, intents: Array, abs_da
 			"basis": _hash([state.to_dict(), repo.unit_footprints, attempts, clearance, march_boundary, repo.world_table("political", "diplomacy") if not march_boundary.is_empty() else {}]), "intents": canonical_intents, "priority": next_priority}}
 
 static func commit(repo: DataRepository, state: GameState, proposed: Dictionary, march_boundary: Dictionary = {}) -> Dictionary:
+	var error := UnitBodies._closed_motion_source_error(repo, state)
+	if not error.is_empty(): return _failure(error)
+	return _commit(repo, state, proposed, march_boundary)
+
+static func _commit(repo: DataRepository, state: GameState, proposed: Dictionary, march_boundary: Dictionary) -> Dictionary:
 	if repo == null or state == null or not _keys(proposed, ["moves", "blocked", "reasons", "cursor"]) or not proposed.cursor is Dictionary:
 		return _failure("Invalid plan schema")
 	var cursor: Dictionary = proposed.cursor
@@ -151,7 +158,7 @@ static func commit(repo: DataRepository, state: GameState, proposed: Dictionary,
 		if _older(int(cursor.abs_day), int(cursor.substep), saved): return _failure("Stale plan cursor")
 		if int(cursor.abs_day) == int(saved.abs_day) and int(cursor.substep) == int(saved.substep):
 			return {"status": "complete", "reason": "Already committed"} if receipt == saved.receipt else _failure("Cursor already committed with another plan")
-	var expected := plan(repo, state, cursor.intents, int(cursor.abs_day), int(cursor.substep), march_boundary)
+	var expected := _plan(repo, state, cursor.intents, int(cursor.abs_day), int(cursor.substep), march_boundary, false)
 	if expected.cursor.is_empty() or _hash(expected) != receipt: return _failure("Stale or modified plan")
 	var candidate: GameState = validation.candidate
 	for move: Dictionary in expected.moves:
@@ -707,6 +714,8 @@ static func _loco_boundary_ok(boundary: Dictionary, abs_day: int, substep: int) 
 	return boundary.version == 2 and boundary.abs_day == abs_day and boundary.substep == substep
 
 static func plan_locomotion_candidate(repo: DataRepository, state: GameState, intents: Array, abs_day: int, substep: int, march_boundary: Dictionary = {}) -> Dictionary:
+	var error := UnitBodies._closed_motion_source_error(repo, state)
+	if not error.is_empty(): return _error(error)
 	return _plan_locomotion(repo, state, intents, abs_day, substep, march_boundary, false)
 
 static func plan_battle_locomotion_candidate(repo: DataRepository, state: GameState, intents: Array, boundary: Dictionary) -> Dictionary:
@@ -967,6 +976,11 @@ static func _loco_receipt_geometry_ok(repo: DataRepository, state: GameState, mo
 	return true
 
 static func commit_locomotion_candidate(repo: DataRepository, state: GameState, proposed: Dictionary, march_boundary: Dictionary = {}) -> Dictionary:
+	var error := UnitBodies._closed_motion_source_error(repo, state)
+	if not error.is_empty(): return _failure(error)
+	return _commit_locomotion(repo, state, proposed, march_boundary)
+
+static func _commit_locomotion(repo: DataRepository, state: GameState, proposed: Dictionary, march_boundary: Dictionary) -> Dictionary:
 	if repo == null or state == null or not _loco_plan_ok(proposed): return _failure("Invalid locomotion plan schema")
 	# JSON parses integral numbers as floats; normalize only after raw validation.
 	proposed = _canonical(proposed)
@@ -995,7 +1009,7 @@ static func commit_locomotion_candidate(repo: DataRepository, state: GameState, 
 			if _loco_result_hash(state, _loco_context(repo, grid, policies, march_boundary)) != cursor.basis.result:
 				return _failure("Stale locomotion retry state")
 			return {"status": "complete", "reason": "Already committed", "candidate": validated.candidate}
-	var expected := plan_locomotion_candidate(repo, state, cursor.intents, int(cursor.abs_day), int(cursor.substep), march_boundary)
+	var expected := _plan_locomotion(repo, state, cursor.intents, int(cursor.abs_day), int(cursor.substep), march_boundary, false)
 	if not _loco_plan_ok(expected) or _hash(expected) != _hash(proposed): return _failure("Stale or modified locomotion plan")
 	var candidate: GameState = validated.candidate
 	_loco_apply(candidate, expected.moves)

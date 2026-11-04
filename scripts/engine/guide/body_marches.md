@@ -216,3 +216,10 @@ closed cursor, including standalone TIME and MARCH sources. When no active
 receipt exists, surviving requested identities retain closed priority; new
 identities follow stable unit/slot order. Subsequent active receipts supersede
 that priority. Closure never creates movement budget or processes casualties.
+
+Public standalone TIME and MARCH sources authenticate the enclosing endpoint
+before using closed priority. An initial frozen MARCH day may reconstruct its
+safe pre-day endpoint for this check; staging running costs happens only after
+admission and uses private geometry calls. Invalid/unsealed closed proofs cannot
+become a new ordinary plan, while ordinary TIME/MARCH result projections remain
+unchanged. An active receipt supplies its own priority instead of closed data.

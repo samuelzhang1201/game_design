@@ -2284,6 +2284,8 @@ static func _body_source_error(repo: DataRepository, state: GameState, version: 
 	var control: Dictionary = tx.body_march
 	var closed_error := UnitBodies._closed_motion_cursor_error(state, int(control.abs_day), int(control.next_substep))
 	if not closed_error.is_empty(): return closed_error
+	closed_error = UnitBodies._closed_motion_source_error(repo, state)
+	if not closed_error.is_empty(): return closed_error
 	var raw: Variant = state.military_migration.get("body_motion")
 	if state.military_migration.has("body_motion"):
 		if not (BodyMotion._saved_ok(raw) if version == 1 else BodyMotion._loco_saved_source_ok(repo, state, raw, _body_boundary(state))): return "Invalid inner motion receipt"
@@ -2410,8 +2412,8 @@ static func _commit_body_march(repo: DataRepository, source: GameState, proposed
 	if staged.has("error"): return _body_result("error", staged.error)
 	if BodyMotion._hash(staged.plan) != receipt: return _body_result("error", "Stale or modified march plan")
 	var candidate: GameState = staged.candidate
-	var committed := BodyMotion.commit(repo, candidate, staged.plan.motion, _body_boundary(source)) if version == 1 \
-		else BodyMotion.commit_locomotion_candidate(repo, candidate, staged.plan.motion, _body_boundary(source))
+	var committed := BodyMotion._commit(repo, candidate, staged.plan.motion, _body_boundary(source)) if version == 1 \
+		else BodyMotion._commit_locomotion(repo, candidate, staged.plan.motion, _body_boundary(source))
 	if committed.status != "complete": return _body_result("error", committed.reason)
 	if version == 2: candidate = committed.candidate
 	# BodyMotion owns only rows. Publish metadata without replacing those new rows.
@@ -2502,8 +2504,9 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 			intents.append({"unit": code, "slot": int(body.slot), "path_m": translated, "budget_m": step, "hostile": false})
 		units.append({"unit": code, "anchor_path_m": [here], "used_m": 0, "step_budget_m": step,
 			"entry_after": {}, "saved_entry_after": saved})
-	var motion := BodyMotion.plan(repo, candidate, intents, int(boundary.abs_day), slice, boundary) if int(boundary.version) == 1 \
-		else BodyMotion.plan_locomotion_candidate(repo, candidate, intents, int(boundary.abs_day), slice, boundary)
+	# Public source was authenticated before staging costs; these are private geometry calls.
+	var motion := BodyMotion._plan(repo, candidate, intents, int(boundary.abs_day), slice, boundary, false) if int(boundary.version) == 1 \
+		else BodyMotion._plan_locomotion(repo, candidate, intents, int(boundary.abs_day), slice, boundary, false)
 	if motion.cursor.is_empty(): return {"error": str(motion.reasons.get("error", "Motion refused candidate"))}
 	var paths: Array = motion.moves if int(boundary.version) == 1 else []
 	if int(boundary.version) == 2:
