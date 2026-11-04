@@ -131,6 +131,14 @@ class PhaseTests(unittest.TestCase):
         self.assertTrue(box.contains([[3, 0, 0]]).all())
         self.assertLess(float(box.hi[0, 0]), 3.001)
 
+    def test_uncertain_mixer_norm_reports_the_actual_quaternion_box(self):
+        f = capture.Float32Box
+        with self.assertRaises(phase.Unclosed) as caught:
+            phase.mixer_span_box([0, 0, 0, 1], f([-1, -1, -1, -1], [1, 1, 1, 1]))
+        self.assertEqual(caught.exception.detail['reason'], 'mixer_quaternion_norm_contains_zero')
+        self.assertLessEqual(caught.exception.detail['norm_squared_interval'][0], 0)
+        self.assertIn('quaternion_interval', caught.exception.detail)
+
     def test_quaternion_sign_branch_does_not_create_a_zero_basis(self):
         f = capture.Float32Box
         q = f([-1, 0, 0, -1e-8], [-1, 0, 0, 1e-8])
@@ -213,6 +221,161 @@ class PhaseTests(unittest.TestCase):
             digest = capture.sha256(p); p.write_text('{"x":2}')
             with self.assertRaises(ValueError):
                 capture.read_bound(p, digest)
+
+
+class SlerpRangeTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from royal_native_arithmetic.test_prove import fixture
+        from royal_native_arithmetic import prove
+        cls.capture = fixture()
+        cls.receipt = prove.prove(cls.capture)
+        cls.native = {'engine_executable_sha256': cls.receipt['engine_sha256'],
+                      'engine': cls.capture['engine']['version'],
+                      'runtime': {'double_precision': False}}
+        cls.platform = {'functions': {name: {'image': '/usr/lib/system/libsystem_m.dylib',
+                        'mach_o_uuid': prove.MAC_ID} for name in ('sin', 'sinf', 'acosf')}}
+
+    def authority(self):
+        self.assertTrue(hasattr(phase, 'ScalarAuthority'), 'Missing receipt-backed interval authority')
+        return phase.ScalarAuthority(self.capture, self.receipt, self.native, self.platform)
+
+    def test_sine_endpoint_range_has_exact_hand_bracket_and_native_error(self):
+        authority = self.authority()
+        lo, hi = authority.sine((Q(1, 2), Q(1, 2)), 'sin')
+        # sin(1/2) lies strictly between these independent decimal bounds.
+        self.assertLess(lo, Q('0.4794255386042029'))
+        self.assertGreater(hi, Q('0.4794255386042031'))
+        zero = authority.sine((Q(0), Q(0)), 'sinf')
+        self.assertEqual(zero, (-Q(1, 2**22), Q(1, 2**22)))
+        with self.assertRaisesRegex(phase.Unclosed, 'sine_argument_domain'):
+            authority.sine((Q(-1, 2), Q(1, 2)+Q(1, 2**52)), 'sin')
+
+    def test_receipt_identity_code_domain_and_zero_error_are_not_trusted(self):
+        self.authority()
+        for target, key, value in [('receipt', 'engine_sha256', 'a'*64),
+                ('receipt', 'verifier_sha256', 'a'*64), ('capture', 'schema', 'other')]:
+            c, r = copy.deepcopy(self.capture), copy.deepcopy(self.receipt)
+            (r if target == 'receipt' else c)[key] = value
+            with self.assertRaises(ValueError):
+                phase.ScalarAuthority(c, r, self.native, self.platform)
+        for mutate in [lambda r: r['theorems']['sin'].update(outward_absolute_error='0'),
+                       lambda r: r['theorems']['acosf'].update(domain=['0', '1'])]:
+            r = copy.deepcopy(self.receipt); mutate(r)
+            with self.assertRaises(ValueError):
+                phase.ScalarAuthority(self.capture, r, self.native, self.platform)
+        c = copy.deepcopy(self.capture); c['native']['imports'][0][0]['code'] = '00'
+        with self.assertRaises(ValueError):
+            phase.ScalarAuthority(c, self.receipt, self.native, self.platform)
+        bad_native = copy.deepcopy(self.native); bad_native['engine_executable_sha256'] = 'b'*64
+        with self.assertRaises(ValueError):
+            phase.ScalarAuthority(self.capture, self.receipt, bad_native, self.platform)
+        bad_platform = copy.deepcopy(self.platform); bad_platform['functions']['sin']['mach_o_uuid'] = 'other'
+        with self.assertRaises(ValueError):
+            phase.ScalarAuthority(self.capture, self.receipt, self.native, bad_platform)
+
+    def test_full_weight_range_and_overshoot_close_without_spending_weight_enumeration(self):
+        authority = self.authority()
+        track = {'path': 'Rig:root', 'type': 2, 'interpolation': 1, 'keys': [
+            {'time': 0., 'value': [0, 0, 0, 1]},
+            {'time': .5, 'value': [0, 0, math.sin(.2), math.cos(.2)]}]}
+        budget = phase.Budget(weight_values=0, arithmetic=authority)
+        box = phase.track_span_box(track, 0., .5, .5, capture.system_math(), budget)
+        self.assertEqual(budget.used, 0)
+        for t in np.linspace(0, .5, 33):
+            self.assertTrue(box.contains(capture.native_track_box(track, float(t), .5, capture.system_math()).lo).all())
+        a, b = map(capture.Float32Box, [track['keys'][0]['value'], track['keys'][1]['value']])
+        for weights in [(-.00031, .0001), (.9999, 1.00031), (.5, .50000012)]:
+            w = capture.Float32Box.outward(*weights)
+            interval = authority.slerp(a, b, w, 'test', 0)
+            if weights == (.5, .50000012):
+                self.assertLess(float(np.max(interval.hi-interval.lo)), .001)
+            for value in [w.lo, (w.lo+w.hi)/2, w.hi]:
+                oracle = capture.slerp_box(a, b, np.float32(value), capture.system_math())
+                self.assertTrue(interval.contains(oracle.lo).all() and interval.contains(oracle.hi).all())
+        self.assertGreater(authority.work['weight_interval_compositions'], 0)
+        branch = authority.domains['Rig:root:0']['branches'][0]
+        self.assertGreater(branch['denominator_interval'][0], Q(19, 100))
+        self.assertLess(branch['denominator_interval'][1], Q(21, 100))
+
+    def test_proof_exact_point_uses_scalar_composition_and_keeps_legacy_fit_separate(self):
+        authority = self.authority()
+        track = {'path': 'Rig:root', 'type': 2, 'interpolation': 1, 'keys': [
+            {'time': 0., 'value': [0, 0, 0, 1]},
+            {'time': .5, 'value': [0, 0, math.sin(.2), math.cos(.2)]}]}
+        functions = capture.system_math()
+        legacy = phase.track_span_box(track, 0., 0., .5, functions, phase.Budget())
+        self.assertLess(float(legacy.hi[3]-legacy.lo[3]), 1e-6)
+        budget = phase.Budget(weight_values=0, arithmetic=authority)
+        with patch.object(capture, 'native_track_box', side_effect=AssertionError('unproved point replay')):
+            box = phase.track_span_box(track, 0., 0., .5, functions, budget)
+        # At weight0 double sin(omega)/sinf(omega) cannot use an exact-identity shortcut.
+        self.assertLess(float(box.lo[3]), .99999)
+        self.assertGreater(float(box.hi[3]), 1.00001)
+        self.assertEqual(budget.used, 0)
+        self.assertGreater(authority.work['weight_interval_compositions'], 0)
+        track['keys'][1]['value'] = [0, 0, .4794, .8785]
+        with self.assertRaisesRegex(phase.Unclosed, 'acos_constant_authority_missing'):
+            phase.track_span_box(track, 0., 0., .5, functions, budget)
+
+    def test_outside_acos_domain_never_calls_an_ideal_or_point_replacement(self):
+        authority = self.authority()
+        f = capture.Float32Box
+        with self.assertRaisesRegex(phase.Unclosed, 'acos_constant_authority_missing') as caught:
+            authority.slerp(f([0, 0, 0, 1]), f([0, 0, .4794, .8785]), f(0, 1), 'HindHoof.L', 7)
+        self.assertEqual(caught.exception.detail['key_index'], 7)
+        self.assertLess(caught.exception.detail['cosine_interval'][0], .9)
+        self.assertTrue(caught.exception.detail['dot_states'])
+
+    def test_denominator_zero_and_incomplete_shape_accounting_cannot_close(self):
+        self.authority()
+        with self.assertRaisesRegex(phase.Unclosed, 'denominator_contains_zero'):
+            phase.interval_quotient((Q(0), Q(1)), (Q(-1), Q(1)), 24)
+        old = {'continuous_native': {'unclosed_boxes': [], 'closed_boxes': [
+            {'seconds': [0., 1.], 'triangle_shape': {'hoof': {
+                'native_triangle_ids': [8], 'unclosed_area_or_orientation': [0]}}}]}}
+        with self.assertRaisesRegex(ValueError, 'shape interval not completely accounted'):
+            phase.baseline_accounting(old, [], [])
+
+    def test_proof_mode_requires_complete_inputs_before_native_loading(self):
+        with patch.object(phase, 'load_inputs', side_effect=AssertionError('must reject first')):
+            with self.assertRaisesRegex(ValueError, 'Arithmetic capture, receipt and baseline required together'):
+                phase.build(Path('/review'), arithmetic_capture=Path('/capture'))
+
+    def test_baseline_accounting_preserves_every_old_unknown_and_shape_face(self):
+        self.assertTrue(hasattr(phase, 'baseline_accounting'), 'Missing prior unknown accounting')
+        old = {'continuous_native': {'unclosed_boxes': [{'seconds': [0., .5], 'reason': 'weight_budget'}],
+            'closed_boxes': [{'seconds': [.5, 1.], 'triangle_shape': {'hoof': {
+                'native_triangle_ids': [8, 9], 'unclosed_area_or_orientation': [1]}}}]}}
+        current = [{'seconds': [0., .25], 'triangle_shape': {}},
+                   {'seconds': [.5, 1.], 'triangle_shape': {'hoof': {
+                    'native_triangle_ids': [8, 9], 'unclosed_area_or_orientation': [1]}}}]
+        unknown = [{'seconds': [.25, .5], 'reason': 'denominator'}]
+        result = phase.baseline_accounting(old, current, unknown)
+        self.assertEqual(result['coordinate_boxes'][0]['closed_seconds'], [[0., .25]])
+        self.assertEqual(result['coordinate_boxes'][0]['unclosed_seconds'], [[.25, .5]])
+        self.assertEqual(result['shape_cases'][0]['native_triangle_id'], 9)
+        self.assertEqual(result['shape_cases'][0]['outcome'], 'UNKNOWN')
+        current[-1]['triangle_shape']['hoof']['unclosed_area_or_orientation'] = []
+        self.assertEqual(phase.baseline_accounting(old, current, unknown)['shape_cases'][0]['outcome'], 'CLOSED')
+
+    def test_affine_antipodal_sign_threshold_and_subnormal_rounding(self):
+        authority = self.authority(); f = capture.Float32Box
+        for target in [[0, 0, 0, 1], [0, 0, 0, -1]]:
+            result = authority.slerp(f([0, 0, 0, 1]), f(target), f(-.0003, 1.0003), 'affine', 0)
+            self.assertTrue(result.contains([0, 0, 0, 1]).all())
+        c = np.float32(1)-np.float32(1e-5)
+        for cosine in [np.nextafter(c, np.float32(0)), c, np.nextafter(c, np.float32(1))]:
+            a, b = f([0, 0, 0, 1]), f([math.sqrt(1-float(cosine)**2), 0, 0, cosine])
+            result = authority.slerp(a, b, f(.4999, .5001), 'threshold', float(cosine))
+            oracle = capture.slerp_box(a, b, np.float32(.5), capture.system_math())
+            self.assertTrue(result.contains(oracle.lo).all() and result.contains(oracle.hi).all())
+        double = phase.interval_product((Q(1, 3), Q(1, 3)), (Q(1), Q(1)), 53)
+        single = phase.interval_product((Q(1, 3), Q(1, 3)), (Q(1), Q(1)), 24)
+        self.assertLess(double[1]-double[0], Q(1, 10**15))
+        self.assertGreater(single[1]-single[0], Q(1, 10**8))
+        lo, hi = phase.rounded_interval(Q(1, 2**149), Q(1, 2**149), 24)
+        self.assertLessEqual(lo, 0); self.assertGreaterEqual(hi, Q(1, 2**149))
 
 
 class BindingTests(unittest.TestCase):
@@ -421,6 +584,65 @@ class AcceptedBindingTests(unittest.TestCase):
                 with patch.object(phase.reacquired, 'read_json', side_effect=unavailable_registry):
                     with self.assertRaisesRegex(OSError, 'registry unavailable'):
                         phase.load_inputs(self.receipt, native_manifest=self.manifest, bundle_root=self.bundles[0])
+
+
+@unittest.skipUnless(all(os.environ.get(k) for k in ('CAV_PHASE_BUNDLE', 'CAV_ARITHMETIC_CAPTURE',
+                    'CAV_ARITHMETIC_RECEIPT')), 'explicit accepted native/scalar custody inputs required')
+class AcceptedScalarTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.manifest = phase.reacquired.read_json(phase.ROOT/'docs/reviews/cluster-formations/evidence/locomotion/cavalry/march-native-reacquired.json')
+        roles = phase.reacquired.check_index(Path(os.environ['CAV_PHASE_BUNDLE']), cls.manifest['bundle_index'], cls.manifest['bundle_sha256'])
+        cls.native = phase.reacquired.read_json(roles['native'])
+        cls.scalar_capture = phase.reacquired.read_json(Path(os.environ['CAV_ARITHMETIC_CAPTURE']))
+        cls.scalar_receipt = phase.reacquired.read_json(Path(os.environ['CAV_ARITHMETIC_RECEIPT']))
+
+    def authority(self):
+        return phase.ScalarAuthority(self.scalar_capture, self.scalar_receipt, self.native,
+            self.manifest['component_result']['numerical_accounting']['platform_math'])
+
+    def test_actual_terminal_wrap_contains_receipt_backed_zero_without_point_replay(self):
+        authority = self.authority(); authority.prepare(self.native)
+        surface = dict(self.native['surfaces'][0])
+        surface['joints'] = np.asarray(surface['joints']).reshape(-1, 4)
+        surface['weights'] = np.asarray(surface['weights']).reshape(-1, 4)
+        binds = [capture.matrix(b['pose']) for b in self.native['skin']]
+        functions = capture.system_math()
+        budget = phase.Budget(weight_values=0, arithmetic=authority)
+        with patch.object(capture, 'native_track_box', side_effect=AssertionError('unproved terminal point replay')):
+            zero = phase.surface_span_box(self.native, surface, binds, 0., 0., functions, budget)
+            terminal = phase.surface_span_box(self.native, surface, binds,
+                self.native['native_search_boundaries_seconds'][-1], self.native['length'], functions, budget)
+        self.assertEqual(len(terminal.lo), 21175)
+        self.assertTrue(terminal.contains(zero.lo).all() and terminal.contains(zero.hi).all())
+        self.assertEqual(budget.used, 0)
+
+    def test_all_actual_key_pairs_match_bounded_weight_oracle_and_retain_two_unknowns(self):
+        # This refutation check does not replace the continuous Taylor/error proof.
+        native = self.native; authority = self.authority()
+        authority.prepare(native)
+        self.assertEqual(len(authority.domains), 553)
+        self.assertEqual(sum(len(r['dot_states']) for r in authority.domains.values()), 2496)
+        unknown = set(); checks = 0; f = capture.Float32Box; functions = capture.system_math()
+        for track in native['tracks']:
+            if track['type'] != 2:
+                continue
+            for i, (a, b) in enumerate(zip(track['keys'], track['keys'][1:])):
+                q, r = f(a['value']), f(b['value'])
+                for weight in (-.00030001, .5, 1.0003001):
+                    low = np.float32(weight); high = np.nextafter(low, np.float32(np.inf))
+                    try:
+                        box = authority.slerp(q, r, f(low, high), track['path'], i)
+                    except phase.Unclosed as error:
+                        self.assertEqual(error.detail['reason'], 'acos_constant_authority_missing')
+                        unknown.add((track['path'].split(':')[-1], i))
+                        continue
+                    for value in (low, high):
+                        oracle = capture.slerp_box(q, r, value, functions)
+                        self.assertTrue(box.contains(oracle.lo).all() and box.contains(oracle.hi).all(), (track['path'], i, weight))
+                        checks += 1
+        self.assertEqual(unknown, {('HindHoof.L', 7), ('HindHoof.R', 11)})
+        self.assertEqual(checks, 3306)
 
 
 if __name__ == '__main__':
