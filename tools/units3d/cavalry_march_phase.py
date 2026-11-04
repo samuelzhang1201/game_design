@@ -21,6 +21,7 @@ import subprocess
 import numpy as np
 
 import check_cavalry_march_capture as native
+import reacquire_cavalry_march_native as reacquired
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT/'docs/reviews/cluster-formations/evidence/locomotion/cavalry/march-native-contact.json'
@@ -368,18 +369,45 @@ def canonical_digest(value):
     return hashlib.sha256(json.dumps(json_value(value), sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
 
 
-def load_inputs(review_path):
-    manifest = native.read_bound(MANIFEST, MANIFEST_SHA)
-    require(len(manifest['inputs']) == 298, 'Incomplete accepted input set')
-    for path, digest in manifest['inputs'].items():
-        require(native.sha256(path) == digest, f'Accepted input changed: {path}')
-    review = native.read_bound(review_path, REVIEW_SHA)
-    verdict = review_path.parent/'round2.md'
-    require(native.sha256(verdict) == VERDICT_SHA and review['accepted'] is True
-            and review['manifest_sha256'] == MANIFEST_SHA and review['pr']['state'] == 'MERGED'
-            and review['review_session_id'] == '01a19ca8-5995-7bb2-b666-b3fbf29fb47d', 'Missing bound sole anatomical verdict')
-    capture_path = Path(manifest['capture_directory'])/'native.json'
-    capture = native.read_bound(capture_path, manifest['inputs'][str(capture_path)])
+def load_inputs(review_path, *, native_manifest=None, bundle_root=None):
+    require((native_manifest is None) == (bundle_root is None), 'Native manifest and bundle root required together')
+    fresh = native_manifest is not None
+    context = None
+    if fresh:
+        accepted = reacquired.load_accepted(native_manifest, bundle_root, review_path)
+        manifest, capture, accounting = (accepted[k] for k in ('manifest', 'native', 'accounting'))
+        roles = reacquired.check_index(bundle_root, manifest['bundle_index'], manifest['bundle_sha256'])
+        receipt = reacquired.read_json(review_path)
+        # Bind verdict identity/body, not mutable reaction/profile metadata or transport roots.
+        comment = receipt['comment']
+        binding = {'version': 1, 'kind': 'native-reacquired-v1',
+                   'manifest_sha256': native.sha256(native_manifest), 'bundle_sha256': manifest['bundle_sha256'],
+                   'verdict': receipt['binding'], 'comment': {k: comment[k] for k in
+                       ('id', 'node_id', 'html_url', 'issue_url', 'created_at')},
+                   'comment_author': {k: comment['user'][k] for k in ('id', 'node_id')},
+                   'body_sha256': receipt['body_sha256'],
+                   'role_sha256': {r['role']: r['sha256'] for r in manifest['bundle_index']},
+                   'platform_math': accepted['component_result']['numerical_accounting']['platform_math'],
+                   'algorithm_sha256': {path: native.sha256(ROOT/path) for path in [
+                       'tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py',
+                       'tools/units3d/check_cavalry_march_capture.py', 'tools/units3d/measure_unit_bodies.gd',
+                       'docs/reviews/cluster-formations/cavalry-march-contact-prerequisite.md']}}
+        context = {'binding': binding, 'roles': roles,
+                   'locations': {'native_manifest': str(native_manifest), 'bundle_root': str(bundle_root),
+                                 'review_record': str(review_path)}}
+    else:
+        manifest = native.read_bound(MANIFEST, MANIFEST_SHA)
+        require(len(manifest['inputs']) == 298, 'Incomplete accepted input set')
+        for path, digest in manifest['inputs'].items():
+            require(native.sha256(path) == digest, f'Accepted input changed: {path}')
+        review = native.read_bound(review_path, REVIEW_SHA)
+        verdict = review_path.parent/'round2.md'
+        require(native.sha256(verdict) == VERDICT_SHA and review['accepted'] is True
+                and review['manifest_sha256'] == MANIFEST_SHA and review['pr']['state'] == 'MERGED'
+                and review['review_session_id'] == '01a19ca8-5995-7bb2-b666-b3fbf29fb47d', 'Missing bound sole anatomical verdict')
+        capture_path = Path(manifest['capture_directory'])/'native.json'
+        capture = native.read_bound(capture_path, manifest['inputs'][str(capture_path)])
+        accounting = native.read_bound(manifest['accounting_payload'], manifest['inputs'][manifest['accounting_payload']])
     require(capture['version'] == 2 and 0 < capture['length'] < 1 and len(capture['bones']) == 53
             and len(capture['skin']) == 53 and len(capture['surfaces']) == 1, 'Native domain')
     for path, digest in capture['input_hashes'].items():
@@ -393,15 +421,16 @@ def load_inputs(review_path):
     binds = [native.matrix(b['pose']) for b in capture['skin']]
     require([b['name'] for b in capture['skin']] == [b['name'] for b in capture['bones']]
             and [b['resolved_bone'] for b in capture['skin']] == list(range(53)), 'Native bind mapping')
-    accounting = native.read_bound(manifest['accounting_payload'], manifest['inputs'][manifest['accounting_payload']])
     patches = accounting['patches']
     require({h: len(v['native_sole_triangles']) for h, v in patches.items()} ==
             {'FrontHoof.L': 31, 'FrontHoof.R': 69, 'HindHoof.L': 46, 'HindHoof.R': 48}, 'Incomplete accepted patches')
     for patch in patches.values():
         triangles = np.asarray(surface['indices']).reshape(-1, 3)[patch['native_sole_triangles']]
         require(sorted(set(triangles.ravel().tolist())) == patch['native_sole_vertices'], 'Material patch vertex coverage')
-    actions = ROOT/'tools/units3d/cavalry_rig/actions.py'
-    require(native.sha256(actions) == next(v for k, v in manifest['inputs'].items() if k.endswith('/cavalry_rig/actions.py')), 'Support source changed')
+    actions = roles['resource:tools/units3d/cavalry_rig/actions.py'] if fresh else ROOT/'tools/units3d/cavalry_rig/actions.py'
+    actions_sha = (binding['role_sha256']['resource:tools/units3d/cavalry_rig/actions.py'] if fresh else
+                   next(v for k, v in manifest['inputs'].items() if k.endswith('/cavalry_rig/actions.py')))
+    require(native.sha256(actions) == actions_sha, 'Support source changed')
     constants = {n.targets[0].id: ast.literal_eval(n.value) for n in ast.parse(actions.read_text()).body
                  if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name)
                  and n.targets[0].id in ('CANTER', 'DUTY')}
@@ -410,17 +439,20 @@ def load_inputs(review_path):
     require(set(supports) == set(patches), 'All four source episodes required')
     functions = native.system_math()
     runtime = native.math_runtime_identity(functions)
-    accepted_math = manifest['numerical_accounting']['platform_math']
+    accepted_math = binding['platform_math'] if fresh else manifest['numerical_accounting']['platform_math']
     require(runtime['functions'] == accepted_math['functions'] and runtime['platform'] == accepted_math['platform']
             and subprocess.check_output(['/usr/bin/sw_vers', '-buildVersion'], text=True).strip() == accepted_math['os_build'],
             'Unproved native platform math mismatch')
-    witness_path = Path(manifest['frozen_paths']['witness'])
-    witness = native.read_bound(witness_path, manifest['inputs'][str(witness_path)])
-    require(native.sha256(witness_path.parent/'accepted234-disposition.md') ==
-            'f54da8c9105721029a0aed93dad6ecf2341ebf87cd55ec239401f6c3113db4ad', 'Frozen phase proposal changed')
+    if fresh:
+        witness = reacquired.read_json(roles['witness'])
+    else:
+        witness_path = Path(manifest['frozen_paths']['witness'])
+        witness = native.read_bound(witness_path, manifest['inputs'][str(witness_path)])
+        require(native.sha256(witness_path.parent/'accepted234-disposition.md') ==
+                'f54da8c9105721029a0aed93dad6ecf2341ebf87cd55ec239401f6c3113db4ad', 'Frozen phase proposal changed')
     for path, digest in witness['current_inputs'].items():
         require(native.sha256(ROOT/path) == digest, f'Frozen observation input changed: {path}')
-    return manifest, capture, surface, binds, patches, supports, functions, witness
+    return manifest, capture, surface, binds, patches, supports, functions, witness, context
 
 
 def sampled_points(capture, surface, binds, time):
@@ -592,6 +624,22 @@ def verify_partition(closed, unclosed, length):
 
 
 def validate_diagnostic(report):
+    require(type(report['version']) is int and report['version'] in (1, 2), 'Report version')
+    if report['version'] == 2:
+        binding = report['input_binding']
+        require(binding['kind'] == 'native-reacquired-v1' and type(binding['version']) is int
+                and binding['version'] == 1, 'Input binding version')
+        require(report['step_id'] == 'CAV-CONTACT-PHASE-INPUT-BINDING'
+                and report['atlas_input_packet']['input_binding'] == binding
+                and report['atlas']['input_sha256'] == canonical_digest(report['atlas_input_packet'])
+                and report['inputs']['manifest'] == binding['manifest_sha256']
+                and report['inputs']['verdict_body'] == binding['body_sha256']
+                and all(report['inputs']['role:'+k] == v for k, v in binding['role_sha256'].items())
+                and all(report['inputs'][k] == v for k, v in binding['algorithm_sha256'].items()),
+                'Report/atlas input binding differs')
+    else:
+        require(not any(k in report for k in ('input_binding', 'atlas_input_packet', 'input_locations')),
+                'Mixed legacy/new provenance')
     require(report['status'] == 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY', 'Diagnostic status changed')
     validate_atlas(report['atlas'])
     require(canonical_digest(report['atlas']) == report['atlas_sha256'], 'Atlas coefficients/digest changed')
@@ -684,8 +732,9 @@ def closed_metrics(closed, atlas, patches, supports, birth_boxes, body_mask, sca
     return records, diameter, world
 
 
-def build(review_path):
-    manifest, capture, surface, binds, patches, supports, functions, witness = load_inputs(review_path)
+def build(review_path, *, native_manifest=None, bundle_root=None):
+    manifest, capture, surface, binds, patches, supports, functions, witness, context = load_inputs(
+        review_path, native_manifest=native_manifest, bundle_root=bundle_root)
     phases = sorted({Q(0), Q(1), Q('.137'), Q('.25')}
                     | {Q(k['time'])/Q(capture['length']) for t in capture['tracks'] for k in t['keys']}
                     | {v for pair in supports.values() for v in pair})
@@ -695,14 +744,19 @@ def build(review_path):
              for z in phases]
     rows, counts = fit_rows(phases, boxes, patches, supports)
     distances, fit_result = fit(phases, rows)
-    input_packet = {'manifest_sha256': MANIFEST_SHA, 'review_sha256': REVIEW_SHA, 'verdict_sha256': VERDICT_SHA,
-                    'native_sha256': manifest['inputs'][str(Path(manifest['capture_directory'])/'native.json')],
-                    'accounting_sha256': manifest['inputs'][manifest['accounting_payload']],
-                    'supports': supports, 'full_material_patches': patches, 'native_surface': surface,
-                    'bones': capture['bones'], 'binds': capture['skin'], 'tracks': capture['tracks']}
+    data_packet = {'supports': supports, 'full_material_patches': patches, 'native_surface': surface,
+                   'bones': capture['bones'], 'binds': capture['skin'], 'tracks': capture['tracks']}
+    if context is None:
+        input_packet = {'manifest_sha256': MANIFEST_SHA, 'review_sha256': REVIEW_SHA, 'verdict_sha256': VERDICT_SHA,
+                        'native_sha256': manifest['inputs'][str(Path(manifest['capture_directory'])/'native.json')],
+                        'accounting_sha256': manifest['inputs'][manifest['accounting_payload']], **data_packet}
+        samples_path = Path(manifest['capture_directory'])/'samples.jsonl'
+    else:
+        input_packet = {'input_binding': context['binding'], 'data_sha256': canonical_digest(data_packet)}
+        samples_path = context['roles']['samples']
     atlas = make_atlas(phases, distances, canonical_digest(input_packet), capture['length'])
     samples, sampled, obstruction = captured_obstructions(capture, surface, binds, patches, supports,
-                                    Path(manifest['capture_directory'])/'samples.jsonl', witness)
+                                                         samples_path, witness)
     closed, unclosed, used = continuous_verify(capture, surface, binds, atlas, functions, budget)
     birth_boxes = {hoof: boxes[phases.index(start)][patches[hoof]['native_sole_vertices']]
                    for hoof, (start, _) in supports.items()}
@@ -710,7 +764,8 @@ def build(review_path):
     lance_weight = np.sum(surface['weights']*(np.array(names)[surface['joints']] == 'Lance'), axis=1)
     # Same classification and threshold as measure_unit_bodies.gd, without dropping gear.
     body_mask = lance_weight < 1.-.000001
-    footprint_path = ROOT/'data/army/unit_footprints.csv'
+    footprint_path = (context['roles']['resource:data/army/unit_footprints.csv'] if context else
+                      ROOT/'data/army/unit_footprints.csv')
     with footprint_path.open() as file:
         footprint = next(r for r in csv.DictReader(file) if r['arm'] == 'cavalry')
     scale = witness['scale']['ordinary_world_scale']
@@ -749,19 +804,26 @@ def build(review_path):
          'missing_input': 'Actual admitted duration T / nonzero 1/T domain bound; this verifier encloses normalized native pose only.'},
         {'metric': 'world_envelope_m', 'phase_domain': [[0, 1]],
          'missing_input': 'Closed native boxes, admitted world_per_sim_m and actual renderer world-transform operation enclosure at unchanged scale/seat/R. Full mesh and body/weapon split retained.'}]
-    inputs = {str(MANIFEST): MANIFEST_SHA, **manifest['inputs'], str(review_path): REVIEW_SHA,
-              str(review_path.parent/'round2.md'): VERDICT_SHA,
-              str(Path(manifest['frozen_paths']['witness']).parent/'accepted234-disposition.md'):
-                  'f54da8c9105721029a0aed93dad6ecf2341ebf87cd55ec239401f6c3113db4ad',
-              str(footprint_path): native.sha256(footprint_path)}
+    if context:
+        inputs = {'role:'+k: v for k, v in context['binding']['role_sha256'].items()}
+        inputs['manifest'] = context['binding']['manifest_sha256']
+        inputs['verdict_body'] = context['binding']['body_sha256']
+    else:
+        inputs = {str(MANIFEST): MANIFEST_SHA, **manifest['inputs'], str(review_path): REVIEW_SHA,
+                  str(review_path.parent/'round2.md'): VERDICT_SHA,
+                  str(Path(manifest['frozen_paths']['witness']).parent/'accepted234-disposition.md'):
+                      'f54da8c9105721029a0aed93dad6ecf2341ebf87cd55ec239401f6c3113db4ad',
+                  str(footprint_path): native.sha256(footprint_path)}
     for path in ['tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py',
                  'tools/units3d/check_cavalry_march_capture.py', 'tools/units3d/measure_unit_bodies.gd',
                  'docs/reviews/cluster-formations/cavalry-march-contact-prerequisite.md']:
-        inputs[str(ROOT/path)] = native.sha256(ROOT/path)
+        inputs[path if context else str(ROOT/path)] = native.sha256(ROOT/path)
     return json_value({
-        'version': 1, 'step_id': 'CAV-CONTACT-PHASE', 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
+        **({'input_binding': context['binding'], 'input_locations': context['locations'],
+            'atlas_input_packet': input_packet} if context else {}),
+        'version': 2 if context else 1, 'step_id': 'CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE', 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
         'inputs': inputs, 'work_budget_declared_before_fit': LIMITS, 'work_used': {**used, 'proposal_evaluations': evaluations},
-        'accepted_anatomy': {'manifest_status_preserved': manifest['status'], 'independent_component_verdict': str(review_path),
+        'accepted_anatomy': {'manifest_status_preserved': manifest['status'], 'independent_component_verdict': context['binding']['verdict'] if context else str(review_path),
                              'four_patches': {h: {'vertices': len(p['native_sole_vertices']), 'triangles': len(p['native_sole_triangles'])} for h, p in patches.items()}},
         'source_support_constraints': supports,
         'atlas': atlas, 'atlas_sha256': canonical_digest(atlas),
@@ -790,9 +852,11 @@ def build(review_path):
         'claims': {'verified_physical_candidate': False, 'success_dependency': False, 'contact_certificate': False,
                    'policy_E': None, 'phase_runtime_unblocked': False, 'surface_unblocked': False,
                    'original_12_gates_preserved': True, 'native_recapture': False, 'live_window_or_FPS_acceptance': False},
-        'reproduction': {'build': 'python3 tools/units3d/cavalry_march_phase.py build --review-record REVIEW_COMPLETE_JSON --out REPORT_JSON',
+        'reproduction': ({'build': 'python3 tools/units3d/cavalry_march_phase.py build --native-manifest MANIFEST_JSON --bundle-root BUNDLE_ROOT --review-record ACTUAL_RECEIPT_JSON --out REPORT_JSON',
+                          'verify': 'python3 tools/units3d/cavalry_march_phase.py verify REPORT_JSON --native-manifest MANIFEST_JSON --bundle-root BUNDLE_ROOT --review-record ACTUAL_RECEIPT_JSON',
+                          'exit_status': '2 is diagnostic/unknown, never physical acceptance; malformed/tampered input exits 1.'} if context else {'build': 'python3 tools/units3d/cavalry_march_phase.py build --review-record REVIEW_COMPLETE_JSON --out REPORT_JSON',
                          'verify': 'python3 tools/units3d/cavalry_march_phase.py verify REPORT_JSON --review-record REVIEW_COMPLETE_JSON',
-                         'exit_status': '2 is the expected truthful diagnostic/unknown result, never physical acceptance. A malformed/tampered input exits 1.'}})
+                         'exit_status': '2 is the expected truthful diagnostic/unknown result, never physical acceptance. A malformed/tampered input exits 1.'})})
 
 
 def main():
@@ -802,23 +866,32 @@ def main():
     verify_parser = sub.add_parser('verify'); verify_parser.add_argument('report', type=Path)
     for p in [build_parser, verify_parser]:
         p.add_argument('--review-record', type=Path, required=True)
+        p.add_argument('--native-manifest', type=Path)
+        p.add_argument('--bundle-root', type=Path)
     args = parser.parse_args()
     try:
         existing = None
         if args.command == 'verify':
             existing = json.loads(args.report.read_text())
             validate_diagnostic(existing)
-        report = build(args.review_record.resolve())
+        fresh = args.native_manifest is not None
+        require(fresh == (args.bundle_root is not None), 'Native manifest and bundle root required together')
+        if existing is not None:
+            require(existing['version'] == (2 if fresh else 1), 'Report/input mode mismatch')
+        report = build(args.review_record.resolve(),
+                       native_manifest=args.native_manifest.resolve() if fresh else None,
+                       bundle_root=args.bundle_root.resolve() if fresh else None)
         validate_diagnostic(report)
         if args.command == 'build':
             args.out.write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False)+'\n')
         else:
-            require(existing == report, 'Report differs from independent replay')
+            require({k: v for k, v in existing.items() if k != 'input_locations'} ==
+                    {k: v for k, v in report.items() if k != 'input_locations'}, 'Report differs from independent replay')
         print(json.dumps({'status': report['status'], 'atlas_sha256': report['atlas_sha256'],
                           'closed_boxes': len(report['continuous_native']['closed_boxes']),
                           'unclosed_boxes': len(report['continuous_native']['unclosed_boxes'])}))
         return 2
-    except (ValueError, OSError, KeyError, StopIteration) as error:
+    except (ValueError, OSError, KeyError, StopIteration, subprocess.SubprocessError) as error:
         print(f'Invalid input or unclosed construction: {error}')
         return 1
 
