@@ -417,11 +417,91 @@ def acos_endpoint(cosine):
     return lo, hi
 
 
+# Finite captured instruction results, not an extension of the ideal-acos theorem.
+ACOS_WORDS = {('cavalry_rig/Skeleton3D:HindHoof.L', 7): ('3f60e5c3', '3f60e5c4', '3f60e5c5'),
+              ('cavalry_rig/Skeleton3D:HindHoof.R', 11): ('3f61a824', '3f61a825', '3f61a826')}
+ACOS_KEY_SHA = {'cavalry_rig/Skeleton3D:HindHoof.L': 'efe7d7c47258a786ef9cbb800c9187a07e4c2b68de3d2882f538da41021b8439',
+                'cavalry_rig/Skeleton3D:HindHoof.R': '082a661c34fb3987fde982e5e5e453bb6743185eea2dc1581be74577fe1e870d'}
+ACOS_BASELINE_SHA = '88e4105d141a055e52737ffe2e6f8e312b37718e69db988d1a6e8db51e0c8947'
+ACOS_ENGINE_SHA = 'c7cccbf8fb143e34e02fd6521e09be2c2b974f0d5db080b19071c9c570718ccf'
+
+
+def binary32_word(value):
+    return struct.pack('>f', value).hex()
+
+
+def finite_acos_constant(profile, word, binding):
+    require(word in {w for words in ACOS_WORDS.values() for w in words}, 'Uncovered acos constant word')
+    require(all(profile.get(k) == v for k, v in scalar.MAC_PROFILE['acosf'].items()),
+            'Finite acos instruction/constant profile mismatch')
+    # Source instruction words are fixed separately from the receipt's generic theorem.
+    recipe = [
+        (0xbb3c, '01c0201e', 'fabs s1,s0'), (0xbb40, '02102e1e', 'fmov s2,1'),
+        (0xbb44, '2020221e', 'fcmp s1,s2'), (0xbb48, '02102c1e', 'fmov s2,1/2'),
+        (0xbb4c, 'c5060054', 'b.pl 0xbc24 (not taken)'), (0xbb50, '2020221e', 'fcmp s1,s2'),
+        (0xbb54, '6208001c', 'ldr s2,0xbc60 (flags unchanged)'), (0xbb58, '2c010054', 'b.gt 0xbb7c (taken)'),
+        (0xbb7c, '02102e1e', 'fmov s2,1'), (0xbb80, '4138211e', 'fsub s1,s2,s1 (Sterbenz exact)'),
+        (0xbb84, '21c0221e', 'fcvt d1,s1 (exact widening)'), (0xbb88, '40080010', 'adr x0,0xbc90'),
+        (0xbb8c, '020c406d', 'ldp d2,d3,[x0]'), (0xbb90, '0414416d', 'ldp d4,d5,[x0,16]'),
+        (0xbb94, '061c426d', 'ldp d6,d7,[x0,32]'), (0xbb98, '30c0611e', 'fsqrt d16,d1'),
+        (0xbb9c, '230c421f', 'fmadd d3,d1,d2,d3'), (0xbba0, '2514441f', 'fmadd d5,d1,d4,d5'),
+        (0xbba4, '271c461f', 'fmadd d7,d1,d6,d7'), (0xbba8, '2208611e', 'fmul d2,d1,d1'),
+        (0xbbac, '4514431f', 'fmadd d5,d2,d3,d5'), (0xbbb0, '471c451f', 'fmadd d7,d2,d5,d7'),
+        (0xbbb4, '0820201e', 'fcmp s0,0'), (0xbbb8, '8c000054', 'b.gt 0xbbc8 (taken)'),
+        (0xbbc8, 'e008701e', 'fmul d0,d7,d16'), (0xbbcc, '0040621e', 'fcvt s0,d0')]
+    for pc, raw, _ in recipe:
+        require(scalar.read_memory(profile, pc, 4).hex() == raw, 'Finite acos branch/instruction mismatch')
+    cosine = Q(struct.unpack('>f', bytes.fromhex(word))[0])
+    require(Q(1, 2) < cosine < 1, 'Finite acos positive branch predicate')
+    t = 1-cosine
+    require(Q(np.float32(float(t)).item()) == t and Q(float(t)) == t, 'Inexact Sterbenz subtraction/widening')
+    cs = scalar.coefficients(profile, 0xbc90, 6)
+    nodes = []
+
+    def node(pc, exact, bits=53):
+        lo, hi = exact
+        require(scalar.minnormal(bits) <= lo <= hi < 2**100, 'Finite acos intermediate range')
+        rounded = rounded_interval(lo, hi, bits)
+        require(scalar.minnormal(bits) <= rounded[0] <= rounded[1] < 2**100, 'Finite acos rounded range')
+        nodes.append({'pc': hex(pc), 'precision': bits, 'exact_interval': exact, 'rounded_interval': rounded})
+        return rounded
+
+    def fma(pc, a, b, c):
+        values = [x*y+z for x in a for y in b for z in c]
+        return node(pc, (min(values), max(values)))
+
+    # isqrt proves the bracket; this denominator is proof precision, not a tolerance.
+    root_exact = sqrt_bounds(t, 2**96)
+    require(root_exact[0]**2 <= t <= root_exact[1]**2, 'Finite acos sqrt bracket')
+    root = node(0xbb98, root_exact)
+    point = lambda x: (x, x)
+    a = fma(0xbb9c, point(t), point(cs[0]), point(cs[1]))
+    b = fma(0xbba0, point(t), point(cs[2]), point(cs[3]))
+    d = fma(0xbba4, point(t), point(cs[4]), point(cs[5]))
+    t2 = node(0xbba8, point(t*t))
+    h1 = fma(0xbbac, t2, a, b)
+    h = fma(0xbbb0, t2, h1, d)
+    products = [x*y for x in h for y in root]
+    product = node(0xbbc8, (min(products), max(products)))
+    output = node(0xbbcc, product, 24)
+    record = {'method': 'six-finite-native-acosf-instruction-results-v1', 'input_word': word,
+        'input_rational': cosine, 'sterbenz_t': t, 'exact_binary64_widening': t,
+        'branch_path': [{'pc': hex(pc), 'bytes': raw, 'instruction': meaning} for pc, raw, meaning in recipe],
+        'profile': 'macos-arm64/'+scalar.MAC_ID, 'code_sha256': hashlib.sha256(bytes.fromhex(profile['code'])).hexdigest(),
+        'coefficient_bytes': scalar.read_memory(profile, 0xbc90, 48).hex(),
+        'coefficient_sha256': hashlib.sha256(scalar.read_memory(profile, 0xbc90, 48)).hexdigest(),
+        'coefficients': cs, 'sqrt_rational_bracket': root_exact, 'nodes': nodes, 'omega_interval': output,
+        'assumptions': 'IEEE binary32/binary64; every rounding direction; fused fmadd (one rounding); normal positive operands/results make FTZ inactive; no reassociation',
+        'binding': dict(binding), 'consumer_algorithm_sha256': native.sha256(__file__)}
+    record['sha256'] = canonical_digest(record)
+    return record
+
+
 class ScalarAuthority:
     """Consumer composition of accepted244; never extends a scalar theorem domain.
 
-    Fixed-dot enumeration is phase independent. Native acos outside [.9,1] has
-    no all-rounding constant-point receipt here, so those exact states stay UNKNOWN.
+    Fixed-dot enumeration is phase independent. Only six actual native states
+    outside [.9,1] can use finite captured-instruction proofs, bound to their keys.
     The point-only fit keeps its accepted platform replay and is not refitted.
     """
     def __init__(self, capture, receipt, native_capture, platform_math):
@@ -435,10 +515,25 @@ class ScalarAuthority:
             require(all(platform_math['functions'][name] == {'image': slot['image_path'],
                     'mach_o_uuid': slot['image_id']} for slot in slots), 'Arithmetic/native profile mismatch')
         self.receipt = receipt
+        self.acos_profile = capture['native']['imports'][2][0]
+        self.constant_keys = {}
+        self.constant_records = {}
+        self.constant_digests = {}
+        if receipt['engine_sha256'] == ACOS_ENGINE_SHA:
+            for track in native_capture.get('tracks', []):
+                for index in range(len(track['keys'])-1):
+                    identity = (track['path'], index)
+                    if identity in ACOS_WORDS:
+                        require(track['type'] == 2 and track['interpolation'] != 0, 'Finite acos native key type')
+                        keys = tuple(tuple(np.float32(v).item() for v in key['value'])
+                                     for key in track['keys'][index:index+2])
+                        if canonical_digest(keys) == ACOS_KEY_SHA[track['path']]:
+                            self.constant_keys[identity] = keys
         self.binding = {'kind': 'accepted244-scalar-composition-v1', 'receipt': receipt,
                         'capture_sha256': scalar.digest(scalar.canonical(capture)),
                         'verifier_sha256': native.sha256(scalar.__file__)}
         self.cache = {}
+        self.cache_digests = {}
         self.domains = {}
         self.weight_domains = {}
         self.work = {'fixed_dot_states': 0, 'weight_interval_compositions': 0,
@@ -455,7 +550,7 @@ class ScalarAuthority:
         return taylor_endpoint(lo, True)[0]-error, taylor_endpoint(hi, True)[1]+error
 
     def key_domain(self, a, b, track, key_index):
-        cache_key = (tuple(a.lo), tuple(a.hi), tuple(b.lo), tuple(b.hi))
+        cache_key = (track, key_index, tuple(a.lo), tuple(a.hi), tuple(b.lo), tuple(b.hi))
         if cache_key not in self.cache:
             dot = native.box_dot(a, b, 4)
             first, last = float_key(dot.lo), float_key(dot.hi)
@@ -474,7 +569,24 @@ class ScalarAuthority:
                 if nonlinear:
                     low, high = map(Q, record['cosine_interval'])
                     if low < Q(9, 10) or high > 1:
-                        record['unknown'] = 'acos_constant_authority_missing'
+                        identity = (track, key_index)
+                        words = tuple(binary32_word(c) for c in sorted(set(cosines)))
+                        keys = (tuple(a.lo), tuple(b.lo))
+                        if (not negative and words == ACOS_WORDS.get(identity)
+                                and keys == self.constant_keys.get(identity)
+                                and np.array_equal(a.lo, a.hi) and np.array_equal(b.lo, b.hi)):
+                            proofs = [finite_acos_constant(self.acos_profile, word, self.binding) for word in words]
+                            record['constant_proof_sha256'] = [p['sha256'] for p in proofs]
+                            for proof in proofs:
+                                self.constant_records[proof['input_word']] = {**proof, 'track': track, 'key_index': key_index,
+                                    'source_keys': keys}
+                                self.constant_digests[proof['input_word']] = canonical_digest(self.constant_records[proof['input_word']])
+                            omega = float_box((min(p['omega_interval'][0] for p in proofs),
+                                               max(p['omega_interval'][1] for p in proofs)))
+                            record['omega_interval'] = list(box_interval(omega))
+                            record['denominator_interval'] = list(self.sine(box_interval(omega), 'sinf'))
+                        else:
+                            record['unknown'] = 'acos_constant_authority_missing'
                     else:
                         error = Q(self.receipt['theorems']['acosf']['outward_absolute_error'])
                         omega = float_box((acos_endpoint(high)[0]-error, acos_endpoint(low)[1]+error))
@@ -482,8 +594,14 @@ class ScalarAuthority:
                         record['denominator_interval'] = list(self.sine(box_interval(omega), 'sinf'))
                 result.append(record)
             self.cache[cache_key] = {'dot_states': states, 'branches': result}
+            self.cache_digests[cache_key] = canonical_digest(self.cache[cache_key])
             self.work['fixed_dot_states'] += count
         record = self.cache[cache_key]
+        require(canonical_digest(record) == self.cache_digests[cache_key], 'Stale/corrupted scalar domain cache')
+        for word in ACOS_WORDS.get((track, key_index), ()):
+            if word in self.constant_records:
+                require(canonical_digest(self.constant_records[word]) == self.constant_digests[word],
+                        'Stale/corrupted finite acos proof cache')
         self.domains.setdefault(track+':'+str(key_index), {'track': track, 'key_index': key_index, **record})
         return record
 
@@ -1063,12 +1181,12 @@ def verify_partition(closed, unclosed, length):
 
 
 def validate_diagnostic(report):
-    require(type(report['version']) is int and report['version'] in (1, 2, 3, 4), 'Report version')
-    if report['version'] in (2, 3, 4):
+    require(type(report['version']) is int and report['version'] in (1, 2, 3, 4, 5), 'Report version')
+    if report['version'] in (2, 3, 4, 5):
         binding = report['input_binding']
         require(binding['kind'] == 'native-reacquired-v1' and type(binding['version']) is int
                 and binding['version'] == 1, 'Input binding version')
-        require(report['step_id'] == ('CAV-CONTACT-PHASE-QUATERNION-NORM' if report['version'] == 4 else ('CAV-CONTACT-PHASE-SLERP-BOUNDS' if report['version'] == 3 else 'CAV-CONTACT-PHASE-INPUT-BINDING'))
+        require(report['step_id'] == ('CAV-CONTACT-PHASE-ACOS-CONSTANTS' if report['version'] == 5 else 'CAV-CONTACT-PHASE-QUATERNION-NORM' if report['version'] == 4 else ('CAV-CONTACT-PHASE-SLERP-BOUNDS' if report['version'] == 3 else 'CAV-CONTACT-PHASE-INPUT-BINDING'))
                 and report['atlas_input_packet']['input_binding'] == binding
                 and report['atlas']['input_sha256'] == canonical_digest(report['atlas_input_packet'])
                 and report['inputs']['manifest'] == binding['manifest_sha256']
@@ -1079,7 +1197,7 @@ def validate_diagnostic(report):
     else:
         require(not any(k in report for k in ('input_binding', 'atlas_input_packet', 'input_locations')),
                 'Mixed legacy/new provenance')
-    if report['version'] in (3, 4):
+    if report['version'] in (3, 4, 5):
         require('arithmetic_proof' in report and report['atlas_input_packet'].get('arithmetic_proof') == report['arithmetic_proof']
                 and report['arithmetic_proof']['verifier_sha256'] == ARITHMETIC_VERIFIER_SHA
                 and report['inputs']['arithmetic_capture'] == report['arithmetic_proof']['capture_file_sha256']
@@ -1090,7 +1208,7 @@ def validate_diagnostic(report):
                 'Arithmetic proof/atlas binding differs')
         require(len(report['baseline_accounting']['coordinate_boxes']) == 69
                 and len(report['baseline_accounting']['shape_cases']) == 18, 'Incomplete prior unknown accounting')
-    if report['version'] == 4:
+    if report['version'] in (4, 5):
         require(report['inputs']['norm_baseline_report'] == NORM_BASELINE_SHA
                 and report['atlas_input_packet']['norm_baseline_report_sha256'] == NORM_BASELINE_SHA,
                 'Norm proof/accepted255 binding differs')
@@ -1111,6 +1229,38 @@ def validate_diagnostic(report):
                     return Q(*v) if isinstance(v, list) else rational(v)
                 require(lower('mixer_rounded_norm_squared') > 0 and lower('basis_rounded_norm_squared') > 0
                         and len(branch['hamilton_roundoff']) == 2, 'Unproved norm denominator')
+    if report['version'] == 5:
+        require(report['inputs']['acos_baseline_report'] == ACOS_BASELINE_SHA
+                and report['atlas_input_packet']['acos_baseline_report_sha256'] == ACOS_BASELINE_SHA,
+                'Finite acos/accepted256 binding differs')
+        require(len(report['accepted256_input_bindings']) == 801
+                and set(report['accepted256_input_bindings']) <= set(report['inputs']), 'Lost accepted256 input names')
+        require(len(report['previous_norm_accounting']['coordinate_boxes']) == 18
+                and len(report['previous_norm_accounting']['shape_cases']) == 3677
+                and len(report['acos_target_replays']) == 18, 'Incomplete accepted256 accounting')
+        proofs = report['continuous_native']['finite_acos_constants']
+        require(len(proofs) == 6 and {p['input_word'] for p in proofs} ==
+                {w for words in ACOS_WORDS.values() for w in words}, 'Missing/duplicated finite acos state')
+        for proof in proofs:
+            identity = (proof['track'], proof['key_index'])
+            require(proof['input_word'] in ACOS_WORDS.get(identity, ()), 'Finite acos proof transplanted to another key')
+            require(canonical_digest(proof['source_keys']) == ACOS_KEY_SHA[proof['track']], 'Finite acos source keys changed')
+            expected = finite_acos_constant(scalar.MAC_PROFILE['acosf'], proof['input_word'], report['arithmetic_proof'])
+            require({k: v for k, v in proof.items() if k not in ('track', 'key_index', 'source_keys')} == json_value(expected),
+                    'Finite acos proof differs from rounded instruction replay')
+        for domain in report['continuous_native']['scalar_domain_records']:
+            for branch in domain['branches']:
+                if (domain['track'], domain['key_index']) in ACOS_WORDS and branch['nonlinear']:
+                    require(not branch['negative'] and 'constant_proof_sha256' in branch
+                            and tuple(binary32_word(c) for c in domain['dot_states']) == ACOS_WORDS[domain['track'], domain['key_index']],
+                            'Finite acos domain state/branch coverage differs')
+                if 'constant_proof_sha256' in branch:
+                    matched = [p for p in proofs if (p['track'], p['key_index']) == (domain['track'], domain['key_index'])]
+                    require(len(matched) == 3 and branch['constant_proof_sha256'] == [p['sha256'] for p in matched],
+                            'Finite acos branch proof coverage differs')
+                    omega = float_box((min(Q(*p['omega_interval'][0]) for p in matched),
+                                       max(Q(*p['omega_interval'][1]) for p in matched)))
+                    require(branch['omega_interval'] == json_value(list(box_interval(omega))), 'Stale finite acos omega hull')
     require(report['status'] == 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY', 'Diagnostic status changed')
     validate_atlas(report['atlas'])
     require(canonical_digest(report['atlas']) == report['atlas_sha256'], 'Atlas coefficients/digest changed')
@@ -1241,16 +1391,18 @@ def baseline_accounting(baseline, closed, unclosed):
 
 
 def build(review_path, *, native_manifest=None, bundle_root=None,
-          arithmetic_capture=None, arithmetic_receipt=None, baseline_report=None, norm_baseline_report=None):
+          arithmetic_capture=None, arithmetic_receipt=None, baseline_report=None, norm_baseline_report=None,
+          acos_baseline_report=None):
     proof_mode = arithmetic_capture is not None
     require((arithmetic_capture is None) == (arithmetic_receipt is None) == (baseline_report is None),
             'Arithmetic capture, receipt and baseline required together')
     require(not proof_mode or native_manifest is not None, 'Arithmetic mode requires explicit accepted native inputs')
     require(proof_mode == (norm_baseline_report is not None), 'Norm mode requires accepted255 baseline')
+    require(proof_mode == (acos_baseline_report is not None), 'Finite acos mode requires accepted256 baseline')
 
     manifest, capture, surface, binds, patches, supports, functions, witness, context = load_inputs(
         review_path, native_manifest=native_manifest, bundle_root=bundle_root)
-    arithmetic = baseline = norm_baseline = None
+    arithmetic = baseline = norm_baseline = acos_baseline = None
     if proof_mode:
         baseline = native.read_bound(baseline_report, BASELINE_SHA)
         validate_diagnostic(baseline)
@@ -1258,12 +1410,15 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         norm_baseline = native.read_bound(norm_baseline_report, NORM_BASELINE_SHA)
         validate_diagnostic(norm_baseline)
         require(norm_baseline['version'] == 3, 'Expected accepted255 baseline')
+        acos_baseline = native.read_bound(acos_baseline_report, ACOS_BASELINE_SHA)
+        validate_diagnostic(acos_baseline)
+        require(acos_baseline['version'] == 4, 'Expected accepted256 baseline')
         arithmetic = ScalarAuthority(reacquired.read_json(arithmetic_capture), reacquired.read_json(arithmetic_receipt),
                                      capture, context['binding']['platform_math'])
         arithmetic.binding.update(capture_file_sha256=native.sha256(arithmetic_capture),
                                   receipt_file_sha256=native.sha256(arithmetic_receipt))
         context['locations'].update(arithmetic_capture=str(arithmetic_capture), arithmetic_receipt=str(arithmetic_receipt),
-                                    baseline_report=str(baseline_report), norm_baseline_report=str(norm_baseline_report))
+                                    baseline_report=str(baseline_report), norm_baseline_report=str(norm_baseline_report), acos_baseline_report=str(acos_baseline_report))
     phases = sorted({Q(0), Q(1), Q('.137'), Q('.25')}
                     | {Q(k['time'])/Q(capture['length']) for t in capture['tracks'] for k in t['keys']}
                     | {v for pair in supports.values() for v in pair})
@@ -1285,7 +1440,7 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         samples_path = context['roles']['samples']
     if arithmetic is not None:
         input_packet.update(arithmetic_proof=arithmetic.binding, baseline_report_sha256=BASELINE_SHA,
-                            norm_baseline_report_sha256=NORM_BASELINE_SHA)
+                            norm_baseline_report_sha256=NORM_BASELINE_SHA, acos_baseline_report_sha256=ACOS_BASELINE_SHA)
     atlas = make_atlas(phases, distances, canonical_digest(input_packet), capture['length'])
     samples, sampled, obstruction = captured_obstructions(capture, surface, binds, patches, supports,
                                                          samples_path, witness)
@@ -1318,6 +1473,32 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
                 disposition = {'outcome': 'UNKNOWN', **error.detail}
             norm_targets.append({'original_seconds': target['seconds'], 'original_bone': target['bone'],
                                  'original_reason': target['reason'], **disposition})
+    acos_targets = []
+    acos_budget = Budget(arithmetic=arithmetic)
+    if arithmetic is not None:
+        original_work = dict(arithmetic.work)
+        targets = acos_baseline['continuous_native']['unclosed_boxes']
+        require(len(targets) == 18 and all(t['reason'] == 'acos_constant_authority_missing' for t in targets),
+                'Accepted256 acos target identity')
+        for target in targets:
+            lo, hi = target['seconds']
+            try:
+                replay = surface_span_box(capture, surface, binds, lo, hi, functions, acos_budget)
+                for time in [lo, (lo+hi)/2, hi]:
+                    require(replay.contains(sampled_points(capture, surface, binds, time)).all(),
+                            'Finite acos target outside full raw geometry box')
+                disposition = {'outcome': 'COORDINATE_CLOSED', 'vertices': len(replay.lo), 'refutation_rows': 3}
+            except Unclosed as error:
+                disposition = {'outcome': 'UNKNOWN', **error.detail}
+            acos_targets.append({'original_seconds': target['seconds'], 'original_track': target['track'],
+                'original_key_index': target['key_index'], 'original_reason': target['reason'], **disposition})
+    if arithmetic is not None:
+        finite_work = {k: arithmetic.work[k]-v for k, v in original_work.items()}
+        arithmetic.work = original_work
+        finite_bound = 18*sum(len(t['keys'])-1 for t in capture['tracks'] if t['type'] == 2)*4
+        require(finite_work['weight_interval_compositions'] <= finite_bound
+                and finite_work['sine_ranges'] <= 3*finite_bound, 'Finite acos target work bound')
+        require(len(acos_budget.norm_records) <= 18*len(capture['bones']), 'Finite acos target bone bound')
     birth_boxes = {hoof: boxes[phases.index(start)][patches[hoof]['native_sole_vertices']]
                    for hoof, (start, _) in supports.items()}
     names = [b['name'] for b in capture['bones']]
@@ -1377,7 +1558,7 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
     if arithmetic is not None:
         inputs.update(arithmetic_capture=arithmetic.binding['capture_file_sha256'],
                       arithmetic_receipt=arithmetic.binding['receipt_file_sha256'], baseline_report=BASELINE_SHA,
-                      arithmetic_verifier=ARITHMETIC_VERIFIER_SHA, norm_baseline_report=NORM_BASELINE_SHA)
+                      arithmetic_verifier=ARITHMETIC_VERIFIER_SHA, norm_baseline_report=NORM_BASELINE_SHA, acos_baseline_report=ACOS_BASELINE_SHA)
         key_pairs = sum(len(t['keys'])-1 for t in capture['tracks'] if t['type'] == 2 and t['interpolation'] != 0)
         bound = LIMITS['continuous_boxes']*key_pairs*4
         require(arithmetic.work['weight_interval_compositions'] <= bound
@@ -1398,17 +1579,31 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
             'finite_sine_range_bound': 3*bound+2*key_pairs,
             'finite_basic_interval_operation_bound': 6*bound,
             'scope': 'Separate fixed-key/branch range work; original finite-weight counters and all LIMITS unchanged.'}
+        used['finite_acos'] = {'constant_proofs': len(arithmetic.constant_records), 'constant_proof_bound': 6,
+            'rounded_nodes': sum(len(p['nodes']) for p in arithmetic.constant_records.values()), 'rounded_node_bound': 54,
+            'target_replays': len(acos_targets), 'target_replay_bound': 18, 'target_refutation_rows': sum(r.get('refutation_rows', 0) for r in acos_targets),
+            'target_refutation_bound': 54, 'target_scalar_work': finite_work, 'target_composition_bound': finite_bound,
+            'target_bone_span_records': len(acos_budget.norm_records), 'target_bone_span_bound': 18*len(capture['bones']),
+            'scope': 'Additional finite six-state instruction proof and exact accepted256 18-box replays; original counters and LIMITS unchanged.'}
     for path in ['tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py',
                  'tools/units3d/check_cavalry_march_capture.py', 'tools/units3d/measure_unit_bodies.gd',
                  'docs/reviews/cluster-formations/cavalry-march-contact-prerequisite.md']:
         inputs[path if context else str(ROOT/path)] = native.sha256(ROOT/path)
+    if arithmetic is not None:
+        old_inputs = acos_baseline['inputs']
+        require(len(old_inputs) == 801 and set(old_inputs) <= set(inputs), 'Lost accepted256 binding names')
+        changed = {k for k, v in old_inputs.items() if inputs[k] != v}
+        require(changed <= {'tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py'},
+                'Accepted256 nonalgorithm input changed')
     return json_value({
         **({'input_binding': context['binding'], 'input_locations': context['locations'],
             'atlas_input_packet': input_packet} if context else {}),
-        'version': 4 if arithmetic else (2 if context else 1), 'step_id': 'CAV-CONTACT-PHASE-QUATERNION-NORM' if arithmetic else ('CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE'), 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
+        'version': 5 if arithmetic else (2 if context else 1), 'step_id': 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if arithmetic else ('CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE'), 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
         **({'arithmetic_proof': arithmetic.binding, 'baseline_accounting': baseline_accounting(baseline, records, unclosed),
             'previous_operation_accounting': baseline_accounting(norm_baseline, records, unclosed),
-            'norm_target_replays': norm_targets} if arithmetic else {}),
+            'norm_target_replays': norm_targets, 'acos_target_replays': acos_targets,
+            'previous_norm_accounting': baseline_accounting(acos_baseline, records, unclosed),
+            'accepted256_input_bindings': acos_baseline['inputs']} if arithmetic else {}),
         'inputs': inputs, 'work_budget_declared_before_fit': LIMITS, 'work_used': {**used, 'proposal_evaluations': evaluations},
         'accepted_anatomy': {'manifest_status_preserved': manifest['status'], 'independent_component_verdict': context['binding']['verdict'] if context else str(review_path),
                              'four_patches': {h: {'vertices': len(p['native_sole_vertices']), 'triangles': len(p['native_sole_triangles'])} for h, p in patches.items()}},
@@ -1425,12 +1620,15 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
             'diameter_m': {'lower': lower, 'upper': None, 'scope': 'Two required endpoints; free-anchor radius lower is half, never entry drift.'},
             'penetration_m': None, 'hover_m': None, 'normal_rad': None, 'envelope_m': None},
         'continuous_native': {**({'scalar_domain_records': list(arithmetic.domains.values()),
+                                  'finite_acos_constants': list(arithmetic.constant_records.values()),
+                                  'acos_target_norm_certificates': [{'seconds': [lo, hi], 'bone': bone, 'branches': branches}
+                                      for (lo, hi, bone), branches in acos_budget.norm_records.items()],
                                   'weight_domain_records': list(arithmetic.weight_domains.values()),
                                   'quaternion_norm_certificates': [{'seconds': [lo, hi], 'bone': bone, 'branches': branches}
                                       for (lo, hi, bone), branches in budget.norm_records.items()]} if arithmetic else {}),
                               'closed_boxes': records, 'unclosed_boxes': unclosed,
                               'closed_subset_diameter_upper_m': diameter, 'closed_subset_body_world_sphere_upper_m': body_world,
-                              'method': ('Shared-weight exact fixed-key Gram quadratic plus explicit interpolation/Taylor, two-Hamilton/FMA/FTZ and normalization/Basis norm certificates; machine sign branches retained through Basis. Exact rational monotone Taylor sine/acos ranges plus recomputed accepted244 scalar errors, binary64 scale0/binary32 scale1 rounding and FTZ; fixed-dot states all enumerated, full weights enclosed through mixer/Basis/FK/true-bind/raw LBS. Out-of-domain constant acos stays UNKNOWN.' if arithmetic else 'Outward binary32 track/search/mixer/Basis/FK/true-bind/unnormalized LBS boxes; every finite binary32 slerp weight is enumerated with pinned acosf/sinf/double sin. Exhausted domains stay UNKNOWN. No assumed libm ULP bound, sampled residual allowance, or fast-math reassociation.'),
+                              'method': ('Shared-weight exact fixed-key Gram quadratic plus explicit interpolation/Taylor, two-Hamilton/FMA/FTZ and normalization/Basis norm certificates; machine sign branches retained through Basis. Exact rational monotone Taylor sine/acos ranges plus recomputed accepted244 scalar errors, binary64 scale0/binary32 scale1 rounding and FTZ; fixed-dot states all enumerated, full weights enclosed through mixer/Basis/FK/true-bind/raw LBS. Six actual fixed positive acosf states use captured-instruction, all-rounding finite result proofs; every other out-of-domain state stays UNKNOWN.' if arithmetic else 'Outward binary32 track/search/mixer/Basis/FK/true-bind/unnormalized LBS boxes; every finite binary32 slerp weight is enumerated with pinned acosf/sinf/double sin. Exhausted domains stay UNKNOWN. No assumed libm ULP bound, sampled residual allowance, or fast-math reassociation.'),
                               'loop': 'Player exact terminal maps to phase 0; direct terminal query and one-sided epsilon-search branches remain separate in closed interval checks.'},
         'full_geometry': {'vertices': len(surface['vertices']), 'triangles': len(surface['indices'])//3,
                           'body_vertices': int(np.count_nonzero(body_mask)), 'attack_only_vertices': int(np.count_nonzero(~body_mask)),
@@ -1443,8 +1641,8 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         'claims': {'verified_physical_candidate': False, 'success_dependency': False, 'contact_certificate': False,
                    'policy_E': None, 'phase_runtime_unblocked': False, 'surface_unblocked': False,
                    'original_12_gates_preserved': True, 'native_recapture': False, 'live_window_or_FPS_acceptance': False},
-        'reproduction': ({'build': 'python3 tools/units3d/cavalry_march_phase.py build --native-manifest MANIFEST_JSON --bundle-root BUNDLE_ROOT --review-record ACTUAL_RECEIPT_JSON --out REPORT_JSON'+(' --arithmetic-capture SCALAR_CAPTURE --arithmetic-receipt SCALAR_RECEIPT --baseline-report ACCEPTED252_REPORT --norm-baseline-report ACCEPTED255_REPORT' if arithmetic else ''),
-                          'verify': 'python3 tools/units3d/cavalry_march_phase.py verify REPORT_JSON --native-manifest MANIFEST_JSON --bundle-root BUNDLE_ROOT --review-record ACTUAL_RECEIPT_JSON'+(' --arithmetic-capture SCALAR_CAPTURE --arithmetic-receipt SCALAR_RECEIPT --baseline-report ACCEPTED252_REPORT --norm-baseline-report ACCEPTED255_REPORT' if arithmetic else ''),
+        'reproduction': ({'build': 'python3 tools/units3d/cavalry_march_phase.py build --native-manifest MANIFEST_JSON --bundle-root BUNDLE_ROOT --review-record ACTUAL_RECEIPT_JSON --out REPORT_JSON'+(' --arithmetic-capture SCALAR_CAPTURE --arithmetic-receipt SCALAR_RECEIPT --baseline-report ACCEPTED252_REPORT --norm-baseline-report ACCEPTED255_REPORT --acos-baseline-report ACCEPTED256_REPORT' if arithmetic else ''),
+                          'verify': 'python3 tools/units3d/cavalry_march_phase.py verify REPORT_JSON --native-manifest MANIFEST_JSON --bundle-root BUNDLE_ROOT --review-record ACTUAL_RECEIPT_JSON'+(' --arithmetic-capture SCALAR_CAPTURE --arithmetic-receipt SCALAR_RECEIPT --baseline-report ACCEPTED252_REPORT --norm-baseline-report ACCEPTED255_REPORT --acos-baseline-report ACCEPTED256_REPORT' if arithmetic else ''),
                           'exit_status': '2 is diagnostic/unknown, never physical acceptance; malformed/tampered input exits 1.'} if context else {'build': 'python3 tools/units3d/cavalry_march_phase.py build --review-record REVIEW_COMPLETE_JSON --out REPORT_JSON',
                          'verify': 'python3 tools/units3d/cavalry_march_phase.py verify REPORT_JSON --review-record REVIEW_COMPLETE_JSON',
                          'exit_status': '2 is the expected truthful diagnostic/unknown result, never physical acceptance. A malformed/tampered input exits 1.'})})
@@ -1463,6 +1661,7 @@ def main():
         p.add_argument('--arithmetic-receipt', type=Path)
         p.add_argument('--baseline-report', type=Path)
         p.add_argument('--norm-baseline-report', type=Path)
+        p.add_argument('--acos-baseline-report', type=Path)
     args = parser.parse_args()
     try:
         existing = None
@@ -1475,14 +1674,15 @@ def main():
         require(proof_mode == (args.arithmetic_receipt is not None) == (args.baseline_report is not None),
                 'Arithmetic capture, receipt and baseline required together')
         if existing is not None:
-            require(existing['version'] == (4 if proof_mode else (2 if fresh else 1)), 'Report/input mode mismatch')
+            require(existing['version'] == (5 if proof_mode else (2 if fresh else 1)), 'Report/input mode mismatch')
         report = build(args.review_record.resolve(),
                        native_manifest=args.native_manifest.resolve() if fresh else None,
                        bundle_root=args.bundle_root.resolve() if fresh else None,
                        arithmetic_capture=args.arithmetic_capture.resolve() if proof_mode else None,
                        arithmetic_receipt=args.arithmetic_receipt.resolve() if proof_mode else None,
                        baseline_report=args.baseline_report.resolve() if proof_mode else None,
-                       norm_baseline_report=args.norm_baseline_report.resolve() if args.norm_baseline_report else None)
+                       norm_baseline_report=args.norm_baseline_report.resolve() if args.norm_baseline_report else None,
+                       acos_baseline_report=args.acos_baseline_report.resolve() if args.acos_baseline_report else None)
         validate_diagnostic(report)
         if args.command == 'build':
             args.out.write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False)+'\n')

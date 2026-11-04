@@ -7,6 +7,7 @@ import os
 from unittest.mock import patch
 import tempfile
 import unittest
+import struct
 from pathlib import Path
 
 import numpy as np
@@ -221,6 +222,119 @@ class PhaseTests(unittest.TestCase):
             digest = capture.sha256(p); p.write_text('{"x":2}')
             with self.assertRaises(ValueError):
                 capture.read_bound(p, digest)
+
+
+class FiniteAcosTests(unittest.TestCase):
+    @staticmethod
+    def directed(x, precision, upper):
+        # Independent IEEE normal-number rounding by integer significand division.
+        exponent = x.numerator.bit_length()-x.denominator.bit_length()
+        if x < Q(2)**exponent:
+            exponent -= 1
+        unit = Q(2)**(exponent-precision+1)
+        significand = x/unit
+        n, remainder = divmod(significand.numerator, significand.denominator)
+        return (n+bool(upper and remainder))*unit
+
+    @classmethod
+    def walk(cls, cosine, coefficients):
+        t = 1-cosine
+        point = lambda x: (x, x)
+        def rounded(pair, precision=53):
+            return cls.directed(pair[0], precision, False), cls.directed(pair[1], precision, True)
+        def fma(a, b, c):
+            values = [x*y+z for x in a for y in b for z in c]
+            return rounded((min(values), max(values)))
+        # Independent finer integer sqrt bracket, then actual directed binary64 grid.
+        denominator = 2**160
+        n = math.isqrt(t.numerator*denominator**2//t.denominator)
+        root = rounded((Q(n, denominator), Q(n+1, denominator)))
+        a, b, d = [fma(point(t), point(coefficients[i]), point(coefficients[i+1])) for i in (0, 2, 4)]
+        square = rounded(point(t*t))
+        h = fma(square, fma(square, a, b), d)
+        product = rounded((root[0]*h[0], root[1]*h[1]))
+        return rounded(product, 24)
+
+    def test_six_exact_words_control_flow_sqrt_and_all_direction_results(self):
+        profile = phase.scalar.MAC_PROFILE['acosf']
+        coefficients = [Q(x) for x in struct.unpack('<6d', bytes.fromhex(profile['code'])[-48:])]
+        expected_t = [2038333, 2038332, 2038331, 1988572, 1988571, 1988570]
+        words = [w for group in phase.ACOS_WORDS.values() for w in group]
+        for word, numerator in zip(words, expected_t):
+            r = phase.finite_acos_constant(profile, word, {})
+            c = Q(int(word, 16)&0x7fffff | 0x800000, 2**24)
+            self.assertEqual(r['input_rational'], c)
+            self.assertEqual(r['sterbenz_t'], Q(numerator, 2**24))
+            self.assertTrue(Q(1, 2) < c < 1)
+            lo, hi = r['sqrt_rational_bracket']
+            self.assertTrue(lo*lo <= 1-c <= hi*hi)
+            self.assertLessEqual(hi-lo, Q(1, 2**96))
+            independent = self.walk(c, coefficients)
+            self.assertLessEqual(r['omega_interval'][0], independent[0])
+            self.assertGreaterEqual(r['omega_interval'][1], independent[1])
+            self.assertTrue(0 < r['omega_interval'][0] < r['omega_interval'][1] < Q(1, 2))
+            self.assertEqual([n['pc'] for n in r['nodes']],
+                ['0xbb98', '0xbb9c', '0xbba0', '0xbba4', '0xbba8', '0xbbac', '0xbbb0', '0xbbc8', '0xbbcc'])
+            # A host value is a refutation control only.
+            observed = Q(np.float32(math.acos(float(c))).item())
+            self.assertLessEqual(r['omega_interval'][0], observed)
+            self.assertGreaterEqual(r['omega_interval'][1], observed)
+
+    def test_actual_aarch64_branch_targets_and_fma_register_equations(self):
+        profile = phase.scalar.MAC_PROFILE['acosf']
+        def instruction(pc):
+            return int.from_bytes(phase.scalar.read_memory(profile, pc, 4), 'little')
+        # B.cond uses the existing NZCV flags; intervening FMOV/LDR do not set them.
+        for pc, condition, target in [(0xbb4c, 5, 0xbc24), (0xbb58, 12, 0xbb7c), (0xbbb8, 12, 0xbbc8)]:
+            word = instruction(pc)
+            self.assertEqual(word & 0xff000010, 0x54000000)
+            self.assertEqual(word & 15, condition)
+            displacement = (word >> 5) & 0x7ffff
+            if displacement & 0x40000:
+                displacement -= 0x80000
+            self.assertEqual(pc+4*displacement, target)
+        # FMADD Dd,Dn,Dm,Da: one rounding, no intermediate product rounding.
+        for pc, registers in [(0xbb9c, (3, 1, 2, 3)), (0xbba0, (5, 1, 4, 5)),
+                              (0xbba4, (7, 1, 6, 7)), (0xbbac, (5, 2, 3, 5)), (0xbbb0, (7, 2, 5, 7))]:
+            word = instruction(pc)
+            self.assertEqual(word & 0xffe08000, 0x1f400000)
+            self.assertEqual((word & 31, (word >> 5) & 31, (word >> 16) & 31, (word >> 10) & 31), registers)
+        # ADR X0 loads the six binary64 constants at PC + signed imm21.
+        word = instruction(0xbb88)
+        displacement = ((word >> 5) & 0x7ffff)*4+((word >> 29) & 3)
+        self.assertEqual(0xbb88+displacement, 0xbc90)
+
+    def test_fused_rounding_and_directed_conversion_hand_cases(self):
+        # Exact FMA cancels to 2^-104; a separately rounded product loses it.
+        a, b, c = 1+Q(1, 2**52), 1+Q(1, 2**52), -(1+Q(1, 2**51))
+        exact = a*b+c
+        self.assertEqual(exact, Q(1, 2**104))
+        self.assertEqual(self.directed(exact, 53, False), exact)
+        self.assertEqual(self.directed(a*b, 53, False)+c, 0)
+        for precision in (24, 53):
+            midpoint = 1+Q(1, 2**precision)
+            self.assertEqual(self.directed(midpoint, precision, False), 1)
+            self.assertEqual(self.directed(midpoint, precision, True), 1+Q(1, 2**(precision-1)))
+        # Constant-polynomial hand case: ((2*t+3)*t^2+(4*t+5))*t^2+(6*t+7), t=1/4.
+        t = Q(1, 4)
+        exact = ((2*t+3)*t*t+(4*t+5))*t*t+(6*t+7)
+        self.assertEqual(exact, Q(4551, 512))
+        root = phase.sqrt_bounds(Q(1, 4), 2**96)
+        self.assertEqual(root, (Q(1, 2), Q(1, 2)))
+
+    def test_foreign_word_branch_coefficient_format_and_profile_reject(self):
+        profile = phase.scalar.MAC_PROFILE['acosf']
+        with self.assertRaisesRegex(ValueError, 'Uncovered acos constant'):
+            phase.finite_acos_constant(profile, '3f60e5c2', {})
+        for offset in (0x28, 0x50, 0x6c, 0x98, 0x9c, 0x160):
+            changed = copy.deepcopy(profile)
+            raw = bytearray.fromhex(changed['code']); raw[offset] ^= 1
+            changed['code'] = raw.hex()
+            with self.assertRaisesRegex(ValueError, 'profile mismatch'):
+                phase.finite_acos_constant(changed, '3f60e5c3', {})
+        changed = dict(profile, entry_offset=0)
+        with self.assertRaisesRegex(ValueError, 'profile mismatch'):
+            phase.finite_acos_constant(changed, '3f60e5c3', {})
 
 
 class SlerpRangeTests(unittest.TestCase):
@@ -712,6 +826,83 @@ class AcceptedScalarTests(unittest.TestCase):
         return phase.ScalarAuthority(self.scalar_capture, self.scalar_receipt, self.native,
             self.manifest['component_result']['numerical_accounting']['platform_math'])
 
+    def test_actual_six_states_bind_keys_and_reject_stale_hull_and_proofs(self):
+        authority = self.authority(); authority.prepare(self.native)
+        self.assertEqual(set(authority.constant_records), {w for words in phase.ACOS_WORDS.values() for w in words})
+        for identity, words in phase.ACOS_WORDS.items():
+            track = next(t for t in self.native['tracks'] if t['path'] == identity[0])
+            a, b = [capture.Float32Box(k['value']) for k in track['keys'][identity[1]:identity[1]+2]]
+            domain = authority.key_domain(a, b, *identity)
+            self.assertEqual(len(domain['branches'][0]['constant_proof_sha256']), 3)
+            foreign = authority.key_domain(a, b, 'foreign', identity[1])
+            self.assertEqual(foreign['branches'][0]['unknown'], 'acos_constant_authority_missing')
+            foreign_key = authority.key_domain(a, b, identity[0], identity[1]+1)
+            self.assertEqual(foreign_key['branches'][0]['unknown'], 'acos_constant_authority_missing')
+            saved = copy.deepcopy(domain['branches'][0]['omega_interval'])
+            domain['branches'][0]['omega_interval'][0] = Q(0)
+            with self.assertRaisesRegex(ValueError, 'domain cache'):
+                authority.key_domain(a, b, *identity)
+            domain['branches'][0]['omega_interval'] = saved
+            r = authority.constant_records[words[0]]
+            original = r['assumptions']; r['assumptions'] = 'nearest only'
+            with self.assertRaisesRegex(ValueError, 'proof cache'):
+                authority.key_domain(a, b, *identity)
+            r['assumptions'] = original
+
+    def test_final_report_rejects_corrupted_finite_proofs_and_preserves_old_cases(self):
+        report_path = os.environ.get('CAV_ACOS_REPORT')
+        if not report_path:
+            self.skipTest('explicit new finite-acos report required')
+        report = json.loads(Path(report_path).read_text())
+        phase.validate_diagnostic(report)
+        for mutation in [lambda p: p.update(input_word='3f60e5c2'),
+                         lambda p: p.update(profile='foreign'),
+                         lambda p: p['binding'].update(capture_sha256='0'*64),
+                         lambda p: p['binding'].update(engine_sha256='0'*64),
+                         lambda p: p.update(coefficient_bytes='00'),
+                         lambda p: p.update(assumptions='nearest only; omit FTZ'),
+                         lambda p: p['nodes'][0].update(rounded_interval=[[0, 1], [0, 1]]),
+                         lambda p: p['nodes'][-2].update(rounded_interval=[[0, 1], [0, 1]]),
+                         lambda p: p['nodes'][-1].update(rounded_interval=[[0, 1], [0, 1]]),
+                         lambda p: p.update(key_index=99),
+                         lambda p: p.update(consumer_algorithm_sha256='0'*64),
+                         lambda p: p.update(sha256='0'*64)]:
+            proof = copy.deepcopy(report['continuous_native']['finite_acos_constants'][0]); mutation(proof)
+            changed = {**report, 'continuous_native': {**report['continuous_native'],
+                'finite_acos_constants': [proof]+report['continuous_native']['finite_acos_constants'][1:]}}
+            with self.assertRaises(ValueError):
+                phase.validate_diagnostic(changed)
+        for proofs in [report['continuous_native']['finite_acos_constants'][1:],
+                       [report['continuous_native']['finite_acos_constants'][0]]*6]:
+            changed = {**report, 'continuous_native': {**report['continuous_native'], 'finite_acos_constants': proofs}}
+            with self.assertRaises(ValueError):
+                phase.validate_diagnostic(changed)
+        self.assertEqual(len(report['accepted256_input_bindings']), 801)
+        self.assertEqual(len(report['inputs']), 802)
+        for key, coordinates, shapes in [('baseline_accounting', 69, 18),
+                                         ('previous_operation_accounting', 19, 3028), ('previous_norm_accounting', 18, 3677)]:
+            self.assertEqual(len(report[key]['coordinate_boxes']), coordinates)
+            self.assertEqual(len(report[key]['shape_cases']), shapes)
+        self.assertTrue(all(t.get('vertices') == 21175 for t in report['acos_target_replays'] if t['outcome'] == 'COORDINATE_CLOSED'))
+        self.assertTrue(all(t.get('reason') != 'acos_constant_authority_missing' for t in report['acos_target_replays']))
+        self.assertEqual(len(report['norm_target_replays']), 8)
+        self.assertTrue(all(t['outcome'] == 'COORDINATE_CLOSED' for t in report['norm_target_replays']))
+
+    def test_sign_changed_source_keys_cannot_reuse_six_constant_authority(self):
+        changed = copy.deepcopy(self.native)
+        for track in changed['tracks']:
+            identity = (track['path'], 7)
+            if identity in phase.ACOS_WORDS:
+                for key in track['keys'][7:9]:
+                    key['value'] = [-v for v in key['value']]
+                authority = phase.ScalarAuthority(self.scalar_capture, self.scalar_receipt, changed,
+                    self.manifest['component_result']['numerical_accounting']['platform_math'])
+                a, b = [capture.Float32Box(k['value']) for k in track['keys'][7:9]]
+                with self.assertRaisesRegex(phase.Unclosed, 'acos_constant_authority_missing'):
+                    authority.slerp(a, b, capture.Float32Box(.5), *identity)
+                return
+        self.fail('Missing actual finite key set')
+
     def test_eight_frozen_norm_failures_replay_full_raw_geometry_with_positive_denominators(self):
         baseline_path = os.environ.get('CAV_NORM_BASELINE')
         if not baseline_path:
@@ -762,7 +953,7 @@ class AcceptedScalarTests(unittest.TestCase):
         self.assertTrue(terminal.contains(zero.lo).all() and terminal.contains(zero.hi).all())
         self.assertEqual(budget.used, 0)
 
-    def test_all_actual_key_pairs_match_bounded_weight_oracle_and_retain_two_unknowns(self):
+    def test_all_actual_key_pairs_match_bounded_weight_oracle_with_six_finite_constants(self):
         # This refutation check does not replace the continuous Taylor/error proof.
         native = self.native; authority = self.authority()
         authority.prepare(native)
@@ -786,8 +977,9 @@ class AcceptedScalarTests(unittest.TestCase):
                         oracle = capture.slerp_box(q, r, value, functions)
                         self.assertTrue(box.contains(oracle.lo).all() and box.contains(oracle.hi).all(), (track['path'], i, weight))
                         checks += 1
-        self.assertEqual(unknown, {('HindHoof.L', 7), ('HindHoof.R', 11)})
-        self.assertEqual(checks, 3306)
+        self.assertEqual(unknown, set())
+        self.assertEqual(checks, 3318)
+        self.assertEqual(len(authority.constant_records), 6)
 
 
 if __name__ == '__main__':
