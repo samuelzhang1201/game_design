@@ -2,6 +2,9 @@
 import copy
 from fractions import Fraction as Q
 import math
+import json
+import os
+from unittest.mock import patch
 import tempfile
 import unittest
 from pathlib import Path
@@ -177,7 +180,7 @@ class PhaseTests(unittest.TestCase):
         phase.verify_partition(closed, failed, 1.)
 
     def test_diagnostic_report_rejects_success_claim_or_changed_coefficients(self):
-        report = {'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY', 'atlas': self.atlas(),
+        report = {'version': 1, 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY', 'atlas': self.atlas(),
                   'claims': {'success_dependency': False, 'verified_physical_candidate': False,
                              'policy_E': None, 'phase_runtime_unblocked': False, 'surface_unblocked': False,
                              'contact_certificate': False, 'original_12_gates_preserved': True},
@@ -210,6 +213,214 @@ class PhaseTests(unittest.TestCase):
             digest = capture.sha256(p); p.write_text('{"x":2}')
             with self.assertRaises(ValueError):
                 capture.read_bound(p, digest)
+
+
+class BindingTests(unittest.TestCase):
+    def test_partial_new_mode_fails_before_legacy_or_accepted_reads(self):
+        for manifest, bundle in [(Path('/new'), None), (None, Path('/bundle'))]:
+            with patch.object(capture, 'read_bound', side_effect=AssertionError('legacy read')):
+                with self.assertRaisesRegex(ValueError, 'together'):
+                    phase.load_inputs(Path('/receipt'), native_manifest=manifest, bundle_root=bundle)
+
+    def test_new_mode_requires_receipt_and_calls_existing_acceptance_boundary(self):
+        with patch.object(phase.reacquired, 'load_accepted', side_effect=ValueError('authoritative rejection')) as load:
+            with self.assertRaisesRegex(ValueError, 'authoritative rejection'):
+                phase.load_inputs(Path('/receipt'), native_manifest=Path('/manifest'), bundle_root=Path('/bundle'))
+            load.assert_called_once_with(Path('/manifest'), Path('/bundle'), Path('/receipt'))
+        with self.assertRaisesRegex(ValueError, 'receipt required'):
+            phase.load_inputs(None, native_manifest=Path('/manifest'), bundle_root=Path('/bundle'))
+
+    def report(self):
+        atlas = PhaseTests().atlas()
+        binding = {'kind': 'native-reacquired-v1', 'version': 1, 'manifest_sha256': 'b'*64,
+                   'body_sha256': 'c'*64, 'role_sha256': {'native': 'd'*64},
+                   'algorithm_sha256': {'algorithm': 'e'*64}}
+        packet = {'input_binding': binding, 'data_sha256': 'f'*64}
+        atlas['input_sha256'] = phase.canonical_digest(packet)
+        return {'version': 2, 'step_id': 'CAV-CONTACT-PHASE-INPUT-BINDING',
+                'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
+                'input_binding': binding, 'atlas_input_packet': packet,
+                'inputs': {'manifest': 'b'*64, 'verdict_body': 'c'*64, 'role:native': 'd'*64, 'algorithm': 'e'*64},
+                'atlas': atlas, 'atlas_sha256': phase.canonical_digest(atlas),
+                'claims': {'success_dependency': False, 'verified_physical_candidate': False,
+                           'policy_E': None, 'phase_runtime_unblocked': False, 'surface_unblocked': False,
+                           'contact_certificate': False, 'original_12_gates_preserved': True},
+                'continuous_native': {'closed_boxes': [], 'unclosed_boxes': [{'seconds': [0., .5]}]},
+                'missing_physical_context': [{'missing_input': 'actual terrain'}]}
+
+    def test_versioned_provenance_rejects_mixed_versions_and_stale_atlas(self):
+        phase.validate_diagnostic(self.report())
+        mutations = [lambda r: r.update(version=1), lambda r: r.update(version=3),
+                     lambda r: r['input_binding'].update(version=2),
+                     lambda r: r['input_binding'].update(kind='legacy'),
+                     lambda r: r['inputs'].update(manifest='a'*64),
+                     lambda r: r['inputs'].update(verdict_body='a'*64),
+                     lambda r: r['inputs'].update({'role:native': 'a'*64}),
+                     lambda r: r['inputs'].update(algorithm='a'*64),
+                     lambda r: r['atlas_input_packet'].update(data_sha256='a'*64),
+                     lambda r: r['input_binding'].update(body_sha256='a'*64)]
+        for mutate in mutations:
+            bad = copy.deepcopy(self.report()); mutate(bad)
+            with self.subTest(mutation=mutations.index(mutate)), self.assertRaises(ValueError):
+                phase.validate_diagnostic(bad)
+
+    def test_cli_partial_flags_and_mode_mismatch_do_not_publish(self):
+        import sys
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)/'report.json'
+            for flags in [['--native-manifest', '/manifest'], ['--bundle-root', '/bundle']]:
+                with patch.object(sys, 'argv', ['phase', 'build', '--review-record', '/receipt', '--out', str(out), *flags]):
+                    with patch.object(phase, 'build', side_effect=AssertionError('must reject first')):
+                        self.assertEqual(phase.main(), 1)
+                self.assertFalse(out.exists())
+            out.write_text(json.dumps(self.report()))
+            with patch.object(sys, 'argv', ['phase', 'verify', str(out), '--review-record', '/receipt']):
+                with patch.object(phase, 'build', side_effect=AssertionError('must reject first')):
+                    self.assertEqual(phase.main(), 1)
+
+    def test_unavailable_acceptance_evidence_rejects_without_partial_report(self):
+        import subprocess
+        import sys
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)/'out.json'
+            with patch.object(sys, 'argv', ['phase', 'build', '--out', str(out), '--review-record', '/receipt',
+                                           '--native-manifest', '/manifest', '--bundle-root', '/bundle']):
+                with patch.object(phase.reacquired, 'load_accepted', side_effect=subprocess.CalledProcessError(1, 'gh')):
+                    self.assertEqual(phase.main(), 1)
+            self.assertFalse(out.exists())
+
+
+@unittest.skipUnless(os.environ.get('CAV_PHASE_BUNDLE') and os.environ.get('CAV_PHASE_RECEIPT')
+                     and os.environ.get('CAV_PHASE_SECOND_BUNDLE'), 'explicit accepted custody inputs required')
+class AcceptedBindingTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.manifest = phase.ROOT/'docs/reviews/cluster-formations/evidence/locomotion/cavalry/march-native-reacquired.json'
+        cls.receipt = Path(os.environ['CAV_PHASE_RECEIPT'])
+        cls.bundles = [Path(os.environ[k]) for k in ('CAV_PHASE_BUNDLE', 'CAV_PHASE_SECOND_BUNDLE')]
+        import builtins
+        import io
+        original_open, original_io_open = builtins.open, io.open
+        def guard(opener):
+            def checked(file, *args, **kwargs):
+                text = str(file)
+                if any(fragment in text for fragment in ['/acquisition-20261104-01/',
+                    '/cluster-loco-clip-cavalry/', '/cavalry-contact-native/game_design/',
+                    '/cluster-loco-cert-cavalry/game_design/']):
+                    raise AssertionError('Legacy data file opened: '+text)
+                return opener(file, *args, **kwargs)
+            return checked
+        with patch.object(builtins, 'open', guard(original_open)), patch.object(io, 'open', guard(original_io_open)):
+            cls.loaded = [phase.load_inputs(cls.receipt, native_manifest=cls.manifest, bundle_root=b) for b in cls.bundles]
+
+    def test_real_accepted_copies_have_identical_binding_and_scientific_data(self):
+        a, b = self.loaded
+        self.assertEqual(a[-1]['binding'], b[-1]['binding'])
+        self.assertNotEqual(a[-1]['locations'], b[-1]['locations'])
+        for i in (1, 2, 3, 4, 5, 7):
+            self.assertEqual(phase.canonical_digest(a[i]), phase.canonical_digest(b[i]))
+        self.assertEqual(len(a[1]['sample_times_seconds']), 154)
+        self.assertEqual(a[-1]['binding']['role_sha256']['samples'], capture.sha256(a[-1]['roles']['samples']))
+        self.assertNotEqual(a[-1]['binding']['manifest_sha256'], phase.MANIFEST_SHA)
+
+    def test_actual_legacy_mode_remains_unavailable_without_fallback(self):
+        with self.assertRaises((OSError, ValueError)):
+            phase.load_inputs(self.receipt)
+
+    def test_new_mode_keeps_actual_platform_and_installed_source_guards(self):
+        accepted = {'manifest': self.loaded[0][0], 'native': self.loaded[0][1],
+                    'accounting': {'patches': self.loaded[0][4]},
+                    'component_result': {'numerical_accounting': {
+                        'platform_math': self.loaded[0][-1]['binding']['platform_math']}}}
+        with patch.object(phase.reacquired, 'load_accepted', return_value=accepted):
+            with patch.object(capture, 'math_runtime_identity', return_value={'functions': {}, 'platform': 'other'}):
+                with self.assertRaisesRegex(ValueError, 'platform math mismatch'):
+                    phase.load_inputs(self.receipt, native_manifest=self.manifest, bundle_root=self.bundles[0])
+            bad = copy.deepcopy(accepted)
+            bad['native']['skin'][0]['resolved_bone'] = 52
+            with patch.object(phase.reacquired, 'load_accepted', return_value=bad):
+                with self.assertRaisesRegex(ValueError, 'bind mapping'):
+                    phase.load_inputs(self.receipt, native_manifest=self.manifest, bundle_root=self.bundles[0])
+
+    def test_unknown_manifest_version_and_component_overclaim_reject_before_replay(self):
+        accepted = copy.deepcopy(self.loaded[0][0])
+        mutations = [lambda m: m.update(version=2), lambda m: m.update(step_id='other'),
+                     lambda m: m['claims'].update(physical_contact=True),
+                     lambda m: m['claims'].update(phase_candidate=True),
+                     lambda m: m['claims'].update(CERT=True)]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'manifest.json'
+            for mutate in mutations:
+                bad = copy.deepcopy(accepted); mutate(bad); path.write_text(json.dumps(bad))
+                with patch.object(phase.reacquired, 'portable_replay', side_effect=AssertionError('must reject first')):
+                    with self.assertRaises(ValueError):
+                        phase.load_inputs(self.receipt, native_manifest=path, bundle_root=self.bundles[0])
+
+    def test_legacy_fixture_preserves_genuine_legacy_validation_branch(self):
+        # Synthetic complete legacy fixture, never a fabricated acceptance of missing historical bytes.
+        manifest, native, _, _, patches, _, _, witness, _ = self.loaded[0]
+        legacy = {'inputs': {f'/fixture/input-{i}': '0'*64 for i in range(294)},
+                  'capture_directory': '/fixture/capture', 'accounting_payload': '/fixture/accounting.json',
+                  'frozen_paths': {'witness': '/fixture/witness.json'},
+                  'numerical_accounting': {'platform_math': manifest['component_result']['numerical_accounting']['platform_math']}}
+        actions = phase.ROOT/'tools/units3d/cavalry_rig/actions.py'
+        legacy['inputs'].update({'/fixture/capture/native.json': '1'*64, '/fixture/accounting.json': '2'*64,
+                                 '/fixture/witness.json': '3'*64, str(actions): capture.sha256(actions)})
+        review = {'accepted': True, 'manifest_sha256': phase.MANIFEST_SHA, 'pr': {'state': 'MERGED'},
+                  'review_session_id': '01a19ca8-5995-7bb2-b666-b3fbf29fb47d'}
+        payloads = {str(phase.MANIFEST): legacy, '/fixture/review.json': review,
+                    '/fixture/capture/native.json': native, '/fixture/accounting.json': {'patches': patches},
+                    '/fixture/witness.json': witness}
+        original_sha = capture.sha256
+        def fixture_sha(path):
+            text = str(path)
+            if text in legacy['inputs']: return legacy['inputs'][text]
+            if text == '/fixture/round2.md': return phase.VERDICT_SHA
+            if text == '/fixture/accepted234-disposition.md':
+                return 'f54da8c9105721029a0aed93dad6ecf2341ebf87cd55ec239401f6c3113db4ad'
+            return original_sha(path)
+        with patch.object(capture, 'read_bound', side_effect=lambda p, digest: copy.deepcopy(payloads[str(p)])), \
+             patch.object(capture, 'sha256', side_effect=fixture_sha), \
+             patch.object(phase.reacquired, 'load_accepted', side_effect=AssertionError('fresh fallback')):
+            result = phase.load_inputs(Path('/fixture/review.json'))
+            self.assertIsNone(result[-1])
+            self.assertEqual(phase.canonical_digest(result[1]), phase.canonical_digest(native))
+            review['accepted'] = False
+            with self.assertRaisesRegex(ValueError, 'anatomical verdict'):
+                phase.load_inputs(Path('/fixture/review.json'))
+
+    def test_receipt_corruption_and_unavailable_evidence_use_original_boundary(self):
+        import subprocess
+        manifest = self.loaded[0][0]
+        record = phase.reacquired.read_json(self.receipt)
+        published = copy.deepcopy(record['comment'])
+        with tempfile.TemporaryDirectory() as directory:
+            receipt = Path(directory)/'receipt.json'
+            variants = [{'accepted': True}]
+            for key, value in [('producer_head', 'a'*40), ('manifest_sha256', 'a'*64),
+                               ('bundle_sha256', 'a'*64), ('review_session_id', 'other'),
+                               ('implementation_session_id', 'other'), ('continuous_contact_certified', True)]:
+                bad = copy.deepcopy(record); bad['binding'][key] = value; variants.append(bad)
+            for key, value in [('body', 'changed'), ('id', 1), ('node_id', 'other')]:
+                bad = copy.deepcopy(record); bad['comment'][key] = value; variants.append(bad)
+            # Reuse only the unchanged expensive numerical result; receipt/registry validation really executes.
+            with patch.object(phase.reacquired, 'portable_replay', return_value=manifest['component_result']):
+                with patch.object(phase.reacquired, 'fetch_github', return_value=published):
+                    for i, bad in enumerate(variants):
+                        receipt.write_text(json.dumps(bad))
+                        with self.subTest(variant=i), self.assertRaises((ValueError, KeyError)):
+                            phase.load_inputs(receipt, native_manifest=self.manifest, bundle_root=self.bundles[0])
+                with patch.object(phase.reacquired, 'fetch_github', side_effect=subprocess.CalledProcessError(1, 'gh')):
+                    with self.assertRaises(subprocess.CalledProcessError):
+                        phase.load_inputs(self.receipt, native_manifest=self.manifest, bundle_root=self.bundles[0])
+                original = phase.reacquired.read_json
+                def unavailable_registry(path):
+                    if Path(path).name == 'codex-handoffs.json':
+                        raise OSError('registry unavailable')
+                    return original(path)
+                with patch.object(phase.reacquired, 'read_json', side_effect=unavailable_registry):
+                    with self.assertRaisesRegex(OSError, 'registry unavailable'):
+                        phase.load_inputs(self.receipt, native_manifest=self.manifest, bundle_root=self.bundles[0])
 
 
 if __name__ == '__main__':
