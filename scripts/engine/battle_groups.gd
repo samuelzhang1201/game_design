@@ -376,6 +376,7 @@ static func in_reach(repo: DataRepository, state: GameState, code: String, row: 
 ## Validate the complete proposed rows before publishing any slot or anchor.
 static func placement(repo: DataRepository, state: GameState, battle: Dictionary, include_other_fields := true) -> Dictionary:
 	var occupied: Array = []
+	var overlap_error := {}
 	var grid := MarchPath.of_pack(repo)
 	var fields: Array = [battle]
 	if include_other_fields:
@@ -405,10 +406,11 @@ static func placement(repo: DataRepository, state: GameState, battle: Dictionary
 					if field != battle and not prior.proposed: continue
 					var pair := BattleGroupGeometry.pair(point, int(footprint.radius_m), prior.point, int(prior.radius), 0)
 					if not pair.ok: return {"ok": false, "error": String(pair.reason)}
-					if pair.overlap:
-						return {"ok": false, "overlap": true, "error": "Occupied battle discs overlap: " + code + " / " + String(prior.code)}
+					if pair.overlap and overlap_error.is_empty():
+						overlap_error = {"ok": false, "overlap": true, "error": "Occupied battle discs overlap: " + code + " / " + String(prior.code)}
 				occupied.append({"point": point, "radius": footprint.radius_m, "code": code, "proposed": field == battle})
-	return {"ok": true}
+	# A layout retry is safe only after every proposed row has passed ground/schema checks.
+	return {"ok": true} if overlap_error.is_empty() else overlap_error
 
 
 ## A pure precommit check, also used for every leg of legacy/saved marches.

@@ -613,3 +613,65 @@ func test_join_refuses_a_closed_new_rank_without_halting_or_spending_a_slot() ->
 	assert_false(BattleSystem.join(f.repo, f.state, int(f.battle.id), friend, "att"))
 	assert_eq(SaveLoad.state_hash(f.state), before)
 	MarchPath.forget()
+
+func _overlap_and_late_ground(blocked: bool) -> Dictionary:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 200)
+	f.state.regiments[f.a].facing_deg = 90
+	f.state.foes[f.enemy].facing_deg = 270
+	f.state.foes[f.enemy].y_m = 2020
+	f.battle.place_y_m = 2010
+	var cells := PackedByteArray()
+	cells.resize(500 * 500)
+	cells.fill(0)
+	if blocked: cells[192 * 500 + 100] = 255
+	f.repo.balance.army_march_grid_px = 1
+	var grid := MarchPath.build(f.repo, 500, 500, 10, cells)
+	MarchPath.use(f.repo, grid)
+	assert_true(grid.clear(Vector2i(1000, 2000), Vector2i(1000, 2000)))
+	assert_true(grid.clear(Vector2i(1000, 2020), Vector2i(1000, 2020)))
+	return f
+
+func test_overlap_cannot_hide_a_later_closed_rank_during_new_contact() -> void:
+	for blocked: bool in [true, false]:
+		var f := _overlap_and_late_ground(blocked)
+		f.state.battles.clear()
+		var before := SaveLoad.state_hash(f.state)
+		var events: Array = []
+		BattleSystem._start(f.repo, f.state, f.a, f.enemy, "", events)
+		if blocked:
+			assert_eq(f.state.battles, [], "Front overlap cannot bypass the later water row by moving the field")
+			assert_eq(events, [])
+			assert_eq(SaveLoad.state_hash(f.state), before)
+		else:
+			assert_eq(f.state.battles.size(), 1, "Pure overlap still permits a legal complete deployment")
+			assert_true(BattleGroups.placement(f.repo, f.state, f.state.battles[0]).ok)
+			for code: String in [f.a, f.enemy]: assert_eq(ArmySystem.fit_count(f.repo, f.state, code), 200)
+		MarchPath.forget()
+
+func test_overlap_cannot_hide_a_later_closed_rank_during_geometry_migration() -> void:
+	for blocked: bool in [true, false]:
+		var f := _overlap_and_late_ground(blocked)
+		f.battle.groups = {}
+		f.battle.group_facing = {f.a: 90, f.enemy: 270}
+		f.battle.group_size_version = 2
+		f.battle.group_size_men = 100
+		for code: String in [f.a, f.enemy]:
+			var rows: Array = []
+			var at := BattleSystem._at_m(f.repo, f.state, code)
+			for point: Vector2i in BattleGroups.layout(f.repo, "double_rank", 2, at, int(f.battle.group_facing[code]), 80):
+				rows.append({"slot": rows.size(), "count": 100,
+					"role": "front" if rows.is_empty() else "reserve", "x_m": point.x, "y_m": point.y})
+			f.battle.groups[code] = rows
+		var before := SaveLoad.state_hash(f.state)
+		var result := BattleGroups.migrate_geometry(f.repo, f.state, f.battle)
+		if blocked:
+			assert_eq(result.status, "error")
+			assert_string_contains(result.get("error", ""), "blocked ground")
+			assert_string_contains(result.get("error", ""), "(1000, 1920)")
+			assert_eq(SaveLoad.state_hash(f.state), before, "Mixed failure must preserve the complete saved candidate")
+		else:
+			assert_eq(result.status, "complete", "Pure saved overlap still repairs at the safe boundary")
+			assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+		MarchPath.forget()
