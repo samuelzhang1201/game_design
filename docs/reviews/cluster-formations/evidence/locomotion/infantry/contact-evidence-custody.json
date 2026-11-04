@@ -1,0 +1,2122 @@
+{
+  "schema": "infantry-contact-custody/v1",
+  "repository": "samuelzhang1201/game_design",
+  "release_tag": "evidence-infantry-contact-12c6915d0f528651",
+  "tag_target_accepted_commit": "f71c158e1df9f96954a2954ea0f32beeb236663e",
+  "asset_cap_bytes": 104857600,
+  "assets": [
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00000.zlibpart",
+      "bytes": 100663296,
+      "sha256": "ff979359abd0bb22edba494999654e8e519726e23295ab7634a8f414e24ed428",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00000.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00001.zlibpart",
+      "bytes": 100663296,
+      "sha256": "466914ed5edc49101b6960ef3c175eaa1e590e8ae6103f373f4a0eab31556b44",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00001.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00002.zlibpart",
+      "bytes": 100663296,
+      "sha256": "2e0de5f501e36bfa57f0242ff7cb0bc77d3bec000aacbd37364c19d502f3ac26",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00002.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00003.zlibpart",
+      "bytes": 100663296,
+      "sha256": "f1c7869ffd5baba8d9150fb19cd4dd6bff4b0dc845219fa4824b286d8f094c21",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00003.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00004.zlibpart",
+      "bytes": 100663296,
+      "sha256": "7d0f5afa0fedff16b8fa36ce0710822fe62d370abac99cfb712234f3eb5a9937",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00004.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00005.zlibpart",
+      "bytes": 100663296,
+      "sha256": "4f38527a0a4d0bbf8966d6479396a24c64301c9db566cda8612489bd29047787",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00005.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00006.zlibpart",
+      "bytes": 100663296,
+      "sha256": "b7e98e75219482c549ab995fde3cbf5890974fb3eb5dcc931d31c4574e84dfc0",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00006.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00007.zlibpart",
+      "bytes": 100663296,
+      "sha256": "bd7957da739700154f62422b0d917dedf795a906e02f95646d7a0eace65a5f62",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00007.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00008.zlibpart",
+      "bytes": 100663296,
+      "sha256": "5d97da9d4ccb8a238aac840c587f0671f6eb605caf1be3014e34fc3ed740c835",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00008.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00009.zlibpart",
+      "bytes": 100663296,
+      "sha256": "82f711736ddede42c7e54d130086ccd4ad9eec3af3bb8d1c5738695ca48d187e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00009.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00010.zlibpart",
+      "bytes": 100663296,
+      "sha256": "603abcbeb5db7c527d7bf9b31fee23fe7103704706c79aa6f95343244c519814",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00010.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00011.zlibpart",
+      "bytes": 100663296,
+      "sha256": "f49fdebb5388da30249b75a97e3f18668a11be4122e6260fd63cff8a971084ec",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00011.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00012.zlibpart",
+      "bytes": 100663296,
+      "sha256": "d51fd4acc761a4fb0e7f55ce12389da7fbc25a0dfda6d8c6eeafb0b30313d4ef",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00012.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00013.zlibpart",
+      "bytes": 100663296,
+      "sha256": "e623e5da99ce4e383207e21827ff13557026714cd44abe8f3f1dc63484b9b8e9",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00013.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00014.zlibpart",
+      "bytes": 100663296,
+      "sha256": "7ee9dfe160bf704aa1d4f7fe1c846824bb50007dedbc186849fcf9a496cf3028",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00014.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00015.zlibpart",
+      "bytes": 100663296,
+      "sha256": "263983c5da61f8335fdd24e69bd71fae796cfc6bab8d1373b0e7082b564765a0",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00015.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00016.zlibpart",
+      "bytes": 100663296,
+      "sha256": "455d0a4f2454496071573a8bd13003561cb2ab6de62b67f3b29870ace857d1b1",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00016.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00017.zlibpart",
+      "bytes": 100663296,
+      "sha256": "401f50a5ca1f397bccf8d1ebb4acbc449e5ac721df2f842aa7248c0c0a548799",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00017.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00018.zlibpart",
+      "bytes": 100663296,
+      "sha256": "cdc3df1050dc9b45e64fb497252e4b38d9756cfce17801319a63e43e5ab6e542",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00018.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00019.zlibpart",
+      "bytes": 100663296,
+      "sha256": "a294ceda1d5e1cffce8631cc44361284390fa5139e72007917ac634667f14558",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00019.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00020.zlibpart",
+      "bytes": 100663296,
+      "sha256": "fa61b7e773c07836b94827a5bd5e3d15ebfef1c47a680c05e55817d3678cbdd0",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00020.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00021.zlibpart",
+      "bytes": 100663296,
+      "sha256": "5cb27df4b372c8470ce9cbbff2f4607ae33714af2f4fdcfd84a7201733c6cc29",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00021.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00022.zlibpart",
+      "bytes": 100663296,
+      "sha256": "d5a6f18a77cb8be84fde819ce573b22cdfc3b357a99677b2230f9908d20223bc",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00022.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00023.zlibpart",
+      "bytes": 100663296,
+      "sha256": "ab8725ed4ceeb70de93523e75287151af1068cf91143c9aaf63f417bfdf76f1e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00023.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00024.zlibpart",
+      "bytes": 100663296,
+      "sha256": "d085afcb6b78a20394dff2a216e5787fa16353034bddb503978e381af38765bb",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00024.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00025.zlibpart",
+      "bytes": 100663296,
+      "sha256": "55da5fb9b9a38e0c2ee6b0aefbd9086fc8134c4dfe668679d7b2182d1db3d3e5",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00025.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00026.zlibpart",
+      "bytes": 100663296,
+      "sha256": "8fa5f07d58ca8c91f72e0ed31a48fd97566f501831786033f07ab52306b6cfb8",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00026.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00027.zlibpart",
+      "bytes": 100663296,
+      "sha256": "7d0ca85e7b6658240f01661efaa691817a3e2503a6b0d5ef0ca854be6763d2b2",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00027.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00028.zlibpart",
+      "bytes": 100663296,
+      "sha256": "551fc9a592a72ebdcaad1911af49266c0dc1367f5f64fdf6ab484865bde85b9c",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00028.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00029.zlibpart",
+      "bytes": 100663296,
+      "sha256": "d3b8c923938286ee2966575e3b45fc87f4b9fbbbaf1aa5f7d721a38795c1b3af",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00029.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00030.zlibpart",
+      "bytes": 100663296,
+      "sha256": "db8d2ef1e614a283015cb4204ea3db7105f66108b47a01db628b628c87093dac",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00030.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00031.zlibpart",
+      "bytes": 100663296,
+      "sha256": "4c5c1872271e03f6e213f002710bdd532581188d62035f7b94c366fb27c7f182",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00031.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00032.zlibpart",
+      "bytes": 100663296,
+      "sha256": "37397be5efdfa7f92a35465cdf300398da5dab9a0310b4c75fdb45652324c1ce",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00032.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00033.zlibpart",
+      "bytes": 100663296,
+      "sha256": "2ce6cf2089842425460fef053e42e170fa9cb9dd4f645346fbf9117e78f1b527",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00033.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00034.zlibpart",
+      "bytes": 100663296,
+      "sha256": "6535d44b02a97bee0881dfbb17c98c2aae83936b96f87db73b625bed75592b24",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00034.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00035.zlibpart",
+      "bytes": 100663296,
+      "sha256": "f14e2a52aaa57dca0a8f88d229289d109de1bcd075fb27b1938490a211ebcc05",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00035.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00036.zlibpart",
+      "bytes": 100663296,
+      "sha256": "b9277de97ebebce60f87215191040b66b10206bca71b7daa5c840a712ec0f434",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00036.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00037.zlibpart",
+      "bytes": 100663296,
+      "sha256": "cf03eff3c6d24be81cee8e52fb6a2907fdbba4392ba95e1641ee0ee0593c2dc7",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00037.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00038.zlibpart",
+      "bytes": 100663296,
+      "sha256": "1b68947b80776225a9ec55b2347c63eb49b9fa4c98f34a58004f68c9db109a86",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00038.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00039.zlibpart",
+      "bytes": 100663296,
+      "sha256": "d8a046e2d0850978403caae32e22692ae358194c866c261fdbba194a31c528c7",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00039.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00040.zlibpart",
+      "bytes": 100663296,
+      "sha256": "34492ed73a3216d163926064fef44fc84d96a913d547b2bcdfc6bcf8986dbcc1",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00040.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00041.zlibpart",
+      "bytes": 100663296,
+      "sha256": "a3864dd034345173800a9079ee381625c396632e69ab6d5679c774f3ebb3599d",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00041.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00042.zlibpart",
+      "bytes": 100663296,
+      "sha256": "49abf6a6b9432d83e9517c9747e1cac4780f250dbc9ff92566f9a2cc4571f549",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00042.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00043.zlibpart",
+      "bytes": 100663296,
+      "sha256": "2aad977c0adc0b73b72ee79b91d1ff12b1c6fba0cfa9072e7bd07468d2d6f92a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00043.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00044.zlibpart",
+      "bytes": 100663296,
+      "sha256": "0de7a2d8de3e0acfd5ae45f537ef0463ceaea7fddc0d87524bcc298a0dd2c29d",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00044.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00045.zlibpart",
+      "bytes": 100663296,
+      "sha256": "aeb614ce140575b20141637ea8dd994f9b44269b6ffdbb89f47bbe22ce97c301",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00045.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-responses-00046.zlibpart",
+      "bytes": 30180438,
+      "sha256": "53840304b5c31733cd50205ee1ac3078e94fe353805c482a34f0501e17cd9993",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-responses-00046.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00000.zlibpart",
+      "bytes": 100663296,
+      "sha256": "d3783eff3d2a17e5604d10bf35aef387b91bf3b2ebb8381e34d56f3fda57d3ed",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00000.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00001.zlibpart",
+      "bytes": 100663296,
+      "sha256": "592af328d80c35567acd8c8aab5183bca1b871e58d900cc4f498fac49d70ba6f",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00001.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00002.zlibpart",
+      "bytes": 100663296,
+      "sha256": "059c45fc22ccb9d733fe9f67d9f473bd15865ba0778717fd33506a876262604f",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00002.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00003.zlibpart",
+      "bytes": 100663296,
+      "sha256": "c72faea0cfbcf5cd9b866ee8884d9c8bd252b687f8e005b62c3b3ae5a9922b7e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00003.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00004.zlibpart",
+      "bytes": 100663296,
+      "sha256": "74ffe5797bafa8cac606ab9a607cfd2052f6c44065dcd514341ba675707511fb",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00004.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00005.zlibpart",
+      "bytes": 100663296,
+      "sha256": "4f1d67056fce889c51aec6690da1f116f8ce58dfa130649895605ad0facf8817",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00005.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00006.zlibpart",
+      "bytes": 100663296,
+      "sha256": "4e322dc2919fb8f2e200698450537269a2f91c463cca6c47d486c448cd5fc057",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00006.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00007.zlibpart",
+      "bytes": 100663296,
+      "sha256": "f50db79877f2a21c2ad5aa358af634b2fa677bedfaf70ae3316dbe35ec9798f4",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00007.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00008.zlibpart",
+      "bytes": 100663296,
+      "sha256": "72bad361b170e2b76733643097a7067eae0e020a83a12443de8845462f4cae2b",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00008.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00009.zlibpart",
+      "bytes": 100663296,
+      "sha256": "7a5cfd0bf4f5c3e56a2dd37cb1d23be54fbf282c2ac5df06d91db175d331ed10",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00009.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00010.zlibpart",
+      "bytes": 100663296,
+      "sha256": "5816f4544e96d095f58bade94b24622c144b0d27f8b1ba693ba12d01cc628374",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00010.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00011.zlibpart",
+      "bytes": 100663296,
+      "sha256": "9b3fa06acfa1226dfc2bd72958f7424af2a8ad75ab2bb4398fa1b86fd3a91421",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00011.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00012.zlibpart",
+      "bytes": 100663296,
+      "sha256": "4ab920e34f36aaa6f088b2e2e7d90ce9228ab8bdab7680b083c57023e74cbe30",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00012.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00013.zlibpart",
+      "bytes": 100663296,
+      "sha256": "f6db60b98dc68eab80d1fcb34ac58583976f36618964580a667501f77e5c2a6d",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00013.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00014.zlibpart",
+      "bytes": 100663296,
+      "sha256": "3022b191ecb01621bfb93bea1f481c43e4f7fffd4be36b61001e3400a79af166",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00014.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00015.zlibpart",
+      "bytes": 100663296,
+      "sha256": "3d4eaa64a93bc5ce28bf2046346fb32aeadbeac24102a99acefdf2776f4ade4e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00015.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00016.zlibpart",
+      "bytes": 100663296,
+      "sha256": "14f3ce5f98748584d34ca52fcb9a9718893da14cafd8dad41262792fd84122b3",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00016.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00017.zlibpart",
+      "bytes": 100663296,
+      "sha256": "82e57bcfa55048a10885108646dc204cca190ef2185ccca1c3db1dfc7bdd81d1",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00017.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00018.zlibpart",
+      "bytes": 100663296,
+      "sha256": "72793f4941edb0842595abaab442c6e3b65b850be0e7817bb6c6b56a29ca70a3",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00018.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00019.zlibpart",
+      "bytes": 100663296,
+      "sha256": "df4f5b59473c772d12404c4e75ad2059c8ca6b2bf6d69386b284ee60025a7a2a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00019.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00020.zlibpart",
+      "bytes": 100663296,
+      "sha256": "51cf03cbe7d6031f7c44ea66838a3e2aab9c8e16d30f55bd8f39917c05fc788d",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00020.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00021.zlibpart",
+      "bytes": 100663296,
+      "sha256": "b3268356f7ef5e52d577cf163b101edd3ab4a8c63edda065f1e8aab642f9dbef",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00021.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00022.zlibpart",
+      "bytes": 100663296,
+      "sha256": "292b872940e4510c51b58a13b22ce65b3aa314ebc55f2d8609bbaf258a1ffff2",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00022.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00023.zlibpart",
+      "bytes": 100663296,
+      "sha256": "f5be992837c16e481ebaa4408d4e7f161d7cbe872b9e26f59a2f6a35e5122528",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00023.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00024.zlibpart",
+      "bytes": 100663296,
+      "sha256": "be5227fed200a6afb3922ded8d6bc40458d76adba960d698156812837e2bde56",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00024.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00025.zlibpart",
+      "bytes": 100663296,
+      "sha256": "5c9f4f70e98efa9dc39cbd4a13b4653746b18920fdd79318cfc15cce41e5a1a6",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00025.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00026.zlibpart",
+      "bytes": 100663296,
+      "sha256": "1906c08d65927f3ebe90c1b252cc1b206d68293fb3ad06e1b885691dd39e3552",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00026.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00027.zlibpart",
+      "bytes": 100663296,
+      "sha256": "4a831cc9661ab2abe3071305ea1a18c78fc319c4d5235cd92dc4804a7878ad18",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00027.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00028.zlibpart",
+      "bytes": 100663296,
+      "sha256": "0925f2ca407195b37bd1c725a72bf07c24f9cc13a2e2a4d95188d0254b414abd",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00028.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00029.zlibpart",
+      "bytes": 100663296,
+      "sha256": "f24359f01401d6ee9ed5a26466366ebdfdc85b1f388592540f05b59626015186",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00029.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00030.zlibpart",
+      "bytes": 100663296,
+      "sha256": "ddeb569ee955ab46b445bc89c329fd8bd9a6ccf03982c463581bbb264c3aa607",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00030.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00031.zlibpart",
+      "bytes": 100663296,
+      "sha256": "c73573a5d5d7b4d9064224c2a48903f368fbf84189972f50e9f51682eea001ac",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00031.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00032.zlibpart",
+      "bytes": 100663296,
+      "sha256": "049003bd0a30fb948018e84fd8043c67268d271d75579d8eb2051c8704d7a18a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00032.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00033.zlibpart",
+      "bytes": 100663296,
+      "sha256": "aa74d87b35c689a954d5c5bbfbff6f63e478b3792e964e39baae6fea5ddd7e03",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00033.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00034.zlibpart",
+      "bytes": 100663296,
+      "sha256": "ffa9551a8f24096e4706ac26504632647290f3fa2bfb1fb8840270d301ce5c24",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00034.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00035.zlibpart",
+      "bytes": 100663296,
+      "sha256": "781b6d330d03578de649b374160cdb5619537389ae23a2aecdd98fab3ced16be",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00035.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00036.zlibpart",
+      "bytes": 100663296,
+      "sha256": "5634deba148fab1f720b17ff9154778e08bd8863bda54b02453492728922ec4c",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00036.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00037.zlibpart",
+      "bytes": 100663296,
+      "sha256": "8885e6b8eb7c7f0a91fba39d1aafa23e0b2a989fb59d5e7a692eabf93da42e68",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00037.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00038.zlibpart",
+      "bytes": 100663296,
+      "sha256": "ec6c89477cac3d232457c22101792252d6332cc29f9706afdb6f355dcb31ea39",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00038.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00039.zlibpart",
+      "bytes": 100663296,
+      "sha256": "4bd0eb24d5c3d236a14f2befc8439cb54ce2482f5abf7705c6ea26c021ade0a7",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00039.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00040.zlibpart",
+      "bytes": 100663296,
+      "sha256": "741a957f0cb0f286ec7e7950fa7744f1bbe5722f5324f34bb81372de9c31e7da",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00040.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00041.zlibpart",
+      "bytes": 100663296,
+      "sha256": "6b1d59d3f4da7706b44130cc7f3a4785382a4931c3107f004c259254152e3793",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00041.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00042.zlibpart",
+      "bytes": 100663296,
+      "sha256": "b86b59bb2f4767d7fe8e90f2e48622453e12df0d4ecbf5942ef22348e727c178",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00042.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00043.zlibpart",
+      "bytes": 100663296,
+      "sha256": "407cd8149166ed110342050973842fefd4e763a8e5bd9720cad3c0809072153e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00043.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00044.zlibpart",
+      "bytes": 100663296,
+      "sha256": "b4ae000e63573a187362b1cc17380953dac430076d04fb404c26a0ccae0ac9c2",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00044.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00045.zlibpart",
+      "bytes": 100663296,
+      "sha256": "c011f2a22540d5f59930f68d678983c1c5efe234e07ce4050fdf447e122ef588",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00045.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00046.zlibpart",
+      "bytes": 100663296,
+      "sha256": "b1901374a6f1bef8424a5421c949eeb1028e8568ad2d77002c3f224b7c8ccec1",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00046.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00047.zlibpart",
+      "bytes": 100663296,
+      "sha256": "72983ecb21af6fead7e9bbec6a56e7af2db258dcacd4aa1039e8f35ad0fcf33a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00047.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00048.zlibpart",
+      "bytes": 100663296,
+      "sha256": "37ac63c06854e3c76f2d2f1e4ddcb2d30df837da6902287ab7b2e04354120a74",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00048.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00049.zlibpart",
+      "bytes": 100663296,
+      "sha256": "e660b177d786f3bcab9a30a55ba08eb5cae99b74c63ea24ddad62ccc65c9c1a5",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00049.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00050.zlibpart",
+      "bytes": 100663296,
+      "sha256": "3906a7cd4633e3735eec688a03f111fdb4028fbb25727af7f7b63400c2006fa5",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00050.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00051.zlibpart",
+      "bytes": 100663296,
+      "sha256": "2609c2bfc1057ecee72c1a41decb02a06da3ab1a9b67ab254367d7d2a304d28c",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00051.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00052.zlibpart",
+      "bytes": 100663296,
+      "sha256": "33cac008f74d1b54fd55b339b4b0b2306221d510a1543bb5e3622ae6fbbdf579",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00052.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00053.zlibpart",
+      "bytes": 100663296,
+      "sha256": "45ce192f4845ace7cefede066586b7ca86879535903fe00e3d599c4d3420dad6",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00053.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00054.zlibpart",
+      "bytes": 100663296,
+      "sha256": "b34364a0a5d76382306a24bf553193c2cf3a994bbc968eb37907f1e18ea010ca",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00054.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00055.zlibpart",
+      "bytes": 100663296,
+      "sha256": "63f72e455d0b574d5f738caa8e079168e716ab57c19221afc5b4153cb4e84d2c",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00055.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00056.zlibpart",
+      "bytes": 100663296,
+      "sha256": "2ac7f68d667bf4da65c650812a56374964c4fbf15956224c70455723236de322",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00056.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00057.zlibpart",
+      "bytes": 100663296,
+      "sha256": "14d8853c2b952d457fa1d4b09d236054a801f820d19e5b93ada413638a047a8a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00057.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00058.zlibpart",
+      "bytes": 100663296,
+      "sha256": "43e69989ff3b879128a7179737853abcd695f70ef3381b08c22526cd59ee634f",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00058.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00059.zlibpart",
+      "bytes": 100663296,
+      "sha256": "5285d88d97d9f4c482f47ba48274205bfb10ee958c02b0fa4b0c0ae8034d3c40",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00059.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00060.zlibpart",
+      "bytes": 100663296,
+      "sha256": "41f77f06e690df7fd944ea9b786c83f26dbef6a528680f57aec6344a6013f967",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00060.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00061.zlibpart",
+      "bytes": 100663296,
+      "sha256": "ffbc293f61a6a18798fcef99513e8db099f06eb01b14f3f7b93d8842d554a4e8",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00061.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00062.zlibpart",
+      "bytes": 100663296,
+      "sha256": "6a057bd89e0d0bcebe986ec1deede4a72ec2be825ed667b988310b4a27aba733",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00062.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00063.zlibpart",
+      "bytes": 100663296,
+      "sha256": "84895620fb85e4467322ab3607d729ebd95f4f1541ec1b1f9290402cba862376",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00063.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00064.zlibpart",
+      "bytes": 100663296,
+      "sha256": "dacdc4d36e22bce76cdb82dca0100f94bb5c421dd6f2aa4d610428033c0e614c",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00064.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00065.zlibpart",
+      "bytes": 100663296,
+      "sha256": "63a1e78dfe98ddbcef617a83c2355f3df08274d41dc795471f43d31acdf0f788",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00065.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00066.zlibpart",
+      "bytes": 100663296,
+      "sha256": "cde355a2ceb19fb079df623a2e311e289dc9cf4da568cff1b93e7141f22e8f7d",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00066.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00067.zlibpart",
+      "bytes": 100663296,
+      "sha256": "16219dfe29ba385f5a73f924a67ebb39339f2ca5a78d1ba637d3785ec99ce772",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00067.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00068.zlibpart",
+      "bytes": 100663296,
+      "sha256": "eedd7f379c8451b1c8cdd6858fbdb1b0eff7a2f289ef5d150d025ae22215b91e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00068.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00069.zlibpart",
+      "bytes": 100663296,
+      "sha256": "9030bb702d8547ab166876b1201d679bef9c1927b4b64f76c70eba55dc457053",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00069.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00070.zlibpart",
+      "bytes": 100663296,
+      "sha256": "e34bed3580420b92ca2b2530b0a0a61282f3a7237e1cb8986640c9674043243d",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00070.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00071.zlibpart",
+      "bytes": 100663296,
+      "sha256": "7bf1a227d7923bcc75647e7fcf64e7cfb029df654eb17b01fd8d5499ecda04fa",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00071.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00072.zlibpart",
+      "bytes": 100663296,
+      "sha256": "cef05d37c9562e4dff5e26d01be3ed55152d777bccf5cdd0c26c2ba949a71474",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00072.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00073.zlibpart",
+      "bytes": 100663296,
+      "sha256": "8f115415c9a89dea55cce4bb7613dc7d9e82f9e5810beb3aadcf5c272fcbf57a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00073.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00074.zlibpart",
+      "bytes": 100663296,
+      "sha256": "651bd4a54afb85e22742c1e3da6636c5054cd504ccbf2911ec0c7adee611f0bf",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00074.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00075.zlibpart",
+      "bytes": 100663296,
+      "sha256": "19f5869776011425d32ee92a671cd477ab36cb7c80be42b58a4d1b34dfae2d97",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00075.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00076.zlibpart",
+      "bytes": 100663296,
+      "sha256": "c8eeff806faa8a95a99eb01836142888f63b44d8fc6cd7a37bf769d2a16e0f5a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00076.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00077.zlibpart",
+      "bytes": 100663296,
+      "sha256": "15094d9a2bb56f433963633b96f2f3d66cfc6e3ea944174551cac5b518573604",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00077.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00078.zlibpart",
+      "bytes": 100663296,
+      "sha256": "5e2b148aaa3d8c32017df7eff486d8d4134d55170541ff9da4fa3ff5fed1f9e6",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00078.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00079.zlibpart",
+      "bytes": 100663296,
+      "sha256": "728c780155ad20c3aa5ed1eac732a0e04880605766904fd31434373ae6b917e6",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00079.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00080.zlibpart",
+      "bytes": 100663296,
+      "sha256": "9baa31779d0aed2688aa41b33d1067051bf843803d6c57d4b1303c690bfac77e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00080.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00081.zlibpart",
+      "bytes": 100663296,
+      "sha256": "e0122be28d8bcb83a615e3137576b7c7f74dc9452f695e18026dc2dbb9c1e00c",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00081.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00082.zlibpart",
+      "bytes": 100663296,
+      "sha256": "0041ea2a01098087a35ef389550ce0b0f7e1a53b954d47dae2858d5d3eb41597",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00082.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-native-raw-00083.zlibpart",
+      "bytes": 24225879,
+      "sha256": "931e7314f463c436c0a46bef65e538ee9a90c0cafba3099b8ff2a276c7ff5b0e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-native-raw-00083.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00000.zlibpart",
+      "bytes": 100663296,
+      "sha256": "18e3e20f3cdf3c9a8cdca364740d69e03e80069488fa75a8ed852d783fe59144",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00000.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00001.zlibpart",
+      "bytes": 100663296,
+      "sha256": "294f6e5913eb739b52b56a192b60f242ce244ffccb3f90bff39c4260476a19e8",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00001.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00002.zlibpart",
+      "bytes": 100663296,
+      "sha256": "eb514e73daf4a34018f7515f1061bb9302e4a8b0982b20bfd8470a45db93ba47",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00002.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00003.zlibpart",
+      "bytes": 100663296,
+      "sha256": "4d03cda3bba84c59a9997f4e69ee7f040cf156e4ec98c7bbf2523b0c46ba8a1a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00003.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00004.zlibpart",
+      "bytes": 100663296,
+      "sha256": "e8271d9224b149f788f8fbfce0ca832ce5e23cc6d4bd11150a2a5be8d870d04d",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00004.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00005.zlibpart",
+      "bytes": 100663296,
+      "sha256": "7e2ad893b0128cb48cb453ba6da3e59f9d5f41df6ef890bbec2b859374fe7c5a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00005.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00006.zlibpart",
+      "bytes": 100663296,
+      "sha256": "79245db3a5e6cbcf036c981f4437dfc461b77812634d228fff68860bf441dcd9",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00006.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00007.zlibpart",
+      "bytes": 100663296,
+      "sha256": "4fa38ffe10e70e6b134706a56c04c1963f981eb62bc977677652a2d02e87f1a6",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00007.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00008.zlibpart",
+      "bytes": 100663296,
+      "sha256": "76a3facf3d851b00581ef46a145bfae86713062da4e5e8f2c2159602841032d4",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00008.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00009.zlibpart",
+      "bytes": 100663296,
+      "sha256": "15450071af1306b7b92835374d91cc4f6caeb33a386018a8f4b4ca471c87cc68",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00009.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00010.zlibpart",
+      "bytes": 100663296,
+      "sha256": "a27510a1799443763e217487c06f775407d3604a2abe644884cc28fecd558a2a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00010.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00011.zlibpart",
+      "bytes": 100663296,
+      "sha256": "1530dc65584a25681c8faa2dbdb59ab3d451d9a17a070ac694563283c7eeb511",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00011.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00012.zlibpart",
+      "bytes": 100663296,
+      "sha256": "73d990d3df69eae6956ba72630e4c0b128824805ca1cdb5e14fd5692611179f6",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00012.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00013.zlibpart",
+      "bytes": 100663296,
+      "sha256": "bc85f8cde5272021d7260935a87e7e944898dc7df097a51ca16f3791a9695605",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00013.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00014.zlibpart",
+      "bytes": 100663296,
+      "sha256": "440dcdfc9249223211d89f4f97f2db9fcad942efbbc53375e1842b8ef2163084",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00014.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00015.zlibpart",
+      "bytes": 100663296,
+      "sha256": "03167240dbd48d844964109ecf44e8151aa2c6aa76aca6323657f9c5ff98dfbe",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00015.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00016.zlibpart",
+      "bytes": 100663296,
+      "sha256": "9dfc6f7348fb006f053eb2e18702fdc63f283635bec4ef863efb602fb90723fe",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00016.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00017.zlibpart",
+      "bytes": 100663296,
+      "sha256": "6b5682de6cfb94374aff5046d79f50e0d69fe53f83da2378c3283490092c1a26",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00017.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00018.zlibpart",
+      "bytes": 100663296,
+      "sha256": "3fce4592478a58e9711735e4436d9e9f102a51894a7872d95a0d53b73eb74be5",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00018.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00019.zlibpart",
+      "bytes": 100663296,
+      "sha256": "d4166cfdb3075948adb8120939eebc81e251e5703eb0e4847accb23685920947",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00019.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00020.zlibpart",
+      "bytes": 100663296,
+      "sha256": "e8acb74646d91ac27953f166ecba6dbbd6b447ef81aa5b4b8435f6c34c6b2cec",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00020.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00021.zlibpart",
+      "bytes": 100663296,
+      "sha256": "87b71dd3557fc44709230ce2c176b604b82448824733962a28e5c5b5df415236",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00021.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00022.zlibpart",
+      "bytes": 100663296,
+      "sha256": "7c261eaffa559a061c0fa240a79cf649b72f27c0e4d7aff9d035874f26969adc",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00022.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00023.zlibpart",
+      "bytes": 100663296,
+      "sha256": "a8f1765ec6f3ef12420058111cb1cf639b48230b35a67ae261039f8964db90b6",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00023.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00024.zlibpart",
+      "bytes": 100663296,
+      "sha256": "dcc4cf8d62ecb6462d5e038081aa2f5333cd771a1af7c649e5a44a4eb25e1bcc",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00024.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00025.zlibpart",
+      "bytes": 100663296,
+      "sha256": "77a0fbd943d3346e197d190a6fb2bb02f492f7d4ded701f849e4c85314f37812",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00025.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00026.zlibpart",
+      "bytes": 100663296,
+      "sha256": "90dffead96e61a5f1e52648772f86d3b0aa2285d9ba98c1a06a5ce7878fee886",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00026.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00027.zlibpart",
+      "bytes": 100663296,
+      "sha256": "5001cc11a20216877506631616c63ce0aee9a6b398d760b3296e924119f4f844",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00027.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-requests-00028.zlibpart",
+      "bytes": 30796744,
+      "sha256": "f48829624e79766aff232873939395b7e8f1592136c461fbe3dd4c199118b1bd",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-requests-00028.zlibpart"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-baseline-contact-input.json.zlib",
+      "bytes": 25037011,
+      "sha256": "f3e7febfbda35c52635c45e74161e673a5efc4a15a86f96fc323922c26b9cbbb",
+      "decoded_bytes": 33070293,
+      "decoded_sha256": "a5038bd8e2b38afe4816cb033ebfec4b3fe4455186dc72d4d9d59ae995a698b4",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-baseline-contact-input.json.zlib"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-baseline-contact-provenance.json.zlib",
+      "bytes": 75719752,
+      "sha256": "28b9a8532e769485236ab238821597924acc8b20195a58f778451d53ec149801",
+      "decoded_bytes": 100458310,
+      "decoded_sha256": "0c62cadbde8db678206e1a91f6d9ea0b635197ef972b215c2961574f84340a02",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-baseline-contact-provenance.json.zlib"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00000.png",
+      "bytes": 4960387,
+      "sha256": "3bf92a02a1951e601e878619add4db53a2825d069816b3dc86d8cd616d2b7a7c",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00000.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00001.png",
+      "bytes": 4960374,
+      "sha256": "bc4ca9f179f7712e210ff0a26093cdd56e7494e96945866ad8ac7ee6149ff760",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00001.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00002.png",
+      "bytes": 4960007,
+      "sha256": "ffb9af9f01398008e7574806b3979fdbe896970d684b9abe5198c1b166ff7049",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00002.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00003.png",
+      "bytes": 4960479,
+      "sha256": "a1ba9bec80a75e6659578329f13d92908bf0efd70466758d6a2610ff218d3222",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00003.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00004.png",
+      "bytes": 4960223,
+      "sha256": "1e6106517a9b996f9ea174536f15e42d53f6c25e358c88d7e26ea9f40bc845b6",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00004.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00005.png",
+      "bytes": 4960175,
+      "sha256": "eee211d1cb18aa5d7f4ea3ed1ab2c0328abf254f2503fb3bb77dc97e4e3554cc",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00005.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00006.png",
+      "bytes": 4959884,
+      "sha256": "814cab676c9785c673200bd9ce7ff51b791ba2ae99c89d9899453a22cd04dec9",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00006.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00007.png",
+      "bytes": 4960098,
+      "sha256": "12a45ef51a10518743df402e83a6462fd0170ca94536146f23cde9a4acf37ed2",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00007.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00008.png",
+      "bytes": 4960179,
+      "sha256": "d12ba07f2355c6f4171a4083826c687064e42a614fc7dfca26a6177a296e4343",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00008.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00009.png",
+      "bytes": 4960147,
+      "sha256": "9021ec39bd641f41473126e118ef16f889699eeac3d92f1d5758466107176e22",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00009.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00010.png",
+      "bytes": 4960007,
+      "sha256": "4482ad416dbcd4d8d6c74cbddd1b9292547734f7d0fd4e8cc14bc800661a3f05",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00010.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00011.png",
+      "bytes": 4959931,
+      "sha256": "02e5fa32a56f3d2564c2ad2ad8656352c6cfa773cd355987266df3bdd2fc251d",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00011.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00012.png",
+      "bytes": 4960004,
+      "sha256": "9a5c0b028dbcf14d186634e360a882cf4e4d60d38af996bb07ac2bf6bbe6a678",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00012.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00013.png",
+      "bytes": 4960218,
+      "sha256": "0be3ba9be9774f453345198803cd2ba2af931d1173f5052487d7afdeba2df80e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00013.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00014.png",
+      "bytes": 4960288,
+      "sha256": "571d0bfda902fed054f464fe851ceff4eacdbffcf35831cb8942d843b3baccd4",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00014.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00015.png",
+      "bytes": 4959886,
+      "sha256": "bb822eda8bfd6b6af02985041b9d0243cabca2b2faeec751f2590f0519430b98",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00015.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00016.png",
+      "bytes": 4960333,
+      "sha256": "5856f42cbc1cac1e7b2199f0a77800841aa4ac4b07900dd6e411d7ae8e4ef2f7",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00016.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00017.png",
+      "bytes": 4960178,
+      "sha256": "d8fd94259876b5cc3e7b075f798a61d60a23127800ed30dcf34004ec0a5a5952",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00017.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00018.png",
+      "bytes": 4960096,
+      "sha256": "cd6e63b7797c3d41882ff475f385b0c4f832f7d8a46f50502dde981d04426689",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00018.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00019.png",
+      "bytes": 4960142,
+      "sha256": "5f3a3ba12274b3ade4c89035d8b89d4248f6cc5fb711a5c63cbc7b2d010cfdc5",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00019.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00020.png",
+      "bytes": 4959934,
+      "sha256": "40e50222df7ba3ad6d4590de6c6649fce62720260eae43f8f291b30a0907eac9",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00020.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00021.png",
+      "bytes": 4960405,
+      "sha256": "e464130c08e200375c617d65e8a0897342bedc800d6ee1d371e8e1d0adeac305",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00021.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00022.png",
+      "bytes": 4960278,
+      "sha256": "c899780129e1462f0357d853b3c6dfe231d041686c3c0c245b3e53e97d48dcf5",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00022.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00023.png",
+      "bytes": 4960175,
+      "sha256": "5e2152e0867cf4b9e239c8136325534e579b203f8c4913797b49f527e1ad6678",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00023.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00024.png",
+      "bytes": 4960350,
+      "sha256": "0f2461fc21ce80350d58a1097d620b025978a40b9065011a102766819912e4f8",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00024.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00025.png",
+      "bytes": 4960292,
+      "sha256": "5df8cff71b16d0f57485e51f0ac14137820069f54957a4e42751c4f56791331e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00025.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00026.png",
+      "bytes": 4960220,
+      "sha256": "dbb08f83ee6c3dccd88bc9c69be5ed29a0946ce6b5f968e0ab840dcf43cf0f89",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00026.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00027.png",
+      "bytes": 4960462,
+      "sha256": "5db41e8777442729626827e0a4d973bb63917ad4f270ac87b9aeb1870f2e9dce",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00027.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00028.png",
+      "bytes": 4960108,
+      "sha256": "45688c28c2ee5f9815391cac5ed4c68dc37a88883c083f0d5c58705bd22ae4f1",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00028.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00029.png",
+      "bytes": 4960479,
+      "sha256": "3ce6a83abe75a6dbcb89cbbbd7e975435707fea2f3eea64819a29ce86fa0a6fd",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00029.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00030.png",
+      "bytes": 4960106,
+      "sha256": "3591db7ee2ea76bdb8f7d02f7a1d7038612fdef561e952d26873764234f0b01f",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00030.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00031.png",
+      "bytes": 4960373,
+      "sha256": "ff1aa517ab737d6e22c6b74db877789ecd602861801f94500603161b138a1322",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00031.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00032.png",
+      "bytes": 4960182,
+      "sha256": "dd9da1ea198d067183f20f643b57dc8def835fcaa0d9e8980ac24f5b0f3b09ce",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00032.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00033.png",
+      "bytes": 4960131,
+      "sha256": "6dd938c6b72785474978e91b947d7a1963f8d33fc7d65fa1951715f74938579a",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00033.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00034.png",
+      "bytes": 4959948,
+      "sha256": "41c71d97c40de6aaba71db7de9d880f1c9e0e1301472760cb4403854673944ab",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00034.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00035.png",
+      "bytes": 4959940,
+      "sha256": "d4c5c02c702ee372f603599a52ee78e8614146532450725d5f81546f9123c4a5",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00035.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00036.png",
+      "bytes": 4960037,
+      "sha256": "b3b96ecc6b7dd138f4e2ee7436224f2b9b2d65d96019c6f84808c232e544f60f",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00036.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00037.png",
+      "bytes": 4960039,
+      "sha256": "32264463d688743d85b91d08b8930671f5bfa75692e25a6c628feff52e8456f1",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00037.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00038.png",
+      "bytes": 4960250,
+      "sha256": "5eeb3b0633e5f54607dfcfc2636b1131a30aa07ec8f3286d32c082e9879c89c9",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00038.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00039.png",
+      "bytes": 4960206,
+      "sha256": "351784d484f758b8c37e3f5e83a3290737061856ecd10b1a9e8d7e56a60f4bcb",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00039.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00040.png",
+      "bytes": 4960250,
+      "sha256": "0e1fe6e9f752730f2b0e294bc7c8ddd0414bd91bf095d0961c7fb36115eeb27c",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00040.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00041.png",
+      "bytes": 4960216,
+      "sha256": "c0d4f5d60a7ca4db73e6e648f8e891a1eed44fc4309198a60618bd589f7078c0",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00041.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00042.png",
+      "bytes": 4960520,
+      "sha256": "0f47d0558fb6e3d9782afcfa171c8ca3695c7f1752eb6c899293c37cebde8a48",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00042.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00043.png",
+      "bytes": 4960094,
+      "sha256": "85956bf8a76af10e19ea1c49e3c8409fe427e88999a2380943e14ccd85e5de16",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00043.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00044.png",
+      "bytes": 4960364,
+      "sha256": "6f3149379160d2c7e3b1e99ee8d29c404d6e8a2cf0801a2d490c3e82bf5c43fa",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00044.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00045.png",
+      "bytes": 4960147,
+      "sha256": "2dd44f54cb592a9c63446737dbe7bd7e33bcf2498aa0b9c595c1e8670dd82d83",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00045.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00046.png",
+      "bytes": 4960267,
+      "sha256": "05dbf6f08a2fdb1ef82a17b5d08c9ea9e7c3c72921bf52293aae91091ee6850e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00046.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00047.png",
+      "bytes": 4960373,
+      "sha256": "1134273cce4182ca06e1eeb420085d1b722c09a163352a409e84879498ae8ea3",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00047.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00048.png",
+      "bytes": 4960126,
+      "sha256": "c33fb0def04f143fcfd36745ec7e11628940d5d8f9f8cf9067ca72ae7f6f1968",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00048.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00049.png",
+      "bytes": 4960296,
+      "sha256": "db13b16f9a98d7dff077b3d24030c464ddaa31b2a4af1e1f0339abafe89ac49f",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00049.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00050.png",
+      "bytes": 4960237,
+      "sha256": "6824b1d8c5330f6be0f761444e8c88878a617bb1d4f66c9bc42dd8115ebdfc1f",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00050.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00051.png",
+      "bytes": 4959991,
+      "sha256": "8d427504f01b363a675a05360f60e65d519b33d52ec3dd97af04eb05634aee19",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00051.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00052.png",
+      "bytes": 4960220,
+      "sha256": "ee7d7787bcf6e1642c5da08cf9e13699f9668ef857992a64c19d0a1d1b6acbd6",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00052.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00053.png",
+      "bytes": 4960390,
+      "sha256": "f6388d2fcc1c5423e2ce3c0e333af06aa63b7e0ce8b09d491ed3801c93777313",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00053.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00054.png",
+      "bytes": 4960127,
+      "sha256": "bca86da1880471f1fbc934bb5654a659b601a0feaaee4d21abcb3a6b32f4680b",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00054.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00055.png",
+      "bytes": 4960087,
+      "sha256": "b102ddfbab89ecb58f0ca1f15a31b22393e9c8a662b9e545cc5a90bebb8c377e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00055.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00056.png",
+      "bytes": 4960394,
+      "sha256": "dad975e6e7c3767ee3e7ac98de43a08e122490ad44d8be45b90464eb6b767a2d",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00056.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00057.png",
+      "bytes": 4960316,
+      "sha256": "f4a7eebf05d63e90e4a39d9fbc0fe53b7ee590f52c01b1c695318b43a77c7470",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00057.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00058.png",
+      "bytes": 4960256,
+      "sha256": "835c7e911c95ceeb303aae96a5e17c0bd1ff3779769354cbfcb489e673b7632f",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00058.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00059.png",
+      "bytes": 4960353,
+      "sha256": "0a3af37dacac55bd0a7d39013fc869ee4982e4dd8dc41b741611c0b180d1b74f",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00059.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00060.png",
+      "bytes": 4960464,
+      "sha256": "b06eaf03bd5c3d34d581b3f8b721db9da9b88fba5a69b8c04d848589bae52f2d",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00060.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00061.png",
+      "bytes": 4960395,
+      "sha256": "1190061b944a11c46436c065440328cb84964e5034f3a15aa6cfdf9b28770ccd",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00061.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00062.png",
+      "bytes": 4960010,
+      "sha256": "7b7dba08d03033ef9728643278a11e84e0accdc418b418d8a2df2b773e0dc0bf",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00062.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00063.png",
+      "bytes": 4960012,
+      "sha256": "7fcd2612247518741b623d09874c413b048564ca8533463b2868974ffcfb67b0",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00063.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00064.png",
+      "bytes": 4960023,
+      "sha256": "c92f49afa81792253311f6fbd5e6f517280b5852eac3671a65553d34d73ef7a5",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00064.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00065.png",
+      "bytes": 4959886,
+      "sha256": "c9282d8a0cc43d8d7d37bc60ba08b1843c87421e7e608d428964f8fc68946ef0",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00065.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00066.png",
+      "bytes": 4960315,
+      "sha256": "68ff99ad7d62c67aecf5beeb772d4f879b15a5139af4de32237c07d541fc6d32",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00066.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00067.png",
+      "bytes": 4960708,
+      "sha256": "de91162037edfebaadff7ebecd69a406dc06715add31e9ab49bbad64f215ea1e",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00067.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00068.png",
+      "bytes": 4960210,
+      "sha256": "076b5252bee0e4230c8c183fafdaca5302090613404f4673710f59853713d747",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00068.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00069.png",
+      "bytes": 4960136,
+      "sha256": "5870c9ad7db1ad9ee557c2116bbc2cd6c251dd35e591f2a6e45bb42ff5cce0e4",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00069.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00070.png",
+      "bytes": 4959995,
+      "sha256": "b44376c0e9343435095295eea31a6f8b0020b75e7dc1170e28eb3d8f844ed0c7",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00070.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00071.png",
+      "bytes": 4960163,
+      "sha256": "051c844f3b3cd9c5edff76164207b404b9a760e20b2538f21e902681a7f877ed",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00071.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00072.png",
+      "bytes": 4960127,
+      "sha256": "20d1dbad0128dcbff464790e972ed1be2e32f63059f7703dda429051d08f0d60",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00072.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00073.png",
+      "bytes": 4959917,
+      "sha256": "f5ea88cff927160155a73e1657fdbf90b4d227f1d502400825ce5948fd09c77f",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00073.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00074.png",
+      "bytes": 4960253,
+      "sha256": "7a8c946eb2cc25b18cc7ddf842ced516a6cb204775da0891422889b51ce48f92",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00074.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00075.png",
+      "bytes": 4960263,
+      "sha256": "7ae6d955892df9b5626e99218cee851c8290f23ec48bf312f964cd0c9545fb55",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00075.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00076.png",
+      "bytes": 4960472,
+      "sha256": "9f9730bdefd980602fd4cb079d46224ad37088a2dfad9712f35f94e86a185feb",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00076.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00077.png",
+      "bytes": 4960226,
+      "sha256": "3851d3ec426632634dd29041ace2a8200cb68e02085217e91d328ce53bf733dd",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-context-00077.png"
+    },
+    {
+      "asset_name": "infantry-contact-12c6915d0f528651-capture-context.json.zlib",
+      "bytes": 7836099,
+      "sha256": "2e4b3fa31411172b2380a2f075618e72754dbddbd8baf1c97b7fc27d8159dae5",
+      "decoded_bytes": 10491983,
+      "decoded_sha256": "45f974d184349c00f25b30b595b2a5c1f02d242bd6a9f861a7f2d485d3af31e2",
+      "url": "https://github.com/samuelzhang1201/game_design/releases/download/evidence-infantry-contact-12c6915d0f528651/infantry-contact-12c6915d0f528651-capture-context.json.zlib"
+    }
+  ],
+  "assets_total_bytes": 16384828945,
+  "native_raw": {
+    "raw_bytes": 109577700713,
+    "raw_sha256": "65b7c78c72b3e64dfd5f2c5f1e08f7089bfe3c5d2d4f4800df7c0c0a83c6223f",
+    "zlib9_bytes": 8379279447,
+    "zlib9_sha256": "e1aff809eb369a3dbdb82052903f16f3dabb79e9fbc81914100be024a904271d",
+    "state": "ALL_ORIGINAL_NATIVE_RAW_BYTES_CUSTODY_ROUNDTRIP_VERIFIED",
+    "parts": 19882,
+    "rows": 81434993,
+    "original_part_hashes_all_match": true,
+    "full_stream_and_each_part_lossless_roundtrip": true,
+    "plan_sha256": "f3f74bae9e02ae97dc4a2e6d484e08acd6beaa1f53cce7058f99449e5f696295",
+    "wall_seconds": 982.375443457975,
+    "adopted_storage_contract": false,
+    "original_raw_files_deleted": false,
+    "strict_Gram": "FAIL",
+    "physical_uncertainty": "UNKNOWN",
+    "E": null,
+    "motion_acceptance": "FAIL/PENDING"
+  },
+  "original_request_file": {
+    "raw_bytes": 3957232502,
+    "raw_sha256": "d01b875c3e88e0bd9abae97296396081148eee4ddd6fd435e076769a8b702984",
+    "zlib9_bytes": 2849369032,
+    "zlib9_sha256": "b88d26223c4b66c451e3091f10f199c5594f344172621e29eb68045afb957af8",
+    "rows": 81434993,
+    "full_byte_roundtrip": true,
+    "source_file_sha256": "d01b875c3e88e0bd9abae97296396081148eee4ddd6fd435e076769a8b702984",
+    "canonical_request_rowstream_sha256": "b8d2de90a3eb15c031a5963c2b1f394f9151f1dee95ddd603ac7d6f07d09efa9",
+    "wall_seconds": 100.08111195795937,
+    "adopted_storage_contract": false,
+    "original_files_deleted": false
+  },
+  "C_response_transport": {
+    "state": "COMPLETE_NATIVE_RESPONSE_TRANSPORT_ASSEMBLED_AND_READ_BACK",
+    "rows": 81434993,
+    "footer": {
+      "chunk_count": 19882,
+      "row_count": 81434993,
+      "decoded_bytes": 95733751903,
+      "stream_sha256": "85573eaa643b0a71b12d4a4698561b7be64c4ddb339bbe482880f3c3d7e61732"
+    },
+    "response_file_sha256": "12c6915d0f528651ae11215985d24e5b518515ebad0f071f618f0bd2d9d05df6",
+    "response_file_bytes": 6741890172,
+    "request_stream_sha256": "b8d2de90a3eb15c031a5963c2b1f394f9151f1dee95ddd603ac7d6f07d09efa9",
+    "oracle_manifest_sha256": "d0e1051dcff83f9ea7529c0c799b710363e819b76ea27e7a88fbdf5da1aa24db",
+    "context_count": 78,
+    "full_C_regeneration_and_measurement_report_complete": false,
+    "strict_Gram": "FAIL",
+    "physical_uncertainty": "UNKNOWN",
+    "E": null,
+    "motion_acceptance": "FAIL/PENDING"
+  },
+  "portable_native_ledger_payload": "proposal-source/portable-native-parts.json",
+  "frozen_source_manifest_payload": "run/frozen-run-manifest.json",
+  "raw_observation_payload": "run/observation.json",
+  "baseline_custody": "Exact prior246payloads and5PNG supplements are inside the two baseline JSON assets, byte-identical to the pre-full-run originals.",
+  "C_full_measurement_attempt": {
+    "exit": 124,
+    "timeout_seconds": 2700,
+    "wall_seconds": 2700.044868625002,
+    "report_generated": false
+  },
+  "strict_Gram": "FAIL",
+  "physical_uncertainty": "UNKNOWN",
+  "E": null,
+  "motion_acceptance": "FAIL/PENDING",
+  "certificate": false,
+  "stream_groups": {
+    "responses": {
+      "ordered_parts": [
+        "infantry-contact-12c6915d0f528651-responses-00000.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00001.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00002.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00003.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00004.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00005.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00006.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00007.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00008.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00009.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00010.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00011.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00012.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00013.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00014.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00015.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00016.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00017.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00018.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00019.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00020.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00021.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00022.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00023.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00024.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00025.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00026.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00027.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00028.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00029.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00030.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00031.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00032.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00033.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00034.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00035.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00036.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00037.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00038.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00039.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00040.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00041.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00042.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00043.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00044.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00045.zlibpart",
+        "infantry-contact-12c6915d0f528651-responses-00046.zlibpart"
+      ],
+      "compressed_bytes": 4660692054,
+      "compressed_sha256": "9cb5c50c2d0221b6b5b788ee774ab91570d2d1df4690a089305b8efe69733b76",
+      "decoded_bytes": 6741890172,
+      "decoded_sha256": "12c6915d0f528651ae11215985d24e5b518515ebad0f071f618f0bd2d9d05df6",
+      "logical_cache_path": "responses.json"
+    },
+    "native_raw": {
+      "ordered_parts": [
+        "infantry-contact-12c6915d0f528651-native-raw-00000.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00001.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00002.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00003.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00004.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00005.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00006.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00007.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00008.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00009.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00010.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00011.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00012.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00013.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00014.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00015.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00016.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00017.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00018.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00019.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00020.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00021.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00022.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00023.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00024.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00025.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00026.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00027.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00028.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00029.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00030.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00031.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00032.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00033.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00034.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00035.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00036.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00037.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00038.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00039.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00040.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00041.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00042.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00043.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00044.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00045.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00046.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00047.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00048.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00049.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00050.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00051.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00052.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00053.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00054.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00055.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00056.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00057.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00058.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00059.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00060.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00061.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00062.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00063.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00064.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00065.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00066.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00067.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00068.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00069.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00070.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00071.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00072.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00073.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00074.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00075.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00076.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00077.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00078.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00079.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00080.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00081.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00082.zlibpart",
+        "infantry-contact-12c6915d0f528651-native-raw-00083.zlibpart"
+      ],
+      "compressed_bytes": 8379279447,
+      "compressed_sha256": "e1aff809eb369a3dbdb82052903f16f3dabb79e9fbc81914100be024a904271d",
+      "decoded_bytes": 109577700713,
+      "decoded_sha256": "65b7c78c72b3e64dfd5f2c5f1e08f7089bfe3c5d2d4f4800df7c0c0a83c6223f",
+      "logical_cache_path": "native-raw.jsonl"
+    },
+    "original_requests": {
+      "ordered_parts": [
+        "infantry-contact-12c6915d0f528651-requests-00000.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00001.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00002.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00003.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00004.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00005.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00006.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00007.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00008.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00009.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00010.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00011.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00012.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00013.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00014.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00015.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00016.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00017.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00018.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00019.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00020.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00021.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00022.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00023.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00024.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00025.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00026.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00027.zlibpart",
+        "infantry-contact-12c6915d0f528651-requests-00028.zlibpart"
+      ],
+      "compressed_bytes": 2849369032,
+      "compressed_sha256": "b88d26223c4b66c451e3091f10f199c5594f344172621e29eb68045afb957af8",
+      "decoded_bytes": 3957232502,
+      "decoded_sha256": "d01b875c3e88e0bd9abae97296396081148eee4ddd6fd435e076769a8b702984",
+      "logical_cache_path": "requests.json"
+    }
+  },
+  "context_packet_asset": "infantry-contact-12c6915d0f528651-capture-context.json.zlib",
+  "baseline_asset_names": [
+    "infantry-contact-12c6915d0f528651-baseline-contact-input.json.zlib",
+    "infantry-contact-12c6915d0f528651-baseline-contact-provenance.json.zlib"
+  ],
+  "actual_context_PNG_assets": [
+    {
+      "job": 0,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00000.png",
+      "logical_cache_path": "contexts/job00000.png"
+    },
+    {
+      "job": 1,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00001.png",
+      "logical_cache_path": "contexts/job00001.png"
+    },
+    {
+      "job": 2,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00002.png",
+      "logical_cache_path": "contexts/job00002.png"
+    },
+    {
+      "job": 3,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00003.png",
+      "logical_cache_path": "contexts/job00003.png"
+    },
+    {
+      "job": 4,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00004.png",
+      "logical_cache_path": "contexts/job00004.png"
+    },
+    {
+      "job": 5,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00005.png",
+      "logical_cache_path": "contexts/job00005.png"
+    },
+    {
+      "job": 6,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00006.png",
+      "logical_cache_path": "contexts/job00006.png"
+    },
+    {
+      "job": 7,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00007.png",
+      "logical_cache_path": "contexts/job00007.png"
+    },
+    {
+      "job": 8,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00008.png",
+      "logical_cache_path": "contexts/job00008.png"
+    },
+    {
+      "job": 9,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00009.png",
+      "logical_cache_path": "contexts/job00009.png"
+    },
+    {
+      "job": 10,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00010.png",
+      "logical_cache_path": "contexts/job00010.png"
+    },
+    {
+      "job": 11,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00011.png",
+      "logical_cache_path": "contexts/job00011.png"
+    },
+    {
+      "job": 12,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00012.png",
+      "logical_cache_path": "contexts/job00012.png"
+    },
+    {
+      "job": 13,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00013.png",
+      "logical_cache_path": "contexts/job00013.png"
+    },
+    {
+      "job": 14,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00014.png",
+      "logical_cache_path": "contexts/job00014.png"
+    },
+    {
+      "job": 15,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00015.png",
+      "logical_cache_path": "contexts/job00015.png"
+    },
+    {
+      "job": 16,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00016.png",
+      "logical_cache_path": "contexts/job00016.png"
+    },
+    {
+      "job": 17,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00017.png",
+      "logical_cache_path": "contexts/job00017.png"
+    },
+    {
+      "job": 18,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00018.png",
+      "logical_cache_path": "contexts/job00018.png"
+    },
+    {
+      "job": 19,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00019.png",
+      "logical_cache_path": "contexts/job00019.png"
+    },
+    {
+      "job": 20,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00020.png",
+      "logical_cache_path": "contexts/job00020.png"
+    },
+    {
+      "job": 21,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00021.png",
+      "logical_cache_path": "contexts/job00021.png"
+    },
+    {
+      "job": 22,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00022.png",
+      "logical_cache_path": "contexts/job00022.png"
+    },
+    {
+      "job": 23,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00023.png",
+      "logical_cache_path": "contexts/job00023.png"
+    },
+    {
+      "job": 24,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00024.png",
+      "logical_cache_path": "contexts/job00024.png"
+    },
+    {
+      "job": 25,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00025.png",
+      "logical_cache_path": "contexts/job00025.png"
+    },
+    {
+      "job": 26,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00026.png",
+      "logical_cache_path": "contexts/job00026.png"
+    },
+    {
+      "job": 27,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00027.png",
+      "logical_cache_path": "contexts/job00027.png"
+    },
+    {
+      "job": 28,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00028.png",
+      "logical_cache_path": "contexts/job00028.png"
+    },
+    {
+      "job": 29,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00029.png",
+      "logical_cache_path": "contexts/job00029.png"
+    },
+    {
+      "job": 30,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00030.png",
+      "logical_cache_path": "contexts/job00030.png"
+    },
+    {
+      "job": 31,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00031.png",
+      "logical_cache_path": "contexts/job00031.png"
+    },
+    {
+      "job": 32,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00032.png",
+      "logical_cache_path": "contexts/job00032.png"
+    },
+    {
+      "job": 33,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00033.png",
+      "logical_cache_path": "contexts/job00033.png"
+    },
+    {
+      "job": 34,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00034.png",
+      "logical_cache_path": "contexts/job00034.png"
+    },
+    {
+      "job": 35,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00035.png",
+      "logical_cache_path": "contexts/job00035.png"
+    },
+    {
+      "job": 36,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00036.png",
+      "logical_cache_path": "contexts/job00036.png"
+    },
+    {
+      "job": 37,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00037.png",
+      "logical_cache_path": "contexts/job00037.png"
+    },
+    {
+      "job": 38,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00038.png",
+      "logical_cache_path": "contexts/job00038.png"
+    },
+    {
+      "job": 39,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00039.png",
+      "logical_cache_path": "contexts/job00039.png"
+    },
+    {
+      "job": 40,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00040.png",
+      "logical_cache_path": "contexts/job00040.png"
+    },
+    {
+      "job": 41,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00041.png",
+      "logical_cache_path": "contexts/job00041.png"
+    },
+    {
+      "job": 42,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00042.png",
+      "logical_cache_path": "contexts/job00042.png"
+    },
+    {
+      "job": 43,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00043.png",
+      "logical_cache_path": "contexts/job00043.png"
+    },
+    {
+      "job": 44,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00044.png",
+      "logical_cache_path": "contexts/job00044.png"
+    },
+    {
+      "job": 45,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00045.png",
+      "logical_cache_path": "contexts/job00045.png"
+    },
+    {
+      "job": 46,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00046.png",
+      "logical_cache_path": "contexts/job00046.png"
+    },
+    {
+      "job": 47,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00047.png",
+      "logical_cache_path": "contexts/job00047.png"
+    },
+    {
+      "job": 48,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00048.png",
+      "logical_cache_path": "contexts/job00048.png"
+    },
+    {
+      "job": 49,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00049.png",
+      "logical_cache_path": "contexts/job00049.png"
+    },
+    {
+      "job": 50,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00050.png",
+      "logical_cache_path": "contexts/job00050.png"
+    },
+    {
+      "job": 51,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00051.png",
+      "logical_cache_path": "contexts/job00051.png"
+    },
+    {
+      "job": 52,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00052.png",
+      "logical_cache_path": "contexts/job00052.png"
+    },
+    {
+      "job": 53,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00053.png",
+      "logical_cache_path": "contexts/job00053.png"
+    },
+    {
+      "job": 54,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00054.png",
+      "logical_cache_path": "contexts/job00054.png"
+    },
+    {
+      "job": 55,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00055.png",
+      "logical_cache_path": "contexts/job00055.png"
+    },
+    {
+      "job": 56,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00056.png",
+      "logical_cache_path": "contexts/job00056.png"
+    },
+    {
+      "job": 57,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00057.png",
+      "logical_cache_path": "contexts/job00057.png"
+    },
+    {
+      "job": 58,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00058.png",
+      "logical_cache_path": "contexts/job00058.png"
+    },
+    {
+      "job": 59,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00059.png",
+      "logical_cache_path": "contexts/job00059.png"
+    },
+    {
+      "job": 60,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00060.png",
+      "logical_cache_path": "contexts/job00060.png"
+    },
+    {
+      "job": 61,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00061.png",
+      "logical_cache_path": "contexts/job00061.png"
+    },
+    {
+      "job": 62,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00062.png",
+      "logical_cache_path": "contexts/job00062.png"
+    },
+    {
+      "job": 63,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00063.png",
+      "logical_cache_path": "contexts/job00063.png"
+    },
+    {
+      "job": 64,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00064.png",
+      "logical_cache_path": "contexts/job00064.png"
+    },
+    {
+      "job": 65,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00065.png",
+      "logical_cache_path": "contexts/job00065.png"
+    },
+    {
+      "job": 66,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00066.png",
+      "logical_cache_path": "contexts/job00066.png"
+    },
+    {
+      "job": 67,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00067.png",
+      "logical_cache_path": "contexts/job00067.png"
+    },
+    {
+      "job": 68,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00068.png",
+      "logical_cache_path": "contexts/job00068.png"
+    },
+    {
+      "job": 69,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00069.png",
+      "logical_cache_path": "contexts/job00069.png"
+    },
+    {
+      "job": 70,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00070.png",
+      "logical_cache_path": "contexts/job00070.png"
+    },
+    {
+      "job": 71,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00071.png",
+      "logical_cache_path": "contexts/job00071.png"
+    },
+    {
+      "job": 72,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00072.png",
+      "logical_cache_path": "contexts/job00072.png"
+    },
+    {
+      "job": 73,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00073.png",
+      "logical_cache_path": "contexts/job00073.png"
+    },
+    {
+      "job": 74,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00074.png",
+      "logical_cache_path": "contexts/job00074.png"
+    },
+    {
+      "job": 75,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00075.png",
+      "logical_cache_path": "contexts/job00075.png"
+    },
+    {
+      "job": 76,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00076.png",
+      "logical_cache_path": "contexts/job00076.png"
+    },
+    {
+      "job": 77,
+      "asset_name": "infantry-contact-12c6915d0f528651-context-00077.png",
+      "logical_cache_path": "contexts/job00077.png"
+    }
+  ],
+  "restoration_contract": [
+    "Use explicit ordered_parts lists, exact per-asset and concatenated compressed SHA/byte counts; bounded zlib decoding must end at one EOF with no trailing bytes and exact decoded SHA/length.",
+    "All output paths are these safe logical cache paths or the portable-native-parts ledger logical paths under one explicit ignored cache root. Historical absolute source paths inside evidence are opaque data, never extraction destinations.",
+    "The context packet schema is infantry-contact-custody-context/v1; every nested files entry is zlib+base64 with decoded and compressed SHA/size. Decode/check all entries, never execute embedded scripts automatically.",
+    "The original native part ledger restores every original native JSONL byte/19882file boundaries. Original request file is stored exactly, not recreated by a possibly different zlib codec. Its original decoded chunks can independently restore/verify all original request parts.",
+    "Unmodified C QueryStream/CLI input formats remain byte-identical. This container is not adopted until the explicitly registered contract prerequisite is merged and accepted."
+  ]
+}

@@ -447,7 +447,29 @@ optional; without it memory remains bounded. A disk-backed index or ignored
 temporary chunks may assist, but no new dependency or tracked evidence path is
 authorized. Final compressed response evidence must be embedded in the capture's
 existing `contact-input.json` / `contact-provenance.json`, with manifest either
-embedded or exactly regenerable from bound inputs. Reports must distinguish
+embedded or exactly regenerable from bound inputs; alternatively, those same two
+files may bind the immutable SHA256 of
+`evidence/locomotion/infantry/contact-evidence-custody.json` and the exact response
+file SHA256. This manifest names every byte-bound asset in the same repository's
+`evidence-infantry-contact-12c6915d0f528651` Release. Explicit ordered parts bind
+the compressed whole and exact decoded byte lengths/SHA256; download all listed
+assets into a fresh flat cache and reject missing, extra, duplicate or changed
+assets. The offline stdlib `tools/units3d/soldier_arp/pivot_contact_evidence.py`
+restores into a new ignored cache with bounded zlib decoding, one strict EOF,
+no trailing streams, and safe relative destinations. Historical absolute paths
+in opaque evidence never become output destinations; evidence scripts are never
+executed. Retain both original baseline JSONs, every nested payload, all native
+part boundaries and receipt hashes, all context PNGs, and every source/log/failure
+record. Hash checks and complete unmodified C `QueryStream` replay must cover all
+original requests/native words/responses, counts and digests; custody is not a
+replacement for regenerated geometry or physical acceptance. The original capture
+owner alone adopts the accepted manifest reference in its two existing files.
+Same-pair Review must first accept the frozen code, manifest and local assets
+before implementation publishes those exact assets, then independently fetch and
+replay every asset in a fresh unrelated cache. The historical full geometry run
+remains failed at its unchanged 2,700-second deadline; strict Gram remains FAIL,
+physical uncertainty UNKNOWN and E null. All row/envelope/identity/coverage,
+uncertainty/budget, geometry and physical gates above remain required. Reports must distinguish
 enumeration completeness from valid-surface completeness and continuous proof.
 Interrupted/incomplete streams cannot pass. C must demonstrate bounded memory,
 chunk corruption/limits/restart rejection and complete finite counts; if real
