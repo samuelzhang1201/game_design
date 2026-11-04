@@ -6,7 +6,11 @@ const Geometry := preload("res://scripts/engine/battle_group_geometry.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture() -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
+	# Synthetic historical rows below are 40 m apart; keep their physical fixture explicit.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9445)
 	var codes := state.regiments.keys()
 	codes.sort()
@@ -30,6 +34,103 @@ func test_configured_hundred_fit_counts() -> void:
 	assert_eq(int(repo.bal("battle_group_size")), 100)
 	assert_eq(BattleGroups.counts(101, int(repo.bal("battle_group_size"))), [100, 1] as Array[int])
 	assert_eq(BattleGroups.counts(1000, int(repo.bal("battle_group_size"))).size(), 10)
+
+func test_production_rows_fit_installed_piece_discs() -> void:
+	var f := _fixture()
+	f.repo = SuiteData.open_country(f.repo)
+	f.repo.unit_footprints = SuiteData.repo().unit_footprints.duplicate(true)
+	for code: String in [f.a, f.enemy]:
+		Personnel.replace(f.repo, f.state, code, 1000)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var rows: Array = f.battle.groups[f.a]
+	var footprint := Geometry.footprint(f.repo, ArmySystem.regiment(f.repo, f.a, f.state))
+	assert_true(footprint.ok)
+	assert_eq(rows.size(), 10, "Every hundred fit people keeps its full-scale figure")
+	for i: int in rows.size():
+		for j: int in range(i):
+			var separation := Geometry.pair([rows[i].x_m, rows[i].y_m], footprint.radius_m,
+				[rows[j].x_m, rows[j].y_m], footprint.radius_m, 0)
+			assert_true(separation.ok and not separation.overlap, "Installed discs must not overlap")
+
+func test_rejected_rigid_step_preserves_anchor_rows_paths_and_slots() -> void:
+	var f := _fixture()
+	f.repo = SuiteData.open_country(f.repo)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var before := SaveLoad.state_hash(f.state)
+	var own: Dictionary = f.battle.groups[f.a][0]
+	var enemy: Dictionary = f.battle.groups[f.enemy][0]
+	BattleGroups.translate(f.repo, f.state, f.battle, f.a,
+		Vector2i(int(enemy.x_m) - int(own.x_m), int(enemy.y_m) - int(own.y_m)))
+	assert_eq(SaveLoad.state_hash(f.state), before, "A step through occupied enemy discs is wholly rejected")
+
+func test_march_validates_the_complete_path_before_publishing_its_entry() -> void:
+	var f := _fixture()
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var entry: Dictionary = f.state.regiments[f.a]
+	entry.order = ArmySystem.ORDER_MARCH
+	entry.battle_retreat = true
+	entry.camp_state = {"phase": CampSystem.NONE}
+	entry.erase("departure")
+	var own: Dictionary = f.battle.groups[f.a][0]
+	var enemy: Dictionary = f.battle.groups[f.enemy][0]
+	entry.dest_x_m = int(entry.x_m) + int(enemy.x_m) - int(own.x_m)
+	entry.dest_y_m = int(entry.y_m) + int(enemy.y_m) - int(own.y_m)
+	var before := SaveLoad.state_hash(f.state)
+	var travelled: Array = []
+	assert_false(ArmySystem._march_one(f.repo, f.state, f.a, entry, f.state.absolute_day(),
+		{}, [], 1, 0, 10000, 10000, travelled))
+	assert_eq(SaveLoad.state_hash(f.state), before)
+	assert_eq(travelled, [], "Rejected motion cannot earn pursuit metres")
+	var origin := Vector2i(int(entry.x_m), int(entry.y_m))
+	entry.dest_x_m = origin.x - 100
+	entry.dest_y_m = origin.y
+	assert_true(ArmySystem._march_one(f.repo, f.state, f.a, entry, f.state.absolute_day(), {}, [], 1, 0, 100, 100))
+	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), origin - Vector2i(100, 0))
+	assert_true(BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.a))
+	assert_eq(f.battle.group_anchor_m[f.a], [entry.x_m, entry.y_m])
+
+func test_installed_partial_rows_and_adjacent_friendly_unit_remain_disjoint() -> void:
+	var f := _fixture()
+	f.repo.unit_footprints = SuiteData.repo().unit_footprints.duplicate(true)
+	var codes: Array = f.state.regiments.keys()
+	codes.sort()
+	var friend := String(codes[1])
+	f.state.regiments[friend].x_m = 21000
+	f.state.regiments[friend].y_m = 2000
+	f.battle.att.append(friend)
+	for people: int in [901, 1, 0]:
+		for code: String in [f.a, f.enemy, friend]: Personnel.replace(f.repo, f.state, code, people)
+		assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+		assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+		for code: String in [f.a, f.enemy, friend]:
+			var rows: Array = f.battle.groups[code]
+			assert_eq(rows.size(), BattleGroups.counts(people, 100).size())
+			var total := 0
+			for row: Dictionary in rows: total += int(row.count)
+			assert_eq(total, people)
+			if people == 0:
+				assert_eq(BattleGroups.deployment(f.repo, f.state, f.battle)[code], BattleSystem._at_m(f.repo, f.state, code))
+
+func test_blocked_recovery_preserves_people_receipt_and_slots_until_admission() -> void:
+	var f := _fixture()
+	Personnel.replace(f.repo, f.state, f.a, 200)
+	Personnel.move(f.repo, f.state, f.a, "fit", "wounded", 100)
+	Personnel.replace(f.repo, f.state, f.enemy, 100)
+	f.state.regiments[f.a].facing_deg = 90
+	f.state.foes[f.enemy].y_m = 1920  # Occupies the next80m rear slot, without overlapping the existing front.
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	for code: String in f.state.military_rosters: f.state.conduct_marks["recovery:" + code] = f.state.tick
+	f.state.conduct_marks.erase("recovery:" + f.a)
+	var frozen := SaveLoad.state_hash(f.state)
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_eq(SaveLoad.state_hash(f.state), frozen, "A failed physical admission cannot publish recovery people or a consumed receipt")
+	assert_true(BattleGroups.translate(f.repo, f.state, f.battle, f.enemy, Vector2i(-1000, 0)))
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_gt(ArmySystem.fit_count(f.repo, f.state, f.a), 100)
+	assert_eq(f.battle.groups[f.a].size(), 2)
+	var recovered := SaveLoad.state_hash(f.state)
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_eq(SaveLoad.state_hash(f.state), recovered, "A successful physical recovery is paid and consumed once")
 
 func test_counts_table() -> void:
 	assert_eq(BattleGroups.counts(0, 100), [] as Array[int])
@@ -145,6 +246,7 @@ func test_translate_and_follow_anchor_apply_exactly_once() -> void:
 	f.battle["groups"] = {f.a: [
 		{"count": 50, "role": "front", "x_m": 200, "y_m": 200, "path_m": [[210, 200]]},
 		{"count": 50, "role": "reserve", "x_m": 160, "y_m": 200}]}
+	BattleGroups.refresh(f.repo, f.state, f.battle)
 	BattleGroups.translate(f.repo, f.state, f.battle, f.a, Vector2i(30, 40))
 	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), Vector2i(230, 240))
 	assert_eq(_points(f.battle.groups[f.a]), [Vector2i(230, 240), Vector2i(190, 240)])

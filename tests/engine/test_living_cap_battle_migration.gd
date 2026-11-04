@@ -1,5 +1,12 @@
 extends "res://tests/engine/test_military_reorganization.gd"
 
+func before_each() -> void:
+	super.before_each()
+	#1m fixture discs separate retained2m-spaced rows; split-boundary coincidences still require repair.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 1
+		row.pitch_m = 4
+
 func _legacy_rows(fit: int, at: Vector2i, first_slot := 0) -> Array:
 	var rows: Array = []
 	for count: int in BattleGroups.counts(fit, 50):
@@ -14,7 +21,8 @@ func test_active_battle_keeps_saved_points_and_singular_intent() -> void:
 	for i: int in 20:
 		rows.append({"count": 50, "role": "front", "x_m": 100 + i, "y_m": 200, "slot": i})
 	rows.append({"count": 1, "role": "reserve", "x_m": 999, "y_m": 333, "slot": 20})
-	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: rows},
+	state.battles = [{"id": 7, "place_x_m": BattleSystem._at_m(repo,state,original).x,
+		"place_y_m": BattleSystem._at_m(repo,state,original).y, "att": [original], "def": [], "groups": {original: rows},
 		"group_facing": {original: 37}, "pending_round": {}, "rounds": 3,
 		"unit_formations": {original: {"current": "line"}}, "reports": [{"unit": original, "loss": 9}]}]
 	state.battle_aliases = {"6": 7}
@@ -38,15 +46,17 @@ func test_active_battle_keeps_saved_points_and_singular_intent() -> void:
 		assert_eq(battle.group_facing[code], 37)
 		for group: Dictionary in battle.groups[code]:
 			counts[i] += int(group.count)
-			assert_true(rows.any(func(saved: Dictionary) -> bool: return saved.x_m == group.x_m and saved.y_m == group.y_m))
+			assert_true(rows.any(func(saved: Dictionary) -> bool: return saved.slot == group.slot), "Each admitted row retains a surviving source slot")
 	assert_eq(counts, [501, 500])
-	assert_eq(battle.groups[original][-1].x_m, battle.groups[children[1]][0].x_m, "Boundary row splits in place")
+	assert_eq(battle.groups[original][-1].slot, battle.groups[children[1]][0].slot, "Both fragments retain the boundary source slot")
+	assert_true(BattleGroups.placement(repo, state, battle).ok, "Public reconciliation admits disjoint physical fragments")
 	var hash_before := SaveLoad.state_hash(state)
 	assert_eq(_reconcile().status, "complete")
 	assert_eq(SaveLoad.state_hash(state), hash_before)
 
 func test_wounded_only_battle_child_has_no_groups() -> void:
-	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: [{"count": 1, "x_m": 9, "y_m": 8, "role": "front"}]}, "group_facing": {original: 90}}]
+	state.battles = [{"id": 7, "place_x_m": BattleSystem._at_m(repo,state,original).x,
+		"place_y_m": BattleSystem._at_m(repo,state,original).y, "att": [original], "def": [], "groups": {original: [{"count": 1, "x_m": 9, "y_m": 8, "role": "front"}]}, "group_facing": {original: 90}}]
 	assert_eq(_reconcile().status, "complete")
 	var children := _children()
 	if children.size() != 2: return
@@ -84,7 +94,8 @@ func test_paid_assembling_reservations_partition_without_receipt_or_gear_replay(
 	assert_eq(state.to_dict(), before)
 
 func test_bad_group_fit_total_refuses_entire_candidate() -> void:
-	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: [{"count": 99, "x_m": 9, "y_m": 8}]}}]
+	state.battles = [{"id": 7, "place_x_m": BattleSystem._at_m(repo,state,original).x,
+		"place_y_m": BattleSystem._at_m(repo,state,original).y, "att": [original], "def": [], "groups": {original: [{"count": 99, "x_m": 9, "y_m": 8}]}}]
 	var before := SaveLoad.state_hash(state)
 	assert_eq(_reconcile().status, "error")
 	assert_eq(SaveLoad.state_hash(state), before)
@@ -92,7 +103,8 @@ func test_bad_group_fit_total_refuses_entire_candidate() -> void:
 func test_new_child_without_a_task_holds_under_an_attacking_side() -> void:
 	state.military_cohorts.common.fit = 1000
 	state.military_cohorts.common.wounded = 0
-	state.battles = [{"id": 7, "att": [original], "def": [], "actions": {"att": {"kind": "attack"}},
+	state.battles = [{"id": 7, "place_x_m": BattleSystem._at_m(repo,state,original).x,
+		"place_y_m": BattleSystem._at_m(repo,state,original).y, "att": [original], "def": [], "actions": {"att": {"kind": "attack"}},
 		"groups": {original: _legacy_rows(1001, Vector2i(9, 8))}, "group_facing": {original: 37}}]
 	assert_eq(_reconcile().status, "complete")
 	var children := _children()
@@ -115,6 +127,7 @@ func test_unrelated_idle_units_migrate_while_a_frozen_round_waits() -> void:
 	frozen_unit.regiment_code = "frozen"
 	state.army_roster.frozen = frozen_unit
 	state.military_rosters.frozen = {"commander_id": "", "cohort_ids": ["frozen"]}
+	state.regiments.frozen = state.regiments[original].duplicate(true)
 	var source: Dictionary = state.military_cohorts.common.duplicate(true)
 	source.id = "frozen"
 	source.unit_code = "frozen"
@@ -126,7 +139,8 @@ func test_unrelated_idle_units_migrate_while_a_frozen_round_waits() -> void:
 	source.initial = 1001
 	state.military_cohorts.frozen = source
 	var round_input := {"att": ["frozen"], "roll": 99, "costs": {"frozen": 17}}
-	state.battles = [{"id": 7, "att": ["frozen"], "def": [], "pending_round": round_input.duplicate(true),
+	state.battles = [{"id": 7, "place_x_m": BattleSystem._at_m(repo,state,original).x,
+		"place_y_m": BattleSystem._at_m(repo,state,original).y, "att": ["frozen"], "def": [], "pending_round": round_input.duplicate(true),
 		"groups": {"frozen": _legacy_rows(1001, Vector2i(123, 456))}, "group_facing": {"frozen": 0}}]
 	assert_eq(_reconcile().status, "deferred")
 	assert_eq(_children().size(), 2)
@@ -146,13 +160,15 @@ func test_migration_seeds_child_anchor_and_preserves_retired_slot_counter() -> v
 	state.military_cohorts.common.wounded = 0
 	var at := BattleSystem._at_m(repo, state, original)
 	state.regiments[original].group_next_slot = 90
-	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: _legacy_rows(1001, at, 11)},
+	state.battles = [{"id": 7, "place_x_m": BattleSystem._at_m(repo,state,original).x,
+		"place_y_m": BattleSystem._at_m(repo,state,original).y, "att": [original], "def": [], "groups": {original: _legacy_rows(1001, at, 11)},
 		"group_anchor_m": {original: [at.x, at.y]}, "group_facing": {original: 37}}]
 	assert_eq(_reconcile().status, "complete")
 	var children := _children()
 	if children.size() != 2: return
 	var child: String = children[1]
-	assert_eq(state.battles[0].get("group_anchor_m", {}).get(child, []), [at.x, at.y])
+	var admitted := BattleSystem._at_m(repo, state, child)
+	assert_eq(state.battles[0].get("group_anchor_m", {}).get(child, []), [admitted.x, admitted.y])
 	assert_eq(state.regiments[child].group_next_slot, 90)
 	var before := SaveLoad.state_hash(state)
 	BattleGroups.follow_anchor(repo, state, state.battles[0], child)
@@ -161,7 +177,8 @@ func test_migration_seeds_child_anchor_and_preserves_retired_slot_counter() -> v
 func test_migration_hold_follows_saved_battle_alias_without_a_task() -> void:
 	state.military_cohorts.common.fit = 1000
 	state.military_cohorts.common.wounded = 0
-	state.battles = [{"id": 7, "att": [original], "def": [], "actions": {"att": {"kind": "attack"}},
+	state.battles = [{"id": 7, "place_x_m": BattleSystem._at_m(repo,state,original).x,
+		"place_y_m": BattleSystem._at_m(repo,state,original).y, "att": [original], "def": [], "actions": {"att": {"kind": "attack"}},
 		"groups": {original: _legacy_rows(1001, Vector2i(9, 8))}, "group_facing": {original: 37}}]
 	assert_eq(_reconcile().status, "complete")
 	var children := _children()
@@ -175,7 +192,8 @@ func test_migration_hold_follows_saved_battle_alias_without_a_task() -> void:
 func test_no_task_child_uses_defensive_strength_under_attacking_side() -> void:
 	state.military_cohorts.common.fit = 1000
 	state.military_cohorts.common.wounded = 0
-	state.battles = [{"id": 7, "att": [original], "def": [], "actions": {"att": {"kind": "attack"}},
+	state.battles = [{"id": 7, "place_x_m": BattleSystem._at_m(repo,state,original).x,
+		"place_y_m": BattleSystem._at_m(repo,state,original).y, "att": [original], "def": [], "actions": {"att": {"kind": "attack"}},
 		"groups": {original: _legacy_rows(1001, Vector2i(9, 8))}, "group_facing": {original: 37}}]
 	assert_eq(_reconcile().status, "complete")
 	var children := _children()
@@ -197,7 +215,8 @@ func test_partitioned_rows_survive_refresh_and_json_without_movement() -> void:
 	for i: int in 20:
 		rows.append({"count": 50, "role": "front", "x_m": 100 + i, "y_m": 200, "slot": i})
 	rows.append({"count": 1, "role": "reserve", "x_m": 999, "y_m": 333, "slot": 20})
-	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: rows}, "group_facing": {original: 37}}]
+	state.battles = [{"id": 7, "place_x_m": BattleSystem._at_m(repo,state,original).x,
+		"place_y_m": BattleSystem._at_m(repo,state,original).y, "att": [original], "def": [], "groups": {original: rows}, "group_facing": {original: 37}}]
 	assert_eq(_reconcile().status, "complete")
 	var before: Dictionary = state.battles[0].groups.duplicate(true)
 	state = GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())), false)

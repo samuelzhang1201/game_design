@@ -4,6 +4,12 @@ const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture(gap := 700, people := 50) -> Dictionary:
 	var repo := SuiteData.open_country(SuiteData.repo())
+	# Synthetic20m pieces plus60m edge reach retain a hand-computed100m contact centre.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
+	repo.balance.battle_group_contact_m = 60
+	repo.balance.battle_line_gap_m = 60
 	var state := SuiteData.campaign(repo, 9461)
 	var codes := state.regiments.keys()
 	codes.sort()
@@ -180,7 +186,7 @@ func test_friendly_group_blocks_the_actual_charge_corridor() -> void:
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	BattleCharge.move(f.repo, f.state, f.battle, f.a, f.enemy)
 	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), Vector2i(1700, 1000))
-	assert_eq(int(f.state.regiments[f.a].charge.runup_m), 0)
+	assert_eq(int(f.state.regiments[f.a].get("charge", {}).get("runup_m", 0)), 0)
 	assert_eq(_context(f).kind, "melee")
 
 func test_enemy_closing_distance_supplies_no_momentum() -> void:
@@ -217,7 +223,7 @@ func test_shock_losses_apply_only_to_contacted_opponent() -> void:
 	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def", distant).kind, "melee")
 	assert_eq(BattleSystem.step_battle(f.repo, f.state, 9461).status, "complete")
 	assert_eq(Personnel.count(f.state, f.enemy, "dead"), 6)
-	assert_eq(Personnel.count(f.state, distant, "dead"), 5)
+	assert_eq(Personnel.count(f.state, distant, "dead"), 0, "An untouched remote ally receives no melee casualties")
 
 func test_new_target_cannot_skip_regroup_after_an_impact() -> void:
 	var f := _fixture()
@@ -259,8 +265,8 @@ func test_actual_battle_merge_preserves_unit_momentum_and_daily_move_guard() -> 
 	Personnel.replace(f.repo, f.state, ally, 50)
 	Personnel.replace(f.repo, f.state, enemy, 50)
 	f.state.regiments[ally]["x_m"] = 1000
-	f.state.regiments[ally]["y_m"] = 1000
-	f.state.foes[enemy]["x_m"] = 2200
+	f.state.regiments[ally]["y_m"] = 1080
+	f.state.foes[enemy]["x_m"] = 2280
 	f.state.foes[enemy]["y_m"] = 1000
 	var other := {"id": 9462, "att": [ally], "def": [enemy], "rounds": 0,
 		"town": "", "place_x_m": 1000, "place_y_m": 1000, "actions": {}}

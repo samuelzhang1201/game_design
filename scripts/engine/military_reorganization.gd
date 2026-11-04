@@ -11,7 +11,8 @@ static func reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 	var group_pending := false
 	for battle: Dictionary in state.battles:
 		if not bool(battle.get("ended", false)) and not bool(battle.get("finished", false)) \
-				and (BattleGroups.saved_size(repo, battle) <= 0 or int(battle.get("group_size_version", 0)) != 2):
+				and (BattleGroups.saved_size(repo, battle) <= 0 or int(battle.get("group_size_version", 0)) != 2 \
+					or int(battle.get("geometry_version", 0)) != 1):
 			group_pending = true
 	if living_complete and not group_pending:
 		return {"status": "complete"}
@@ -26,6 +27,9 @@ static func reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 		var groups := BattleGroups.migrate_size(repo, candidate, battle)
 		if groups.status == "error": return groups
 		if groups.status == "deferred": result.status = "deferred"
+		var geometry := BattleGroups.migrate_geometry(repo, candidate, battle)
+		if geometry.status == "error": return geometry
+		if geometry.status == "deferred": result.status = "deferred"
 	for field: String in ["army_roster", "military_rosters", "military_cohorts", "military_migration",
 			"regiments", "foes", "supply_lines", "recruitment_projects", "battles", "ai_hosts", "war_plans", "unit_prize_gold"]:
 		state.set(field, candidate.get(field))
@@ -428,6 +432,7 @@ static func _battle(repo: DataRepository, state: GameState, battle: Dictionary, 
 			battle.unit_formations[child] = battle.unit_formations[code].duplicate(true)
 	if int(battle.get("group_size_version", 0)) == 2:
 		battle.group_size_regroup_pending = true
+		battle.erase("geometry_version")
 	for side: String in ["att", "def"]:
 		if battle.has(side): battle[side] = _expanded_codes(battle[side], code, children)
 	return ""

@@ -9,7 +9,10 @@ const BattleScenario := preload("res://tests/fixtures/battle_scenario.gd")
 ## Battle 1: foe f1 attacks crown p1; battle 2: crown p2 attacks foe f2.
 ## p1 (0,0), f1 (0,3000), p2 (5000,20000), f2 (80,0): f2 stands 80 m from p1.
 func _fixture(f2_at := Vector2i(80, 0), p2_at := Vector2i(5000, 20000)) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9447)
 	var mine := state.regiments.keys()
 	mine.sort()
@@ -59,12 +62,12 @@ func test_contact_inside_reach_merges_by_allegiance() -> void:
 	assert_true(events[0] in s.report_events)
 
 func test_reach_is_inclusive_and_only_whole_metres() -> void:
-	var f := _fixture(Vector2i(100, 0))
+	var f := _fixture(Vector2i(140, 0))
 	BattleMerge.day(f.repo, f.state)
-	assert_eq(f.state.battles.size(), 1, "100 m is in contact")
-	var g := _fixture(Vector2i(101, 0))
+	assert_eq(f.state.battles.size(), 1, "20+20+100 m is inclusive contact")
+	var g := _fixture(Vector2i(141, 0))
 	BattleMerge.day(g.repo, g.state)
-	assert_eq(g.state.battles.size(), 2, "101 m is not")
+	assert_eq(g.state.battles.size(), 2, "141 m is outside contact")
 	var h := _fixture(Vector2i(150, 0))
 	assert_eq(BattleMerge.day(h.repo, h.state), [])
 	assert_eq(h.state.battle_aliases, {})

@@ -59,9 +59,7 @@ static func mergeable(repo: DataRepository, state: GameState, a: Dictionary, b: 
 				continue
 			for ga: Dictionary in a.get("groups", {}).get(ua, []):
 				for gb: Dictionary in b.get("groups", {}).get(ub, []):
-					var dx := int(ga["x_m"]) - int(gb["x_m"])
-					var dy := int(ga["y_m"]) - int(gb["y_m"])
-					if dx * dx + dy * dy <= reach * reach:
+					if BattleGroups.in_reach(repo, state, ua, ga, ub, gb, reach):
 						return true
 	return _ranged_contact(repo, state, a, b) or _ranged_contact(repo, state, b, a)
 

@@ -46,7 +46,7 @@ static func unit_action(repo: DataRepository, state: GameState, battle: Dictiona
 			action["kind"] = "hold"
 			action["reason"] = "Unit task holds: insufficient personnel or carried supplies"
 	if action["kind"] == "attack" and not action.has("pursuit_target") and BattleRanged.share(repo, state, code) >= int(repo.bal("battle_context_arm_threshold_permille")) \
-			and BattleRanged.touching(repo, battle, code):
+			and BattleRanged.touching(repo, battle, code, state):
 		action["kind"] = "hold"
 		action["reason"] = "Ranged unit defends at actual close contact"
 		action["close_defence"] = true
@@ -503,9 +503,14 @@ static func join(repo: DataRepository, state: GameState, battle_id: int, code: S
 		return false
 	if not battle_of(state, code).is_empty() or _side_for(state, b, code) != side:
 		return false
+	var original := b
+	b = b.duplicate(true)
 	var list: Array = b[side]
 	if list.size() >= int(repo.bal("battle_max_units")):
 		return false
+	list.append(code)
+	if not BattleGroups.refresh(repo, state, b): return false
+	list.erase(code)
 	BattleRules.ensure_parties(b)   # an old save's default is taken before the newcomer is in the list
 	if b.has("parley"):   # the frozen terms are inherited: the reinforcement becomes a party
 		b.parley.parties[side].append(code)
@@ -519,7 +524,8 @@ static func join(repo: DataRepository, state: GameState, battle_id: int, code: S
 	b.reinforcement_evidence.append({"unit": code, "side": side, "day": state.absolute_day(),
 		"reason": "This regiment physically joined the existing battle."})
 	_halt(state, code)
-	BattleGroups.refresh(repo, state, b)
+	original.clear()
+	original.merge(b)
 	return true
 
 
@@ -597,8 +603,7 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 	if town != "":
 		var bu: Dictionary = repo.burgs[town]
 		place = ArmySystem.pack_to_metres(repo, Vector2(float(bu["x"]), float(bu["y"])))
-	state.foe_next_id += 1
-	var b := {"id": state.foe_next_id, "att": att, "def": def, "start_day": state.absolute_day(),
+	var b := {"id": state.foe_next_id + 1, "att": att, "def": def, "start_day": state.absolute_day(),
 		"rounds": 0, "place_x_m": place.x, "place_y_m": place.y, "town": town,
 		"deployed_day": state.absolute_day()}   # the day of contact deploys nothing; the next prepare_day does
 	b["actions"] = {}
@@ -615,6 +620,8 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 		b["actions"][side] = {"kind": kind, "reason": "Received advance plan" if kind == "attack" else "Maintain distance at contact"}
 	BattleRules.freeze(repo, state, b)
 	BattleFormation.ensure(b)
+	if not BattleGroups.refresh(repo, state, b): return
+	state.foe_next_id += 1
 	state.battles.append(b)
 	for entry_side: String in SIDES:
 		for member: String in b[entry_side]:
@@ -674,6 +681,16 @@ static func step_battle(repo: DataRepository, state: GameState, battle_id: int) 
 	var events: Array = []
 	var battle := battle_by_id(state, battle_id)
 	if not battle.is_empty():
+		if not battle.has("pending_round") and int(battle.get("geometry_version", 0)) != 1:
+			if not state.day_resolution.is_empty():
+				battle.geometry_deferred_reason = "Historical day finishes before a newly computed physical round"
+				return {"status": "complete", "events": []}
+			var admission := MilitaryReorganization.reconcile(repo, state)
+			if admission.status == "error": return {"status": "error", "error": admission.error, "events": []}
+			if admission.status == "deferred": return {"status": "complete", "events": []}
+			battle = battle_by_id(state, battle_id)
+		if not battle.has("pending_round") and not BattleGroups.refresh(repo, state, battle):
+			return {"status": "error", "error": "Battle rows cannot admit current fit personnel without overlap", "events": []}
 		var had_commanders := battle.has("commanders")
 		var previous: Dictionary = battle.get("commanders", {}).duplicate(true)
 		var leadership := BattleCommand.update_battle(repo, state, battle)
@@ -833,7 +850,7 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 			for code: String in b[side]:
 				if bool(_stored(state, code).get("battle_retreat", false)):
 					withdrawing += 1
-			if withdrawing > 0 or BattleOrders.kind(b, side) == "retreat" \
+			if b.has("groups") or withdrawing > 0 or BattleOrders.kind(b, side) == "retreat" \
 					or (b["def" if side == "att" else "att"] as Array).any(func(code: String) -> bool:
 					return BattleCharge.impacting(repo, state, b, code) > 0 or BattleRanged.share(repo, state, code) > 0):
 				if not tier.has("unit_loss_permille"):

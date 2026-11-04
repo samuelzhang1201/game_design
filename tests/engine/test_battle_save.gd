@@ -101,6 +101,65 @@ func test_save_is_stable() -> void:
 	var back := GameState.from_dict(JSON.parse_string(a))
 	assert_eq(JSON.stringify(back.to_dict(), "", true), a, "and a load then a save changes nothing")
 
+func _overlapping_geometry_save() -> GameState:
+	SuiteData.open_country(repo)
+	var state := SuiteData.campaign(repo, 11)
+	var codes := state.regiments.keys()
+	codes.sort()
+	var own := String(codes[0])
+	var enemy := String(state.foes.keys()[0])
+	var battle := {"id": 9911, "att": [own], "def": [enemy], "rounds": 0,
+		"town": "", "place_x_m": 32000, "place_y_m": 30000,
+		"group_size_version": 2, "group_size_men": 100, "groups": {}, "group_facing": {}, "group_anchor_m": {}}
+	state.battles = [battle]
+	BattleFormation.ensure(battle)
+	for code: String in [own, enemy]:
+		var entry := BattleSystem._stored(state, code)
+		entry.x_m = 30000 if code == own else 34000
+		entry.y_m = 30000
+		var rows: Array = []
+		for amount: int in BattleGroups.counts(ArmySystem.fit_count(repo, state, code), 100):
+			rows.append({"slot": rows.size(), "count": amount, "role": "front",
+				"x_m": entry.x_m, "y_m": 30000 + rows.size() * 40})
+		battle.groups[code] = rows
+		battle.group_facing[code] = 0 if code == own else 180
+		battle.group_anchor_m[code] = [entry.x_m, entry.y_m]
+	return state
+
+func test_geometry_only_old_save_migrates_once_without_people_or_cost_changes() -> void:
+	var state := _overlapping_geometry_save()
+	var conserved := {}
+	for field: String in ["military_cohorts", "military_rosters", "army_roster", "metrics", "military_events"]:
+		conserved[field] = state.get(field).duplicate(true)
+	var rng := state.rng.to_dict()
+	assert_eq(MilitaryReorganization.reconcile(repo, state).status, "complete")
+	assert_eq(int(state.battles[0].get("geometry_version", 0)), 1)
+	assert_true(BattleGroups.placement(repo, state, state.battles[0]).ok)
+	for field: String in conserved: assert_eq(state.get(field), conserved[field], field)
+	assert_eq(state.rng.to_dict(), rng)
+	var loaded := GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())))
+	var frozen := SaveLoad.state_hash(loaded)
+	assert_eq(MilitaryReorganization.reconcile(repo, loaded).status, "complete")
+	assert_eq(SaveLoad.state_hash(loaded), frozen, "Repeated JSON admission is inert")
+
+func test_geometry_migration_defers_a_frozen_historical_round_unchanged() -> void:
+	var state := _overlapping_geometry_save()
+	state.battles[0].pending_round = {"day": state.absolute_day(), "round": 1, "roll": 319}
+	var frozen := SaveLoad.state_hash(state)
+	assert_eq(MilitaryReorganization.reconcile(repo, state).status, "deferred")
+	assert_eq(SaveLoad.state_hash(state), frozen)
+
+func test_geometry_migration_retains_already_clear_saved_points_and_paths() -> void:
+	var state := _overlapping_geometry_save()
+	#40m centre spacing is safe for explicit1m fixture discs; migration need not move them.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 1
+		row.pitch_m = 4
+	var groups: Dictionary = state.battles[0].groups.duplicate(true)
+	assert_eq(MilitaryReorganization.reconcile(repo, state).status, "complete")
+	assert_eq(state.battles[0].groups, groups)
+	assert_eq(int(state.battles[0].geometry_version), 1)
+
 func test_blocked_day_transaction_round_trip_preserves_cursor_and_journal() -> void:
 	var s := _filled()
 	s.day_resolution = DayResolution.begin(16, false)

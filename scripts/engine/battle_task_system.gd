@@ -95,7 +95,7 @@ static func _interceptors(repo: DataRepository, state: GameState, battle: Dictio
 			continue
 		if (elsewhere and BattleSystem._within(BattleSystem._at_m(repo, state, unit), BattleSystem._at_m(repo, state, enemy),
 				int(repo.bal("battle_contact_km") * 1000))) \
-				or BattleCharge._approach(repo, battle, unit, enemy, Vector2.ZERO) == 0.0:
+				or BattleCharge._approach(repo, state, battle, unit, enemy, Vector2.ZERO) == 0.0:
 			out.append(enemy)
 	out.sort()
 	return out
@@ -529,11 +529,21 @@ static func _snapshot_flank(repo: DataRepository, state: GameState, unit: String
 	var size := BattleGroups.saved_size(repo, battle) if battle.has("groups") else int(repo.bal("battle_group_size"))
 	if size <= 0: return
 	var n := BattleGroups.counts(ArmySystem.fit_count(repo, state, target), size).size()
-	var radius := 0
-	for offset: Vector2i in BattleGroups.layout(repo, shape if shape != "" else BattleFormation.DEFAULT, n, Vector2i.ZERO, 0):
-		radius = maxi(radius, ceili(Vector2(offset).length()))
-	var positions := BattleGroups.layout(repo, shape if shape != "" else BattleFormation.DEFAULT, n, there, facing)
+	var footprint := BattleGroups.piece(repo, state, target)
+	var own := BattleGroups.piece(repo, state, unit)
+	if not footprint.ok or not own.ok: return
+	var positions: Array[Vector2i] = []
+	if battle.get("groups", {}).has(target):
+		for row: Dictionary in battle.groups[target]:
+			if int(row.count) > 0: positions.append(Vector2i(int(row.x_m), int(row.y_m)))
+	else:
+		positions = BattleGroups.layout(repo, shape if shape != "" else BattleFormation.DEFAULT,
+			n, there, facing, int(footprint.pitch_m))
+	var radius := int(footprint.radius_m)
+	for point: Vector2i in positions:
+		radius = maxi(radius, ceili(Vector2(point - there).length()) + int(footprint.radius_m))
 	var geometry := {"x_m": there.x, "y_m": there.y, "facing_deg": facing, "radius_m": radius,
+		"piece_radius_m": footprint.radius_m, "own_radius_m": own.radius_m,
 		"points_m": MarchRoute.to_pairs(positions)}
 	if flank.get("known", {}) != geometry:
 		flank["known"] = geometry
@@ -547,14 +557,14 @@ static func flank_route(repo: DataRepository, here: Vector2i, known: Dictionary)
 	var centre := Vector2i(int(known["x_m"]), int(known["y_m"]))
 	var face := WarFront.facing_vector(int(known["facing_deg"]))
 	var across := Vector2(-face.y, face.x)
-	var radius := int(known["radius_m"]) + int(repo.bal("battle_group_contact_m"))
+	var radius := int(known["radius_m"]) + int(known.get("own_radius_m", 0)) + int(repo.bal("battle_group_contact_m"))
 	var forward := Vector2(here - centre).dot(face)
 	var bypass := maxf(absf(forward), float(radius)) * (-1.0 if forward < 0.0 else 1.0)
 	var grid := MarchPath.of_pack(repo)
 	var points := MarchRoute.from_pairs(known.get("points_m", [[centre.x, centre.y]]))
 	if points.is_empty():
 		return []
-	var reach := float(repo.bal("battle_group_contact_m"))
+	var reach := float(int(known.get("piece_radius_m", 0)) + int(known.get("own_radius_m", 0)) + int(repo.bal("battle_group_contact_m")))
 	var best: Array = []
 	var length := INF
 	for sign_: int in [1, -1]:
@@ -652,7 +662,7 @@ static func deploy_flank(repo: DataRepository, state: GameState, battle: Diction
 	var here := BattleSystem._at_m(repo, state, unit)
 	var budget := int(repo.bal("battle_deploy_step_m"))
 	var axis := Vector2(Vector2i(path[0]) - here).normalized()
-	var contact := BattleCharge._approach(repo, battle, unit, String(record["request"]["target_unit"]), axis)
+	var contact := BattleCharge._approach(repo, state, battle, unit, String(record["request"]["target_unit"]), axis)
 	var distance := mini(budget, ceili(contact)) if not is_inf(contact) else budget
 	var walked := MarchRoute.walk(here, [path[0]], distance)
 	var to: Vector2i = walked["at"]
@@ -660,9 +670,9 @@ static func deploy_flank(repo: DataRepository, state: GameState, battle: Diction
 		distance -= 1
 		walked = MarchRoute.walk(here, [path[0]], distance)
 		to = walked["at"]
-	if not BattleCharge._clear(repo, battle, unit, to - here):
+	if not BattleCharge._clear(repo, state, battle, unit, to - here):
 		return true
-	BattleGroups.translate(repo, state, battle, unit, to - here)
+	if not BattleGroups.translate(repo, state, battle, unit, to - here, budget): return true
 	flank["path_m"] = MarchRoute.to_pairs((walked["path"] as Array) + path.slice(1))
 	BattleGroups.refresh(repo, state, battle)
 	if BattleGroups.engaged_counts(repo, state, battle, unit, String(record["request"]["target_unit"])).x > 0:

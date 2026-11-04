@@ -56,15 +56,18 @@ static func _point(row: Dictionary) -> Vector2:
 
 
 ## First contact along the actual forward corridor, including lateral group offsets.
-static func _approach(repo: DataRepository, battle: Dictionary, code: String, foe: String, axis: Vector2) -> float:
-	var reach := float(repo.bal("battle_group_contact_m"))
+static func _approach(repo: DataRepository, state: GameState, battle: Dictionary, code: String, foe: String, axis: Vector2) -> float:
+	var own := BattleGroups.piece(repo, state, code)
+	var enemy := BattleGroups.piece(repo, state, foe)
+	if not own.ok or not enemy.ok: return INF
+	var reach := float(int(own.radius_m) + int(enemy.radius_m) + int(repo.bal("battle_group_contact_m")))
 	var distance := INF
 	for row: Dictionary in battle.get("groups", {}).get(code, []):
 		if row["role"] != "front":
 			continue
 		for other: Dictionary in battle.get("groups", {}).get(foe, []):
 			var relative := _point(row) - _point(other)
-			if relative.length_squared() <= reach * reach:
+			if BattleGroups.in_reach(repo, state, code, row, foe, other, int(repo.bal("battle_group_contact_m"))):
 				return 0.0
 			var projection := relative.dot(axis)
 			var discriminant := projection * projection - relative.length_squared() + reach * reach
@@ -73,31 +76,16 @@ static func _approach(repo: DataRepository, battle: Dictionary, code: String, fo
 	return distance
 
 
-static func _clear(repo: DataRepository, battle: Dictionary, code: String, movement: Vector2i) -> bool:
-	var grid := MarchPath.of_pack(repo)
-	var spacing := float(repo.bal("battle_group_spacing_m"))
-	for row: Dictionary in battle.get("groups", {}).get(code, []):
-		var from := Vector2i(_point(row))
-		var to := from + movement
-		if grid != null and not grid.clear(from, to, [grid.cell_of(from)]):
-			return false
-		for other_code: String in battle.get("groups", {}):
-			if other_code == code:
-				continue
-			for other: Dictionary in battle["groups"][other_code]:
-				var offset := _point(other) - Vector2(from)
-				var delta := Vector2(movement)
-				var along := clampf(offset.dot(delta) / delta.length_squared(), 0.0, 1.0) if delta != Vector2.ZERO else 0.0
-				if (offset - delta * along).length_squared() < spacing * spacing:
-					return false
-	return true
+static func _clear(repo: DataRepository, state: GameState, battle: Dictionary, code: String, movement: Vector2i) -> bool:
+	return BattleGroups.motion(repo, state, battle, code, BattleSystem._at_m(repo, state, code),
+		movement, ceili(Vector2(movement).length()))
 
 
 static func move(repo: DataRepository, state: GameState, battle: Dictionary, code: String, foe: String) -> void:
 	var entry := BattleSystem._stored(state, code)
 	var from := BattleSystem._at_m(repo, state, code)
 	var today := state.absolute_day()
-	var charge: Dictionary = entry.get("charge", {})
+	var charge: Dictionary = entry.get("charge", {}).duplicate(true)
 	if charge.is_empty() or charge.get("target", "") != foe \
 			or Vector2i(int(charge.get("x_m", from.x)), int(charge.get("y_m", from.y))) != from:
 		var phase := String(charge.get("phase", "approach"))
@@ -105,7 +93,6 @@ static func move(repo: DataRepository, state: GameState, battle: Dictionary, cod
 			phase = "disengage"
 		charge = {"phase": phase, "target": foe, "origin_x_m": from.x, "origin_y_m": from.y,
 			"x_m": from.x, "y_m": from.y, "runup_m": 0, "impact_day": -1}
-		entry["charge"] = charge
 	var axis := Vector2(BattleSystem._at_m(repo, state, foe) - from).normalized()
 	var heading := WarFront.facing_deg(axis)
 	if charge["phase"] == "approach" and int(charge.get("heading_deg", heading)) != heading:
@@ -113,7 +100,7 @@ static func move(repo: DataRepository, state: GameState, battle: Dictionary, cod
 		charge["origin_y_m"] = from.y
 		charge["runup_m"] = 0
 	charge["heading_deg"] = heading
-	var approach := _approach(repo, battle, code, foe, axis)
+	var approach := _approach(repo, state, battle, code, foe, axis)
 	var runup := int(repo.bal("battle_charge_runup_m"))
 	if charge["phase"] == "impact":
 		if int(charge["impact_day"]) == today:
@@ -124,10 +111,12 @@ static func move(repo: DataRepository, state: GameState, battle: Dictionary, cod
 		charge["origin_x_m"] = from.x
 		charge["origin_y_m"] = from.y
 		charge["runup_m"] = 0
+		entry["charge"] = charge
 		return
 	if charge["phase"] == "approach" and approach <= 0.0:
 		charge["phase"] = "disengage"
 		charge["runup_m"] = 0
+		entry["charge"] = charge
 		return
 	var distance := approach
 	if charge["phase"] == "disengage":
@@ -148,15 +137,16 @@ static func move(repo: DataRepository, state: GameState, battle: Dictionary, cod
 			movement.x -= 1 if movement.x > 0 else -1
 		else:
 			movement.y -= 1 if movement.y > 0 else -1
-	if not _clear(repo, battle, code, movement):
+	if not _clear(repo, state, battle, code, movement):
 		return
 	var to := from + movement
-	BattleGroups.translate(repo, state, battle, code, movement)
+	if not BattleGroups.translate(repo, state, battle, code, movement, budget): return
+	entry["charge"] = charge
 	charge["x_m"] = to.x
 	charge["y_m"] = to.y
 	BattleGroups.refresh(repo, state, battle)
 	if charge["phase"] == "disengage":
-		if _approach(repo, battle, code, foe, -axis) >= float(runup):
+		if _approach(repo, state, battle, code, foe, -axis) >= float(runup):
 			charge["phase"] = "regroup"
 		return
 	var origin := Vector2i(int(charge["origin_x_m"]), int(charge["origin_y_m"]))

@@ -6,7 +6,11 @@ const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture() -> Dictionary:
 	var repo := SuiteData.open_country(SuiteData.repo())   # straight steps; the water test lays its own grid
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9446)
+	state.town_seat.clear()  # Mobile-column cases; the fixed-seat regression assigns a real held seat.
 	var codes := state.regiments.keys()
 	codes.sort()
 	var a := String(codes[0])
@@ -27,15 +31,64 @@ func _at(f: Dictionary, code: String) -> Vector2i:
 func test_targets_and_two_day_approach() -> void:
 	var f := _fixture()
 	var t: Dictionary = BattleGroups.deployment(f.repo, f.state, f.battle)
-	assert_eq(t[f.enemy], Vector2i(-50, 0))
-	assert_eq(t[f.a], Vector2i(50, 0))
+	assert_eq(t[f.enemy], Vector2i(-70, 0))
+	assert_eq(t[f.a], Vector2i(70, 0))
 	f.state.day = 5
 	BattleGroups.deploy_day(f.repo, f.state, f.battle)
 	assert_eq(_at(f, f.a), Vector2i(1500, 0))
-	assert_eq(_at(f, f.enemy), Vector2i(-50, 0))
+	assert_eq(_at(f, f.enemy), Vector2i(-70, 0))
 	f.state.day = 6
 	BattleGroups.deploy_day(f.repo, f.state, f.battle)
-	assert_eq(_at(f, f.a), Vector2i(50, 0))
+	assert_eq(_at(f, f.a), Vector2i(70, 0))
+
+func test_stationary_seat_front_reserves_its_actual_occupied_radius() -> void:
+	var f := _fixture()
+	f.repo.unit_footprints = SuiteData.repo().unit_footprints.duplicate(true)
+	for code: String in [f.a, f.enemy]:
+		for arm: String in f.repo.world_table("military", "unit_types"): f.state.army_roster[code][arm] = "0"
+		f.state.army_roster[code].infantry = "100"
+		f.state.army_roster[code].is_royal = "0"
+		Personnel.replace(f.repo, f.state, code, 100)
+	var kingdom := String(f.state.army_roster[f.a].kingdom_code)
+	for town: String in f.repo.burgs:
+		if ArmyGround.holds(f.repo, f.state, kingdom, town):
+			f.state.town_seat = {town: f.a}
+			break
+	assert_ne(ArmyGround.seated_in(f.repo, f.state, f.a), "")
+	f.battle.place_x_m = 4000
+	f.state.day = 5
+	BattleGroups.deploy_day(f.repo, f.state, f.battle)
+	# Fixed front4000-927; opposing centre=4000-927-100-927=2046.
+	assert_eq(_at(f, f.a), Vector2i(4000, 0))
+	assert_eq(_at(f, f.enemy), Vector2i(2046, 0))
+	assert_gt(BattleGroups.engaged_counts(f.repo, f.state, f.battle, f.enemy).x, 0)
+
+func test_admitted_deployment_axis_is_stable_during_a_side_approach() -> void:
+	var f := _fixture()
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	var targets := BattleGroups.deployment(f.repo, f.state, f.battle)
+	assert_true(BattleGroups.translate(f.repo, f.state, f.battle, f.a, Vector2i(0, 1000)))
+	assert_eq(BattleGroups.deployment(f.repo, f.state, f.battle), targets,
+		"A flanking anchor cannot rotate every other unit's deployment target")
+
+func test_abreast_clearance_uses_actual_rows_instead_of_nominal_slot_count() -> void:
+	var f := _fixture()
+	var codes: Array = f.state.regiments.keys()
+	codes.sort()
+	var friend := String(codes[1])
+	Personnel.replace(f.repo, f.state, f.a, 200)
+	Personnel.replace(f.repo, f.state, f.enemy, 100)
+	Personnel.replace(f.repo, f.state, friend, 100)
+	f.state.regiments[friend].x_m = 4000
+	f.state.regiments[friend].y_m = 2000
+	f.battle.att.append(friend)
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	f.battle.deployment_axis_deg = 0  # Hand calculation projects actual rows onto the fixedY cross-axis.
+	f.battle.groups[f.a][0].y_m = -400
+	f.battle.groups[f.a][1].y_m = 400
+	var targets := BattleGroups.deployment(f.repo, f.state, f.battle)
+	# Actual half-widths420 and20 plus100 clear metres require540 between centres.
+	assert_eq(targets[friend].y - targets[f.a].y, 540)
 
 func test_two_units_abreast_across_the_axis() -> void:
 	var f := _fixture()
@@ -49,11 +102,11 @@ func test_two_units_abreast_across_the_axis() -> void:
 	Personnel.replace(f.repo, f.state, b, 240)
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	var t: Dictionary = BattleGroups.deployment(f.repo, f.state, f.battle)
-	# axis +x, att line centre (50, 0), across = y; each width 100 m
+	# Each occupied width=80+2*20=120;100m gap gives centres +/-110, forward20+50=70.
 	var ys := [t[f.a].y, t[b].y]
 	ys.sort()
-	assert_eq(ys, [-50, 50])
-	assert_eq(t[f.a].x, 50)
+	assert_eq(ys, [-110, 110])
+	assert_eq(t[f.a].x, 70)
 
 func test_a_withdrawal_stops_the_whole_deployment() -> void:
 	var f := _fixture()
@@ -78,7 +131,7 @@ func test_once_per_day_and_save_roundtrip() -> void:
 	assert_eq(int(back.deployed_day), int(f.battle.deployed_day))
 	f.battle.erase("deployed_day")   # an old save migrates: deploys again
 	BattleGroups.deploy_day(f.repo, f.state, f.battle)
-	assert_eq(_at(f, f.a), Vector2i(50, 0))
+	assert_eq(_at(f, f.a), Vector2i(70, 0))
 
 func test_retreat_order_stops_both_sides() -> void:
 	var f := _fixture()
@@ -98,7 +151,7 @@ func test_a_step_across_water_is_not_taken() -> void:
 	BattleGroups.deploy_day(f.repo, f.state, f.battle)
 	MarchPath.forget()
 	assert_eq(_at(f, f.a), Vector2i(4000, 0))
-	assert_eq(_at(f, f.enemy), Vector2i(-50, 0), "the defender's dry step is taken")
+	assert_eq(_at(f, f.enemy), Vector2i(-70, 0), "the defender's dry step is taken")
 
 func test_deployment_translates_existing_rows_once() -> void:
 	var f := _fixture()
@@ -106,6 +159,7 @@ func test_deployment_translates_existing_rows_once() -> void:
 	f.battle["groups"] = {f.a: [
 		{"count": 50, "role": "front", "x_m": 4000, "y_m": 200},
 		{"count": 50, "role": "reserve", "x_m": 3960, "y_m": 200}]}
+	f.battle.place_y_m = 200  # The existing physical rows lie on this horizontal battle line.
 	f.state.day = 5
 	BattleGroups.deploy_day(f.repo, f.state, f.battle)
 	assert_eq(_at(f, f.a), Vector2i(1500, 0))

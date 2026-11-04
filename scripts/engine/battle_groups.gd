@@ -30,10 +30,10 @@ static func saved_size(repo: DataRepository, battle: Dictionary) -> int:
 ## y down, degrees), so across = the facing turned +90 degrees and back = -facing.
 ## Each position is rounded to whole metres once.
 static func layout(repo: DataRepository, formation: String, count: int, anchor: Vector2i,
-		facing_deg: int) -> Array[Vector2i]:
+		facing_deg: int, pitch_m := 0) -> Array[Vector2i]:
 	var face := WarFront.facing_vector(facing_deg)
-	var across := Vector2(-face.y, face.x) * float(repo.bal("battle_group_spacing_m"))
-	var back := -face * float(repo.bal("battle_group_depth_m"))
+	var across := Vector2(-face.y, face.x) * float(pitch_m if pitch_m > 0 else repo.bal("battle_group_spacing_m"))
+	var back := -face * float(pitch_m if pitch_m > 0 else repo.bal("battle_group_depth_m"))
 	var out: Array[Vector2i] = []
 	for slot: Vector2 in BattleFormation.slots(formation, count):
 		out.append(anchor + Vector2i((across * slot.x + back * slot.y).round()))
@@ -42,20 +42,23 @@ static func layout(repo: DataRepository, formation: String, count: int, anchor: 
 
 ## Reconciles fit counts without moving surviving physical rows. Legacy rows
 ## acquire identities once; only a unit without rows seeds its formation.
-static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) -> void:
-	if battle.has("pending_round"):
-		return
+static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) -> bool:
+	if not (battle.get("pending_round", {}) as Dictionary).is_empty():
+		return false
 	var size := saved_size(repo, battle) if battle.has("groups") else int(repo.bal("battle_group_size"))
 	if not battle.has("groups") and not state.day_resolution.is_empty():
 		for current: Dictionary in state.battles:
 			if current.has("groups") and not bool(current.get("ended", false)) and not bool(current.get("finished", false)) \
 					and saved_size(repo, current) == 50:
 				size = 50
-	if size <= 0: return
+	if size <= 0: return false
+	var initial_axis := _deployment_axis(repo, state, battle)
+	if initial_axis == Vector2.ZERO: return false
 	var groups := {}
 	var facing := {}
 	var snapshots := {}
 	var anchors := {}
+	var next_slots := {}
 	for side: String in BattleSystem.SIDES:
 		for code: String in battle[side]:
 			anchors[code] = BattleSystem._at_m(repo, state, code)
@@ -72,13 +75,15 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 			if not other.is_empty():
 				@warning_ignore("integer_division")
 				face = WarFront.facing_deg(Vector2(mean / other.size() - anchor))
-			face = int(BattleSystem._stored(state, code).get("facing_deg", face))
+			face = int(BattleSystem._stored(state, code).get("facing_deg", battle.get("group_facing", {}).get(code, face)))
 			var task := BattleTaskSystem.current(state, code)
 			var known: Dictionary = task.get("flank", {}).get("known", {})
 			if task.get("status", "") == "received" and task.get("request", {}).get("task", "") == "flank" \
 					and BattleSystem.canonical(state, int(task["request"]["battle_id"])) == int(battle.get("id", -1)) and not known.is_empty():
 				face = WarFront.facing_deg(Vector2(Vector2i(int(known["x_m"]), int(known["y_m"])) - anchor))
-			var old: Array = battle.get("groups", {}).get(code, [])
+			var footprint := piece(repo, state, code)
+			if not footprint.ok: return false
+			var old: Array = battle.get("groups", {}).get(code, []).duplicate(true)
 			var left := ArmySystem.fit_count(repo, state, code)
 			var sizes: Array[int] = []
 			# Partial migration rows keep their people; only losses trim the tail.
@@ -92,8 +97,9 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 				sizes[-1] += added
 				left -= added
 			sizes.append_array(counts(left, size))
-			var at := layout(repo, BattleFormation.of_unit(state, code), sizes.size(), anchor, face)
-			var slots := BattleFormation.slots(BattleFormation.of_unit(state, code), sizes.size())
+			var shape := String(BattleFormation._deployment(battle, side, code).get("current", BattleFormation.DEFAULT))
+			var at := layout(repo, shape, sizes.size(), anchor, face, int(footprint.pitch_m))
+			var slots := BattleFormation.slots(shape, sizes.size())
 			var front := 0.0
 			for slot: Vector2 in slots:
 				front = minf(front, slot.y)
@@ -113,7 +119,7 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 				else:
 					var point: Vector2i = at[i]
 					if not old.is_empty():
-						rear += float(repo.bal("battle_group_depth_m"))
+						rear += float(footprint.pitch_m)
 						point = anchor + Vector2i((back * rear).round())
 					row = {"role": "reserve" if not old.is_empty() else (
 						"front" if is_equal_approx(slots[i].y, front) else "reserve"),
@@ -123,16 +129,44 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 					next += 1
 				row["count"] = sizes[i]
 				rows.append(row)
-			entry["group_next_slot"] = next
+			next_slots[code] = next
 			groups[code] = rows
 			facing[code] = face
 			snapshots[code] = battle.get("group_anchor_m", {}).get(code, [anchor.x, anchor.y])
+	var seeded_anchors := {}
+	if not battle.has("groups") or int(battle.get("geometry_version", 0)) == 1:
+		var proposed := battle.duplicate(true)
+		proposed.groups = groups
+		proposed.group_facing = facing
+		proposed.group_anchor_m = snapshots
+		if not battle.has("groups"):
+			proposed.group_size_version = 2 if size == int(repo.bal("battle_group_size")) else 1
+			proposed.group_size_men = size
+		if not placement(repo, state, proposed, false).ok:
+			if battle.has("groups"): return false
+			seeded_anchors = deployment(repo, state, proposed)
+			if seeded_anchors.size() != anchors.size() or _relayout(repo, state, proposed, seeded_anchors) != "": return false
+			if not placement(repo, state, proposed, false).ok: return false
+			groups = proposed.groups
+			snapshots = proposed.group_anchor_m
+		if not placement(repo, state, proposed).ok: return false
+		battle.geometry_version = 1
+	for code: String in seeded_anchors:
+		var at: Vector2i = seeded_anchors[code]
+		var entry := BattleSystem._stored(state, code)
+		entry.x_m = at.x
+		entry.y_m = at.y
+	for code: String in next_slots:
+		BattleSystem._stored(state, code)["group_next_slot"] = next_slots[code]
 	if not battle.has("groups"):
 		battle["group_size_version"] = 2 if size == int(repo.bal("battle_group_size")) else 1
 		battle["group_size_men"] = size
 	battle["groups"] = groups
 	battle["group_facing"] = facing
 	battle["group_anchor_m"] = snapshots
+	if int(battle.get("geometry_version", 0)) == 1 and not battle.has("deployment_axis_deg"):
+		battle.deployment_axis_deg = WarFront.facing_deg(initial_axis)
+	return true
 
 
 ## Explicit boundary migration; the caller publishes this private candidate atomically.
@@ -171,6 +205,7 @@ static func migrate_size(repo: DataRepository, state: GameState, battle: Diction
 				if not rows[i] is Dictionary:
 					return {"status": "error", "error": "Invalid saved group row: " + code}
 				var row: Dictionary = rows[i]
+				if not row.has("slot"): row.slot = i
 				for field: String in ["count", "x_m", "y_m"]:
 					if not _whole(row.get(field)):
 						return {"status": "error", "error": "Invalid saved group " + field + ": " + code}
@@ -220,30 +255,219 @@ static func _whole(value: Variant) -> bool:
 	return (value is int or value is float) and is_finite(float(value)) and float(value) == float(int(value))
 
 
+static func piece(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var result := BattleGroupGeometry.footprint(repo, ArmySystem.regiment(repo, code, state))
+	if not result.ok: return {"ok": false, "error": String(result.reason)}
+	return result
+
+
+## This runs only on MilitaryReorganization's detached safe-boundary candidate.
+static func migrate_geometry(repo: DataRepository, state: GameState, battle: Dictionary) -> Dictionary:
+	if not _whole(battle.get("geometry_version", 0)) or int(battle.get("geometry_version", 0)) not in [0, 1]:
+		return {"status": "error", "error": "Invalid saved geometry version"}
+	if int(battle.get("geometry_version", 0)) == 1: return {"status": "complete"}
+	if not state.day_resolution.is_empty(): return {"status": "deferred"}
+	for current: Dictionary in state.battles:
+		if not (current.get("pending_round", {}) as Dictionary).is_empty(): return {"status": "deferred"}
+	var proposed := battle.duplicate(true)
+	var anchors := {}
+	for side: String in BattleSystem.SIDES:
+		for code: String in battle[side]:
+			anchors[code] = BattleSystem._at_m(repo, state, code)
+	var axis := _deployment_axis(repo, state, proposed)
+	if axis == Vector2.ZERO: return {"status": "error", "error": "Invalid saved deployment axis"}
+	proposed.deployment_axis_deg = WarFront.facing_deg(axis)
+	var error := _relayout(repo, state, proposed, anchors, false)
+	if error != "": return {"status": "error", "error": error}
+	if not placement(repo, state, proposed, false).ok:
+		error = _relayout(repo, state, proposed, anchors)
+		if error != "": return {"status": "error", "error": error}
+	if not placement(repo, state, proposed, false).ok:
+		anchors = deployment(repo, state, proposed)
+		if anchors.size() != proposed.att.size() + proposed.def.size():
+			return {"status": "error", "error": "No complete legacy geometry deployment"}
+		error = _relayout(repo, state, proposed, anchors)
+		if error != "": return {"status": "error", "error": error}
+	var admission := placement(repo, state, proposed)
+	if not admission.ok: return {"status": "error", "error": admission.error}
+	var grid := MarchPath.of_pack(repo)
+	for code: String in anchors:
+		for row: Dictionary in proposed.groups[code]:
+			var point := Vector2i(int(row.x_m), int(row.y_m))
+			if grid != null and not grid.clear(point, point):
+				return {"status": "error", "error": "Legacy geometry is on blocked ground: " + code + " " + str(point)}
+	for code: String in anchors:
+		var at: Vector2i = anchors[code]
+		var entry := BattleSystem._stored(state, code)
+		entry.x_m = at.x
+		entry.y_m = at.y
+		if entry.get("order", "") != ArmySystem.ORDER_MARCH:
+			entry.dest_x_m = at.x
+			entry.dest_y_m = at.y
+		var charge: Dictionary = entry.get("charge", {})
+		if not charge.is_empty():
+			charge.x_m = at.x
+			charge.y_m = at.y
+			charge.origin_x_m = at.x
+			charge.origin_y_m = at.y
+			charge.runup_m = 0
+			charge.phase = "approach" if charge.get("phase", "approach") == "approach" else "disengage"
+			charge.impact_day = -1
+	proposed.geometry_version = 1
+	proposed.geometry_reason = "Legacy battle rows admitted against installed piece footprints at a safe transaction boundary"
+	battle.clear()
+	battle.merge(proposed)
+	return {"status": "complete"}
+
+
+static func _relayout(repo: DataRepository, state: GameState, battle: Dictionary, anchors: Dictionary, rebuild := true) -> String:
+	if not battle.get("groups", {}) is Dictionary or not battle.get("group_facing", {}) is Dictionary:
+		return "Invalid saved geometry groups or facings"
+	for side: String in BattleSystem.SIDES:
+		for code: String in battle[side]:
+			var footprint := piece(repo, state, code)
+			if not footprint.ok: return String(footprint.error)
+			var saved: Variant = battle.get("groups", {}).get(code, [])
+			if not saved is Array: return "Invalid geometry row array: " + code
+			var rows: Array = saved
+			var shape := String(BattleFormation._deployment(battle, side, code).get("current", BattleFormation.DEFAULT))
+			var face: Variant = battle.get("group_facing", {}).get(code)
+			if not _whole(face) or int(face) < 0 or int(face) >= 360: return "Invalid geometry facing: " + code
+			var positions := layout(repo, shape, rows.size(), anchors[code], int(face), int(footprint.pitch_m))
+			var total := 0
+			var slots := {}
+			for i: int in rows.size():
+				if not rows[i] is Dictionary: return "Invalid geometry row: " + code
+				var row: Dictionary = rows[i]
+				if not row.has("slot"): row.slot = i
+				for field: String in ["count", "slot", "x_m", "y_m"]:
+					if not _whole(row.get(field)): return "Invalid geometry row " + field + ": " + code
+				if int(row.count) <= 0 or int(row.count) > saved_size(repo, battle) or int(row.slot) < 0 or slots.has(int(row.slot)) \
+						or row.get("role", "") not in ["front", "reserve"]:
+					return "Invalid geometry count or repeated slot: " + code
+				slots[int(row.slot)] = true
+				total += int(row.count)
+				if not rebuild: positions[i] = Vector2i(int(row.x_m), int(row.y_m))
+				var delta := positions[i] - Vector2i(int(row.x_m), int(row.y_m))
+				if row.has("path_m"):
+					if not row.path_m is Array: return "Invalid geometry row path: " + code
+					for point: Variant in row.path_m:
+						if not point is Array or point.size() != 2 or not _whole(point[0]) or not _whole(point[1]): return "Invalid geometry row path: " + code
+						point[0] = int(point[0]) + delta.x
+						point[1] = int(point[1]) + delta.y
+				row.x_m = positions[i].x
+				row.y_m = positions[i].y
+			if total != ArmySystem.fit_count(repo, state, code): return "Geometry rows disagree with fit personnel: " + code
+			battle.get_or_add("group_anchor_m", {})[code] = [anchors[code].x, anchors[code].y]
+	return ""
+
+
+static func in_reach(repo: DataRepository, state: GameState, code: String, row: Dictionary,
+		foe: String, other: Dictionary, reach: int) -> bool:
+	var own := piece(repo, state, code)
+	var enemy := piece(repo, state, foe)
+	if not own.ok or not enemy.ok: return false
+	var pair := BattleGroupGeometry.pair([row.x_m, row.y_m], int(own.radius_m),
+		[other.x_m, other.y_m], int(enemy.radius_m), reach)
+	if not pair.ok or not pair.in_reach: return false
+	var grid := MarchPath.of_pack(repo)
+	return grid == null or grid.clear(Vector2i(int(row.x_m), int(row.y_m)), Vector2i(int(other.x_m), int(other.y_m)))
+
+
+## Validate the complete proposed rows before publishing any slot or anchor.
+static func placement(repo: DataRepository, state: GameState, battle: Dictionary, include_other_fields := true) -> Dictionary:
+	var occupied: Array = []
+	var fields: Array = [battle]
+	if include_other_fields:
+		for other: Dictionary in state.battles:
+			if int(other.get("id", -1)) != int(battle.get("id", -1)):
+				fields.append(other)
+	for field: Dictionary in fields:
+		if not field.get("groups", {}) is Dictionary: return {"ok": false, "error": "Invalid occupied group dictionary"}
+		var codes: Array = field.get("groups", {}).keys()
+		codes.sort()
+		for code: String in codes:
+			var footprint := piece(repo, state, code)
+			if not footprint.ok: return footprint
+			if not field.groups[code] is Array: return {"ok": false, "error": "Invalid occupied row array: " + code}
+			for value: Variant in field.groups[code]:
+				if not value is Dictionary: return {"ok": false, "error": "Invalid occupied row: " + code}
+				var row: Dictionary = value
+				var bounds := BattleGroupGeometry.envelope([row], int(footprint.radius_m))
+				if not bounds.ok: return {"ok": false, "error": String(bounds.reason)}
+				if not _whole(row.get("count")) or int(row.count) <= 0:
+					return {"ok": false, "error": "Invalid occupied row count: " + code}
+				var point := [row.get("x_m"), row.get("y_m")]
+				for prior: Dictionary in occupied:
+					if field != battle and not prior.proposed: continue
+					var pair := BattleGroupGeometry.pair(point, int(footprint.radius_m), prior.point, int(prior.radius), 0)
+					if not pair.ok: return {"ok": false, "error": String(pair.reason)}
+					if pair.overlap:
+						return {"ok": false, "error": "Occupied battle discs overlap: " + code + " / " + String(prior.code)}
+				occupied.append({"point": point, "radius": footprint.radius_m, "code": code, "proposed": field == battle})
+	return {"ok": true}
+
+
+## A pure precommit check, also used for every leg of legacy/saved marches.
+static func motion(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
+		from: Vector2i, movement: Vector2i, budget: int) -> bool:
+	if not (battle.get("pending_round", {}) as Dictionary).is_empty(): return false
+	var footprint := piece(repo, state, code)
+	if not footprint.ok: return false
+	var rows: Array = battle.get("groups", {}).get(code, []).duplicate(true)
+	if rows.is_empty(): return true
+	var snapshot: Array = battle.get("group_anchor_m", {}).get(code, [from.x, from.y])
+	var shift := from - Vector2i(int(snapshot[0]), int(snapshot[1]))
+	for row: Dictionary in rows:
+		row.x_m = int(row.x_m) + shift.x
+		row.y_m = int(row.y_m) + shift.y
+	var blockers: Array = []
+	var fields: Array = [battle]
+	for other: Dictionary in state.battles:
+		if int(other.get("id", -1)) != int(battle.get("id", -1)): fields.append(other)
+	for field: Dictionary in fields:
+		for other_code: String in field.get("groups", {}):
+			if other_code == code: continue
+			var other_piece := piece(repo, state, other_code)
+			if not other_piece.ok: return false
+			for row: Dictionary in field.groups[other_code]:
+				blockers.append({"x_m": row.x_m, "y_m": row.y_m, "radius_m": other_piece.radius_m})
+	var check := BattleGroupGeometry.rigid_step(rows, int(footprint.radius_m),
+		[movement.x, movement.y], budget, blockers)
+	if not check.ok or not check.allowed: return false
+	var grid := MarchPath.of_pack(repo)
+	for row: Dictionary in rows:
+		var start := Vector2i(int(row.x_m), int(row.y_m))
+		if grid != null and not grid.clear(start, start + movement, [grid.cell_of(start)]): return false
+	return true
+
+
 ## Commit an already validated rigid step; movement has one anchor writer.
 static func translate(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
-		movement: Vector2i) -> void:
-	if battle.has("pending_round"):
-		return
-	refresh(repo, state, battle)
+		movement: Vector2i, budget := -1) -> bool:
+	var from := BattleSystem._at_m(repo, state, code)
+	if not motion(repo, state, battle, code, from, movement,
+			budget if budget >= 0 else ceili(Vector2(movement).length())): return false
 	var entry := BattleSystem._stored(state, code)
 	var at := BattleSystem._at_m(repo, state, code) + movement
+	battle.get_or_add("group_anchor_m", {})[code] = [from.x, from.y]
 	entry["x_m"] = at.x
 	entry["y_m"] = at.y
-	follow_anchor(repo, state, battle, code)
+	return follow_anchor(repo, state, battle, code)
 
 
 ## Follow a live march commit, never a private forecast. This does not move the
 ## anchor or reconcile a pending round's personnel, and replaying it is inert.
-static func follow_anchor(repo: DataRepository, state: GameState, battle: Dictionary, code: String) -> void:
+static func follow_anchor(repo: DataRepository, state: GameState, battle: Dictionary, code: String) -> bool:
 	if not battle.get("groups", {}).has(code):
-		return
+		return true
 	var at := BattleSystem._at_m(repo, state, code)
 	if not battle.has("group_anchor_m"):
 		battle["group_anchor_m"] = {}
 	var pair: Array = battle["group_anchor_m"].get(code, [at.x, at.y])
 	var delta := at - Vector2i(int(pair[0]), int(pair[1]))
 	if delta != Vector2i.ZERO:
+		if not motion(repo, state, battle, code, at - delta, delta, ceili(Vector2(delta).length())): return false
 		for row: Dictionary in battle["groups"][code]:
 			row["x_m"] = int(row["x_m"]) + delta.x
 			row["y_m"] = int(row["y_m"]) + delta.y
@@ -252,6 +476,7 @@ static func follow_anchor(repo: DataRepository, state: GameState, battle: Dictio
 					point[0] = int(point[0]) + delta.x
 					point[1] = int(point[1]) + delta.y
 	battle["group_anchor_m"][code] = [at.x, at.y]
+	return true
 
 
 ## Every unit's target anchor on its side's deployment line (P4.4d2). The axis
@@ -259,45 +484,93 @@ static func follow_anchor(repo: DataRepository, state: GameState, battle: Dictio
 ## coincide); each line centre is the battle place +- axis * gap / 2 (att on the
 ## + side); a side's units stand abreast in sorted code order, each as wide as
 ## its front groups, the side centred. Pure; each target rounded to metres once.
-static func deployment(repo: DataRepository, state: GameState, battle: Dictionary) -> Dictionary:
-	var size := saved_size(repo, battle) if battle.has("groups") else int(repo.bal("battle_group_size"))
-	if size <= 0: return {}
+static func _deployment_axis(repo: DataRepository, state: GameState, battle: Dictionary) -> Vector2:
+	if battle.has("deployment_axis_deg"):
+		var saved: Variant = battle.deployment_axis_deg
+		if not _whole(saved) or int(saved) < 0 or int(saved) >= 360: return Vector2.ZERO
+		return WarFront.facing_vector(int(saved))
+	if battle.att.is_empty() or battle.def.is_empty(): return Vector2.RIGHT
 	var means := {}
 	for side: String in BattleSystem.SIDES:
 		var sum := Vector2i.ZERO
-		for code: String in battle[side]:
-			sum += BattleSystem._at_m(repo, state, code)
-		var n: int = maxi(1, (battle[side] as Array).size())
+		for code: String in battle[side]: sum += BattleSystem._at_m(repo, state, code)
 		@warning_ignore("integer_division")
-		means[side] = sum / n
-	var axis := Vector2(means["att"] - means["def"])
-	axis = axis.normalized() if axis != Vector2.ZERO else Vector2.RIGHT
+		means[side] = sum / battle[side].size()
+	var delta := Vector2(means.att - means.def)
+	return delta.normalized() if delta != Vector2.ZERO else Vector2.RIGHT
+
+
+static func deployment(repo: DataRepository, state: GameState, battle: Dictionary) -> Dictionary:
+	var size := saved_size(repo, battle) if battle.has("groups") else int(repo.bal("battle_group_size"))
+	if size <= 0: return {}
+	if not _whole(battle.get("place_x_m")) or not _whole(battle.get("place_y_m")): return {}
+	var axis := _deployment_axis(repo, state, battle)
+	if axis == Vector2.ZERO: return {}
 	var across := Vector2(-axis.y, axis.x)
-	var place := Vector2(int(battle["place_x_m"]), int(battle["place_y_m"]))
-	var spacing := float(repo.bal("battle_group_spacing_m"))
-	var half_gap := float(repo.bal("battle_line_gap_m")) / 2.0
+	var place := Vector2(int(battle.place_x_m), int(battle.place_y_m))
+	var gap := float(repo.bal("battle_line_gap_m"))
 	var out := {}
 	for side: String in BattleSystem.SIDES:
-		var centre := place + axis * (half_gap if side == "att" else -half_gap)
-		var codes: Array = (battle[side] as Array).duplicate()
+		var forward := -axis if side == "att" else axis
+		var codes: Array = battle[side].duplicate()
 		codes.sort()
-		var widths := {}
+		var bounds := {}
 		var total := 0.0
+		var front := -INF
 		for code: String in codes:
-			var slots := BattleFormation.slots(BattleFormation.of_unit(state, code),
-				counts(ArmySystem.fit_count(repo, state, code), size).size())
-			var front := 0.0
-			for slot: Vector2 in slots:
-				front = minf(front, slot.y)
-			var n := 0
-			for slot: Vector2 in slots:
-				n += 1 if is_equal_approx(slot.y, front) else 0
-			widths[code] = float(maxi(1, n)) * spacing
-			total += float(widths[code])
-		var at := -total / 2.0
+			var footprint := piece(repo, state, code)
+			if not footprint.ok: return {}
+			var shape := String(BattleFormation._deployment(battle, side, code).get("current", BattleFormation.DEFAULT))
+			var face := int(battle.get("group_facing", {}).get(code, WarFront.facing_deg(forward)))
+			var points: Array[Vector2i] = []
+			var anchor := BattleSystem._at_m(repo, state, code)
+			var rows: Array = battle.get("groups", {}).get(code, [])
+			for row: Dictionary in rows:
+				points.append(Vector2i(int(row.x_m), int(row.y_m)) - anchor)
+			if rows.is_empty():
+				points = layout(repo, shape, counts(ArmySystem.fit_count(repo, state, code), size).size(),
+					Vector2i.ZERO, face, int(footprint.pitch_m))
+			if points.is_empty():
+				bounds[code] = {"low": 0.0, "width": 0.0}
+				continue
+			var low := Vector2(points[0]).dot(across)
+			var high := low
+			for point: Vector2i in points:
+				low = minf(low, Vector2(point).dot(across))
+				high = maxf(high, Vector2(point).dot(across))
+				front = maxf(front, Vector2(point).dot(forward) + float(footprint.radius_m))
+			var width := high - low + 2.0 * float(footprint.radius_m)
+			bounds[code] = {"low": low - float(footprint.radius_m), "width": width}
+			total += width + gap
+		if is_inf(front):
+			for code: String in codes: out[code] = BattleSystem._at_m(repo, state, code)
+			continue
+		var cursor := -(total - gap) / 2.0
+		var back := front + gap / 2.0
+		# A fixed opponent cannot supply its nominal half of the deployment gap.
+		for enemy: String in battle["def" if side == "att" else "att"]:
+			if ArmyGround.seated_in(repo, state, enemy) == "" and not bool(BattleSystem._stored(state, enemy).get("captured", false)): continue
+			var footprint := piece(repo, state, enemy)
+			if not footprint.ok: return {}
+			var rows: Array = battle.get("groups", {}).get(enemy, []).duplicate(true)
+			if rows.is_empty() and ArmySystem.fit_count(repo, state, enemy) > 0:
+				var shape := String(BattleFormation._deployment(battle, "def" if side == "att" else "att", enemy).get("current", BattleFormation.DEFAULT))
+				var face := int(battle.get("group_facing", {}).get(enemy, WarFront.facing_deg(-forward)))
+				for point: Vector2i in layout(repo, shape, counts(ArmySystem.fit_count(repo, state, enemy), size).size(),
+						BattleSystem._at_m(repo, state, enemy), face, int(footprint.pitch_m)):
+					rows.append({"x_m": point.x, "y_m": point.y})
+			for row: Dictionary in rows:
+				back = maxf(back, front + float(footprint.radius_m) + gap -
+					(Vector2(int(row.x_m), int(row.y_m)) - place).dot(forward))
+		var centre := place - forward * back
 		for code: String in codes:
-			out[code] = Vector2i((centre + across * (at + float(widths[code]) / 2.0)).round())
-			at += float(widths[code])
+			if float(bounds[code].width) == 0.0:
+				out[code] = BattleSystem._at_m(repo, state, code)
+				continue
+			out[code] = Vector2i((centre + across * (cursor - float(bounds[code].low))).round())
+			cursor += float(bounds[code].width) + gap
+			if ArmyGround.seated_in(repo, state, code) != "" or bool(BattleSystem._stored(state, code).get("captured", false)):
+				out[code] = BattleSystem._at_m(repo, state, code)
 	return out
 
 
@@ -334,9 +607,7 @@ static func engaged_counts(repo: DataRepository, state: GameState, battle: Dicti
 				if incoming["kind"] != "attack":
 					continue
 			for other: Dictionary in battle["groups"].get(foe, []):
-				var dx := int(row["x_m"]) - int(other["x_m"])
-				var dy := int(row["y_m"]) - int(other["y_m"])
-				if dx * dx + dy * dy <= reach * reach:
+				if in_reach(repo, state, code, row, foe, other, reach):
 					if grid != null and not grid.clear(Vector2i(int(row["x_m"]), int(row["y_m"])),
 							Vector2i(int(other["x_m"]), int(other["y_m"]))):
 						continue
@@ -379,14 +650,14 @@ static func withdrawing(state: GameState, battle: Dictionary) -> bool:
 ## are refreshed by the caller.
 static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionary) -> void:
 	var today := state.absolute_day()
-	if int(battle.get("deployed_day", -1)) == today or withdrawing(state, battle) or battle.has("pending_round"):
+	if int(battle.get("deployed_day", -1)) == today or withdrawing(state, battle) or not (battle.get("pending_round", {}) as Dictionary).is_empty():
 		return
 	battle["deployed_day"] = today
 	var targets := deployment(repo, state, battle)
 	var step := float(repo.bal("battle_deploy_step_m"))
 	var grid := MarchPath.of_pack(repo)   # the land grid: no step into water or over a scarp
 	var charges := {}
-	refresh(repo, state, battle)
+	if not refresh(repo, state, battle): return
 	for code: String in targets:
 		var e := BattleSystem._stored(state, code)
 		if e.is_empty() or bool(e.get("captured", false)) or ArmySystem.fit_count(repo, state, code) <= 0 \
@@ -417,7 +688,7 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 		# ponytail: a blocked straight step waits in place; a routed approach round water is later work
 		if grid != null and not grid.clear(from, moved, [grid.cell_of(from)]):
 			continue
-		translate(repo, state, battle, code, moved - from)
+		translate(repo, state, battle, code, moved - from, int(step))
 
 	refresh(repo, state, battle)
 	for code: String in charges:

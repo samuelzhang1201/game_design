@@ -7,6 +7,11 @@ const BASE := Vector2i(10000, 10000)
 func _fixture() -> Dictionary:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
 	repo.balance["battle_line_gap_m"] = 0
+	# Synthetic20m discs:20+20+60 edge metres keep the100m contact-centre fixture.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
+	repo.balance.battle_group_contact_m = 60
 	var state := SuiteData.campaign(repo, 9477)
 	state.day = 10
 	state.ai_hosts.clear()
@@ -42,6 +47,9 @@ func test_received_flank_walks_to_side_and_turning_removes_actual_benefit() -> v
 	BattleGroups.deploy_day(f.repo, f.state, f.battle)
 	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a).y, BASE.y, "pending task retains ordinary deployment")
 	Play.place(f.repo, f.state, f.a, BASE, ArmySystem.ORDER_STANDBY)
+	assert_true(BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.a))
+	# The defender's20m occupied radius puts its fixed-axis centre20m beyond the old point.
+	assert_eq(BattleSystem._at_m(f.repo, f.state, f.enemy), BASE + Vector2i(1020, 0))
 	assert_eq(BattleTaskSystem.deliver_task(f.repo, f.state, "flank").status, "received")
 	for day: int in range(11, 36):
 		f.state.tick = 1 + (day - 1) / 30
@@ -51,7 +59,7 @@ func test_received_flank_walks_to_side_and_turning_removes_actual_benefit() -> v
 		var to := BattleSystem._at_m(f.repo, f.state, f.a)
 		assert_lte(from.distance_squared_to(to), 2500, "at most 50 real metres per day")
 		assert_ne(to, BASE + Vector2i(1000, 0), "never the target centre")
-	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), BASE + Vector2i(1000, -100), "east-facing transverse vector tie chooses first reachable side")
+	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), BASE + Vector2i(1020, -100), "east-facing transverse vector tie chooses first reachable side")
 	assert_true(BattleFormation.context(f.repo, f.state, f.battle, "def", f.enemy).flanked)
 	var factors: Array = BattleFormation.effects(f.repo, f.state, f.battle, "def", false, f.enemy).factors
 	var flanks := factors.filter(func(factor: Dictionary) -> bool: return factor.source == "formation:flank")

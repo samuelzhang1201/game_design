@@ -7,6 +7,13 @@ const BattleScenario := preload("res://tests/fixtures/battle_scenario.gd")
 # f2 is 300 m east: 100^2 < 300^2 <= 400^2, unobstructed and inside the cone.
 func _fixture(gap := 300) -> Dictionary:
 	var repo := SuiteData.open_country(SuiteData.repo())
+	# Synthetic20m discs:20+20+60 edge metres keep the100m contact-centre fixture.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
+	repo.balance.battle_group_contact_m = 60
+	# 20+20+360 keeps the400m firing boundary and physical20m blocker tangency.
+	repo.balance.battle_ranged_reach_m = 360
 	var state := SuiteData.campaign(repo, 9447)
 	var mine := state.regiments.keys()
 	mine.sort()

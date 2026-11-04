@@ -14,6 +14,11 @@ func _fixture() -> Dictionary:
 		tier.attacker_morale = 0
 		tier.defender_morale = 0
 		tier.rout = "none"
+	# Synthetic20m discs:20+20+60 edge metres keep the100m contact-centre fixture.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
+	repo.balance.battle_group_contact_m = 60
 	var state := SuiteData.campaign(repo, 9478)
 	state.day = 10
 	state.ai_hosts.clear()
