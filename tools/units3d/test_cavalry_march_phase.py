@@ -298,6 +298,26 @@ class SlerpRangeTests(unittest.TestCase):
         self.assertGreater(branch['denominator_interval'][0], Q(19, 100))
         self.assertLess(branch['denominator_interval'][1], Q(21, 100))
 
+    def test_proof_exact_point_uses_scalar_composition_and_keeps_legacy_fit_separate(self):
+        authority = self.authority()
+        track = {'path': 'Rig:root', 'type': 2, 'interpolation': 1, 'keys': [
+            {'time': 0., 'value': [0, 0, 0, 1]},
+            {'time': .5, 'value': [0, 0, math.sin(.2), math.cos(.2)]}]}
+        functions = capture.system_math()
+        legacy = phase.track_span_box(track, 0., 0., .5, functions, phase.Budget())
+        self.assertLess(float(legacy.hi[3]-legacy.lo[3]), 1e-6)
+        budget = phase.Budget(weight_values=0, arithmetic=authority)
+        with patch.object(capture, 'native_track_box', side_effect=AssertionError('unproved point replay')):
+            box = phase.track_span_box(track, 0., 0., .5, functions, budget)
+        # At weight0 double sin(omega)/sinf(omega) cannot use an exact-identity shortcut.
+        self.assertLess(float(box.lo[3]), .99999)
+        self.assertGreater(float(box.hi[3]), 1.00001)
+        self.assertEqual(budget.used, 0)
+        self.assertGreater(authority.work['weight_interval_compositions'], 0)
+        track['keys'][1]['value'] = [0, 0, .4794, .8785]
+        with self.assertRaisesRegex(phase.Unclosed, 'acos_constant_authority_missing'):
+            phase.track_span_box(track, 0., 0., .5, functions, budget)
+
     def test_outside_acos_domain_never_calls_an_ideal_or_point_replacement(self):
         authority = self.authority()
         f = capture.Float32Box
@@ -569,14 +589,37 @@ class AcceptedBindingTests(unittest.TestCase):
 @unittest.skipUnless(all(os.environ.get(k) for k in ('CAV_PHASE_BUNDLE', 'CAV_ARITHMETIC_CAPTURE',
                     'CAV_ARITHMETIC_RECEIPT')), 'explicit accepted native/scalar custody inputs required')
 class AcceptedScalarTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.manifest = phase.reacquired.read_json(phase.ROOT/'docs/reviews/cluster-formations/evidence/locomotion/cavalry/march-native-reacquired.json')
+        roles = phase.reacquired.check_index(Path(os.environ['CAV_PHASE_BUNDLE']), cls.manifest['bundle_index'], cls.manifest['bundle_sha256'])
+        cls.native = phase.reacquired.read_json(roles['native'])
+        cls.scalar_capture = phase.reacquired.read_json(Path(os.environ['CAV_ARITHMETIC_CAPTURE']))
+        cls.scalar_receipt = phase.reacquired.read_json(Path(os.environ['CAV_ARITHMETIC_RECEIPT']))
+
+    def authority(self):
+        return phase.ScalarAuthority(self.scalar_capture, self.scalar_receipt, self.native,
+            self.manifest['component_result']['numerical_accounting']['platform_math'])
+
+    def test_actual_terminal_wrap_contains_receipt_backed_zero_without_point_replay(self):
+        authority = self.authority(); authority.prepare(self.native)
+        surface = dict(self.native['surfaces'][0])
+        surface['joints'] = np.asarray(surface['joints']).reshape(-1, 4)
+        surface['weights'] = np.asarray(surface['weights']).reshape(-1, 4)
+        binds = [capture.matrix(b['pose']) for b in self.native['skin']]
+        functions = capture.system_math()
+        budget = phase.Budget(weight_values=0, arithmetic=authority)
+        with patch.object(capture, 'native_track_box', side_effect=AssertionError('unproved terminal point replay')):
+            zero = phase.surface_span_box(self.native, surface, binds, 0., 0., functions, budget)
+            terminal = phase.surface_span_box(self.native, surface, binds,
+                self.native['native_search_boundaries_seconds'][-1], self.native['length'], functions, budget)
+        self.assertEqual(len(terminal.lo), 21175)
+        self.assertTrue(terminal.contains(zero.lo).all() and terminal.contains(zero.hi).all())
+        self.assertEqual(budget.used, 0)
+
     def test_all_actual_key_pairs_match_bounded_weight_oracle_and_retain_two_unknowns(self):
         # This refutation check does not replace the continuous Taylor/error proof.
-        manifest = phase.reacquired.read_json(phase.ROOT/'docs/reviews/cluster-formations/evidence/locomotion/cavalry/march-native-reacquired.json')
-        roles = phase.reacquired.check_index(Path(os.environ['CAV_PHASE_BUNDLE']), manifest['bundle_index'], manifest['bundle_sha256'])
-        native = phase.reacquired.read_json(roles['native'])
-        authority = phase.ScalarAuthority(phase.reacquired.read_json(Path(os.environ['CAV_ARITHMETIC_CAPTURE'])),
-            phase.reacquired.read_json(Path(os.environ['CAV_ARITHMETIC_RECEIPT'])), native,
-            manifest['component_result']['numerical_accounting']['platform_math'])
+        native = self.native; authority = self.authority()
         authority.prepare(native)
         self.assertEqual(len(authority.domains), 553)
         self.assertEqual(sum(len(r['dot_states']) for r in authority.domains.values()), 2496)

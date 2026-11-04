@@ -400,7 +400,7 @@ def track_span_box(track, lo, hi, length, functions, budget):
     times = [k['time'] for k in track['keys']]
     require(times[0] == 0 and (len(times) == 1 or times[-1] == length)
             and all(a < b for a, b in zip(times, times[1:])), 'Incomplete search keys')
-    if lo == hi:
+    if lo == hi and budget.arithmetic is None:
         if track['type'] == 2:
             if budget.used == budget.weight_values:
                 raise Unclosed('platform_point_weight_budget', required_weight_values=1,
