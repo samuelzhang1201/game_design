@@ -133,7 +133,8 @@ static func _validate(rest: Variant, pose: Variant, op: Variant, carrier: Varian
 	if not native_op is Dictionary or not Carrier._op_ok(native_op) or native_op.kind != "pivot": return "native_operation"
 	var start: float = float(native_op.yaw0_udeg)/1000000.0
 	var turn: float = float(native_op.turn_udeg)/1000000.0
-	if op.start_heading != start or op.turn_degrees != turn or op.end_heading != fposmod(start+turn,360.0): return "operation_identity"
+	var end: float = float(posmod(int(native_op.yaw0_udeg)+int(native_op.turn_udeg),BodyMotion.LOCOMOTION_TURN))/1000000.0
+	if op.start_heading != start or op.turn_degrees != turn or op.end_heading != end: return "operation_identity"
 	for hoof: String in Pivot._HOOVES:
 		reason = Pivot._validate_contact(contacts[hoof])
 		if reason != "": return hoof+":"+reason

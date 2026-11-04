@@ -460,3 +460,21 @@ func test_carrier_R1_source_identity_must_match_the_packet_source() -> void:
 	p.identity.r1 = 1
 	f.carrier = Carrier.prepare(p,f.carrier.terrain).packet
 	assert_eq(_prepare(a,f).diagnostics.reason,"carrier_source_identity")
+
+func test_fractional_integer_heading_half_turn_and_wrap_keep_exact_operation_identity() -> void:
+	var a: GDScript = _adapter()
+	if a == null: return
+	# Literal accepted239 control, then positive/negative wrap controls. Endpoints
+	# are converted from committed integers, never recomputed with a float sum.
+	for row: Array in [[76000012,180000000,256000012],[256000012,180000000,76000012],
+		[359000012,2000000,1000012],[1000012,-2000000,359000012]]:
+		var f: Dictionary = _fixture()
+		f.native_op.yaw0_udeg = row[0]; f.native_op.turn_udeg = row[1]
+		f.op.start_heading = float(row[0])/1000000.0
+		f.op.turn_degrees = float(row[1])/1000000.0
+		f.op.end_heading = float(row[2])/1000000.0
+		assert_eq(Pivot._validate_operation(f.op),"")
+		assert_true(Carrier._op_ok(f.native_op))
+		assert_true(_prepare(a,f).ok,str(row))
+		f.op.end_heading += .000001
+		assert_false(_prepare(a,f).ok,"different committed endpoint remains rejected")
