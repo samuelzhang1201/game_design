@@ -1,0 +1,827 @@
+"""Offline native-pose distance fit; UNKNOWN never enables a runtime consumer.
+
+Reuses the accepted native audit, never the unmerged CERT implementation. Exact
+rational atlas/constraint proofs and continuous platform arithmetic are separate
+from physical E and from missing terrain/support context. No Godot is launched.
+"""
+import argparse
+import ast
+import csv
+from bisect import bisect_right
+from dataclasses import dataclass
+from fractions import Fraction as Q
+import hashlib
+import json
+import math
+from pathlib import Path
+import re
+import struct
+import subprocess
+
+import numpy as np
+
+import check_cavalry_march_capture as native
+
+ROOT = Path(__file__).resolve().parents[2]
+MANIFEST = ROOT/'docs/reviews/cluster-formations/evidence/locomotion/cavalry/march-native-contact.json'
+MANIFEST_SHA = '37266c5097ee2f5b80dbdc35e41c4d4a612bc06f6715bfd26b31601143792843'
+REVIEW_SHA = '408a3c381c1d1516eece628f8bb8d84bd0d761eecc885b1037121690a0407dc7'
+VERDICT_SHA = 'e1e879d30471c1dcd4f53b3b369b6810664da1cc3fd1ea104fb00c395b32cab2'
+# Computation limits, not design values, a physical tolerance, or project timeouts.
+LIMITS = {'fit_trials': 24, 'fit_upper_expansions': 8, 'max_knots': 256,
+          'max_constraints': 250000, 'refinement_splits': 32, 'continuous_boxes': 256,
+          'float32_weight_values_total': 16384, 'float32_dot_values_per_track': 256,
+          'proposal_evaluations': 1024, 'dense_native_capture_rows': 154,
+          'rational_sqrt_denominator': 10**12,
+          'strict_slope_floor_model_m_per_phase': [1, 10**9]}
+GRID = LIMITS['rational_sqrt_denominator']
+
+
+def require(condition, message):
+    native.require(condition, message)
+
+
+def rational(value):
+    if type(value) in (np.float32, np.float64, np.int64):
+        value = value.item()
+    require(type(value) in (int, float, Q) and (not isinstance(value, float) or math.isfinite(value)),
+            'Nonfinite/malformed rational input')
+    return Q(value)
+
+
+def make_atlas(phases, distances, digest, seconds):
+    result = {'version': 1, 'input_sha256': digest, 'clip_seconds': seconds,
+              'knots': [{'phase_num': p.numerator, 'phase_den': p.denominator,
+                         'distance_num': d.numerator, 'distance_den': d.denominator}
+                        for p, d in zip(map(rational, phases), map(rational, distances))]}
+    require(len(phases) == len(distances), 'Atlas cardinality')
+    validate_atlas(result)
+    return result
+
+
+def validate_atlas(atlas):
+    require(type(atlas) is dict and set(atlas) == {'version', 'input_sha256', 'clip_seconds', 'knots'}, 'Atlas schema')
+    require(type(atlas['version']) is int and atlas['version'] == 1, 'Atlas version')
+    require(type(atlas['input_sha256']) is str and re.fullmatch('[0-9a-f]{64}', atlas['input_sha256']), 'Atlas digest')
+    require(type(atlas['clip_seconds']) in (int, float) and math.isfinite(atlas['clip_seconds'])
+            and atlas['clip_seconds'] > 0, 'Clip length')
+    require(type(atlas['knots']) is list and 2 <= len(atlas['knots']) <= LIMITS['max_knots'], 'Knot count')
+    phases, distances = [], []
+    for k in atlas['knots']:
+        require(type(k) is dict and set(k) == {'phase_num', 'phase_den', 'distance_num', 'distance_den'}, 'Knot schema')
+        require(all(type(v) is int and abs(v) < 2**53 for v in k.values()), 'Inexact JSON integer')
+        require(k['phase_den'] > 0 and k['distance_den'] > 0, 'Nonpositive denominator')
+        require(math.gcd(k['phase_num'], k['phase_den']) == math.gcd(k['distance_num'], k['distance_den']) == 1,
+                'Unreduced rational')
+        phases.append(Q(k['phase_num'], k['phase_den']))
+        distances.append(Q(k['distance_num'], k['distance_den']))
+    require(phases[0] == distances[0] == 0 and phases[-1] == 1, 'Atlas endpoints')
+    require(all(a < b for a, b in zip(phases, phases[1:]))
+            and all(a < b for a, b in zip(distances, distances[1:])), 'Nonpositive slope')
+    return phases, distances
+
+
+def distance_at(atlas, z):
+    phases, distances = validate_atlas(atlas)
+    z = rational(z); cycle = z//1; p = z-cycle
+    i = bisect_right(phases, p)-1
+    return cycle*distances[-1]+distances[i]+(p-phases[i])*(distances[i+1]-distances[i])/(phases[i+1]-phases[i])
+
+
+def sample(atlas, cycle, phase, distance):
+    phases, distances = validate_atlas(atlas)
+    phase, distance = rational(phase), rational(distance)
+    require(type(cycle) is int and 0 <= cycle < 2**63 and 0 <= phase < 1 and distance >= 0, 'Sample domain')
+    target = distance_at(atlas, phase)+distance
+    loops = target//distances[-1]; residual = target-loops*distances[-1]
+    require(cycle+loops < 2**63, 'Cycle overflow')
+    i = bisect_right(distances, residual)-1
+    derivative = (phases[i+1]-phases[i])/(distances[i+1]-distances[i])
+    return cycle+loops, phases[i]+(residual-distances[i])*derivative, derivative
+
+
+def compatible(atlas, entry, exit_, distance):
+    entry, exit_, distance = map(rational, (entry, exit_, distance))
+    require(exit_ >= entry and distance >= 0, 'Endpoint tuple domain')
+    return distance_at(atlas, exit_)-distance_at(atlas, entry) == distance
+
+
+def sqrt_bounds(value, denominator=GRID):
+    value = rational(value)
+    require(value >= 0, 'Negative square root')
+    n = math.isqrt(value.numerator*denominator**2//value.denominator)
+    lo = Q(n, denominator)
+    return lo, lo if lo*lo == value else Q(n+1, denominator)
+
+
+def endpoint_floor(delta):
+    x, y, z = map(rational, delta)
+    # Translation is along +Z and nonnegative. An adverse positive Z cannot be undone.
+    horizontal = sqrt_bounds(x*x+max(Q(0), z)**2)
+    spatial = sqrt_bounds(x*x+y*y+max(Q(0), z)**2)
+    return {'entry_drift_xz': horizontal, 'free_anchor_xz': tuple(v/2 for v in horizontal),
+            'entry_drift_xyz': spatial}
+
+
+def allowed_distance(error, xlo, xhi, zlo, zhi, *, inner):
+    """Integer-grid disk: robust inner satisfaction vs existential outer relaxation."""
+    require(all(type(v) is int for v in (error, xlo, xhi, zlo, zhi))
+            and error >= 0 and xlo <= xhi and zlo <= zhi, 'Constraint domain')
+    lateral = max(abs(xlo), abs(xhi)) if inner else (0 if xlo <= 0 <= xhi else min(abs(xlo), abs(xhi)))
+    square = error*error-lateral*lateral
+    if square < 0:
+        return None
+    radius = math.isqrt(square)
+    if not inner and radius*radius != square:
+        radius += 1
+    return (-radius-zlo, radius-zhi) if inner else (-radius-zhi, radius-zlo)
+
+
+def feasible(count, rows, error, increments, *, inner):
+    """Exact integer difference constraints; None only proves the specified system infeasible."""
+    require(count >= 2 and len(increments) == count-1 and all(v > 0 for v in increments), 'Monotonic increments')
+    edges = [(i+1, i, -v) for i, v in enumerate(increments)]
+    grouped = {}
+    for i, j, xlo, xhi, zlo, zhi in rows:
+        require(0 <= i < j < count, 'Constraint knot index')
+        interval = allowed_distance(error, xlo, xhi, zlo, zhi, inner=inner)
+        if interval is None or interval[0] > interval[1]:
+            return None
+        lo, hi = grouped.get((i, j), interval)
+        lo, hi = max(lo, interval[0]), min(hi, interval[1])
+        if lo > hi:
+            return None
+        grouped[i, j] = lo, hi
+    for (i, j), (lo, hi) in sorted(grouped.items()):
+        edges.extend([(i, j, hi), (j, i, -lo)])
+    values = [0]*count
+    for _ in range(count):
+        changed = False
+        for i, j, upper in edges:
+            if values[j] > values[i]+upper:
+                values[j] = values[i]+upper; changed = True
+        if not changed:
+            return [v-values[0] for v in values]
+    return None
+
+
+def exact_vertex(vertex, joints, weights, globals_, binds):
+    """Exact real LBS of the captured binary inputs, retaining every raw influence."""
+    p = list(map(rational, vertex))+[Q(1)]
+    answer = [Q(0)]*3
+    for joint, weight in zip(joints, weights):
+        require(type(joint) in (int, np.int64) and 0 <= joint < len(globals_), 'Skin joint')
+        w = rational(weight)
+        require(w >= 0, 'Negative weight')
+        if not w:
+            continue
+        bind = [[rational(v) for v in row] for row in binds[joint]]
+        g = [[rational(v) for v in row] for row in globals_[joint]]
+        bound = [sum(row[k]*p[k] for k in range(4)) for row in bind]
+        for c in range(3):
+            answer[c] += w*sum(g[c][k]*bound[k] for k in range(4))
+    return answer
+
+
+class Unclosed(ValueError):
+    def __init__(self, reason, **detail):
+        super().__init__(reason)
+        self.detail = {'reason': reason, **detail}
+
+
+@dataclass
+class Budget:
+    weight_values: int = LIMITS['float32_weight_values_total']
+    used: int = 0
+    planning: bool = False
+
+
+def float_key(value):
+    bits = struct.unpack('<I', struct.pack('<f', value))[0]
+    return (~bits & 0xffffffff) if bits >> 31 else bits | 0x80000000
+
+
+def key_float(key):
+    bits = (key & 0x7fffffff) if key >> 31 else (~key & 0xffffffff)
+    return struct.unpack('<f', struct.pack('<I', bits))[0]
+
+
+def hull(boxes):
+    return native.Float32Box(np.minimum.reduce([b.lo for b in boxes]), np.maximum.reduce([b.hi for b in boxes]))
+
+
+def track_span_box(track, lo, hi, length, functions, budget):
+    """Enclose every native search branch and finite binary32 interpolation state.
+
+    No ideal-sin or empirical libm error budget: for nonlinear branches enumerate
+    every binary32 weight; scale0's double sin then has a finite exact input set too.
+    """
+    f = native.Float32Box
+    require(0 <= lo <= hi <= length, 'Continuous time domain')
+    times = [k['time'] for k in track['keys']]
+    require(times[0] == 0 and (len(times) == 1 or times[-1] == length)
+            and all(a < b for a, b in zip(times, times[1:])), 'Incomplete search keys')
+    if lo == hi:
+        if track['type'] == 2:
+            if budget.used == budget.weight_values:
+                raise Unclosed('platform_point_weight_budget', required_weight_values=1,
+                               next_input='Evaluate the exact point with the pinned platform operations under a new declared work budget.')
+            budget.used += 1
+        if budget.planning:
+            return f(track['keys'][0]['value'])
+        return native.native_track_box(track, lo, length, functions)
+    if len(times) == 1:
+        return f(track['keys'][0]['value'])
+    outputs = []
+    for i, key in enumerate(track['keys']):
+        # Since length < 1, CMP_EPSILON is constant. Widen the binary64
+        # threshold arithmetic, including the one-sided early-key region.
+        lower = np.nextafter(times[i]-1e-5, -np.inf) if i else 0.
+        upper = np.nextafter(times[i+1]+1e-5, np.inf) if i+1 < len(times) else length
+        if hi < lower or lo > upper:
+            continue
+        a = f(key['value']); b = f(track['keys'][(i+1) % len(times)]['value'])
+        if track['interpolation'] == 0 or i == len(times)-1:
+            outputs.append(a); continue
+        require(length <= 1, 'Variable native search epsilon needs a separate branch proof')
+        delta = np.float32(times[i+1]-times[i])
+        weight = f.outward(max(lo, lower)-times[i], min(hi, upper)-times[i])/f(delta)
+        if track['type'] != 2:
+            outputs.append(a+(b-a)*weight); continue
+        dot = native.box_dot(a, b, 4)
+        # The whole near-identical-key branch is affine in weight.
+        if dot.lo*dot.hi > 0 and np.float32(1)-np.float32(min(abs(float(dot.lo)), abs(float(dot.hi)))) <= np.float32(1e-5):
+            target = -b if dot.hi < 0 else b
+            outputs.append(a*(f(1)-weight)+target*weight); continue
+        first, last = float_key(weight.lo), float_key(weight.hi)
+        required = last-first+1
+        if required > budget.weight_values-budget.used:
+            raise Unclosed('platform_slerp_weight_enumeration_budget', key_index=i,
+                           weight_bits=[first, last], weight_interval=[float(weight.lo), float(weight.hi)],
+                           required_weight_values=required, remaining_weight_values=budget.weight_values-budget.used,
+                           next_input='Complete pinned-libm enumeration of these binary32 weights (including double scale0 sin), or a proved range enclosure for this exact platform binary.')
+        budget.used += required
+        if budget.planning:
+            outputs.append(a); continue
+        for bits in range(first, last+1):
+            outputs.append(native.slerp_box(a, b, np.float32(key_float(bits)), functions))
+    require(outputs, 'No native search branch')
+    return hull(outputs)
+
+
+def mixer_span_box(rest, target):
+    f = native.Float32Box
+    rest = f(rest)
+    relative = native.quaternion_product_box(rest*f([-1, -1, -1, 1]), target)
+    # Only Basis consumes this representative. At mixer weight 1, the two
+    # short-arc branches are q and -q: IEEE sign symmetry and Basis(q)=Basis(-q)
+    # permit one representative without destroying its correlated norm.
+    return native.normalize_box(native.quaternion_product_box(rest, relative))
+
+
+def basis_span_box(position, q, scale):
+    f = native.Float32Box
+    x, y, z, w = [q[i] for i in range(4)]
+    s = f(2)/native.box_dot(q, q, 4)
+    xs, ys, zs = x*s, y*s, z*s
+    wx, wy, wz, xx, xy, xz, yy, yz, zz = w*xs, w*ys, w*zs, x*xs, x*ys, x*zs, y*ys, y*zs, z*zs
+    b = native.box_stack([native.box_stack([f(1)-(yy+zz), xy-wz, xz+wy]),
+                          native.box_stack([xy+wz, f(1)-(xx+zz), yz-wx]),
+                          native.box_stack([xz-wy, yz+wx, f(1)-(xx+yy)])])
+    diagonal = f(np.diag(scale))
+    return native.box_stack([native.box_dot(b, diagonal[:, i], 3) for i in range(3)]+[position], axis=1)
+
+
+def surface_span_box(capture, surface, binds, lo, hi, functions, budget):
+    f = native.Float32Box
+    require(len(capture['bones']) == len(binds), 'Bind cardinality')
+    if lo < hi:
+        # Count the whole box before spending finite libm work on an early
+        # track that leaves no budget for the remaining native hierarchy.
+        plan = Budget(weight_values=2**63, planning=True)
+        costs = []
+        for track in capture['tracks']:
+            before = plan.used
+            track_span_box(track, lo, hi, capture['length'], functions, plan)
+            costs.append({'track': track['path'], 'required_weight_values': plan.used-before})
+        if plan.used > budget.weight_values-budget.used:
+            raise Unclosed('platform_box_weight_enumeration_budget', required_weight_values=plan.used,
+                           remaining_weight_values=budget.weight_values-budget.used,
+                           track_costs=costs,
+                           next_input='Subdivide this exact seconds interval until all track weight domains fit the remaining declared finite enumeration budget, or supply a proved enclosure for the pinned libm binary.')
+    tracks = {}
+    for track in capture['tracks']:
+        key = track['path'].split(':')[-1], track['type']
+        require(key not in tracks, 'Duplicate native track')
+        try:
+            tracks[key] = track_span_box(track, lo, hi, capture['length'], functions, budget)
+        except Unclosed as error:
+            error.detail['track'] = track['path']; raise
+    globals_ = []
+    for i, bone in enumerate(capture['bones']):
+        position = f(bone['default_position'])
+        rotation = f(bone['default_rotation'])
+        if (bone['name'], 1) in tracks:
+            rest = f(native.matrix(bone['rest'])[:3, 3])
+            position = rest+(tracks[bone['name'], 1]-rest)
+        if (bone['name'], 2) in tracks:
+            rotation = mixer_span_box(bone['rest_rotation'], tracks[bone['name'], 2])
+        require((bone['name'], 3) not in tracks, 'Animated scale mixer unaccounted')
+        local = basis_span_box(position, rotation, bone['default_scale'])
+        parent = bone['parent']
+        require(-1 <= parent < i, 'Bone hierarchy')
+        globals_.append(local if parent < 0 else native.affine_box(globals_[parent], local))
+    transforms = native.box_stack([native.affine_box(g, f(b[:3])) for g, b in zip(globals_, binds)])
+    vertices, weights = f(surface['vertices']), f(surface['weights'])
+    joints = np.asarray(surface['joints'])
+    require(joints.shape == weights.lo.shape == (len(vertices.lo), 4) and np.isfinite(joints).all()
+            and (joints == np.floor(joints)).all() and (joints >= 0).all() and (joints < len(binds)).all()
+            and (weights.lo >= 0).all(), 'Skin dimensions/domain')
+    joints = joints.astype(int)
+    result = f(np.zeros((len(joints), 3)))
+    for i in range(4):
+        transform = transforms[joints[:, i]]
+        point = native.box_dot(transform[:, :, :3], vertices[:, None, :], 3)+transform[:, :, 3]
+        result = result+point*weights[:, i, None]
+    if hi == capture['length']:
+        # Player fposmod owns the exact terminal as zero; direct queries also
+        # expose the terminal key. Keep both, without assuming their equality.
+        result = hull([result, surface_span_box(capture, surface, binds, 0., 0., functions, budget)])
+    return result
+
+
+def json_value(value):
+    if isinstance(value, Q):
+        return [value.numerator, value.denominator]
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, dict):
+        return {str(k): json_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_value(v) for v in value]
+    return value
+
+
+def canonical_digest(value):
+    return hashlib.sha256(json.dumps(json_value(value), sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+
+
+def load_inputs(review_path):
+    manifest = native.read_bound(MANIFEST, MANIFEST_SHA)
+    require(len(manifest['inputs']) == 298, 'Incomplete accepted input set')
+    for path, digest in manifest['inputs'].items():
+        require(native.sha256(path) == digest, f'Accepted input changed: {path}')
+    review = native.read_bound(review_path, REVIEW_SHA)
+    verdict = review_path.parent/'round2.md'
+    require(native.sha256(verdict) == VERDICT_SHA and review['accepted'] is True
+            and review['manifest_sha256'] == MANIFEST_SHA and review['pr']['state'] == 'MERGED'
+            and review['review_session_id'] == '01a19ca8-5995-7bb2-b666-b3fbf29fb47d', 'Missing bound sole anatomical verdict')
+    capture_path = Path(manifest['capture_directory'])/'native.json'
+    capture = native.read_bound(capture_path, manifest['inputs'][str(capture_path)])
+    require(capture['version'] == 2 and 0 < capture['length'] < 1 and len(capture['bones']) == 53
+            and len(capture['skin']) == 53 and len(capture['surfaces']) == 1, 'Native domain')
+    for path, digest in capture['input_hashes'].items():
+        if path != 'project.godot':
+            require(native.sha256(ROOT/path) == digest, f'Installed input changed: {path}')
+    require(np.array_equal(native.matrix(capture['mesh_to_skeleton']), np.eye(4)), 'Mesh conversion changed')
+    surface = dict(capture['surfaces'][0])
+    surface['joints'] = np.asarray(surface['joints']).reshape(-1, 4)
+    surface['weights'] = np.asarray(surface['weights']).reshape(-1, 4)
+    require(len(surface['vertices']) == 21175 and len(surface['indices']) == 57141, 'Incomplete full geometry')
+    binds = [native.matrix(b['pose']) for b in capture['skin']]
+    require([b['name'] for b in capture['skin']] == [b['name'] for b in capture['bones']]
+            and [b['resolved_bone'] for b in capture['skin']] == list(range(53)), 'Native bind mapping')
+    accounting = native.read_bound(manifest['accounting_payload'], manifest['inputs'][manifest['accounting_payload']])
+    patches = accounting['patches']
+    require({h: len(v['native_sole_triangles']) for h, v in patches.items()} ==
+            {'FrontHoof.L': 31, 'FrontHoof.R': 69, 'HindHoof.L': 46, 'HindHoof.R': 48}, 'Incomplete accepted patches')
+    for patch in patches.values():
+        triangles = np.asarray(surface['indices']).reshape(-1, 3)[patch['native_sole_triangles']]
+        require(sorted(set(triangles.ravel().tolist())) == patch['native_sole_vertices'], 'Material patch vertex coverage')
+    actions = ROOT/'tools/units3d/cavalry_rig/actions.py'
+    require(native.sha256(actions) == next(v for k, v in manifest['inputs'].items() if k.endswith('/cavalry_rig/actions.py')), 'Support source changed')
+    constants = {n.targets[0].id: ast.literal_eval(n.value) for n in ast.parse(actions.read_text()).body
+                 if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name)
+                 and n.targets[0].id in ('CANTER', 'DUTY')}
+    supports = {name: (Q(str(start)), Q(str(start))+Q(str(constants['DUTY'])))
+                for name, start in sorted(constants['CANTER'].items())}
+    require(set(supports) == set(patches), 'All four source episodes required')
+    functions = native.system_math()
+    runtime = native.math_runtime_identity(functions)
+    accepted_math = manifest['numerical_accounting']['platform_math']
+    require(runtime['functions'] == accepted_math['functions'] and runtime['platform'] == accepted_math['platform']
+            and subprocess.check_output(['/usr/bin/sw_vers', '-buildVersion'], text=True).strip() == accepted_math['os_build'],
+            'Unproved native platform math mismatch')
+    witness_path = Path(manifest['frozen_paths']['witness'])
+    witness = native.read_bound(witness_path, manifest['inputs'][str(witness_path)])
+    require(native.sha256(witness_path.parent/'accepted234-disposition.md') ==
+            'f54da8c9105721029a0aed93dad6ecf2341ebf87cd55ec239401f6c3113db4ad', 'Frozen phase proposal changed')
+    for path, digest in witness['current_inputs'].items():
+        require(native.sha256(ROOT/path) == digest, f'Frozen observation input changed: {path}')
+    return manifest, capture, surface, binds, patches, supports, functions, witness
+
+
+def sampled_points(capture, surface, binds, time):
+    """Independent binary64 reconstruction for adversarial comparisons, never a bound."""
+    _, globals_ = native.pose(capture['bones'], native.native_tracks(capture), time, capture['length'])
+    return native.skin(surface, np.asarray([g@b for g, b in zip(globals_, binds)]))
+
+
+def fit_rows(phases, boxes, patches, supports):
+    rows = []
+    counts = {}
+    for hoof, (start, end) in supports.items():
+        active = [i for i, p in enumerate(phases) if start <= p <= end]
+        count = 0
+        for ia, i in enumerate(active):
+            a = boxes[i]
+            for j in active[ia+1:]:
+                b = boxes[j]
+                # Outward integer conversion makes the disk constraints exact.
+                ids = patches[hoof]['native_sole_vertices']
+                lo = np.floor(np.nextafter((b.lo[ids]-a.hi[ids])*GRID, -np.inf)).astype(np.int64)
+                hi = np.ceil(np.nextafter((b.hi[ids]-a.lo[ids])*GRID, np.inf)).astype(np.int64)
+                rows.extend((i, j, int(l[0]), int(u[0]), int(l[2]), int(u[2])) for l, u in zip(lo, hi))
+                count += len(ids)
+        counts[hoof] = count
+    require(len(rows) <= LIMITS['max_constraints'], 'Declared fit constraint budget exhausted')
+    return rows, counts
+
+
+def fit(phases, rows):
+    increments = [max(1, math.ceil((b-a)*Q(*LIMITS['strict_slope_floor_model_m_per_phase'])*GRID))
+                  for a, b in zip(phases, phases[1:])]
+    # Start from a data-derived numerical objective, never from either observed stride.
+    upper = max([max(abs(r[2]), abs(r[3]), abs(r[4]), abs(r[5])) for r in rows]+[1])
+    values = None
+    for _ in range(LIMITS['fit_upper_expansions']):
+        values = feasible(len(phases), rows, upper, increments, inner=True)
+        if values is not None:
+            break
+        upper *= 2
+    require(values is not None, 'No finite sampled inner candidate within declared expansion budget')
+    lower, trials, unknown = 0, [], []
+    best = values
+    for _ in range(LIMITS['fit_trials']):
+        trial = (lower+upper)//2
+        inner = feasible(len(phases), rows, trial, increments, inner=True)
+        if inner is not None:
+            upper, best = trial, inner
+            trials.append({'error_grid': trial, 'result': 'INNER_FEASIBLE'})
+        elif feasible(len(phases), rows, trial, increments, inner=False) is None:
+            lower = trial
+            trials.append({'error_grid': trial, 'result': 'OUTER_INFEASIBLE'})
+        else:
+            unknown.append([lower, upper]); break
+    # Contact imposes no final airborne travel. Continue the preceding slope;
+    # this uniquely minimizes squared slope change over the trailing empty region.
+    last_constrained = max(r[1] for r in rows)
+    for i in range(last_constrained+1, len(phases)):
+        slope = Q(best[last_constrained]-best[last_constrained-1], 1)/(phases[last_constrained]-phases[last_constrained-1])
+        best[i] = best[last_constrained]+math.ceil(slope*(phases[i]-phases[last_constrained]))
+    require(all(best[i+1]-best[i] >= increments[i] for i in range(len(increments))), 'Lost strict monotonicity')
+    require(all((lambda r: r is not None and r[0] <= best[j]-best[i] <= r[1])
+                (allowed_distance(upper, xl, xh, zl, zh, inner=True)) for i, j, xl, xh, zl, zh in rows),
+            'Independent rational coefficient verification failed')
+    return [Q(v, GRID) for v in best], {'lower_m': Q(lower, GRID), 'upper_m': Q(upper, GRID),
+            'trials': trials, 'unclosed_fit_grid_brackets': unknown,
+            'scope': 'Necessary outer / sufficient inner all-vertex, all-pair sampled native-operation boxes in this rational knot family and declared positive slope floor only; not a global scalar-map impossibility.',
+            'tie_rule_status': 'Squared native-departure / lexicographic secondary optimization not certified. Exact Bellman-Ford coefficients are a feasible proposal, not an optimizer proof.'}
+
+
+def captured_obstructions(capture, surface, binds, patches, supports, samples_path, witness):
+    samples, points = [], []
+    with samples_path.open() as file:
+        for line in file:
+            require(len(samples) < LIMITS['dense_native_capture_rows'], 'Native capture row budget')
+            row = json.loads(line)
+            globals_ = [native.matrix(g) for g in row['globals']]
+            # Recompute actual captured-matrix LBS, independently of the saved CPU positions.
+            p = native.skin(surface, np.asarray([g@b for g, b in zip(globals_, binds)]))
+            samples.append(row); points.append(p)
+    best, chosen = -1., None
+    for hoof, (start, end) in supports.items():
+        active = [i for i, s in enumerate(samples) if float(start) <= s['time']/capture['length'] <= float(end)]
+        ids = patches[hoof]['native_sole_vertices']
+        for ia, a in enumerate(active):
+            for b in active[ia+1:]:
+                dx = np.abs(points[b][ids, 0]-points[a][ids, 0]); local = int(np.argmax(dx))
+                if dx[local] > best:
+                    best, chosen = float(dx[local]), (hoof, ids[local], a, b)
+    hoof, vertex, a, b = chosen
+    def exact_at(index, v):
+        return exact_vertex(surface['vertices'][v], surface['joints'][v].tolist(), surface['weights'][v].tolist(),
+                            [native.matrix(g) for g in samples[index]['globals']], binds)
+    pa, pb = exact_at(a, vertex), exact_at(b, vertex)
+    delta = [y-x for x, y in zip(pa, pb)]
+    obstruction = {'hoof': hoof, 'vertex': vertex, 'times_seconds': [samples[a]['time'], samples[b]['time']],
+                   'native_points_exact': [pa, pb], 'delta_exact': delta, 'bounds_m': endpoint_floor(delta),
+                   'scope': 'Every nonnegative scalar distance map with these required native endpoints; exact real raw LBS of captured native globals/binds. Model XZ/XYZ necessary conditions, not terrain contact or chosen E.'}
+    frozen_rows = [next(i for i, s in enumerate(samples) if abs(s['time']/capture['length']-p) < 1e-12) for p in [.137, .25]]
+    fa, fb = [exact_at(i, 16496) for i in frozen_rows]
+    d = [y-x for x, y in zip(fa, fb)]
+    observations = {}
+    for name, stride in [('retained_5.9', Q('5.9')), ('nominal_2.4', Q('2.4'))]:
+        travel = stride*(Q('.25')-Q('.137'))
+        observations[name] = {'travel_model_m': travel, 'entry_drift_xz_m': sqrt_bounds(d[0]**2+(d[2]+travel)**2),
+                              'free_anchor_radius_xz_m': tuple(v/2 for v in sqrt_bounds(d[0]**2+(d[2]+travel)**2)),
+                              'status': 'PRESERVED_OBSERVATION_NOT_CANDIDATE_NOT_POLICY_E'}
+    require(abs(float(observations['retained_5.9']['entry_drift_xz_m'][0])-.3919376776925641) < 1e-11
+            and abs(float(observations['nominal_2.4']['entry_drift_xz_m'][0])-.0037417885450576) < 1e-11,
+            'Frozen native witness changed')
+    return samples, points, {'strongest_sampled_transverse_endpoint': obstruction,
+                             'original_vertex': 16496, 'original_delta_exact': d, 'observations': observations,
+                             'original_scale_observation': witness['scale']}
+
+
+def continuous_domains(capture, phases):
+    # Imported key, epsilon-search, support, rational-fit and loop boundaries.
+    cuts = {0., capture['length']}
+    cuts.update(float(p)*capture['length'] for p in phases)
+    cuts.update(capture['native_search_boundaries_seconds'])
+    cuts.update(k['time'] for t in capture['tracks'] for k in t['keys'])
+    return [(a, b, 0) for a, b in zip(sorted(cuts), sorted(cuts)[1:]) if a < b]
+
+
+def continuous_verify(capture, surface, binds, atlas, functions, budget=None):
+    phases, _ = validate_atlas(atlas)
+    pending = continuous_domains(capture, phases)
+    budget, closed, unclosed = budget or Budget(), [], []
+    attempts = splits = independent_evaluations = 0
+    while pending and attempts < LIMITS['continuous_boxes']:
+        lo, hi, depth = pending.pop(0); attempts += 1
+        try:
+            box = surface_span_box(capture, surface, binds, lo, hi, functions, budget)
+            # Independent dense/adversarial arithmetic comparison on the full mesh.
+            outside = []
+            for time in [lo, (lo+hi)/2, hi]:
+                independent_evaluations += 1
+                points = sampled_points(capture, surface, binds, time)
+                indices = np.argwhere(~box.contains(points))
+                if len(indices):
+                    outside.append({'seconds': time, 'vertex_components': indices[:16].tolist()})
+            if outside:
+                raise Unclosed('independent_interior_outside_enclosure', violations=outside,
+                               next_input='Resolve concrete native-interpolation/mixer or search-branch counterexample before using this box.')
+            closed.append({'seconds': [lo, hi], 'vertex_bounds': box, 'depth': depth})
+        except (ValueError, FloatingPointError) as error:
+            detail = error.detail if isinstance(error, Unclosed) else {'reason': str(error), 'next_input': 'A tighter native-operation interval proving this denominator/branch, retaining all influences.'}
+            if splits < LIMITS['refinement_splits'] and hi-lo > 1e-9:
+                mid = (lo+hi)/2
+                pending[0:0] = [(mid, hi, depth+1), (lo, mid, depth+1)]
+                splits += 1
+            else:
+                unclosed.append({'seconds': [lo, hi], 'depth': depth, **detail})
+    unclosed.extend({'seconds': [a, b], 'depth': depth, 'reason': 'continuous_box_budget',
+                     'next_input': 'Continue the declared operation enclosure on this exact pending interval under a newly declared finite work budget.'}
+                    for a, b, depth in pending)
+    verify_partition(closed, unclosed, capture['length'])
+    return closed, unclosed, {'attempts': attempts, 'refinement_splits': splits, 'float32_weight_values': budget.used,
+                              'independent_track_evaluations': independent_evaluations}
+
+
+def verify_partition(closed, unclosed, length):
+    cursor = 0.
+    for a, b in sorted(item['seconds'] for item in closed+unclosed):
+        require(math.isfinite(a) and math.isfinite(b) and a == cursor and a < b <= length,
+                'Missing, overlapping or malformed continuous domain interval')
+        cursor = b
+    require(cursor == length, 'Continuous domain not completely accounted for')
+
+
+def validate_diagnostic(report):
+    require(report['status'] == 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY', 'Diagnostic status changed')
+    validate_atlas(report['atlas'])
+    require(canonical_digest(report['atlas']) == report['atlas_sha256'], 'Atlas coefficients/digest changed')
+    claims = report['claims']
+    require(all(claims[k] is False for k in ['success_dependency', 'verified_physical_candidate',
+            'phase_runtime_unblocked', 'surface_unblocked', 'contact_certificate'])
+            and claims['policy_E'] is None and claims['original_12_gates_preserved'] is True,
+            'Diagnostic cannot grant physical acceptance or select E')
+    require(report['missing_physical_context'], 'Missing physical context silently erased')
+    verify_partition(report['continuous_native']['closed_boxes'], report['continuous_native']['unclosed_boxes'],
+                     report['atlas']['clip_seconds'])
+
+
+def reject_captured_boxes(closed, comparisons):
+    rejected = {}
+    for row in comparisons:
+        for box in row['violated_boxes']:
+            rejected.setdefault(tuple(box['seconds']), []).append({'seconds': row['seconds'],
+                'vertex_components': box['vertex_components']})
+    failed = [{'seconds': list(span), 'reason': 'native_capture_outside_continuous_box',
+               'native_captures': points, 'next_input': 'Resolve these exact native capture/vertex violations before certifying this box.'}
+              for span, points in sorted(rejected.items())]
+    return [box for box in closed if tuple(box['seconds']) not in rejected], failed
+
+
+def norm_upper(box, axes):
+    """Outward sum of squares, including each multiply/add and square root."""
+    f = native.Float32Box
+    maximum = np.maximum(abs(box.lo[:, axes]), abs(box.hi[:, axes]))
+    square = f(maximum)*f(maximum)
+    total = square[:, 0]
+    for i in range(1, len(axes)):
+        total = total+square[:, i]
+    return native.Float32Box(np.maximum(total.lo, 0), total.hi).sqrt().hi
+
+
+def triangle_shape(triangles, birth_triangles):
+    def cross_of_edges(points):
+        a, b = points[:, 1]-points[:, 0], points[:, 2]-points[:, 0]
+        return native.box_stack([a[:, 1]*b[:, 2]-a[:, 2]*b[:, 1],
+                                 a[:, 2]*b[:, 0]-a[:, 0]*b[:, 2],
+                                 a[:, 0]*b[:, 1]-a[:, 1]*b[:, 0]], axis=1)
+    cross, birth = cross_of_edges(triangles), cross_of_edges(birth_triangles)
+    minimum = np.where((cross.lo <= 0) & (cross.hi >= 0), 0., np.minimum(abs(cross.lo), abs(cross.hi)))
+    square = native.Float32Box.outward(minimum*minimum, minimum*minimum)
+    total = square[:, 0]+square[:, 1]+square[:, 2]
+    area = native.Float32Box(np.maximum(total.lo, 0), np.maximum(total.hi, 0)).sqrt()
+    orientation = native.box_dot(cross, birth, 3)
+    return {'min_twice_area_lower_m2': float(np.min(area.lo)),
+            'unclosed_area_or_orientation': np.flatnonzero((area.lo <= 0) | (orientation.lo <= 0)).tolist(),
+            'opposite_orientation': np.flatnonzero(orientation.hi < 0).tolist(),
+            'scope': 'Native material triangle area and orientation against actual birth triangles in model space; no ground normal inferred.'}
+
+
+def closed_metrics(closed, atlas, patches, supports, birth_boxes, body_mask, scale):
+    records, patch_union = [], {}
+    for item in closed:
+        lo, hi = item['seconds']; box = item['vertex_bounds']
+        length = atlas['clip_seconds']
+        p, q = Q(lo)/Q(length), Q(hi)/Q(length)
+        start, end = distance_at(atlas, p), distance_at(atlas, q)
+        translated = native.Float32Box.outward(box.lo, box.hi)
+        travel = native.Float32Box.outward([0., 0., float(start)], [0., 0., float(end)])
+        translated = translated+travel
+        body_upper = float(np.max(norm_upper(box[body_mask], [0, 1, 2])))
+        all_upper = float(np.max(norm_upper(box, [0, 1, 2])))
+        record = {'seconds': [lo, hi], 'entry_drift_upper_m': {}, 'triangle_shape': {},
+                  'body_sphere_upper_model_m': body_upper, 'all_mesh_sphere_upper_model_m': all_upper,
+                  'sphere_scope': 'All native horse/rider/gear vertices, every ideal rigid yaw/tilt; world renderer multiplication still needs its own enclosure.'}
+        for hoof, (a, b) in supports.items():
+            if q < a or p > b:
+                continue
+            ids = patches[hoof]['native_sole_vertices']
+            birth_travel = [0., 0., float(distance_at(atlas, a))]
+            anchor = birth_boxes[hoof]+native.Float32Box.outward(birth_travel, birth_travel)
+            drift = translated[ids]-anchor
+            record['entry_drift_upper_m'][hoof] = float(np.max(norm_upper(drift, [0, 2])))
+            current = translated[ids]
+            patch_union[hoof] = hull([patch_union[hoof], current]) if hoof in patch_union else current
+            if 'native_triangles' in patches[hoof]:
+                local_index = {v: i for i, v in enumerate(ids)}
+                local_triangles = np.array([[local_index[v] for v in face] for face in patches[hoof]['native_triangles']])
+                record['triangle_shape'][hoof] = triangle_shape(current[local_triangles], anchor[local_triangles])
+                record['triangle_shape'][hoof]['native_triangle_ids'] = patches[hoof]['native_sole_triangles']
+        records.append(record)
+    diameter = {hoof: float(np.max(norm_upper(box-box, [0, 2]))) for hoof, box in patch_union.items()}
+    # Positive exact captured scale retained; no fitted/resized scene or new R.
+    maximum = max([r['body_sphere_upper_model_m'] for r in records], default=None)
+    world = None if maximum is None else sqrt_bounds(Q(maximum)**2*Q(scale)**2)[1]
+    return records, diameter, world
+
+
+def build(review_path):
+    manifest, capture, surface, binds, patches, supports, functions, witness = load_inputs(review_path)
+    phases = sorted({Q(0), Q(1), Q('.137'), Q('.25')}
+                    | {Q(k['time'])/Q(capture['length']) for t in capture['tracks'] for k in t['keys']}
+                    | {v for pair in supports.values() for v in pair})
+    require(len(phases) <= LIMITS['max_knots'], 'Declared knot budget')
+    budget = Budget()
+    boxes = [surface_span_box(capture, surface, binds, float(z)*capture['length'], float(z)*capture['length'], functions, budget)
+             for z in phases]
+    rows, counts = fit_rows(phases, boxes, patches, supports)
+    distances, fit_result = fit(phases, rows)
+    input_packet = {'manifest_sha256': MANIFEST_SHA, 'review_sha256': REVIEW_SHA, 'verdict_sha256': VERDICT_SHA,
+                    'native_sha256': manifest['inputs'][str(Path(manifest['capture_directory'])/'native.json')],
+                    'accounting_sha256': manifest['inputs'][manifest['accounting_payload']],
+                    'supports': supports, 'full_material_patches': patches, 'native_surface': surface,
+                    'bones': capture['bones'], 'binds': capture['skin'], 'tracks': capture['tracks']}
+    atlas = make_atlas(phases, distances, canonical_digest(input_packet), capture['length'])
+    samples, sampled, obstruction = captured_obstructions(capture, surface, binds, patches, supports,
+                                    Path(manifest['capture_directory'])/'samples.jsonl', witness)
+    closed, unclosed, used = continuous_verify(capture, surface, binds, atlas, functions, budget)
+    birth_boxes = {hoof: boxes[phases.index(start)][patches[hoof]['native_sole_vertices']]
+                   for hoof, (start, _) in supports.items()}
+    names = [b['name'] for b in capture['bones']]
+    lance_weight = np.sum(surface['weights']*(np.array(names)[surface['joints']] == 'Lance'), axis=1)
+    # Same classification and threshold as measure_unit_bodies.gd, without dropping gear.
+    body_mask = lance_weight < 1.-.000001
+    footprint_path = ROOT/'data/army/unit_footprints.csv'
+    with footprint_path.open() as file:
+        footprint = next(r for r in csv.DictReader(file) if r['arm'] == 'cavalry')
+    scale = witness['scale']['ordinary_world_scale']
+    for patch in patches.values():
+        patch['native_triangles'] = np.asarray(surface['indices']).reshape(-1, 3)[patch['native_sole_triangles']].tolist()
+    # Every retained native capture is an independent adversarial observation;
+    # samples not covered by a closed box remain visible, not silently discarded.
+    comparisons = []
+    worst_sample_error = 0.
+    for sample_, actual in zip(samples, sampled):
+        time = sample_['time']
+        proposal = sampled_points(capture, surface, binds, time)
+        error = float(np.max(abs(proposal-actual)))
+        worst_sample_error = max(worst_sample_error, error)
+        matching = [c for c in closed if c['seconds'][0] <= time <= c['seconds'][1]]
+        outside = []
+        for c in matching:
+            bad = np.argwhere(~c['vertex_bounds'].contains(np.asarray(sample_['skinned_skeleton_local'][0])))
+            if len(bad):
+                outside.append({'seconds': c['seconds'], 'vertex_components': bad[:16].tolist()})
+        comparisons.append({'seconds': time, 'covered_by_continuous_box': bool(matching), 'violated_boxes': outside,
+                            'independent_track_vs_captured_matrix_lbs_max_abs_m': error})
+    closed, rejected = reject_captured_boxes(closed, comparisons)
+    unclosed.extend(rejected)
+    verify_partition(closed, unclosed, capture['length'])
+    records, diameter, body_world = closed_metrics(closed, atlas, patches, supports, birth_boxes, body_mask, scale)
+    evaluations = len(phases)+used['independent_track_evaluations']+len(samples)
+    require(evaluations <= LIMITS['proposal_evaluations'], 'Declared proposal evaluation budget exhausted')
+    lower = obstruction['strongest_sampled_transverse_endpoint']['bounds_m']['entry_drift_xz'][0]
+    physical_unknowns = [
+        {'metric': 'penetration_m,hover_m,normal_rad', 'phase_domain': [[0, 1]],
+         'missing_input': 'Actual admitted terrain triangles/LOD and rendered-surface uncertainty; unchanged root seat/pose-to-world frame and terrain normal domain. Model Y or a fitted plane is not ground.'},
+        {'metric': 'material_entry_drift_m', 'phase_domain': [[0, 1]],
+         'missing_input': 'Physical validity of all four source support episodes, actual material touchdown/carried-in birth records, actual heading/path deviation and admitted operation context. Source labels remain required constraints.'},
+        {'metric': 'real_time_velocity', 'phase_domain': [[0, 1]],
+         'missing_input': 'Actual admitted duration T / nonzero 1/T domain bound; this verifier encloses normalized native pose only.'},
+        {'metric': 'world_envelope_m', 'phase_domain': [[0, 1]],
+         'missing_input': 'Closed native boxes, admitted world_per_sim_m and actual renderer world-transform operation enclosure at unchanged scale/seat/R. Full mesh and body/weapon split retained.'}]
+    inputs = {str(MANIFEST): MANIFEST_SHA, **manifest['inputs'], str(review_path): REVIEW_SHA,
+              str(review_path.parent/'round2.md'): VERDICT_SHA,
+              str(Path(manifest['frozen_paths']['witness']).parent/'accepted234-disposition.md'):
+                  'f54da8c9105721029a0aed93dad6ecf2341ebf87cd55ec239401f6c3113db4ad',
+              str(footprint_path): native.sha256(footprint_path)}
+    for path in ['tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py',
+                 'tools/units3d/check_cavalry_march_capture.py', 'tools/units3d/measure_unit_bodies.gd',
+                 'docs/reviews/cluster-formations/cavalry-march-contact-prerequisite.md']:
+        inputs[str(ROOT/path)] = native.sha256(ROOT/path)
+    return json_value({
+        'version': 1, 'step_id': 'CAV-CONTACT-PHASE', 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
+        'inputs': inputs, 'work_budget_declared_before_fit': LIMITS, 'work_used': {**used, 'proposal_evaluations': evaluations},
+        'accepted_anatomy': {'manifest_status_preserved': manifest['status'], 'independent_component_verdict': str(review_path),
+                             'four_patches': {h: {'vertices': len(p['native_sole_vertices']), 'triangles': len(p['native_sole_triangles'])} for h, p in patches.items()}},
+        'source_support_constraints': supports,
+        'atlas': atlas, 'atlas_sha256': canonical_digest(atlas),
+        'atlas_status': 'ALL_SAMPLED_PATCH_CONSTRAINTS_VERIFIED_PROPOSAL_ONLY',
+        'coefficient_domain': 'Exact rational periodic F(z)=floor(z)*S+f(frac(z)); strict positive slopes, all imported keys/source boundaries. No altered native locals/root/seat/clock.',
+        'fit': {**fit_result, 'constraint_count': len(rows), 'all_vertex_pair_counts_by_hoof': counts,
+                'inner_verification': True, 'secondary_objective_unclosed_domain': {'knots': len(phases),
+                   'reason': 'Finite inner/outer minimax gap and secondary squared-departure/lexicographic optimum unproved; no optimizer or physical candidate claim.'}},
+        'finite_endpoint_necessary_conditions': obstruction,
+        'metric_bounds': {
+            'entry_drift_m': {'lower': lower, 'upper': None, 'scope': 'Model XZ necessary floor for every scalar map; continuous physical upper bound unknown.'},
+            'diameter_m': {'lower': lower, 'upper': None, 'scope': 'Two required endpoints; free-anchor radius lower is half, never entry drift.'},
+            'penetration_m': None, 'hover_m': None, 'normal_rad': None, 'envelope_m': None},
+        'continuous_native': {'closed_boxes': records, 'unclosed_boxes': unclosed,
+                              'closed_subset_diameter_upper_m': diameter, 'closed_subset_body_world_sphere_upper_m': body_world,
+                              'method': 'Outward binary32 track/search/mixer/Basis/FK/true-bind/unnormalized LBS boxes; every finite binary32 slerp weight is enumerated with pinned acosf/sinf/double sin. Exhausted domains stay UNKNOWN. No assumed libm ULP bound, sampled residual allowance, or fast-math reassociation.',
+                              'loop': 'Player exact terminal maps to phase 0; direct terminal query and one-sided epsilon-search branches remain separate in closed interval checks.'},
+        'full_geometry': {'vertices': len(surface['vertices']), 'triangles': len(surface['indices'])//3,
+                          'body_vertices': int(np.count_nonzero(body_mask)), 'attack_only_vertices': int(np.count_nonzero(~body_mask)),
+                          'all_gear_retained': True, 'raw_weight_sum_range': [float(np.min(surface['weights'].sum(axis=1))), float(np.max(surface['weights'].sum(axis=1)))],
+                          'ordinary_world_scale_retained_observation': scale, 'unchanged_footprint': footprint,
+                          'R_comparison': 'For each closed model body sphere B: k*B <= R_sim_m*world_per_sim_m is sufficient for every ideal rigid yaw/tilt. No global comparison passes while any native/world-operation box is unclosed.'},
+        'dense_native_comparison': {'rows': comparisons, 'max_track_reconstruction_discrepancy_m': worst_sample_error,
+                                    'scope': 'Independent accepted native captures and binary64 track reconstruction are adversarial checks, never a universal numerical allowance.'},
+        'missing_physical_context': physical_unknowns,
+        'claims': {'verified_physical_candidate': False, 'success_dependency': False, 'contact_certificate': False,
+                   'policy_E': None, 'phase_runtime_unblocked': False, 'surface_unblocked': False,
+                   'original_12_gates_preserved': True, 'native_recapture': False, 'live_window_or_FPS_acceptance': False},
+        'reproduction': {'build': 'python3 tools/units3d/cavalry_march_phase.py build --review-record REVIEW_COMPLETE_JSON --out REPORT_JSON',
+                         'verify': 'python3 tools/units3d/cavalry_march_phase.py verify REPORT_JSON --review-record REVIEW_COMPLETE_JSON',
+                         'exit_status': '2 is the expected truthful diagnostic/unknown result, never physical acceptance. A malformed/tampered input exits 1.'}})
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest='command', required=True)
+    build_parser = sub.add_parser('build'); build_parser.add_argument('--out', type=Path, required=True)
+    verify_parser = sub.add_parser('verify'); verify_parser.add_argument('report', type=Path)
+    for p in [build_parser, verify_parser]:
+        p.add_argument('--review-record', type=Path, required=True)
+    args = parser.parse_args()
+    try:
+        existing = None
+        if args.command == 'verify':
+            existing = json.loads(args.report.read_text())
+            validate_diagnostic(existing)
+        report = build(args.review_record.resolve())
+        validate_diagnostic(report)
+        if args.command == 'build':
+            args.out.write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False)+'\n')
+        else:
+            require(existing == report, 'Report differs from independent replay')
+        print(json.dumps({'status': report['status'], 'atlas_sha256': report['atlas_sha256'],
+                          'closed_boxes': len(report['continuous_native']['closed_boxes']),
+                          'unclosed_boxes': len(report['continuous_native']['unclosed_boxes'])}))
+        return 2
+    except (ValueError, OSError, KeyError, StopIteration) as error:
+        print(f'Invalid input or unclosed construction: {error}')
+        return 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
