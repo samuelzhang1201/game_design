@@ -108,3 +108,40 @@ pairs sort by own unit/slot then target unit/slot. Each own row contributes its
 actual personnel once across all touching targets, including the partial last
 row. Querying changes no state, RNG, law parties, rows or costs. This candidate
 entry does not discover/merge battles or replace production melee damage.
+
+## Candidate contact enrollment
+
+`BodyBattle.plan_candidate` / `commit_candidate` accept only the closed
+`contacts` and `enter` requests from the CF05 contract at an admitted contact
+boundary. Planning leaves the source unchanged; commit independently replans
+and compares the entire canonical plan before publishing one detached state.
+Unsupported requests error; valid other stages and frozen rounds/decisions
+defer. Raw corruption errors before deferral. Ordinary encounter/day dispatch
+continues to use the existing production lifecycle.
+
+Discovery tests lawful physical surface contact through `BodyBattleContact` on
+private exact transfers. It uses existing stable founder sides, received laws,
+doctrine, town/siege exclusions and enrollment reports. Reinforcement validates
+canonical membership, side capacity and every allegiance pair, freezes old
+parties before appending the newcomer, and requires lawful contact in either
+direction. Friendly frames and anchor proximity cannot start an encounter.
+Distinct contacting fields defer for the unimplemented merge provider. An
+attacking ranged-equipped cross-field evaluation returns
+`deferred: direct_fire_dependency` until the accepted CF06 firing query exists.
+
+Existing row identities, homes, counts, points, facing, paths, slot counters and
+owner anchor/facing snapshots transfer without refresh, seeding or movement.
+Halting changes received command metadata, never a pose. Active movement closes
+through the accepted Q-boundary helper before any enrollment. Only private
+staging endpoints are resealed for the existing transfer/query validators;
+the original endpoint is validated first and the enclosing transaction consumes
+one sequence and seals one final plan/endpoint receipt. Failed private transfers
+or queries discard the whole staged field, reports and counters.
+
+`enter` retains contact stage and has no discovery payload. `contacts` freezes
+the canonical live unprocessed round queue, preserving the daily unit barrier;
+no eligible fields yields advance. It creates no acknowledgement, damage or
+public day driver. Latest exact-plan direct/JSON retries validate the saved
+endpoint and return a detached no-op; stale or changed inputs reject. The
+existing hash context still requires its accepted per-arm policy binding;
+isolated injected test policies certify neither installed art nor live play.

@@ -585,11 +585,21 @@ static func _join_event(repo: DataRepository, state: GameState, b: Dictionary, c
 		events.append({"kind": "join", "battle_id": int(b["id"]), "code": code, "side": side})
 
 
-## A new battle between player regiment `p` and foe `f`: at a town the foe
-## assaults; in the open the side that marched into a standing enemy attacks,
-## else the foe. Fought where the defender stands (the town's point at a town).
-static func _start(repo: DataRepository, state: GameState, p: String, f: String, town: String,
-		events: Array) -> void:
+static func _contact_doctrine(repo: DataRepository, state: GameState, b: Dictionary) -> void:
+	for side: String in SIDES:
+		var actor := String(b[side][0])
+		if ArmySystem.is_foe(state, actor):
+			var host := String(_stored(state, actor).get("host", ""))
+			if host != "" and not homeward(state, actor):
+				var opposition: Array = b["def" if side == "att" else "att"]
+				var seen := EnemyAi.seen_by(repo, state, host)
+				var visible := opposition.filter(func(c: String) -> bool: return c in seen)
+				var take_fight := not visible.is_empty() and EnemyAi.engages(repo, state, host, visible)
+				b["actions"][side] = {"kind": "attack" if take_fight else "hold", "reason": "Commander follows received doctrine and visible opposition"}
+
+
+## Pure metadata for explicit candidate enrollment; never allocates or moves rows.
+static func contact_skeleton_candidate(repo: DataRepository, state: GameState, p: String, f: String, town: String = "") -> Dictionary:
 	var pe := _stored(state, p)
 	# the side that marched into a standing enemy attacks: a column that halted
 	# in front of one today (halt_day, ArmySystem._halt_before) did exactly that
@@ -620,6 +630,18 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 		b["actions"][side] = {"kind": kind, "reason": "Received advance plan" if kind == "attack" else "Maintain distance at contact"}
 	BattleRules.freeze(repo, state, b)
 	BattleFormation.ensure(b)
+	return b
+
+
+## A new battle between player regiment `p` and foe `f`: at a town the foe
+## assaults; in the open the side that marched into a standing enemy attacks,
+## else the foe. Fought where the defender stands (the town's point at a town).
+static func _start(repo: DataRepository, state: GameState, p: String, f: String, town: String,
+		events: Array) -> void:
+	var b := contact_skeleton_candidate(repo, state, p, f, town)
+	var att: Array = b.att
+	var def: Array = b.def
+	var place := Vector2i(int(b.place_x_m), int(b.place_y_m))
 	if not BattleGroups.refresh(repo, state, b): return
 	state.foe_next_id += 1
 	state.battles.append(b)
@@ -627,16 +649,7 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 		for member: String in b[entry_side]:
 			BattleReport.enroll(state, b, member, entry_side)
 	BattleGroups.refresh(repo, state, b)
-	for side: String in SIDES:
-		var actor := String(b[side][0])
-		if ArmySystem.is_foe(state, actor):
-			var host := String(_stored(state, actor).get("host", ""))
-			if host != "" and not homeward(state, actor):
-				var opposition: Array = b["def" if side == "att" else "att"]
-				var seen := EnemyAi.seen_by(repo, state, host)
-				var visible := opposition.filter(func(c: String) -> bool: return c in seen)
-				var take_fight := not visible.is_empty() and EnemyAi.engages(repo, state, host, visible)
-				b["actions"][side] = {"kind": "attack" if take_fight else "hold", "reason": "Commander follows received doctrine and visible opposition"}
+	_contact_doctrine(repo, state, b)
 	var turn := ArmyGround.clearance_on(repo)   # the clearance's facing; none with the rule off
 	if not bool(_stored(state, p).get("battle_retreat", false)):
 		_halt(state, p, _at_m(repo, state, f) if turn else Vector2i(-1, -1))
