@@ -2,6 +2,7 @@
 """Synthetic checks; --full also runs the frozen full native reproduction twice."""
 import base64
 import copy
+from fractions import Fraction
 import hashlib
 import io
 import json
@@ -674,6 +675,139 @@ class NativeMetricTest(unittest.TestCase):
         self.assertIsNotNone(result['vertical_interval_world_m'])
         self.assertIsNone(result['signed_interval_world_m'])
         self.assertIsNone(result['upper_bound_model_um'])
+
+    def test_quantized_target_requires_both_endpoint_roundings(self):
+        # Exact unit-lattice counterexample; this is not a native terrain proof.
+        p, x, eta = Fraction(7, 16), Fraction(9, 16), Fraction(1, 2)
+        self.assertEqual((round(p), round(x)), (0, 1))
+        omitted = abs(x-p)+abs(round(p)-p)
+        self.assertEqual(omitted, Fraction(9, 16))
+        self.assertLess(omitted, 1)
+        self.assertEqual(omitted+eta, Fraction(17, 16))
+        self.assertGreaterEqual(omitted+eta, 1)
+
+        step = 2.**-23
+        for units in (.01, 1., 100.):
+            for sign in (-1., 1.):
+                for role in ('vertex', 'anchor'):
+                    with self.subTest(units=units, sign=sign, role=role):
+                        raw, cases = native_control(units=units)
+                        b = raw['header']['uncertainty']['synthetic']
+                        p = [sign*(1.+3*step/8), 0., 0.]
+                        x = sign*(1.+5*step/8)
+                        ep, eta = step/4*units, step/2*units
+                        b['position' if role == 'vertex' else 'anchor']['value'] = ep
+                        b['height_lipschitz']['value'] = 1./step
+                        jump_n = math.hypot(.6, .8-1.)
+                        b['normal_lipschitz']['value'] = jump_n/(step*units)
+                        state = metric.validate_raw_observation(raw, cases)
+                        patch = state['header']['cases'][0]['patches'][0] if role == 'anchor' else None
+                        request = metric.native_request(state, 0, 0, .5, .25.hex(), 'mapped', 0, p, patch)
+                        q = metric.raw_word(request['query_xz_f32'][0], 'binary32')
+                        qx = struct.unpack('>f', struct.pack('>f', x))[0]
+                        self.assertEqual(q, sign)
+                        self.assertEqual(abs(qx-q), step)
+                        midpoint = sign*(1.+step/2)
+                        self.assertEqual(struct.unpack('>f', struct.pack('>f', midpoint))[0], sign)
+                        self.assertEqual(abs(midpoint-sign)*units, eta)
+                        self.assertEqual(abs(x-p[0])*units, ep)
+                        self.assertEqual(abs(qx-x)*units, 3*step/8*units)
+                        response = oracle(request)
+                        omitted = metric.native_sample(response, request, state)
+                        self.assertAlmostEqual(omitted['height_error']/units, 5/8, places=5)
+                        self.assertLess(omitted['height_error'], units)
+                        self.assertLess(omitted['normal_error'], jump_n)
+                        b['query_coordinate']['value'] = eta
+                        state = metric.validate_raw_observation(raw, cases)
+                        bounded = metric.native_sample(response, request, state)
+                        self.assertTrue(bounded['covered'])
+                        self.assertAlmostEqual(bounded['height_error']/units, 9/8, places=5)
+                        self.assertGreaterEqual(bounded['height_error'], units)
+                        self.assertGreaterEqual(bounded['normal_error'], jump_n)
+                        self.assertIsNone(state['header']['budget'])
+                        self.assertIn('rendered surface proof', state['blockers'])
+
+        # A full two-axis cell needs a Euclidean eta, not one axis's half-ULP.
+        raw, cases = native_control()
+        b = raw['header']['uncertainty']['synthetic']
+        b['position']['value'] = math.sqrt(2)*step/4
+        b['height_lipschitz']['value'] = 1.
+        b['query_coordinate']['value'] = math.sqrt(2)*step/2
+        state = metric.validate_raw_observation(raw, cases)
+        p = [1.+3*step/8, 0., 1.+3*step/8]
+        request = metric.native_request(state, 0, 0, .5, .25.hex(), 'mapped', 0, p)
+        sample = metric.native_sample(oracle(request), request, state)
+        self.assertAlmostEqual(sample['rounding_xz_world_m']/step, 3*math.sqrt(2)/8)
+        self.assertAlmostEqual(sample['height_error']/step, 9*math.sqrt(2)/8, places=5)
+        self.assertGreaterEqual(sample['height_error'], math.sqrt(2)*step)
+
+    def test_quantized_expanded_domain_boundaries_and_independent_anchor(self):
+        step, p = 2.**-23, 1.+3*2.**-26
+        for units in (.01, 1., 100.):
+            for side in ('xz_min', 'xz_max'):
+                raw, cases = native_control(units=units)
+                b = raw['header']['uncertainty']['synthetic']
+                b['position']['value'] = step/4*units
+                b['query_coordinate']['value'] = step/2*units
+                rho = 9*step/8
+                domain = raw['header']['surfaces'][0]['domain']
+                domain[side][0] = p + (-rho if side == 'xz_min' else rho)
+                state = metric.validate_raw_observation(raw, cases)
+                request = metric.native_request(state, 0, 0, .5, .25.hex(), 'mapped', 0, [p, 0., 0.])
+                sample = metric.native_sample(oracle(request), request, state)
+                self.assertFalse(sample['covered'], (units, side))
+                self.assertIn('surface_domain', sample['missing'])
+                self.assertIsNone(sample['height_error'])
+                self.assertIsNone(sample['normal_error'])
+                domain[side][0] += -1e-10 if side == 'xz_min' else 1e-10
+                state = metric.validate_raw_observation(raw, cases)
+                request = metric.native_request(state, 0, 0, .5, .25.hex(), 'mapped', 0, [p, 0., 0.])
+                self.assertTrue(metric.native_sample(oracle(request), request, state)['covered'])
+
+        raw, cases = native_control()
+        b = raw['header']['uncertainty']['synthetic']
+        b['anchor']['value'] = step/4
+        b['query_coordinate']['value'] = step/2
+        raw['header']['surfaces'][0]['domain']['xz_max'][0] = p+9*step/8
+        result = self.measure([0., -.1, 0.], a=[p, 0., 0.],
+                              state=metric.validate_raw_observation(raw, cases))
+        self.assertIsNotNone(result['vertical_interval_world_m'])
+        self.assertIsNotNone(result['signed_interval_world_m'])
+        self.assertIsNone(result['slip_interval_world_m'])
+        self.assertIsNone(result['upper_bound_model_um'])
+        self.assertIn('anchor:surface_domain', result['unknown_terms'])
+        raw['header']['surfaces'][0]['domain']['xz_max'][0] += 1e-10
+        result = self.measure([0., -.1, 0.], a=[p, 0., 0.],
+                              state=metric.validate_raw_observation(raw, cases))
+        self.assertIsNotNone(result['slip_interval_world_m'])
+
+    def test_quantized_interpretation_preserves_unknown_and_adverse_inputs(self):
+        for contributor in native_control()[0]['header']['uncertainty']['synthetic']:
+            raw, cases = native_control()
+            raw['header']['uncertainty']['synthetic'][contributor].update(
+                value=None, reason='synthetic missing full-domain proof')
+            result = self.measure([0., -.1, 0.], state=metric.validate_raw_observation(raw, cases))
+            self.assertIsNone(result['upper_bound_model_um'], contributor)
+            self.assertEqual(result['coverage'], 'UNCOVERED', contributor)
+            self.assertIn(contributor, result['unknown_terms'])
+        for height, normal in ((None, None), (0., None), (0., (0., 0., 0.)), (0., (0., -1., 0.))):
+            result = self.measure([0., -.1, 0.], height=height, normal=normal)
+            self.assertIsNone(result['upper_bound_model_um'])
+            self.assertEqual(result['coverage'], 'UNCOVERED')
+        raw, cases = native_control()
+        surface = raw['header']['surfaces'][0]
+        surface['kind'] = 'sea_clamped'
+        surface['selection'].update(height='max_raw_sea', normal='branch', sea_level=0.)
+        b = raw['header']['uncertainty']['synthetic']
+        b['query_coordinate']['value'] = 2.**-24
+        b['height_lipschitz']['value'] = 2.**23
+        state = metric.validate_raw_observation(raw, cases)
+        request = metric.native_request(state, 0, 0, .5, .25.hex(), 'mapped', 0, [0., -.1, 0.])
+        sample = metric.native_sample(oracle(request, .25, (-1., 1., 0.)), request, state)
+        self.assertIsNotNone(sample['height_error'])
+        self.assertIsNone(sample['normal_error'])
+        self.assertFalse(sample['covered'])
+        self.assertIn('surface_switch_normal', sample['missing'])
 
     def test_raw_words_rounding_and_echo_tampering(self):
         _, _, state = self.setup_native()
