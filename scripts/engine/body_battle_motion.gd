@@ -32,6 +32,8 @@ static func _source_error(repo: DataRepository, source: GameState, boundary: Dic
 	if checked.status != "complete": return checked.reason
 	if not BodyMotion._battle_boundary_ok(boundary): return "Movement requires the explicit move stage"
 	if source.military_migration.has("body_motion"): return "Previous movement requires explicit closure"
+	var retreat_error := BattleSystem._retreat_candidate_error(source)
+	if not retreat_error.is_empty(): return retreat_error
 	var charge_error := BattleCharge._candidate_error(repo, source)
 	if not charge_error.is_empty(): return charge_error
 	var flank_error := BattleTaskSystem._flank_candidate_error(source)
@@ -99,10 +101,12 @@ static func _writer(repo: DataRepository, state: GameState, code: String, battle
 	return "hold"
 
 static func _collect(repo: DataRepository, source: GameState, boundary: Dictionary, providers: Dictionary) -> Dictionary:
+	var native_withdrawal := not providers.has("withdrawal")
 	providers = providers.duplicate()
 	if not providers.has("deployment"): providers.deployment = BattleGroups.deployment_intent_candidate
 	if not providers.has("charge"): providers.charge = BattleCharge.intent_candidate
 	if not providers.has("flank"): providers.flank = BattleTaskSystem.flank_intent_candidate
+	if not providers.has("withdrawal"): providers.withdrawal = BattleSystem.retreat_intent_candidate
 	var error := _source_error(repo, source, boundary)
 	if not error.is_empty(): return {"error": error}
 	for key: Variant in providers:
@@ -116,6 +120,7 @@ static func _collect(repo: DataRepository, source: GameState, boundary: Dictiona
 	var intents: Array = []
 	var units: Array = []
 	var limits := {}
+	var withdrawals: Array = []
 	for code: String in codes:
 		var entry := ArmySystem._entry_of(staged, code)
 		var battle := BattleSystem.battle_of(staged, code)
@@ -125,7 +130,21 @@ static func _collect(repo: DataRepository, source: GameState, boundary: Dictiona
 		var budget := _share(int(tx.march_budgets[code]), count, slice)
 		var here: Array = [int(entry.x_m), int(entry.y_m)]
 		if not battle.is_empty() and battle.get("group_anchor_m", {}).has(code): here = battle.group_anchor_m[code].duplicate()
-		var held := writer == "hold" or bool(entry.get("captured", false)) or not CampSystem.can_march_entry(entry, source.absolute_day()) or MilitaryRoster.fit(staged, code) <= 0
+		var withdrawal := {}
+		if writer == "withdrawal" and native_withdrawal:
+			withdrawal = BattleSystem._retreat_route_candidate(repo, staged, int(battle.id), code)
+			if withdrawal.candidate != null:
+				withdrawals.append(code)
+				staged = withdrawal.candidate
+				tx = staged.day_resolution
+				entry = ArmySystem._entry_of(staged, code)
+				battle = BattleSystem.battle_of(staged, code)
+				tx.march_entries[code] = entry.duplicate(true)
+				if code not in tx.marching_codes:
+					tx.marching_codes.append(code)
+					tx.marching_codes.sort()
+			else: entry.withdrawal_reason = withdrawal.reason
+		var held := writer == "hold" or (writer == "withdrawal" and native_withdrawal and withdrawal.candidate == null) or bool(entry.get("captured", false)) or not CampSystem.can_march_entry(entry, source.absolute_day()) or MilitaryRoster.fit(staged, code) <= 0
 		var task := BattleTaskSystem.current(staged, code)
 		var offensive_pursuit := writer == "pursuit_march" and (not battle.is_empty() or (int(entry.get("disengaging", 0)) != 1 and not bool(entry.get("battle_retreat", false))))
 		if task.get("status", "") in ["bounded", "search_failed", "completed"] \
@@ -178,7 +197,7 @@ static func _collect(repo: DataRepository, source: GameState, boundary: Dictiona
 			if not ArmySystem._body_path_terrain(MarchPath.of_pack(repo), translated, int(repo.unit_footprints[piece].radius_m)).is_empty(): return {"error": "Desired timed slice crosses forbidden terrain"}
 			intents.append({"unit": code, "slot": int(row.slot), "path_m": translated, "budget_m": budget, "hostile": writer == "charge"})
 		units.append({"unit": code, "writer": writer, "budget_m": budget, "anchor_path_m": path.duplicate(true)})
-	return {"candidate": staged, "intents": intents, "units": units, "limits": limits}
+	return {"candidate": staged, "intents": intents, "units": units, "limits": limits, "withdrawals": withdrawals}
 
 static func collect_candidate(repo: DataRepository, source: GameState, boundary: Dictionary, providers: Dictionary = {}) -> Dictionary:
 	var collected := _collect(repo, source, boundary, providers)
@@ -270,6 +289,18 @@ static func commit_candidate(repo: DataRepository, source: GameState, proposed: 
 			for point: Vector2i in ArmySystem._path_of(saved): full.append([point.x, point.y])
 			var row := {"unit": code, "saved_entry_after": saved, "used_m": used, "step_budget_m": unit.budget_m}
 			ArmySystem._body_settle_route(repo, candidate, row, full, common, boundary, staged.limits.get(code, {}), arrivals, true)
+		elif code in staged.withdrawals:
+			var full: Array = [path[0]]
+			for point: Vector2i in ArmySystem._path_of(entry): full.append([point.x, point.y])
+			entry.route_m = ArmySystem._body_remaining(full, common, true)
+			entry.x_m = int(common.back()[0])
+			entry.y_m = int(common.back()[1])
+			entry.day_walked_m = int(entry.get("day_walked_m", 0)) + used
+			entry.march_step = [int(boundary.abs_day), int(boundary.substep)]
+			if used > 0:
+				entry.moved_day = int(boundary.abs_day)
+				ArmySystem._release_camp_on_movement(entry)
+			candidate.day_resolution.march_entries[code] = entry.duplicate(true)
 		else:
 			entry.x_m = int(common.back()[0])
 			entry.y_m = int(common.back()[1])
