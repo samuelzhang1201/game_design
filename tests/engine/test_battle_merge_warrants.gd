@@ -7,8 +7,12 @@ const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 ## Battle 1: crown p1 (att) vs foe f1 (def). Battle 2: foe f2 attacks crown p2 when
 ## `flip`, else crown p2 attacks f2. f2 stands 80 m from p1 (contact 100 m).
 func _fixture(flip: bool) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9448)
+	state.town_seat.clear() # The four 40-person mobile columns occupy distinct discs.
 	var mine := state.regiments.keys()
 	mine.sort()
 	var foes := state.foes.keys()

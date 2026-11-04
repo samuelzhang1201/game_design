@@ -191,6 +191,7 @@ func test_real_field_encounter_pauses_task_and_keeps_known_target_geometry() -> 
 		var opponent := "att" if BattleRules.side_of(b, f.a) == "def" else "def"
 		b.actions[opponent] = {"kind": "retreat"}
 		Play.place(f.repo, state, f.interceptor, BASE + Vector2i(0, -10000), ArmySystem.ORDER_STANDBY)
+		assert_true(BattleGroups.follow_anchor(f.repo, state, b, f.interceptor), "The interceptor takes its rows away from contact")
 		BattleSystem._stored(state, f.interceptor)["battle_retreat"] = true
 		assert_eq(Play.day(TickEngine.new(f.repo), state, true).status, "complete")
 		assert_true(BattleSystem.battle_of(state, f.a).is_empty(), "actual separation ends the interception")

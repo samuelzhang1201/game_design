@@ -5,6 +5,10 @@ const Play := preload("res://tests/invasion_play.gd")
 
 func _fixture() -> Dictionary:
 	var repo := SuiteData.no_clearance(SuiteData.open_country(SuiteData.repo()))
+	# These exact loss fixtures use legal, fully engaged line fronts (20 m discs, 80 m pitch).
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := Scenario.contact(repo, 10)
 	BattleSystem.detect_contacts(repo, state)
 	var battle: Dictionary = state.battles[0]
@@ -19,14 +23,54 @@ func _fixture() -> Dictionary:
 	codes.erase(unit)
 	var other := String(codes[0])
 	var at := BattleSystem._at_m(repo, state, unit)
-	Play.place(repo, state, other, at, ArmySystem.ORDER_STANDBY)
+	Play.place(repo, state, other, at + Vector2i(0, 1000), ArmySystem.ORDER_STANDBY)
 	battle.def.append(other)
 	battle.actions = {"att": {"kind": "hold"}, "def": {"kind": "hold"}}
 	for code: String in battle.att + battle.def:
 		var entry := BattleSystem._stored(state, code)
 		entry.morale = 100
 		entry.supplies = 10000
-	return {"repo": repo, "state": state, "battle": battle, "unit": unit, "other": other, "at": at}
+	var attacker := String(battle.att[0])
+	# All incoming attackers fit opposite the holding ally; its hand-made 100‰
+	# outcome therefore remains fully exposed, while the other unit can withdraw.
+	var fit := mini(ArmySystem.fit_count(repo, state, attacker), ArmySystem.fit_count(repo, state, other))
+	var resized := preload("res://tests/engine/personnel_helpers.gd").replace(repo, state, attacker, fit)
+	assert_false(resized.has("error"))
+	for arm: String in repo.world_table("military", "unit_types"):
+		state.army_roster[other][arm] = "0"
+	state.army_roster[other].is_royal = "0"
+	state.army_roster[other].infantry = str(ArmySystem.fit_count(repo, state, other))
+	# Face the compact fronts across the legal homeward route, so withdrawal
+	# travels away from both opponents and allies rather than through a friend.
+	var probe := GameState.from_dict(state.to_dict(), false)
+	assert_true(BattleSystem._fall_back(repo, probe, unit, probe.battles[0]))
+	var destination := BattleSystem._stored(probe, unit)
+	var away := Vector2(Vector2i(int(destination.dest_x_m), int(destination.dest_y_m)) - at).normalized()
+	var across := Vector2(-away.y, away.x)
+	var face := WarFront.facing_deg(away)
+	var base := at
+	var n := BattleGroups.counts(ArmySystem.fit_count(repo, state, attacker), 100).size()
+	var m := BattleGroups.counts(ArmySystem.fit_count(repo, state, other), 100).size()
+	# The holder's front rows align with the attacker's last m rows; the withdrawing
+	# line is 60 m to its side, so both friends are reachable without overlapping.
+	Play.place(repo, state, attacker, base - Vector2i((away * 120).round()), ArmySystem.ORDER_STANDBY)
+	Play.place(repo, state, unit, base, ArmySystem.ORDER_STANDBY)
+	Play.place(repo, state, other, base - Vector2i((away * 60).round()) + Vector2i((across * (n - m) * 40).round()), ArmySystem.ORDER_STANDBY)
+	state.foes[attacker].facing_deg = face
+	state.regiments[unit].facing_deg = posmod(face + 180, 360)
+	state.regiments[other].facing_deg = posmod(face + 180, 360)
+	battle.unit_formations = {}
+	for side: String in BattleSystem.SIDES:
+		for code: String in battle[side]:
+			var formation: Dictionary = battle.formations[side].duplicate(true)
+			formation.current = "line"
+			formation.target = "line"
+			formation.previous = "line"
+			battle.unit_formations[code] = formation
+	battle.erase("groups")
+	battle.erase("deployment_axis_deg")
+	assert_true(BattleGroups.refresh(repo, state, battle))
+	return {"repo": repo, "state": state, "battle": battle, "unit": unit, "other": other, "at": base}
 
 func _issue(f: Dictionary, id: String, task := "retreat") -> void:
 	assert_eq(BattleTaskSystem.issue_task(f.repo, f.state, {"id": id, "unit": f.unit,

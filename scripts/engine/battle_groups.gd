@@ -458,7 +458,7 @@ static func translate(repo: DataRepository, state: GameState, battle: Dictionary
 
 ## Follow a live march commit, never a private forecast. This does not move the
 ## anchor or reconcile a pending round's personnel, and replaying it is inert.
-static func follow_anchor(repo: DataRepository, state: GameState, battle: Dictionary, code: String) -> bool:
+static func follow_anchor(repo: DataRepository, state: GameState, battle: Dictionary, code: String, passed: Array = []) -> bool:
 	if not battle.get("groups", {}).has(code):
 		return true
 	var at := BattleSystem._at_m(repo, state, code)
@@ -467,7 +467,11 @@ static func follow_anchor(repo: DataRepository, state: GameState, battle: Dictio
 	var pair: Array = battle["group_anchor_m"].get(code, [at.x, at.y])
 	var delta := at - Vector2i(int(pair[0]), int(pair[1]))
 	if delta != Vector2i.ZERO:
-		if not motion(repo, state, battle, code, at - delta, delta, ceili(Vector2(delta).length())): return false
+		var from := at - delta
+		for point: Vector2i in passed + [at]:
+			var leg := point - from
+			if not motion(repo, state, battle, code, from, leg, ceili(Vector2(leg).length())): return false
+			from = point
 		for row: Dictionary in battle["groups"][code]:
 			row["x_m"] = int(row["x_m"]) + delta.x
 			row["y_m"] = int(row["y_m"]) + delta.y
@@ -644,6 +648,53 @@ static func withdrawing(state: GameState, battle: Dictionary) -> bool:
 	return false
 
 
+## Staggered front rows can be outside contact even at their nominal line.
+## Find the nearest actual front approach; exact disc/terrain checks admit its
+## next bounded step, including the nine whole-metre rounding neighbours.
+static func _close_front(repo: DataRepository, state: GameState, battle: Dictionary,
+		code: String, from: Vector2i, budget: int, targets: Dictionary) -> Dictionary:
+	var own := piece(repo, state, code)
+	if not own.ok: return {"target": from}
+	var side := BattleRules.side_of(battle, code)
+	var enemies: Array = battle["def" if side == "att" else "att"].duplicate()
+	enemies.sort()
+	var best := INF
+	var row_from := {}
+	var row_to := {}
+	var target := ""
+	for row: Dictionary in battle.get("groups", {}).get(code, []):
+		if row.role != "front" or int(row.count) <= 0: continue
+		for enemy: String in enemies:
+			# A moving, charging or flanking opponent retains its own approach.
+			if not targets.has(enemy) or BattleSystem._at_m(repo, state, enemy) != targets[enemy]: continue
+			var footprint := piece(repo, state, enemy)
+			if not footprint.ok: return {"target": from}
+			for other: Dictionary in battle.get("groups", {}).get(enemy, []):
+				var pair := BattleGroupGeometry.pair([row.x_m, row.y_m], int(own.radius_m),
+					[other.x_m, other.y_m], int(footprint.radius_m), int(repo.bal("battle_group_contact_m")))
+				if not pair.ok: return {"target": from}
+				if pair.in_reach: continue
+				var gap := sqrt(float(pair.distance_sq)) - float(own.radius_m) - float(footprint.radius_m) - repo.bal("battle_group_contact_m")
+				if gap < best:
+					best = gap
+					row_from = row
+					row_to = other
+					target = enemy
+	if target == "": return {}
+	var direction := Vector2(Vector2i(int(row_to.x_m), int(row_to.y_m)) - Vector2i(int(row_from.x_m), int(row_from.y_m))).normalized()
+	var rounded := Vector2i((direction * best).round())
+	for rounding: Vector2i in [Vector2i.ZERO, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN,
+			Vector2i(-1, -1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(1, 1)]:
+		var delta := rounded + rounding
+		var proposed := row_from.duplicate()
+		proposed.x_m = int(row_from.x_m) + delta.x
+		proposed.y_m = int(row_from.y_m) + delta.y
+		if not in_reach(repo, state, code, proposed, target, row_to, int(repo.bal("battle_group_contact_m"))): continue
+		var step := delta if Vector2(delta).length() <= budget else Vector2i(Vector2(delta).normalized() * budget)
+		if motion(repo, state, battle, code, from, step, budget): return {"target": from + delta}
+	return {"target": from}
+
+
 ## One deployment step, once per absolute day (`battle.deployed_day`): every
 ## unit but a withdrawing, captured, fitless or town-seated one steps its anchor
 ## toward its target by at most `battle_deploy_step_m` whole metres. The groups
@@ -654,7 +705,7 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 		return
 	battle["deployed_day"] = today
 	var targets := deployment(repo, state, battle)
-	var step := float(repo.bal("battle_deploy_step_m"))
+	var step := int(repo.bal("battle_deploy_step_m"))
 	var grid := MarchPath.of_pack(repo)   # the land grid: no step into water or over a scarp
 	var charges := {}
 	if not refresh(repo, state, battle): return
@@ -678,13 +729,22 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 		var from := BattleSystem._at_m(repo, state, code)
 		var to: Vector2i = targets[code]
 		var action := BattleSystem.unit_action(repo, state, battle, code)
-		if action["kind"] == "attack" and not action.has("pursuit_target") \
-				and BattleRanged.share(repo, state, code) >= int(repo.bal("battle_context_arm_threshold_permille")):
+		if engaged_counts(repo, state, battle, code).x > 0: continue
+		var ranged_standoff: bool = action["kind"] == "attack" and not action.has("pursuit_target") \
+			and BattleRanged.share(repo, state, code) >= int(repo.bal("battle_context_arm_threshold_permille"))
+		if ranged_standoff:
 			# Target and offset each round to metres: reserve their combined half-diagonal error.
 			var back := maxf(0.0, float(repo.bal("battle_ranged_reach_m") - repo.bal("battle_line_gap_m")) / 2.0 - sqrt(2.0))
 			to -= Vector2i((WarFront.facing_vector(int(battle["group_facing"][code])) * back).round())
+		var forward := -_deployment_axis(repo, state, battle) if BattleRules.side_of(battle, code) == "att" else _deployment_axis(repo, state, battle)
+		var task := BattleTaskSystem.current(state, code)
+		var close_line: bool = task.is_empty() or (task.get("request", {}).get("task", "") == "advance" and action["kind"] == "attack")
+		if close_line and not ranged_standoff and not action.has("pursuit_target") and not battle.get("reserves", {}).has(code) \
+				and Vector2(from - to).dot(forward) >= 0.0:
+			var approach := _close_front(repo, state, battle, code, from, int(step), targets)
+			if approach.has("target"): to = approach.target
 		var d := Vector2(to - from)
-		var moved := to if d.length() <= step else from + Vector2i((d.normalized() * step).round())
+		var moved := to if d.length() <= step else from + Vector2i(d.normalized() * step)
 		# ponytail: a blocked straight step waits in place; a routed approach round water is later work
 		if grid != null and not grid.clear(from, moved, [grid.cell_of(from)]):
 			continue

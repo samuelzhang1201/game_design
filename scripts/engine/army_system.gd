@@ -1297,9 +1297,10 @@ static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1,
 			_clear_route(entry)
 			entry.erase("departure")
 		var travelled: Array = []
+		var passed: Array = []
 		var arrived_today := false
 		if not pursuit_stopped:
-			arrived_today = _march_one(repo, state, code, entry, state.absolute_day(), blockers, [], pace_divisor,
+			arrived_today = _march_one(repo, state, code, entry, state.absolute_day(), blockers, passed, pace_divisor,
 				substep_index, int(daily_budgets.get(code, -1)), -1, travelled)
 			if not bool(entry.get("battle_retreat", false)) and int(entry.get("disengaging", 0)) != 1:
 				BattleTaskSystem.credit_pursuit(repo, state, code,
@@ -1336,7 +1337,7 @@ static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1,
 			if String(draft.get("order", "")) == WarDrafts.GARRISON and not draft.has("hold"):
 				WarDrafts.strike(state, code)
 		for battle: Dictionary in state.battles:
-			BattleGroups.follow_anchor(repo, state, battle, code)
+			BattleGroups.follow_anchor(repo, state, battle, code, passed)
 		_note_place(blockers, code, state.regiments[code])
 	# The foes' second pass (spec 2026-10-07-enemy-ai-and-battle §2), in code
 	# order and by the same even step: a column in a battle stands; one that
@@ -1354,13 +1355,14 @@ static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1,
 				BattleGroups.follow_anchor(repo, state, battle, code)
 			_resume_departure(repo, state, code, fe)
 			var aim := Vector2i(int(fe.get("dest_x_m", 0)), int(fe.get("dest_y_m", 0)))
-			if _march_one(repo, state, code, fe, state.absolute_day(), blockers, [], pace_divisor,
+			var passed: Array = []
+			if _march_one(repo, state, code, fe, state.absolute_day(), blockers, passed, pace_divisor,
 					substep_index, int(daily_budgets.get(code, -1))):
 				var hb := String(fe.get("halted_by", ""))
 				if BattleSystem.battle_of(state, code).is_empty() and hb != "" and not _enemies(blockers, code, hb):
 					_spread_foe(repo, state, code, fe, aim, blockers)
 			for battle: Dictionary in state.battles:
-				BattleGroups.follow_anchor(repo, state, battle, code)
+				BattleGroups.follow_anchor(repo, state, battle, code, passed)
 			_note_place(blockers, code, state.foes[code])
 	return arrived
 
@@ -1735,7 +1737,8 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 				step_budget = UnitGait.run_step_m(repo, step_budget)
 			var was_packing := String(current.get("camp_state", {}).get("phase", CampSystem.NONE)) == CampSystem.PACKING
 			var travelled: Array = []
-			var walked := _march_one(repo, state, code, saved, state.absolute_day(), blockers, [],
+			var passed: Array = []
+			var walked := _march_one(repo, state, code, saved, state.absolute_day(), blockers, passed,
 				pace_divisor, substep_index, budget, step_budget, travelled)
 			saved["day_walked_m"] = walked_today + (int(travelled[0]) if not travelled.is_empty() else 0)
 			saved_entries[code] = saved.duplicate(true)
@@ -1825,7 +1828,7 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 			saved["march_step"] = [state.absolute_day(), substep_index]
 			saved_entries[code] = saved
 			for battle: Dictionary in state.battles:
-				BattleGroups.follow_anchor(repo, state, battle, code)
+				BattleGroups.follow_anchor(repo, state, battle, code, passed)
 			UnitGait.refresh(repo, state, code, current)
 			_note_place(blockers, code, current)
 	return arrived

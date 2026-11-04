@@ -25,6 +25,46 @@ func _fixture() -> Dictionary:
 	BattleFormation.ensure(battle)
 	return {"repo": repo, "state": state, "a": a, "enemy": enemy, "battle": battle}
 
+func test_diagonal_deployment_uses_a_positive_step_inside_the_integer_budget() -> void:
+	var f := _fixture()
+	for code: String in [f.a, f.enemy]:
+		assert_false(Personnel.replace(f.repo, f.state, code, 100).has("error"))
+	f.state.regiments[f.a].y_m = 4000
+	f.state.regiments[f.a].facing_deg = 225
+	f.state.foes[f.enemy].facing_deg = 45
+	var from := _at(f, f.a)
+	f.state.day += 1
+	BattleGroups.deploy_day(f.repo, f.state, f.battle)
+	var delta := _at(f, f.a) - from
+	var budget := int(f.repo.bal("battle_deploy_step_m"))
+	assert_gt(delta.length_squared(), 0, "Rounding a diagonal cannot stall every daily step")
+	assert_lte(delta.length_squared(), budget * budget)
+
+
+func test_unequal_installed_fronts_reach_contact_without_overlapping() -> void:
+	var f := _fixture()
+	f.repo.unit_footprints = SuiteData.repo().unit_footprints.duplicate(true)
+	for code: String in [f.a, f.enemy]:
+		var fit := 201 if code == f.a else 1000
+		for arm: String in f.repo.world_table("military", "unit_types"):
+			f.state.army_roster[code][arm] = "0"
+		f.state.army_roster[code].is_royal = "0"
+		f.state.army_roster[code].infantry = str(fit)
+		assert_false(Personnel.replace(f.repo, f.state, code, fit).has("error"))
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	for day: int in 4:
+		f.state.day += 1
+		BattleGroups.deploy_day(f.repo, f.state, f.battle)
+	assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+	assert_gt(BattleGroups.engaged_counts(f.repo, f.state, f.battle, f.a).x, 0,
+		"Staggered 201/1000 fronts must reach actual contact at installed scale")
+	assert_gt(BattleGroups.engaged_counts(f.repo, f.state, f.battle, f.enemy).x, 0)
+	var anchors: Dictionary = f.battle.group_anchor_m.duplicate(true)
+	f.state.day += 1
+	BattleGroups.deploy_day(f.repo, f.state, f.battle)
+	assert_eq(f.battle.group_anchor_m, anchors, "Contact stays admitted instead of oscillating back to the nominal line")
+
+
 func _at(f: Dictionary, code: String) -> Vector2i:
 	return BattleSystem._at_m(f.repo, f.state, code)
 

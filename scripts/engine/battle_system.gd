@@ -1081,9 +1081,13 @@ static func may_withdraw(state: GameState, code: String) -> bool:
 
 static func _separated(repo: DataRepository, state: GameState, code: String, enemies: Array) -> bool:
 	var reach := int(repo.bal("battle_contact_km") * 1000)
+	var battle := battle_of(state, code)
 	for enemy: String in enemies:
 		if _within(_at_m(repo, state, code), _at_m(repo, state, enemy), reach):
 			return false
+		for row: Dictionary in battle.get("groups", {}).get(code, []):
+			for other: Dictionary in battle.get("groups", {}).get(enemy, []):
+				if BattleGroups.in_reach(repo, state, code, row, enemy, other, reach): return false
 	return true
 
 

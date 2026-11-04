@@ -61,7 +61,7 @@ static func clear_shot(repo: DataRepository, from: Vector2i, to: Vector2i,
 
 ## Count each group once. An optional other field retains both sources' commands and terms.
 static func counts(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
-		target := "", opposing_battle: Dictionary = {}) -> Dictionary:
+		target := "", opposing_battle: Dictionary = {}, incoming_context := false) -> Dictionary:
 	var out := {"firing": 0, "melee": 0, "fit": 0}
 	var rows: Array = battle.get("groups", {}).get(code, [])
 	for row: Dictionary in rows:
@@ -72,7 +72,7 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 		return out
 	var action := BattleSystem.unit_action(repo, state, battle, code)
 	var in_melee := touching(repo, battle, code, state)
-	if action["kind"] == "retreat" or (not in_melee and battle.get("reserves", {}).has(code) and action["task_id"] == ""):
+	if (action["kind"] == "retreat" and not (incoming_context and in_melee)) or (not in_melee and battle.get("reserves", {}).has(code) and action["task_id"] == ""):
 		return out
 	var task := BattleTaskSystem.current(state, code)
 	var designated := String(task.get("request", {}).get("target_unit", "")) if action["task_id"] != "" else ""
@@ -126,7 +126,10 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 			var withdrawing := BattleOrders.kind(opponents, other) == "retreat" or bool(BattleSystem._stored(state, foe).get("battle_retreat", false))
 			if not opposing_battle.is_empty():
 				withdrawing = BattleSystem.unit_action(repo, state, opponents, foe)["kind"] == "retreat"
-			if withdrawing and not "pursue" in legal:
+			# combat_context already suppresses the bound opponent's power share once.
+			var protected_share := incoming_context and BattleRules._binds(battle,
+				"safe_withdrawal", "protect", state.absolute_day(), [foe], code)
+			if withdrawing and not "pursue" in legal and not protected_share:
 				continue
 			var visible := BattleSystem._at_m(repo, state, foe) - BattleSystem._at_m(repo, state, code)
 			if visible.length_squared() > sight * sight:
@@ -168,10 +171,7 @@ static func incoming_permille(repo: DataRepository, state: GameState, battle: Di
 	for code: String in battle["def" if side == "att" else "att"]:
 		var fit := ArmySystem.fit_count(repo, state, code)
 		var ranged := share(repo, state, code)
-		var actual := counts(repo, state, battle, code, target)
-		if target != "" and BattleSystem.unit_action(repo, state, battle, code)["kind"] != "attack" \
-				and BattleSystem.unit_action(repo, state, battle, target)["kind"] != "attack":
-			actual = {"firing": 0, "melee": 0, "fit": fit}
+		var actual := counts(repo, state, battle, code, target, {}, true)
 		var factor := active_permille(actual)
 		@warning_ignore("integer_division")
 		var melee := int(actual.melee) * 1000 / int(actual.fit) if int(actual.fit) > 0 else 0

@@ -52,6 +52,64 @@ func test_production_rows_fit_installed_piece_discs() -> void:
 				[rows[j].x_m, rows[j].y_m], footprint.radius_m, 0)
 			assert_true(separation.ok and not separation.overlap, "Installed discs must not overlap")
 
+func test_withdrawal_waits_for_actual_rows_when_anchors_are_far_apart() -> void:
+	var f := _fixture()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 100)
+	var reach := int(f.repo.bal("battle_contact_km") * 1000)
+	f.state.foes[f.enemy].y_m = 2000 + reach + 1000
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	# A clear saved row can lie far from its anchor after deployment or a flank.
+	f.battle.groups[f.enemy][0].x_m = 1000
+	f.battle.groups[f.enemy][0].y_m = 2100
+	assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+	f.state.regiments[f.a].battle_retreat = true
+	f.battle.actions = {"att": {"kind": "retreat"}, "def": {"kind": "hold"}}
+	var people: Dictionary = f.state.military_cohorts.duplicate(true)
+	var rng: Dictionary = f.state.rng.to_dict()
+	var out := BattleSystem.step_battle(f.repo, f.state, int(f.battle.id))
+	assert_eq(out.status, "complete")
+	assert_true(f.a in f.battle.att, "An anchor outside encounter range cannot leave its actual contacting rows behind")
+	assert_eq(f.state.battles.size(), 1)
+	assert_eq(f.state.military_cohorts, people)
+	assert_eq(f.state.rng.to_dict(), rng, "A quiet withdrawal creates no combat roll")
+
+
+func test_bent_march_synchronizes_rows_along_its_admitted_legs() -> void:
+	for saved: bool in [false, true]:
+		var f := _fixture()
+		f.repo = SuiteData.no_clearance(f.repo)
+		for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 100)
+		f.state.foes[f.enemy].x_m = 1050
+		f.state.foes[f.enemy].y_m = 2050
+		assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+		var entry: Dictionary = f.state.regiments[f.a]
+		entry.order = ArmySystem.ORDER_MARCH
+		entry.battle_retreat = true
+		entry.camp_state = {"phase": CampSystem.NONE}
+		entry.erase("departure")
+		entry.dest_x_m = 1100
+		entry.dest_y_m = 2100
+		entry.route_m = [[1100, 2000], [1100, 2100]]
+		# The two 100 m legs pass 50 m from the enemy; their diagonal chord hits it.
+		f.battle.groups[f.a][0].path_m = [[1000, 2000]]
+		var before := SaveLoad.state_hash(f.state)
+		ArmySystem.march_ahead(f.repo, f.state, f.a, entry.duplicate(true))
+		assert_eq(SaveLoad.state_hash(f.state), before, "Forecast must not publish row motion")
+		if saved:
+			ArmySystem.march_day_saved(f.repo, f.state, 1, 0, {f.a: entry.duplicate(true)}, {f.a: 200})
+		else:
+			ArmySystem.march_day(f.repo, f.state, 1, 0, true, [f.a], {f.a: 200})
+		assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), Vector2i(1100, 2100))
+		assert_eq(f.battle.group_anchor_m[f.a], [1100, 2100])
+		assert_eq(f.battle.groups[f.a][0].x_m, 1100)
+		assert_eq(f.battle.groups[f.a][0].y_m, 2100)
+		assert_eq(f.battle.groups[f.a][0].path_m, [[1100, 2100]])
+		assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+		var settled := SaveLoad.state_hash(f.state)
+		BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.a)
+		assert_eq(SaveLoad.state_hash(f.state), settled, "Repeated synchronization is inert")
+
+
 func test_rejected_rigid_step_preserves_anchor_rows_paths_and_slots() -> void:
 	var f := _fixture()
 	f.repo = SuiteData.open_country(f.repo)

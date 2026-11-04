@@ -5,8 +5,13 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture(merge := true) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
+	# Four 40-person discs at square corners: diameter 40; diagonal 114 <= reach 140.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9447)
+	state.town_seat.clear()
 	var mine := state.regiments.keys()
 	mine.sort()
 	var foes := state.foes.keys()
@@ -16,7 +21,7 @@ func _fixture(merge := true) -> Dictionary:
 	var p3 := String(mine[2])
 	var f1 := String(foes[0])
 	var f2 := String(foes[1])
-	var at := {p1: Vector2i(0, 0), f1: Vector2i(0, 3000), p2: Vector2i(5000, 20000), f2: Vector2i(80, 0), p3: Vector2i(40000, 40000)}
+	var at := {p1: Vector2i(0, 0), f1: Vector2i(80, 0), p2: Vector2i(0, 80), f2: Vector2i(80, 80), p3: Vector2i(40000, 40000)}
 	for code: String in at:
 		var e: Dictionary = state.foes.get(code, state.regiments.get(code, {}))
 		e["x_m"] = at[code].x
@@ -146,8 +151,6 @@ func test_scoped_withdrawal_rates_freeze_and_replay_without_another_rng_draw() -
 	var b: Dictionary = f.state.battles[0]
 	for code: String in b.att + b.def:
 		var e := BattleSystem._stored(f.state, code)
-		e.x_m = 0
-		e.y_m = 0
 		e.morale = 100
 		e.supplies = 100000
 	for code: String in [f.f1, f.f2]:

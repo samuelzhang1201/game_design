@@ -25,7 +25,8 @@ sightings. A received designated target restricts shots to that target; an attac
 close interceptor still permits lawful local self-defence.
 Pursuit remains bounded by its received region and protected withdrawal bars
 fire. Captured, withdrawing and uncommitted reserve shooters cannot fire;
-close reserves may still defend.
+close reserves may still defend. Incoming context alone retains reachable rear-guard
+melee exposure; withdrawing shooters retain zero firing and strength output.
 No fresh route, target, task or hidden-position cache is written by this helper.
 
 At actual close group contact, a ranged-dominant unit's attack becomes local
@@ -41,7 +42,10 @@ personnel with the fraction actually firing or in melee. Incoming casualty
 contexts also scale the ranged share by that fraction against EACH specific
 target; reaching one enemy never exposes its remote ally. Non-ranged threat
 requires actual reachable front-personnel contact too. The reserve strength
-factor remains unchanged and does not grant remote casualty or morale output. Ranged context uses actual firing personnel;
+factor remains unchanged and does not grant remote casualty or morale output.
+Incoming geometry retains reachable holding melee defence; no round starts without
+an actual attack. Safe-withdrawal protection is applied once by the context's
+opposing-power share, rather than again by the incoming contact fraction. Ranged context uses actual firing personnel;
 close defence uses melee. Every factor has its source and readable reason.
 
 The existing atomic round freezes per-unit loss rates, contexts, negative morale exposure and actions

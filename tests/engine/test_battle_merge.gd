@@ -14,6 +14,7 @@ func _fixture(f2_at := Vector2i(80, 0), p2_at := Vector2i(5000, 20000)) -> Dicti
 		row.radius_m = 20
 		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9447)
+	state.town_seat.clear()  # These field fixtures place mobile columns away from their town seats.
 	var mine := state.regiments.keys()
 	mine.sort()
 	var foes := state.foes.keys()

@@ -12,6 +12,11 @@ const BASE := Vector2i(1000000, 1000000)
 
 func _fixture(task := "pursue") -> Dictionary:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
+	# Tracking tests one visible body per unit; the flank envelope is its real 20 m disc.
+	repo.balance["battle_group_size"] = 10000
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9444)
 	state.tick = 1
 	state.day = 10
@@ -32,6 +37,7 @@ func _fixture(task := "pursue") -> Dictionary:
 	e["order"] = ArmySystem.ORDER_GARRISON
 	var f := {"repo": repo, "state": state, "a": a, "enemy": enemy}
 	_place_foe(f, BASE + Vector2i(5000, 0))
+	assert_true(BattleGroups.refresh(repo, state, battle))
 	var order := {"id": "t1", "unit": a, "battle_id": 9444, "task": task, "target_unit": enemy}
 	assert_eq(BattleTaskSystem.issue_task(repo, state, order).get("status"), "pending")
 	assert_eq(BattleTaskSystem.deliver_task(repo, state, "t1").get("status"), "received")

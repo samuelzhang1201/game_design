@@ -11,7 +11,10 @@ var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = SuiteData.repo()
+	repo = SuiteData.open_country(SuiteData.repo())
+	# A single front figure isolates the report's hand-made casualty/morale tiers;
+	# production hundred-person rows and reserves are covered by battle_groups tests.
+	repo.balance["battle_group_size"] = 10000.0
 	Weather.forget()
 
 
@@ -385,8 +388,14 @@ func _separate_routed_side(s: GameState, engine: TickEngine, meeting: Array, rou
 	var code := String(meeting[2] if rout == "attacker" else meeting[1])
 	var entry := ArmySystem.state_of(repo, s, code)
 	var reach := int(repo.bal("battle_contact_km")) * 1000
-	entry["x_m"] = int(s.battles[0]["place_x_m"]) + reach * 3
-	entry["y_m"] = int(s.battles[0]["place_y_m"])
+	var battle: Dictionary = s.battles[0]
+	var from := BattleSystem._at_m(repo, s, code)
+	var away := Vector2.ZERO
+	var side := BattleRules.side_of(battle, code)
+	for enemy: String in battle["def" if side == "att" else "att"]:
+		away += Vector2(from - BattleSystem._at_m(repo, s, enemy))
+	assert_true(BattleGroups.translate(repo, s, battle, code, Vector2i((away.normalized() * reach * 3).round())),
+		"The routed unit takes its rows away from the enemy, never across it")
 	entry["dest_x_m"] = entry["x_m"]
 	entry["dest_y_m"] = entry["y_m"]
 	entry["order"] = ArmySystem.ORDER_STANDBY

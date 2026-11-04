@@ -12,7 +12,12 @@ var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = SuiteData.repo()
+	repo = SuiteData.open_country(SuiteData.repo())
+	# Exact tiers use one front disc: 450 + 450 m radii + 100 m edge = 1000 m contact.
+	repo.balance["battle_group_size"] = 10000
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 450
+		row.pitch_m = 1800
 	# Lifecycle fixtures isolate tier/retreat arithmetic; deployment factors have their own hand tests.
 	for formation: Dictionary in repo.battle_formations.values():
 		for key: String in ["attack_permille", "defence_permille", "flank_permille", "missile_permille"]:
@@ -82,6 +87,10 @@ func _place(s: GameState, code: String, at: Vector2i) -> void:
 
 
 func _foe(s: GameState, code: String, at: Vector2i, host := "") -> Dictionary:
+	# These lifecycle tiers use a melee attacker, avoiding ranged close-defence conversion.
+	for arm: String in repo.world_table("military", "unit_types"):
+		s.army_roster[code][arm] = "0"
+	s.army_roster[code].infantry = str(ArmySystem.fit_count(repo, s, code))
 	var st := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, code))
 	st["x_m"] = at.x
 	st["y_m"] = at.y
@@ -380,7 +389,7 @@ func test_battle_keeps_its_id_beyond_five_rounds_and_rout_until_separation() -> 
 	assert_eq(int(s2.regiments[p].get("disengaging", 0)), 1)
 	assert_eq(String(s2.foes[f]["order"]), ArmySystem.ORDER_GARRISON, "the winner holds the field")
 	var reach := int(repo.bal("battle_contact_km")) * 1000
-	s2.regiments[p]["x_m"] = int(s2.foes[f]["x_m"]) - reach - 1
+	assert_true(BattleGroups.translate(repo, s2, battle, p, Vector2i(-3 * reach, 0)))
 	_next_day(s2)
 	var separated := BattleSystem.settle_day(repo, s2)
 	assert_eq(s2.battles.size(), 0, "actual separation ends the routed battle")
@@ -417,7 +426,7 @@ func test_evade_stance_starts_route_but_stays_exposed_in_contact() -> void:
 	var q: String = mine[1]
 	var f: String = _theirs()[0]
 	_place(s, p, _spot(s))
-	_place(s, q, _spot(s))
+	_place(s, q, _spot(s) + Vector2i(0, 1000))
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
 	s.regiments[p]["stance"] = "evade"
 	var events := BattleSystem.settle_day(repo, s)
@@ -525,8 +534,8 @@ func test_reinforcement_joins_and_is_capped() -> void:
 	assert_false(BattleSystem.join(repo, s, id + 99, mine[1], "def"), "no such battle")
 	assert_false(BattleSystem.join(repo, s, id, mine[1], "att"), "never on the enemy's side")
 	# two columns come up to the field
-	_place(s, mine[1], _spot(s))
-	_place(s, mine[2], _spot(s))
+	_place(s, mine[1], _spot(s) + Vector2i(0, 1000))
+	_place(s, mine[2], _spot(s) + Vector2i(0, 2000))
 	_next_day(s)
 	var events := BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 1, "they join; no second battle")
@@ -542,7 +551,7 @@ func test_march_away_mid_battle_removes_unit() -> void:
 	var mine := _mine()
 	var f: String = _theirs()[0]
 	_place(s, mine[0], _spot(s))
-	_place(s, mine[1], _spot(s))
+	_place(s, mine[1], _spot(s) + Vector2i(0, 1000))
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
 	BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles[0]["def"], [mine[0], mine[1]])
@@ -559,7 +568,7 @@ func test_march_away_mid_battle_removes_unit() -> void:
 	assert_eq(left.size(), 0, "still within contact range")
 	# Place it at its route endpoint to isolate the physical exit condition.
 	_next_day(s)
-	s.regiments[mine[0]]["x_m"] = _spot(s).x - 30_000
+	assert_true(BattleGroups.translate(repo, s, s.battles[0], mine[0], Vector2i(_spot(s).x - 30_000 - int(s.regiments[mine[0]]["x_m"]), 0)))
 	BattleSystem.settle_day(repo, s)
 	assert_false(_in_battle(s, mine[0]), "physical separation completes withdrawal")
 
@@ -573,7 +582,7 @@ func test_battle_with_one_side_emptied_ends() -> void:
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
 	BattleSystem.settle_day(repo, s)
 	ArmySystem.set_march(repo, s, p, ArmySystem.metres_to_pack(repo, _spot(s) - Vector2i(30_000, 0)))
-	s.regiments[p]["x_m"] = _spot(s).x - 30_000
+	assert_true(BattleGroups.translate(repo, s, s.battles[0], p, Vector2i(_spot(s).x - 30_000 - int(s.regiments[p]["x_m"]), 0)))
 	_next_day(s)
 	var events := BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 0, "no battle is left with one side")
@@ -607,7 +616,7 @@ func _melee(s: GameState) -> void:
 	var mine := _mine()
 	var theirs := _theirs()
 	_place(s, mine[0], _spot(s))
-	_place(s, mine[1], _spot(s))
+	_place(s, mine[1], _spot(s) + Vector2i(0, 1000))
 	_foe(s, theirs[0], _spot(s) + Vector2i(1000, 0))
 	_foe(s, theirs[1], _spot(s) + Vector2i(2000, 0))
 

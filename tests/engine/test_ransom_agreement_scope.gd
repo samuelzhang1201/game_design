@@ -3,8 +3,13 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture(survivor: int) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
+	# One 40-person disc per unit: diameter 40 m, centres 80 m apart.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9447)
+	state.town_seat.clear() # These encounters contain mobile field columns.
 	var mine := state.regiments.keys()
 	mine.sort()
 	var foes := state.foes.keys()

@@ -5,8 +5,13 @@ const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const Scenario := preload("res://tests/fixtures/battle_scenario.gd")
 
 func _fixture(protected_source: int, reverse := false) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
+	# One 40-person disc per unit: diameter 40 m, centres 80 m apart.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9447)
+	state.town_seat.clear() # These encounters contain mobile field columns.
 	state.tick = 1
 	state.day = 7
 	var mine := state.regiments.keys()
@@ -19,8 +24,8 @@ func _fixture(protected_source: int, reverse := false) -> Dictionary:
 		var enemy := String(foes[i])
 		for code: String in [own, enemy]:
 			var entry: Dictionary = state.regiments.get(code, state.foes.get(code, {}))
-			entry["x_m"] = 0
-			entry["y_m"] = 0
+			entry["x_m"] = 0 if code == own else 80
+			entry["y_m"] = i * 80
 			Personnel.replace(repo, state, code, 40)
 		var att: Array = [own] if reverse == (i == 0) else [enemy]
 		var def: Array = [enemy] if reverse == (i == 0) else [own]
