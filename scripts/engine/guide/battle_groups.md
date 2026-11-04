@@ -85,3 +85,26 @@ intermediate exceeds int64 (including negating its minimum). No float square
 root or approximate fallback changes a boundary. These are arithmetic limits,
 not configurable physical distances. Existing footprint calibration remains its
 own input contract; this helper does not certify assets or animations.
+
+## Candidate lawful body contact
+
+`BodyBattleContact.query_candidate(repo, source, battle_id, unit, enemies,
+boundary)` is a read-only query on an admitted current-body world. It resolves
+battle aliases, requires an actual source member and unique sorted hostile
+battlefield targets, and rejects absent stores, duplicate owners and invalid
+boundaries without repairing them. Targets on another live field retain both
+fields' bilateral source-party protections. Received attack/pursuit laws,
+ceasefire, restrained tactics and protected withdrawal filter outgoing pairs
+with a readable reason;
+physical occupancy remains unchanged. Frozen or otherwise unadmitted inputs
+return a query error rather than apparently valid zero contact.
+
+Contact uses checked squared integer centre distances between the sum of the
+installed radii and that sum plus `battle_group_contact_m`, inclusively, with
+an open land segment between the rows. Overlap errors; blocked ground yields
+no pair. Row roles grant no reach and do not suppress real physical contact.
+The closed result is `{status,reason,error,battle_id,unit,fit,engaged,pairs}`;
+pairs sort by own unit/slot then target unit/slot. Each own row contributes its
+actual personnel once across all touching targets, including the partial last
+row. Querying changes no state, RNG, law parties, rows or costs. This candidate
+entry does not discover/merge battles or replace production melee damage.
