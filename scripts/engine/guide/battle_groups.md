@@ -94,7 +94,8 @@ battle aliases, requires an actual source member and unique sorted hostile
 battlefield targets, and rejects absent stores, duplicate owners and invalid
 boundaries without repairing them. Targets on another live field retain both
 fields' bilateral source-party protections. Received attack/pursuit laws,
-ceasefire and protected withdrawal filter outgoing pairs with a readable reason;
+ceasefire, restrained tactics and protected withdrawal filter outgoing pairs
+with a readable reason;
 physical occupancy remains unchanged. Frozen or otherwise unadmitted inputs
 return a query error rather than apparently valid zero contact.
 

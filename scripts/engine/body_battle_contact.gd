@@ -95,6 +95,8 @@ static func _barred(repo: DataRepository, state: GameState, own: Dictionary,
 		for field: Dictionary in [own, target]:
 			if BattleRules._binds(field, "safe_withdrawal", "protect", state.absolute_day(), [unit], enemy):
 				return "Bilateral safe withdrawal bars outgoing contact"
+			if BattleRules._binds(field, "tactics", "restrained", state.absolute_day(), [unit], enemy):
+				return "Bilateral restrained tactics bars pursuit of the withdrawing target"
 		if not "pursue" in legal: return "Received law bars pursuit of the withdrawing target"
 	return ""
 

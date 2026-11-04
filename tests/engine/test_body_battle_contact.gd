@@ -188,6 +188,27 @@ func test_alias_and_both_source_fields_protect_cross_field_pairs() -> void:
 	battle.groups.erase(f.enemy)
 	f.state.battles.append(other)
 	assert_eq(_query(f).engaged, 100, "actual hostile rows on another field may be queried")
+	var tactics := {"agreed": {"tactics": {"policy": "restrained", "until_day": 0}},
+		"parties": {"att": [f.unit], "def": [f.enemy]}}
+	other.parley = tactics.duplicate(true)
+	f.state.foes[f.enemy].battle_retreat = true
+	var result := _query(f)
+	assert_eq(result.engaged, 0, "the target field's bilateral tactics bars pursuit")
+	assert_eq(result.pairs, [])
+	assert_true("restrained" in result.reason.to_lower())
+	battle.groups[f.other][0].x_m = 8269
+	battle.groups[f.other][0].y_m = 10000
+	var enemies: Array = [f.enemy, f.other]
+	enemies.sort()
+	result = _query(f, enemies)
+	assert_eq(result.engaged, 100, "an unrelated contacting opponent remains lawful")
+	assert_eq(result.pairs.map(func(pair: Dictionary) -> String: return pair.target_unit), [f.other])
+	other.parley.agreed.tactics.until_day = f.state.absolute_day() - 1
+	assert_eq(_query(f).engaged, 100, "expired target-field tactics no longer bars pursuit")
+	other.erase("parley")
+	battle.parley = tactics.duplicate(true)
+	assert_eq(_query(f).engaged, 0, "the source field's bilateral tactics also bars pursuit")
+	battle.erase("parley")
 	_protect(f, "ceasefire", true)
 	assert_eq(_query(f).engaged, 0, "the target field's original bilateral parties also bind")
 	other.erase("parley")
