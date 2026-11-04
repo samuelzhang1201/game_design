@@ -98,32 +98,94 @@ reviewed instruction semantics:
 relative `2^(1-p)` basic-operation error (covers all IEEE directions), explicit
 operand/result flush-to-zero allowances and an intermediate bound below
 `2^100`. FMAs have one rounding; multiplications and conversions are separate.
-The sine Taylor remainders are `r^15/15!` and `r^9/9!`. The acos polynomial is
+The Mac sine Taylor remainders are `r^15/15!` and `r^9/9!`. The acos polynomial is
 compared with
 `sqrt(2)*sum(C(2k,k)*t^k/(8^k*(2k+1)))`, using an integer-square-root rational
 bracket for `sqrt(2)` and geometric tail
 `sqrt(2)*(r/2)^6/(13*(1-r/2))`, `r=1/10`.
 
-The derived errors are recomputed from coefficient bits and rounded outward to
-`2^-48` (`sin`) and `2^-22` (`sinf`, `acosf`). No native transcendental call or
-finite sample is used to prove these whole scalar intervals. Instruction
-semantics and IEEE arithmetic remain explicit theorem assumptions.
+## Reviewed Ubuntu profile and equations
+
+Profile: x86_64, `/usr/lib/x86_64-linux-gnu/libm.so.6`, build ID
+`cfae91b4a956116b64e2a41607671c1eeb3cc292`. The actual runner is Ubuntu 26.04;
+the selected Godot 4.7-stable executable SHA256 is
+`f85bbc6b15e22416c7d797cd60b63286dd67b9cb13498847056c18520ae55a75`.
+This executable has no GNU build ID; the receipt retains that absence alongside
+the independently matching executable hashes, path/PID/version and ABI header.
+
+`LINUX_PROFILE` retains complete captured bytes and referenced read-only operand
+bits. Its code ranges are:
+
+- `sin`: import target `0x6dc10`; `[0x6dc10,0x6de10)` and
+  `[0x6e010,0x6e110)`.
+- `sinf`: import target `0x80670`; `[0x80670,0x80870)` and
+  `[0x80860,0x80890)`.
+- `acosf`: actual import wrapper `0x17ff0`; `[0x17ff0,0x181f0)` and
+  `[0x78130,0x784b0)`. The default `dlsym` target differs. Its boolean mismatch
+  is required for this profile; the proof follows the **actual imported wrapper**.
+
+Full ranges conservatively match some unreachable instructions and operands;
+they do not grant coverage outside the declared scalar intervals.
+`validate_linux_control` separately recomputes signed PC-relative operand/branch
+targets from instruction bytes, checks masks/cuts and the required return paths.
+
+- `sin` uses the original argument for `|x|<2^-26`, with error at most
+  `2^-78/6` plus flushing allowance. Up to the captured `0.126` cut, it evaluates
+  a degree-11 odd polynomial: square, four Horner FMAs, multiply by `x`, multiply
+  by the square, then add `x`. The proof uses the larger radius `13/100`, compares
+  actual coefficients with Taylor through degree 11 and adds `r^13/13!`.
+- For the remaining `sin` inputs, the captured `big=3*2^44` shifter has spacing
+  `1/128`. Every rounding direction yields `16<=N<=64`, `a=N/128`, and residual
+  `x=abs(input)-a` with `|x|<=1/128`. Both subtractions are exact by Sterbenz;
+  flushing is conservatively allowed. The integer table index cannot overflow.
+  All 49 rows at `[0xd2be0,0xd3200)` are checked over their **entire residual
+  interval**, rather than at sampled inputs. The native FMAs combine a degree-5
+  sine residual, degree-6 cosine complement, and each row's four actual binary64
+  high/low sine/cosine values. The resulting polynomial is compared coefficient
+  by coefficient with `SA*cos_T6(x)+CA*sin_T5(x)`. `SA` and `CA` are exact rational
+  degree-25/24 Taylor values at `a`, with degree-27/26 remainder bounds. Residual
+  remainders `r^7/7!` and `r^8/8!` and every arithmetic error are added outward.
+  A positive lower bound proves the final sign-bit copy preserves this error.
+  The non-default rounding path loads nearest mode and sets the restore flag at
+  `0x6e0c0`, returning to `0x6dc92`; both it and the restore path are captured.
+- `sinf` converts its binary32 input exactly to binary64 (flushing allowance
+  included), evaluates the captured degree-7 FMA polynomial at `0x8069c..0x806c3`,
+  then converts to binary32. Coefficients are at `0xd4c00`, `0xd4bf0`, `0xd4be0`.
+  The same degree-9 Taylor remainder bounds the full `[-1/2,1/2]` interval.
+  Below `2^-12`, the original input register returns unchanged; the subnormal
+  force-evaluation at `0x8086d` writes a different register. Taylor and explicit
+  flushing bounds cover that tiny path.
+- The `acosf` wrapper compares the magnitude with actual binary32 `1.0` and
+  jumps to `0x78180` for the admitted inputs. For `9/10<=c<1`, the doubled
+  positive binary32 word exceeds `0x7ec2a1db`, selecting `0x78358` directly.
+  `t=1-c` is exact; its nonzero minimum is `2^-24`. The captured binary64 square
+  root and degree-11 Estrin polynomial use twelve coefficients at
+  `0xd3de0..0xd3e38`: pair six FMAs in `t`, combine three pairs in `t^2`, then
+  combine twice in `t^4`. The sign index is zero, so the final FMA uses the
+  **observed zero bits** at `0x9c7b0`, then converts to binary32. The shared
+  positive-acos theorem uses twelve series terms and tail
+  `sqrt(2)*(r/2)^12/(25*(1-r/2))`, `r=1/10`. At `c=1`, the classifier jumps
+  through `0x78438` to `0x78130`; its exact-word branch selects the captured
+  zero-and-return instructions at `0x78160`. It does not divide by a vanishing
+  quantity or assume an unobserved endpoint value.
+
+For both profiles the derived errors are recomputed from coefficient bits and
+rounded outward to `2^-48` (`sin`) and `2^-22` (`sinf`, `acosf`). The native acos
+output bound is separately checked below `12/25`. No native transcendental call
+or finite sample proves these scalar intervals. Reviewed instruction semantics
+and IEEE arithmetic remain explicit theorem assumptions. Every floating
+operation's finite-range/rounding bound is checked; the shifter range has its own
+exact check. Mutation controls reject changed instructions, coefficients, table
+rows, endpoint/mode paths, identities and receipts. Unknown profiles fail.
 
 ## Acceptance limits
 
-The Mac profile proves **scalar value error only**. It is neither the derivative
+These profiles prove **scalar value error only**. This is neither the derivative
 of a floating-point staircase nor a physical allowance. JETS must independently
 validate actual lossless key/branch arguments against these domains, propagate
 its own derivative/FK/raw-skin errors and satisfy its unchanged full-domain gates.
 
-Linux x86_64 is captured through the actual selected CI engine, but remains an
-unknown rejected profile until its own instructions, constants, resolved IFUNC
-targets and whole-interval error proof have been incorporated and independently
-reviewed. The observed Ubuntu image has libm build ID
-`cfae91b4a956116b64e2a41607671c1eeb3cc292`: `sin` enters at `0x6dc10`, `sinf`
-at `0x80670`, and Godot's compatibility-version `acosf` import enters at
-`0x17ff0`, whose admitted positive path jumps to kernel `0x78180`. Its default
-`dlsym` target differs, which is retained rather than substituted for the import.
-These observations alone are **not** a Linux arithmetic proof.
-Mac evidence never covers Ubuntu. Required current-HEAD CI cannot be
-claimed passed while that profile remains unknown.
+Mac evidence never covers Ubuntu. Each acceptance runner must execute the actual
+selected-engine diagnostic and obtain its own closed receipt. GUT prints the
+complete capture and receipt for independent recomputation from the CI log;
+the actual current-HEAD checks and fixed independent Review remain required.

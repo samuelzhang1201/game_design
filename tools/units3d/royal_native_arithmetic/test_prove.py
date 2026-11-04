@@ -17,25 +17,29 @@ if TOOL.exists():
     SPEC.loader.exec_module(proof)
 
 
-def fixture():
+def fixture(platform="macos-arm64"):
     """Synthetic identity envelope; native integration supplies the actual process."""
     records = []
-    for name, profile in proof.MAC_PROFILE.items():
-        records.append([dict(profile, symbol=name, image_id=proof.MAC_ID,
-                             image_path="/usr/lib/system/libsystem_m.dylib", dlsym_equal=True,
+    linux = platform == "linux-x86_64"
+    profiles = proof.LINUX_PROFILE if linux else proof.MAC_PROFILE
+    image_id = "" if linux else "01" * 16
+    for name, profile in profiles.items():
+        records.append([dict(profile, symbol=name, image_id=proof.LINUX_ID if linux else proof.MAC_ID,
+                             image_path="/usr/lib/x86_64-linux-gnu/libm.so.6" if linux else "/usr/lib/system/libsystem_m.dylib",
+                             dlsym_equal=not (linux and name == "acosf"),
                              image_base="0x100000", slot="0x200000",
                              target=hex(0x100000 + profile["entry_offset"]))])
     return {"schema": proof.SCHEMA,
-            "native": {"schema": 1, "platform": "macos-arm64", "pid": 17,
+            "native": {"schema": 1, "platform": platform, "pid": 17,
                        "engine_path": "/fixture/Godot", "engine_version": "Godot Engine v4.7.2.stable.official",
                        "engine_version_components": [4, 7, 2],
-                       "engine_image_id": "01" * 16, "imports": records,
+                       "engine_image_id": image_id, "imports": records,
                        "header_sha256": "02" * 32, "selected_engine_sha256": "01" * 32},
-            "engine": {"pid": 17, "executable": "/fixture/Godot", "architecture": "arm64",
+            "engine": {"pid": 17, "executable": "/fixture/Godot", "architecture": "x86_64" if linux else "arm64",
                        "version": {"string": "4.7.2-stable (official)", "major": 4, "minor": 7, "patch": 2},
                        "executable_sha256": "01" * 32, "collector_sha256": "03" * 32},
-            "acquisition": {"engine_sha256": "01" * 32, "engine_image_id": "01" * 16,
-                            "selected_binary_image_ids": ["01" * 16],
+            "acquisition": {"engine_sha256": "01" * 32, "engine_image_id": image_id,
+                            "selected_binary_image_ids": [] if linux else [image_id],
                             "header_sha256": "02" * 32, "collector_sha256": "03" * 32,
                             "source_sha256": proof.file_hash(TOOL.with_name("capture.c")),
                             "script_sha256": proof.file_hash(TOOL.with_name("capture.gd"))}}
@@ -103,6 +107,53 @@ class NativeArithmeticTests(unittest.TestCase):
         with self.assertRaisesRegex(proof.Rejected, "finite_range"):
             proof.rnd(F(2) ** 100)
 
+    def test_positive_acos_tail_has_hand_bounded_constant_polynomial_case(self):
+        error, output = proof.positive_acos_bound(proof.Ball([1], radius=F(1, 10)))
+        self.assertGreater(error, F(2, 15))
+        self.assertLess(error, F(1, 6))
+        self.assertGreater(output, F(1, 3))
+
+    def test_linux_sine_equations_bound_all_native_table_indices(self):
+        # Arithmetic equations on captured bits; public Linux authority remains gated.
+        bounds = proof.linux_sine_bounds(proof.LINUX_PROFILE)
+        self.assertGreater(bounds["sin"], 0)
+        self.assertLessEqual(bounds["sin"], F(2) ** -48)
+        self.assertGreater(bounds["sinf"], 0)
+        self.assertLessEqual(bounds["sinf"], F(2) ** -22)
+
+    def test_linux_acos_equations_refuse_unobserved_positive_addend(self):
+        profile = copy.deepcopy(proof.LINUX_PROFILE["acosf"])
+        profile["operands"] = [record for record in profile["operands"] if record["offset"] != 0x9c7b0]
+        with self.assertRaisesRegex(proof.Rejected, "outside_capture"):
+            proof.linux_acos_bound(profile)
+
+    def test_linux_closed_receipt_includes_wrapper_endpoint_and_rounding_paths(self):
+        capture = fixture("linux-x86_64")
+        receipt = proof.prove(capture)
+        self.assertEqual(receipt["profile"], "linux-x86_64/" + proof.LINUX_ID)
+        for name, upper in [("sin", F(2) ** -48), ("sinf", F(2) ** -22), ("acosf", F(2) ** -22)]:
+            self.assertGreater(F(receipt["theorems"][name]["derived_absolute_error"]), 0)
+            self.assertLessEqual(F(receipt["theorems"][name]["derived_absolute_error"]), upper)
+        proof.verify_receipt(receipt, capture)
+
+    def test_linux_control_table_coefficient_and_resolution_mutations_reject(self):
+        original = fixture("linux-x86_64")
+        for index, field, offset in [(0, "extra_code", 0x6e0c0), (2, "extra_code", 0x78160),
+                                     (0, "operands", 0xd2be0), (2, "operands", 0xd3de0),
+                                     (2, "operands", 0x9c7b0)]:
+            bad = copy.deepcopy(original)
+            record = bad["native"]["imports"][index][0]
+            item = next(v for v in record[field] if v["offset"] <= offset < v["offset"] + len(v["bytes"]) // 2)
+            data = bytearray.fromhex(item["bytes"])
+            data[offset - item["offset"]] ^= 1
+            item["bytes"] = data.hex()
+            with self.assertRaisesRegex(proof.Rejected, "instruction_or_constant"):
+                proof.prove(bad)
+        bad = copy.deepcopy(original)
+        bad["native"]["imports"][2][0]["dlsym_equal"] = True
+        with self.assertRaisesRegex(proof.Rejected, "unresolved_import"):
+            proof.prove(bad)
+
     def test_exact_short_path_theorems_cover_original_declared_domains(self):
         receipt = proof.prove(fixture())
         self.assertEqual(receipt["status"], "closed_scalar_value_proof")
@@ -124,6 +175,12 @@ class NativeArithmeticTests(unittest.TestCase):
             bad = fixture()
             bad["native"][field] = value
             with self.assertRaises(proof.Rejected, msg=field):
+                proof.prove(bad)
+        for native_key, engine_key in [("engine_image_id", "engine_image_id"), ("engine_path", "executable")]:
+            bad = fixture("linux-x86_64")
+            bad["native"][native_key] = None
+            bad["acquisition" if native_key == "engine_image_id" else "engine"][engine_key] = None
+            with self.assertRaises(proof.Rejected, msg=native_key):
                 proof.prove(bad)
 
     def test_each_instruction_constant_and_import_identity_mutation_rejected(self):
