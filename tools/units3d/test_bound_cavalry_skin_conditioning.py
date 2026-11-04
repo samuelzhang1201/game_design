@@ -233,9 +233,10 @@ class ConditioningTests(unittest.TestCase):
             out = Path(directory)/'out.json'
             proof.write_json(out, {'bounds': [Q(1, 2), Q(2)]}, watched)
             with self.assertRaises(FileExistsError): proof.write_json(out, {}, watched)
-        for value in (float('nan'), float('inf'), 2**2253):
+        for value in (float('nan'), float('inf')):
             with self.assertRaises(ValueError): proof.input_inventory({'bad': value})
         self.assertEqual(proof.input_inventory({'a': [1, .5]})['maximum_integer_bits'], 1)
+        self.assertEqual(proof.input_inventory({'a': 2**2253})['maximum_integer_bits'], 2254)
 
     def test_serialized_metric_replay_rejects_forged_positive_and_extra_context(self):
         import json

@@ -310,7 +310,6 @@ def input_inventory(value):
         counts['nodes'] += 1
         if type(item) is int:
             bits = abs(item).bit_length()
-            require(bits <= 2252, 'Original encoded integer size exceeded')
             counts['maximum_integer_bits'] = max(counts['maximum_integer_bits'], bits)
         elif type(item) is float:
             require(math.isfinite(item), 'Nonfinite input endpoint'); counts['floats'] += 1
