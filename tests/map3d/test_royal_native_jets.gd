@@ -3,6 +3,8 @@ extends GutTest
 
 const Source = preload("res://scripts/map3d/map3d_royal_locomotion_source.gd")
 const Jets = preload("res://scripts/map3d/map3d_royal_native_jets.gd")
+const Math = preload("res://scripts/map3d/map3d_royal_jet_math.gd")
+const InputGate = preload("res://scripts/map3d/map3d_royal_jet_input.gd")
 const TOOL: String = "res://tools/units3d/royal_native_arithmetic/prove.py"
 var _arithmetic: Dictionary
 var _source: Dictionary
@@ -108,7 +110,7 @@ func test_actual_approximate_search_key_sides_step_and_seam() -> void:
 		return
 	var cut: float = Jets._early_cut(0.25)
 	assert_lt(cut, 0.25)
-	assert_eq(Jets._find([0.0, 0.25, 0.5], Jets._down(cut)), 0)
+	assert_eq(Jets._find([0.0, 0.25, 0.5], Math._down(cut)), 0)
 	assert_eq(Jets._find([0.0, 0.25, 0.5], cut), 1)
 	var left: Dictionary = authority.sample(cut * 2.0, "left")
 	var right: Dictionary = authority.sample(cut * 2.0, "right")
@@ -179,7 +181,7 @@ func test_shortest_sign_spherical_and_disabled_baseline() -> void:
 	assert_true(result.branches[1].negative_dot)
 	assert_true(result.branches[1].spherical)
 	assert_gt(result.branches[1].sinom[0], 0.0)
-	assert_gte(result.branches[1].sinom[1] - result.branches[1].sinom[0], 2.0 * Jets.SINF_ERROR)
+	assert_gte(result.branches[1].sinom[1] - result.branches[1].sinom[0], 2.0 * Math.SINF_ERROR)
 	assert_eq(result.locals.Child.basis, Basis.from_scale(Vector3(3, 1, 1)))
 	assert_almost_eq(result.local_jets[0].time_derivative[2], 1.6 * cos(0.1), 0.000002)
 	assert_almost_eq(result.global_jets[1].time_derivative[3], 4.0 - 1.6 * sin(0.1), 0.000002)
@@ -233,13 +235,13 @@ func test_no_wrap_edges_freeze_native_coefficient_and_transition_zero() -> void:
 
 
 func test_interval_endpoints_enclose_tiny_and_transcendental_hand_controls() -> void:
-	assert_gt(Jets._up(0.0), 0.0, "normal outward FTZ allowance, not lost subnormal")
-	assert_lt(Jets._down(0.0), 0.0)
-	var sine: Array[float] = Jets._trig_point(0.5, false)
+	assert_gt(Math._up(0.0), 0.0, "normal outward FTZ allowance, not lost subnormal")
+	assert_lt(Math._down(0.0), 0.0)
+	var sine: Array[float] = Math._trig_point(0.5, false)
 	assert_lte(sine[0], 0.479425538604203)
 	assert_gte(sine[1], 0.479425538604203)
 	assert_lt(sine[1] - sine[0], 1e-13)
-	var cosine: Array[float] = Jets._trig_point(0.0, true)
+	var cosine: Array[float] = Math._trig_point(0.0, true)
 	assert_lte(cosine[0], 1.0)
 	assert_gte(cosine[1], 1.0)
 
@@ -366,11 +368,11 @@ func test_corrupt_identity_schema_indices_proof_and_unsupported_branches_are_ato
 			"engine": capture.engine.version.hash = "stale"
 			"theorem": arithmetic.receipt.theorems.sinf.outward_absolute_error = "0"
 		if kind != "receipt":
-			arithmetic.capture_canonical = Jets._json(capture)
+			arithmetic.capture_canonical = InputGate._json(capture)
 			arithmetic.receipt.capture_sha256 = arithmetic.capture_canonical.sha256_text()
 			var receipt: Dictionary = arithmetic.receipt.duplicate(true)
 			receipt.erase("sha256")
-			arithmetic.receipt.sha256 = Jets._json(receipt).sha256_text()
+			arithmetic.receipt.sha256 = InputGate._json(receipt).sha256_text()
 		var source: Dictionary = _fixture()
 		assert_false(Jets.prepare(source, source.identity, arithmetic).ok, "resealed " + kind)
 	var authority: RefCounted = _prepare(_fixture())
@@ -384,3 +386,56 @@ func test_corrupt_identity_schema_indices_proof_and_unsupported_branches_are_ato
 		tiny.resize(8)
 		tiny.encode_s64(0, -9223372036854775807)
 		assert_false(authority.sample(tiny.decode_double(0)).ok, "negative subnormal cannot enter phase domain through FTZ")
+
+
+func test_resealed_required_version_and_process_identity_schema_rejects() -> void:
+	assert_false(_arithmetic.is_empty())
+	if _arithmetic.is_empty():
+		return
+	for kind: String in ["missing_hash", "numeric_hash", "missing_status", "empty_build", "negative_version", "numeric_image_id", "mixed_image_ids", "empty_engine_path", "numeric_engine_path", "numeric_engine_pid"]:
+		var source: Dictionary = _fixture()
+		var arithmetic: Dictionary = _arithmetic.duplicate(true)
+		var capture: Dictionary = JSON.parse_string(arithmetic.capture_canonical)
+		match kind:
+			"missing_hash":
+				capture.engine.version.erase("hash")
+				source.identity.godot.erase("hash")
+			"numeric_hash":
+				capture.engine.version.hash = 42
+				source.identity.godot.hash = 42
+			"missing_status":
+				capture.engine.version.erase("status")
+				source.identity.godot.erase("status")
+			"empty_build":
+				capture.engine.version.build = ""
+				source.identity.godot.build = ""
+			"negative_version":
+				capture.engine.version.major = -1
+				source.identity.godot.major = -1
+				capture.native.engine_version_components[0] = -1
+			"numeric_image_id":
+				capture.native.engine_image_id = 42
+				capture.acquisition.engine_image_id = 42
+				capture.acquisition.selected_binary_image_ids = [42]
+			"mixed_image_ids":
+				capture.acquisition.selected_binary_image_ids.append(42)
+			"empty_engine_path":
+				capture.native.engine_path = ""
+				capture.engine.executable = ""
+			"numeric_engine_path":
+				capture.native.engine_path = 42
+				capture.engine.executable = 42
+			"numeric_engine_pid":
+				capture.engine.pid = str(capture.native.pid)
+		arithmetic.capture_canonical = InputGate._json(capture)
+		arithmetic.receipt.capture_sha256 = arithmetic.capture_canonical.sha256_text()
+		var unsigned: Dictionary = arithmetic.receipt.duplicate(true)
+		unsigned.erase("sha256")
+		arithmetic.receipt.sha256 = InputGate._json(unsigned).sha256_text()
+		var result: Dictionary = Jets.prepare(source, source.identity, arithmetic)
+		assert_false(result.get("ok", true), kind)
+		assert_null(result.get("authority"), kind)
+		assert_true(result.get("locals", {}).is_empty(), kind)
+		assert_true(result.get("globals", []).is_empty(), kind)
+		assert_true(result.get("positions", []).is_empty(), kind)
+		assert_false(str(result.get("diagnostics", {}).get("reason", "")).is_empty(), kind)
