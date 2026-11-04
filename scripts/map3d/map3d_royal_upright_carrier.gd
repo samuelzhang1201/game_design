@@ -151,7 +151,8 @@ static func _bind_source(child: Dictionary, model: Node3D, calibration: Map3DRoy
 	var ignored: Array = []
 	for modifier: Node in model.find_children("*","SkeletonModifier3D",true,false):
 		var parent: Node = modifier.get_parent()
-		if Engine.get_version_info().hash != "ed1daf0bf001b61586d9930840f2f1394092c079" \
+		# Official4.7 and4.7.2 have the identical non-simulating compatibility writer.
+		if Engine.get_version_info().hash not in ["5b4e0cb0fd279832bbdd69fed5354d4e5ad26f88","ed1daf0bf001b61586d9930840f2f1394092c079"] \
 			or modifier.get_class() != "PhysicalBoneSimulator3D" or not parent is Skeleton3D \
 			or parent.get_children().has(modifier) or modifier.owner != null or modifier.get_script() != null \
 			or modifier.get_child_count(true) != 0 or modifier.call("is_simulating_physics"):
@@ -320,7 +321,7 @@ static func _evaluate(packet: Dictionary, query: Dictionary, side: String, ident
 	if native: enclosures.status = "NATIVE_ENCLOSED"
 	return {"ok":true,"H":H,"H_S":H_S,"enclosures":enclosures,"samples":samples,"active_samples":active,"yaw_S":yaw_S,
 		"identity":identity,"side":side,"native_covered":native,"disposition":"COVERED" if native else "UNAVAILABLE","carrier_status":"NATIVE_ENCLOSED" if native else "ANALYTIC_EXTENSION_ONLY","H_semantics":"nominal real extension; native value authority is enclosures.H",
-		"domain":domain(packet),"native_rounding":{"status":"ENCLOSED" if native else "UNAVAILABLE","reason":enclosures.get("reason","unadmitted_control"),"exact_nominal_equality":false},
+		"domain":domain(packet),"native_rounding":{"status":"ENCLOSED" if native else "UNAVAILABLE","reason":enclosures.get("reason","source-operation-outward-v1" if native else "unadmitted_control"),"exact_nominal_equality":false},
 		"physical_allowance":{"status":"NOT_SELECTED"}}
 
 ## A complete implicit partition: no sampled atlas can erase unvisited headings or land.
