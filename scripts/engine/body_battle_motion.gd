@@ -32,6 +32,8 @@ static func _source_error(repo: DataRepository, source: GameState, boundary: Dic
 	if checked.status != "complete": return checked.reason
 	if not BodyMotion._battle_boundary_ok(boundary): return "Movement requires the explicit move stage"
 	if source.military_migration.has("body_motion"): return "Previous movement requires explicit closure"
+	var charge_error := BattleCharge._candidate_error(repo, source)
+	if not charge_error.is_empty(): return charge_error
 	var tx := source.day_resolution
 	var codes: Array = source.regiments.keys() + source.foes.keys()
 	var land: Array = []
@@ -97,6 +99,7 @@ static func _writer(repo: DataRepository, state: GameState, code: String, battle
 static func _collect(repo: DataRepository, source: GameState, boundary: Dictionary, providers: Dictionary) -> Dictionary:
 	providers = providers.duplicate()
 	if not providers.has("deployment"): providers.deployment = BattleGroups.deployment_intent_candidate
+	if not providers.has("charge"): providers.charge = BattleCharge.intent_candidate
 	var error := _source_error(repo, source, boundary)
 	if not error.is_empty(): return {"error": error}
 	for key: Variant in providers:
@@ -249,6 +252,7 @@ static func commit_candidate(repo: DataRepository, source: GameState, proposed: 
 		if not owner.is_empty():
 			if not owner.has("group_anchor_m"): owner.group_anchor_m = {}
 			owner.group_anchor_m[code] = common.back().duplicate()
+		BattleCharge._settle_candidate(repo, source, candidate, code, unit.writer, common, staged.plan.motion.moves)
 	candidate.day_resolution.journal.arrivals.append_array(arrivals)
 	candidate.day_resolution.body_battle.stage = "contact"
 	candidate.day_resolution.body_battle.sequence = str(int(boundary.sequence) + 1)
