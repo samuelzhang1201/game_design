@@ -686,6 +686,32 @@ static func _battle_control_ok(value: Variant) -> bool:
 		if item.unit.is_empty() or not DayResolution._body_decimal(item.slot): return false
 	return true
 
+static func _closed_motion_cursor_error(source: GameState, abs_day: int, substep: int) -> String:
+	if not source.military_migration.has("body_battle"): return ""
+	var outer: Variant = source.military_migration.body_battle
+	if not _battle_control_ok(outer): return "Invalid raw battle receipt control"
+	var closed: Dictionary = outer.closed_motion
+	if not closed.is_empty() and (BodyMotion._older(abs_day, substep, closed) \
+		or (abs_day == int(closed.abs_day) and substep == int(closed.substep))):
+		return "Movement cursor must be later than closed timeline"
+	return ""
+
+static func _closed_motion_source_error(repo: DataRepository, source: GameState) -> String:
+	if repo == null or source == null: return "Missing closed movement source"
+	if not source.military_migration.has("body_battle"): return ""
+	var outer: Variant = source.military_migration.body_battle
+	if not _battle_control_ok(outer): return "Invalid raw battle receipt control"
+	if source.military_migration.has("body_motion") or outer.closed_motion.is_empty(): return ""
+	if _battle_result_hash(repo, source) == outer.result: return ""
+	# Initial MARCH freezes a day over the authenticated safe endpoint before payment.
+	if source.day_resolution.has("body_march") and DayResolution.body_march_incompatibility_reason(source.day_resolution).is_empty():
+		var control: Dictionary = source.day_resolution.body_march
+		if control.next_substep == "0" and control.last.is_empty():
+			var safe := _copy(source)
+			safe.day_resolution = {}
+			if _battle_result_hash(repo, safe) == outer.result: return ""
+	return "Invalid or unsealed closed movement endpoint proof"
+
 static func _battle_round_error(battle: Dictionary) -> String:
 	if not battle.has("body_round"):
 		if battle.get("pending_round") is Dictionary and battle.pending_round.has("body_round_receipt"):
