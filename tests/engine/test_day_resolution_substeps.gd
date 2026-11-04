@@ -229,6 +229,13 @@ func test_zero_daily_pace_does_not_move_in_substeps() -> void:
 func test_encounter_blocks_before_losses_and_resumes_after_roundtrip() -> void:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
 	var state := BattleScenario.moving_contact(repo, 10)
+	_journal_geometry(repo)
+	# Parallel tracks 40 m apart touch only after each column walks its full 1000 m.
+	repo.balance["battle_contact_km"] = 0.04
+	for entry: Dictionary in state.foes.values():
+		entry.y_m = int(entry.y_m) + 40
+		entry.dest_y_m = int(entry.dest_y_m) + 40
+
 	# This journal fixture needs an active melee attacker, independent of ranged geometry.
 	for code: String in state.foes:
 		var fit := ArmySystem.fit_count(repo, state, code)
@@ -336,6 +343,7 @@ func _paid_fixture_continue(state: GameState, token: String) -> Dictionary:
 func test_second_battle_does_not_replay_first() -> void:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
 	var state := BattleScenario.moving_two_battles(repo, 10)
+	_journal_geometry(repo)
 	repo.battle_outcomes.assign([{"tier": "hand_made", "eff_min": 0, "eff_max": 1000,
 		"attacker_loss_permille": 100, "defender_loss_permille": 100,
 		"wounded_share_permille": 500, "attacker_morale": 0, "defender_morale": 0, "rout": "none"}])
@@ -354,10 +362,15 @@ func test_second_battle_does_not_replay_first() -> void:
 	var spot := Vector2i(int(state.regiments[player]["x_m"]), int(state.regiments[player]["y_m"]))
 	for entry: Dictionary in [state.regiments[player], state.foes[foe]]:
 		entry["x_m"] = spot.x
-		entry["y_m"] = spot.y
-		entry["dest_x_m"] = spot.x
-		entry["dest_y_m"] = spot.y
+		entry["y_m"] = spot.y if entry == state.regiments[player] else spot.y + 40
+		entry["dest_x_m"] = int(entry.x_m)
+		entry["dest_y_m"] = int(entry.y_m)
 		entry["order"] = ArmySystem.ORDER_GARRISON
+	repo.balance["battle_contact_km"] = 0.04
+	for code: String in state.foes:
+		if code != foe:
+			state.foes[code].y_m = int(state.foes[code].y_m) + 40
+			state.foes[code].dest_y_m = int(state.foes[code].dest_y_m) + 40
 	state.metrics["treasury"] = 100.0
 	var engine := TickEngine.new(repo)
 	var first := engine.resolve_day(state)
@@ -421,6 +434,8 @@ func test_second_battle_does_not_replay_first() -> void:
 func test_later_substep_reinforcement_joins_after_round_and_fights_next_day() -> void:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
 	var state := BattleScenario.moving_contact(repo, 10)
+	_journal_geometry(repo)
+	repo.balance["battle_contact_km"] = 0.14
 	# This journal fixture needs an active melee attacker, independent of ranged geometry.
 	for code: String in state.foes:
 		var fit := ArmySystem.fit_count(repo, state, code)
@@ -434,17 +449,17 @@ func test_later_substep_reinforcement_joins_after_round_and_fights_next_day() ->
 	state.regiments[player]["order"] = ArmySystem.ORDER_GARRISON
 	state.regiments[player]["dest_x_m"] = contact.x
 	state.regiments[player]["dest_y_m"] = contact.y
-	state.foes[foe]["x_m"] = contact.x
+	state.foes[foe]["x_m"] = contact.x + 140
 	state.foes[foe]["y_m"] = contact.y
 	state.foes[foe]["order"] = ArmySystem.ORDER_GARRISON
-	state.foes[foe]["dest_x_m"] = contact.x
+	state.foes[foe]["dest_x_m"] = contact.x + 140
 	state.foes[foe]["dest_y_m"] = contact.y
 	var reinforcement := String(codes.filter(func(code: String) -> bool: return code != player)[0])
-	Play.place(repo, state, reinforcement, contact + Vector2i(200, 0), ArmySystem.ORDER_MARCH)
+	Play.place(repo, state, reinforcement, contact + Vector2i(200, 200), ArmySystem.ORDER_MARCH)
 	state.regiments[reinforcement]["carry_days"] = 10
 	state.regiments[reinforcement]["supplies"] = ArmySystem.supply_use(repo,
 		ArmySystem.regiment(repo, reinforcement, state), state) * 6
-	ArmySystem.set_march_m(repo, state, reinforcement, contact)
+	ArmySystem.set_march_m(repo, state, reinforcement, contact + Vector2i(40, 80))
 	var engine := TickEngine.new(repo)
 	var blocked := engine.resolve_day(state)
 	assert_eq(blocked["status"], "blocked")
@@ -616,7 +631,8 @@ func test_main_v3_mid_march_cursor_continues_without_replaying_metres() -> void:
 	assert_eq(loaded.to_dict(), state.to_dict())
 
 func test_unversioned_started_feature_day_keeps_its_completed_work() -> void:
-	var data := SuiteData.repo()
+	# Saved-cursor validation needs a legal field, independent of pack shoreline.
+	var data := SuiteData.open_country(SuiteData.repo())
 	var state := BattleScenario.contact(data, 10)
 	var fights := BattleSystem.prepare_day(data, state)
 	var token := "%d:encounter:%d" % [state.absolute_day(), int(state.battles[0].id)]
@@ -639,7 +655,8 @@ func test_unversioned_started_feature_day_keeps_its_completed_work() -> void:
 	assert_eq(loaded.to_dict(), state.to_dict())
 
 func test_saved_battle_cursor_past_end_is_refused_atomically_in_v3_and_v4() -> void:
-	var data := SuiteData.repo()
+	# Saved-cursor validation needs a legal field, independent of pack shoreline.
+	var data := SuiteData.open_country(SuiteData.repo())
 	for version in [3, 4]:
 		var state := BattleScenario.contact(data, 10)
 		BattleSystem.prepare_day(data, state)
@@ -670,3 +687,10 @@ func _infantry_equipment(repo: DataRepository, state: GameState, code: String, m
 	source.equipment_count = men
 	source.crew_per_element = int(repo.world_row("military", "unit_types", "infantry").crew)
 	row.source_parts = [source]
+
+func _journal_geometry(repo: DataRepository) -> void:
+	# Transaction tests use a single 20 m disc so contact never repacks a moved anchor.
+	repo.balance["battle_group_size"] = 10000
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80

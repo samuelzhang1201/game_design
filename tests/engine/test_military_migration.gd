@@ -658,8 +658,20 @@ func test_main_v7_malformed_import_does_not_publish_partial_conversion() -> void
 	assert_eq(state.to_dict(), before)
 
 func test_main_v7_active_battle_import_resumes_engagement_without_replaying_round() -> void:
-	repo = SuiteData.repo()
+	repo = SuiteData.open_country(SuiteData.repo())
+	# One 20 m front disc keeps the historical ready-to-fire engagement inside a daily step.
+	repo.balance["battle_group_size"] = 10000
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	state = Scenario.contact(repo, 10)
+	state.town_seat.clear() # This saved field encounter has no seated garrison.
+	# Preserve the saved archer equipment and commander; start in clear firing range.
+	var player := String(preload("res://tests/invasion_play.gd").land_regiments(repo, 400)[0])
+	var origin := BattleSystem._at_m(repo, state, player)
+	for code: String in state.foes:
+		var distance := int(BattleGroups.piece(repo, state, player).radius_m) + int(BattleGroups.piece(repo, state, code).radius_m) + int(repo.bal("battle_ranged_reach_m"))
+		preload("res://tests/invasion_play.gd").place(repo, state, code, origin + Vector2i(distance, 0), ArmySystem.ORDER_STANDBY)
 	BattleSystem.prepare_day(repo, state)
 	var battle: Dictionary = state.battles[0]
 	battle.rounds = 2

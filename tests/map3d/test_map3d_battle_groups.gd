@@ -31,7 +31,8 @@ func test_saved_rows_drive_actual_nodes() -> void:
 	assert_eq(SaveLoad.state_hash(state), before)
 
 func test_real_encounter_retains_ordinary_figure_size_and_returns_to_it() -> void:
-	var repo := SuiteData.repo()
+	# Scale continuity uses real installed figures on an explicitly open field.
+	var repo := SuiteData.open_country(SuiteData.repo())
 	var state := preload("res://tests/fixtures/battle_scenario.gd").contact(repo, 10)
 	var foe := String(state.foes.keys()[0])
 	state.foes[foe]["order"] = ArmySystem.ORDER_GARRISON
@@ -705,14 +706,21 @@ func test_zero_fit_has_no_model_hit_box_and_fleet_keeps_counter_path() -> void:
 	fail_test("fixture needs a fleet")
 
 func test_pending_legacy_rows_and_version_are_read_without_truncation() -> void:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
+	# Preserve these frozen 50 m rows through public geometry admission: 1 m
+	# synthetic discs remain clear; the adjacent scale tests use installed art.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 1
+		row.pitch_m = 4
 	var state := SuiteData.campaign(repo, 7)
 	var code := String(state.regiments.keys()[0])
 	preload("res://tests/engine/personnel_helpers.gd").replace(repo, state, code, 1000)
+	state.regiments[code].x_m = 0
+	state.regiments[code].y_m = 0
 	var rows: Array = []
 	for i: int in 20:
 		rows.append({"slot": i, "count": 50, "role": "front", "x_m": i * 50, "y_m": 0})
-	var battle := {"att": [code], "def": [], "groups": {code: rows}, "group_facing": {code: 0}, "pending_round": {"roll": 7}}
+	var battle := {"id": 725, "place_x_m": 0, "place_y_m": 0, "town": "", "att": [code], "def": [], "groups": {code: rows}, "group_facing": {code: 0}, "pending_round": {"roll": 7}}
 	state.battles = [battle]
 	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 2.0})
 	ctx.state_fn = func() -> GameState: return state

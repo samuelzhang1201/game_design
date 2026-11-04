@@ -98,6 +98,15 @@ func test_failed_round_keeps_day_transaction_at_same_battle() -> void:
 	state.battles = [{"id": 1, "att": ["a"], "def": ["b"], "rounds": 0,
 		"town": "", "place_x_m": 0, "place_y_m": 0, "start_day": state.absolute_day(),
 		"actions": {"att": {"kind": "attack"}, "def": {"kind": "hold"}}}]
+	# Admit two disjoint, fully engaged front pieces before freezing the day's cursor.
+	SuiteData.open_country(repo)
+	repo.balance["battle_group_size"] = 10000
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
+	state.regiments.a.merge({"x_m": 0, "y_m": 0}, true)
+	state.foes.b.merge({"x_m": 140, "y_m": 0}, true)
+	assert_true(BattleGroups.refresh(repo, state, state.battles[0]))
 	state.day_resolution = DayResolution.begin(state.day, false, state.absolute_day())
 	state.day_resolution["phase"] = "FIXED_TACTICAL_SUBSTEPS"
 	state.day_resolution["phase_cursor"] = DayResolution.PHASES.find("FIXED_TACTICAL_SUBSTEPS")

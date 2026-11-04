@@ -6,7 +6,7 @@ const Scenario := preload("res://tests/fixtures/battle_scenario.gd")
 var repo: DataRepository
 
 func before_each() -> void:
-	repo = SuiteData.repo()
+	repo = SuiteData.open_country(SuiteData.repo()) # Cursor/decision fixtures require legal open formation ground.
 
 func _resolve(engine: TickEngine, state: GameState) -> Dictionary:
 	return engine.call("resolve_day", state)
@@ -121,6 +121,12 @@ func test_acknowledged_save_does_not_ask_again() -> void:
 
 func test_each_first_contact_is_acknowledged_before_its_losses() -> void:
 	var s := Scenario.two_battles(repo, 10)
+	# The cursor needs two active rounds, independent of close-contact archer self-defence.
+	for code: String in s.foes:
+		var fit := ArmySystem.fit_count(repo, s, code)
+		for arm: String in repo.world_table("military", "unit_types"):
+			s.army_roster[code][arm] = "0"
+		s.army_roster[code]["infantry"] = str(fit)
 	var engine := TickEngine.new(repo)
 	var first := engine.resolve_day(s)
 	assert_eq(first["status"], "blocked")

@@ -6,7 +6,11 @@ const Geometry := preload("res://scripts/engine/battle_group_geometry.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture() -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
+	# Synthetic historical rows below are 40 m apart; keep their physical fixture explicit.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9445)
 	var codes := state.regiments.keys()
 	codes.sort()
@@ -30,6 +34,161 @@ func test_configured_hundred_fit_counts() -> void:
 	assert_eq(int(repo.bal("battle_group_size")), 100)
 	assert_eq(BattleGroups.counts(101, int(repo.bal("battle_group_size"))), [100, 1] as Array[int])
 	assert_eq(BattleGroups.counts(1000, int(repo.bal("battle_group_size"))).size(), 10)
+
+func test_production_rows_fit_installed_piece_discs() -> void:
+	var f := _fixture()
+	f.repo = SuiteData.open_country(f.repo)
+	f.repo.unit_footprints = SuiteData.repo().unit_footprints.duplicate(true)
+	for code: String in [f.a, f.enemy]:
+		Personnel.replace(f.repo, f.state, code, 1000)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var rows: Array = f.battle.groups[f.a]
+	var footprint := Geometry.footprint(f.repo, ArmySystem.regiment(f.repo, f.a, f.state))
+	assert_true(footprint.ok)
+	assert_eq(rows.size(), 10, "Every hundred fit people keeps its full-scale figure")
+	for i: int in rows.size():
+		for j: int in range(i):
+			var separation := Geometry.pair([rows[i].x_m, rows[i].y_m], footprint.radius_m,
+				[rows[j].x_m, rows[j].y_m], footprint.radius_m, 0)
+			assert_true(separation.ok and not separation.overlap, "Installed discs must not overlap")
+
+func test_withdrawal_waits_for_actual_rows_when_anchors_are_far_apart() -> void:
+	var f := _fixture()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 100)
+	var reach := int(f.repo.bal("battle_contact_km") * 1000)
+	f.state.foes[f.enemy].y_m = 2000 + reach + 1000
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	# A clear saved row can lie far from its anchor after deployment or a flank.
+	f.battle.groups[f.enemy][0].x_m = 1000
+	f.battle.groups[f.enemy][0].y_m = 2100
+	assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+	f.state.regiments[f.a].battle_retreat = true
+	f.battle.actions = {"att": {"kind": "retreat"}, "def": {"kind": "hold"}}
+	var people: Dictionary = f.state.military_cohorts.duplicate(true)
+	var rng: Dictionary = f.state.rng.to_dict()
+	var out := BattleSystem.step_battle(f.repo, f.state, int(f.battle.id))
+	assert_eq(out.status, "complete")
+	assert_true(f.a in f.battle.att, "An anchor outside encounter range cannot leave its actual contacting rows behind")
+	assert_eq(f.state.battles.size(), 1)
+	assert_eq(f.state.military_cohorts, people)
+	assert_eq(f.state.rng.to_dict(), rng, "A quiet withdrawal creates no combat roll")
+
+
+func test_bent_march_synchronizes_rows_along_its_admitted_legs() -> void:
+	for saved: bool in [false, true]:
+		var f := _fixture()
+		f.repo = SuiteData.no_clearance(f.repo)
+		for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 100)
+		f.state.foes[f.enemy].x_m = 1050
+		f.state.foes[f.enemy].y_m = 2050
+		assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+		var entry: Dictionary = f.state.regiments[f.a]
+		entry.order = ArmySystem.ORDER_MARCH
+		entry.battle_retreat = true
+		entry.camp_state = {"phase": CampSystem.NONE}
+		entry.erase("departure")
+		entry.dest_x_m = 1100
+		entry.dest_y_m = 2100
+		entry.route_m = [[1100, 2000], [1100, 2100]]
+		# The two 100 m legs pass 50 m from the enemy; their diagonal chord hits it.
+		f.battle.groups[f.a][0].path_m = [[1000, 2000]]
+		var before := SaveLoad.state_hash(f.state)
+		ArmySystem.march_ahead(f.repo, f.state, f.a, entry.duplicate(true))
+		assert_eq(SaveLoad.state_hash(f.state), before, "Forecast must not publish row motion")
+		if saved:
+			ArmySystem.march_day_saved(f.repo, f.state, 1, 0, {f.a: entry.duplicate(true)}, {f.a: 200})
+		else:
+			ArmySystem.march_day(f.repo, f.state, 1, 0, true, [f.a], {f.a: 200})
+		assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), Vector2i(1100, 2100))
+		assert_eq(f.battle.group_anchor_m[f.a], [1100, 2100])
+		assert_eq(f.battle.groups[f.a][0].x_m, 1100)
+		assert_eq(f.battle.groups[f.a][0].y_m, 2100)
+		assert_eq(f.battle.groups[f.a][0].path_m, [[1100, 2100]])
+		assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+		var settled := SaveLoad.state_hash(f.state)
+		BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.a)
+		assert_eq(SaveLoad.state_hash(f.state), settled, "Repeated synchronization is inert")
+
+
+func test_rejected_rigid_step_preserves_anchor_rows_paths_and_slots() -> void:
+	var f := _fixture()
+	f.repo = SuiteData.open_country(f.repo)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var before := SaveLoad.state_hash(f.state)
+	var own: Dictionary = f.battle.groups[f.a][0]
+	var enemy: Dictionary = f.battle.groups[f.enemy][0]
+	BattleGroups.translate(f.repo, f.state, f.battle, f.a,
+		Vector2i(int(enemy.x_m) - int(own.x_m), int(enemy.y_m) - int(own.y_m)))
+	assert_eq(SaveLoad.state_hash(f.state), before, "A step through occupied enemy discs is wholly rejected")
+
+func test_march_validates_the_complete_path_before_publishing_its_entry() -> void:
+	var f := _fixture()
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var entry: Dictionary = f.state.regiments[f.a]
+	entry.order = ArmySystem.ORDER_MARCH
+	entry.battle_retreat = true
+	entry.camp_state = {"phase": CampSystem.NONE}
+	entry.erase("departure")
+	var own: Dictionary = f.battle.groups[f.a][0]
+	var enemy: Dictionary = f.battle.groups[f.enemy][0]
+	entry.dest_x_m = int(entry.x_m) + int(enemy.x_m) - int(own.x_m)
+	entry.dest_y_m = int(entry.y_m) + int(enemy.y_m) - int(own.y_m)
+	var before := SaveLoad.state_hash(f.state)
+	var travelled: Array = []
+	assert_false(ArmySystem._march_one(f.repo, f.state, f.a, entry, f.state.absolute_day(),
+		{}, [], 1, 0, 10000, 10000, travelled))
+	assert_eq(SaveLoad.state_hash(f.state), before)
+	assert_eq(travelled, [], "Rejected motion cannot earn pursuit metres")
+	var origin := Vector2i(int(entry.x_m), int(entry.y_m))
+	entry.dest_x_m = origin.x - 100
+	entry.dest_y_m = origin.y
+	assert_true(ArmySystem._march_one(f.repo, f.state, f.a, entry, f.state.absolute_day(), {}, [], 1, 0, 100, 100))
+	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), origin - Vector2i(100, 0))
+	assert_true(BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.a))
+	assert_eq(f.battle.group_anchor_m[f.a], [entry.x_m, entry.y_m])
+
+func test_installed_partial_rows_and_adjacent_friendly_unit_remain_disjoint() -> void:
+	var f := _fixture()
+	f.repo.unit_footprints = SuiteData.repo().unit_footprints.duplicate(true)
+	var codes: Array = f.state.regiments.keys()
+	codes.sort()
+	var friend := String(codes[1])
+	f.state.regiments[friend].x_m = 21000
+	f.state.regiments[friend].y_m = 2000
+	f.battle.att.append(friend)
+	for people: int in [901, 1, 0]:
+		for code: String in [f.a, f.enemy, friend]: Personnel.replace(f.repo, f.state, code, people)
+		assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+		assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+		for code: String in [f.a, f.enemy, friend]:
+			var rows: Array = f.battle.groups[code]
+			assert_eq(rows.size(), BattleGroups.counts(people, 100).size())
+			var total := 0
+			for row: Dictionary in rows: total += int(row.count)
+			assert_eq(total, people)
+			if people == 0:
+				assert_eq(BattleGroups.deployment(f.repo, f.state, f.battle)[code], BattleSystem._at_m(f.repo, f.state, code))
+
+func test_blocked_recovery_preserves_people_receipt_and_slots_until_admission() -> void:
+	var f := _fixture()
+	Personnel.replace(f.repo, f.state, f.a, 200)
+	Personnel.move(f.repo, f.state, f.a, "fit", "wounded", 100)
+	Personnel.replace(f.repo, f.state, f.enemy, 100)
+	f.state.regiments[f.a].facing_deg = 90
+	f.state.foes[f.enemy].y_m = 1920  # Occupies the next80m rear slot, without overlapping the existing front.
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	for code: String in f.state.military_rosters: f.state.conduct_marks["recovery:" + code] = f.state.tick
+	f.state.conduct_marks.erase("recovery:" + f.a)
+	var frozen := SaveLoad.state_hash(f.state)
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_eq(SaveLoad.state_hash(f.state), frozen, "A failed physical admission cannot publish recovery people or a consumed receipt")
+	assert_true(BattleGroups.translate(f.repo, f.state, f.battle, f.enemy, Vector2i(-1000, 0)))
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_gt(ArmySystem.fit_count(f.repo, f.state, f.a), 100)
+	assert_eq(f.battle.groups[f.a].size(), 2)
+	var recovered := SaveLoad.state_hash(f.state)
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_eq(SaveLoad.state_hash(f.state), recovered, "A successful physical recovery is paid and consumed once")
 
 func test_counts_table() -> void:
 	assert_eq(BattleGroups.counts(0, 100), [] as Array[int])
@@ -145,6 +304,7 @@ func test_translate_and_follow_anchor_apply_exactly_once() -> void:
 	f.battle["groups"] = {f.a: [
 		{"count": 50, "role": "front", "x_m": 200, "y_m": 200, "path_m": [[210, 200]]},
 		{"count": 50, "role": "reserve", "x_m": 160, "y_m": 200}]}
+	BattleGroups.refresh(f.repo, f.state, f.battle)
 	BattleGroups.translate(f.repo, f.state, f.battle, f.a, Vector2i(30, 40))
 	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), Vector2i(230, 240))
 	assert_eq(_points(f.battle.groups[f.a]), [Vector2i(230, 240), Vector2i(190, 240)])
@@ -340,3 +500,178 @@ func test_physical_queries_reject_malformed_rows_and_preserve_repository() -> vo
 	assert_false(Geometry.rigid_step([{ "x_m": 0, "y_m": 0}], 3, [0, 0], 0,
 		[{"x_m": 5, "y_m": 4, "radius_m": -1}]).ok)
 	assert_false(Geometry.segment_disc([0, 0], [10, 0], [5, 0], -1).ok)
+
+func _row_ground(f: Dictionary, blocked: Vector2i) -> MarchPath:
+	var cells := PackedByteArray()
+	cells.resize(100 * 100)
+	cells.fill(0)
+	if blocked != Vector2i(-1, -1): cells[blocked.y * 100 + blocked.x] = 255
+	f.repo.balance.army_march_grid_px = 1
+	var grid := MarchPath.build(f.repo, 100, 100, 100, cells)
+	MarchPath.use(f.repo, grid)
+	return grid
+
+func test_seed_refuses_a_closed_row_even_when_both_anchors_are_dry() -> void:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 200)
+	for side: String in BattleSystem.SIDES: f.battle.formations[side].current = "line"
+	var grid := _row_ground(f, Vector2i(9, 20)) # Front at(960,2000); anchor at(1000,2000).
+	assert_true(grid.clear(Vector2i(1000, 2000), Vector2i(1000, 2000)))
+	assert_true(grid.clear(Vector2i(1000, 4000), Vector2i(1000, 4000)))
+	var before := SaveLoad.state_hash(f.state)
+	assert_false(BattleGroups.refresh(f.repo, f.state, f.battle))
+	assert_eq(SaveLoad.state_hash(f.state), before, "No rows, anchors, slots or version publish on blocked ground")
+	MarchPath.forget()
+
+func test_new_contact_refuses_a_closed_reserve_row_before_any_publication() -> void:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 200)
+	f.state.battles.clear()
+	_row_ground(f, Vector2i(10, 19)) # Default second rank at(1000,1920), behind a dry anchor.
+	var before := SaveLoad.state_hash(f.state)
+	var events: Array = []
+	BattleSystem._start(f.repo, f.state, f.a, f.enemy, "", events)
+	assert_eq(f.state.battles, [])
+	assert_eq(events, [])
+	assert_eq(SaveLoad.state_hash(f.state), before, "Rejected contact cannot halt troops or consume an ID")
+	MarchPath.forget()
+
+func test_recovery_refuses_a_new_closed_rear_row_without_consuming_people_or_receipt() -> void:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	Personnel.replace(f.repo, f.state, f.a, 200)
+	Personnel.move(f.repo, f.state, f.a, "fit", "wounded", 100)
+	Personnel.replace(f.repo, f.state, f.enemy, 100)
+	f.state.regiments[f.a].facing_deg = 90
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	for code: String in f.state.military_rosters: f.state.conduct_marks["recovery:" + code] = f.state.tick
+	f.state.conduct_marks.erase("recovery:" + f.a)
+	_row_ground(f, Vector2i(10, 19)) # Growth appends the first new reserve80m behind the surviving front.
+	var before := SaveLoad.state_hash(f.state)
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_eq(SaveLoad.state_hash(f.state), before)
+	_row_ground(f, Vector2i(-1, -1))
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_gt(ArmySystem.fit_count(f.repo, f.state, f.a), 100)
+	assert_eq(f.battle.groups[f.a].size(), 2)
+	var recovered := SaveLoad.state_hash(f.state)
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_eq(SaveLoad.state_hash(f.state), recovered)
+	MarchPath.forget()
+
+func test_garrison_delivery_retains_admitted_battle_haltpoint_and_frozen_rows() -> void:
+	for blocked: bool in [false, true]:
+		for frozen: bool in [false, true]:
+			var f := _fixture()
+			f.state.town_seat.clear()
+			for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 100)
+			var town := ""
+			for candidate: String in f.repo.burgs:
+				if ArmyGround.holds(f.repo, f.state, String(f.state.army_roster[f.a].kingdom_code), candidate):
+					town = candidate
+					break
+			assert_ne(town, "")
+			var centre := ArmyGround.town_point_m(f.repo, town)
+			var entry: Dictionary = f.state.regiments[f.a]
+			entry.merge({"x_m": centre.x + 100, "y_m": centre.y, "order": ArmySystem.ORDER_MARCH,
+				"camp_town": "", "dest_x_m": centre.x + 1000, "dest_y_m": centre.y,
+				"route_m": [[centre.x + 1000, centre.y]]}, true)
+			f.state.foes[f.enemy].x_m = centre.x if blocked else centre.x + 4000
+			f.state.foes[f.enemy].y_m = centre.y
+			assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+			if frozen: f.battle.pending_round = {"roll": 17, "unit_actions": {}}
+			var before: Dictionary = f.battle.duplicate(true)
+			var at := BattleSystem._at_m(f.repo, f.state, f.a)
+			# The normal action creates its courier; ordinary delivery must keep the admitted point.
+			f.state.metrics.treasury = 10000
+			assert_true(ActionSystem.new(f.repo).execute(ActionRequest.make("ARMY_GARRISON", {"regiment": f.a}), f.state).ok)
+			assert_eq(f.state.couriers.size(), 1)
+			assert_eq(CourierSystem._deliver(f.repo, f.state, f.state.couriers[0]).type, "delivered")
+			assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), at)
+			assert_eq(f.battle, before, "Rows, paths, anchor snapshots and a pending plan remain unchanged")
+			assert_eq(entry.order, ArmySystem.ORDER_GARRISON)
+			assert_eq(Vector2i(int(entry.dest_x_m), int(entry.dest_y_m)), at)
+			assert_false(entry.has("route_m"))
+			assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+			if not frozen: assert_true(BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.a))
+
+func test_join_refuses_a_closed_new_rank_without_halting_or_spending_a_slot() -> void:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 100)
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	var codes: Array = f.state.regiments.keys()
+	codes.sort()
+	var friend := String(codes[1])
+	Personnel.replace(f.repo, f.state, friend, 200)
+	f.state.regiments[friend].merge({"x_m": 2000, "y_m": 2000, "facing_deg": 90,
+		"order": ArmySystem.ORDER_MARCH}, true)
+	_row_ground(f, Vector2i(20, 19)) # Its anchor is dry; its new second rank would stand at(2000,1920).
+	var before := SaveLoad.state_hash(f.state)
+	assert_false(BattleSystem.join(f.repo, f.state, int(f.battle.id), friend, "att"))
+	assert_eq(SaveLoad.state_hash(f.state), before)
+	MarchPath.forget()
+
+func _overlap_and_late_ground(blocked: bool) -> Dictionary:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 200)
+	f.state.regiments[f.a].facing_deg = 90
+	f.state.foes[f.enemy].facing_deg = 270
+	f.state.foes[f.enemy].y_m = 2020
+	f.battle.place_y_m = 2010
+	var cells := PackedByteArray()
+	cells.resize(500 * 500)
+	cells.fill(0)
+	if blocked: cells[192 * 500 + 100] = 255
+	f.repo.balance.army_march_grid_px = 1
+	var grid := MarchPath.build(f.repo, 500, 500, 10, cells)
+	MarchPath.use(f.repo, grid)
+	assert_true(grid.clear(Vector2i(1000, 2000), Vector2i(1000, 2000)))
+	assert_true(grid.clear(Vector2i(1000, 2020), Vector2i(1000, 2020)))
+	return f
+
+func test_overlap_cannot_hide_a_later_closed_rank_during_new_contact() -> void:
+	for blocked: bool in [true, false]:
+		var f := _overlap_and_late_ground(blocked)
+		f.state.battles.clear()
+		var before := SaveLoad.state_hash(f.state)
+		var events: Array = []
+		BattleSystem._start(f.repo, f.state, f.a, f.enemy, "", events)
+		if blocked:
+			assert_eq(f.state.battles, [], "Front overlap cannot bypass the later water row by moving the field")
+			assert_eq(events, [])
+			assert_eq(SaveLoad.state_hash(f.state), before)
+		else:
+			assert_eq(f.state.battles.size(), 1, "Pure overlap still permits a legal complete deployment")
+			assert_true(BattleGroups.placement(f.repo, f.state, f.state.battles[0]).ok)
+			for code: String in [f.a, f.enemy]: assert_eq(ArmySystem.fit_count(f.repo, f.state, code), 200)
+		MarchPath.forget()
+
+func test_overlap_cannot_hide_a_later_closed_rank_during_geometry_migration() -> void:
+	for blocked: bool in [true, false]:
+		var f := _overlap_and_late_ground(blocked)
+		f.battle.groups = {}
+		f.battle.group_facing = {f.a: 90, f.enemy: 270}
+		f.battle.group_size_version = 2
+		f.battle.group_size_men = 100
+		for code: String in [f.a, f.enemy]:
+			var rows: Array = []
+			var at := BattleSystem._at_m(f.repo, f.state, code)
+			for point: Vector2i in BattleGroups.layout(f.repo, "double_rank", 2, at, int(f.battle.group_facing[code]), 80):
+				rows.append({"slot": rows.size(), "count": 100,
+					"role": "front" if rows.is_empty() else "reserve", "x_m": point.x, "y_m": point.y})
+			f.battle.groups[code] = rows
+		var before := SaveLoad.state_hash(f.state)
+		var result := BattleGroups.migrate_geometry(f.repo, f.state, f.battle)
+		if blocked:
+			assert_eq(result.status, "error")
+			assert_string_contains(result.get("error", ""), "blocked ground")
+			assert_string_contains(result.get("error", ""), "(1000, 1920)")
+			assert_eq(SaveLoad.state_hash(f.state), before, "Mixed failure must preserve the complete saved candidate")
+		else:
+			assert_eq(result.status, "complete", "Pure saved overlap still repairs at the safe boundary")
+			assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+		MarchPath.forget()

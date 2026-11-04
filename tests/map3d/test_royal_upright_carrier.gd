@@ -542,3 +542,19 @@ func test_shortcut_radius_box_touch_remains_unavailable() -> void:
 		[[1.0,1.0],[0.0,0.0]],[[0.0,0.0],[0.0,0.0]],"left")
 	assert_false(result.ok,"touching the shortcut comparison is not strict branch separation")
 	assert_eq(result.get("reason"),"native_shortcut_rounding_cut")
+
+func test_current_domain_rejects_stale_loaded_army_writer_and_recovers_after_restore() -> void:
+	var c := _carrier()
+	if c == null: return
+	var repo := SuiteData.repo()
+	assert_eq(c._domain_source(repo).status, "BOUND_GEOMETRIC_SUPERSET")
+	var path := "res://scripts/engine/army_system.gd"
+	var writer: GDScript = load(path)
+	var original := writer.source_code
+	writer.source_code = original + "\n# Deliberately stale loaded writer for the domain boundary test.\n"
+	var refused: Dictionary = c._domain_source(repo)
+	writer.source_code = original
+	assert_eq(refused.status, "UNAVAILABLE")
+	assert_eq(refused.get("reason"), "domain_source_changed")
+	assert_eq(refused.get("path"), path)
+	assert_eq(c._domain_source(repo).status, "BOUND_GEOMETRIC_SUPERSET")

@@ -8,9 +8,20 @@ var repo: DataRepository
 
 func before_each() -> void:
 	repo = SuiteData.no_clearance(SuiteData.open_country(SuiteData.repo()))
+	# Duration tiers assume fully engaged units; one synthetic 1 m front disc per unit.
+	repo.balance["battle_group_size"] = 10000
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 1
+		row.pitch_m = 4
 
 func _battle(attack := true) -> GameState:
 	var state := Scenario.contact(repo, 10)
+	state.town_seat.clear()
+	var player := String(Play.land_regiments(repo, 400)[0])
+	var at := BattleSystem._at_m(repo, state, player)
+	# 1 + 1 m radii + 100 m edge reach: the initial bodies already touch.
+	for code: String in state.foes:
+		Play.place(repo, state, code, at + Vector2i(102, 0), ArmySystem.ORDER_STANDBY)
 	BattleSystem.detect_contacts(repo, state)
 	# Isolate duration/morale/retry arithmetic from ranged reach and deployment.
 	for attacker: String in state.battles[0]["att"]:
@@ -23,6 +34,8 @@ func _battle(attack := true) -> GameState:
 	for entry: Dictionary in state.regiments.values() + state.foes.values():
 		entry["morale"] = 80
 		entry["supplies"] = 10000
+	assert_true(BattleGroups.refresh(repo, state, state.battles[0]))
+	BattleGroups.deploy_day(repo, state, state.battles[0])
 	return state
 
 func test_both_hold_for_three_days_without_rounds_or_rng_but_eat() -> void:
@@ -148,6 +161,11 @@ func _force(state: GameState, code: String, heads: int, morale: int, token: Stri
 
 func _benchmark(label: String, size: int, morale: int, reinforce := false) -> Dictionary:
 	repo = SuiteData.no_clearance(SuiteData.flat_ground(SuiteData.repo()))
+	# Duration tiers assume fully engaged units; one synthetic 1 m front disc per unit.
+	repo.balance["battle_group_size"] = 10000
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 1
+		row.pitch_m = 4
 	var outcomes := repo.battle_outcomes.duplicate(true)
 	var state := _battle()
 	repo.battle_outcomes = outcomes
@@ -176,7 +194,7 @@ func _benchmark(label: String, size: int, morale: int, reinforce := false) -> Di
 		state.foes[reserve] = ArmySystem.starting_state(repo, row)
 		var heads := mini(remaining, cap)
 		_force(state, reserve, heads, morale, label + ":att:" + reserve)
-		Play.place(repo, state, reserve, BattleSystem._at_m(repo, state, attacker), ArmySystem.ORDER_STANDBY)
+		Play.place(repo, state, reserve, BattleSystem._at_m(repo, state, attacker) + Vector2i(-10, 4 * (battle.att.size() + 1)), ArmySystem.ORDER_STANDBY)
 		assert_true(BattleSystem.join(repo, state, id, reserve, "att"))
 		remaining -= heads
 	assert_eq(remaining, 0, "same total force distributed over existing capped units")
@@ -203,7 +221,7 @@ func _benchmark(label: String, size: int, morale: int, reinforce := false) -> Di
 					state.foes[reserve] = ArmySystem.starting_state(repo, state.army_roster[reserve])
 				_force(state, reserve, 1000, 100, label + ":reserve:" + side)
 				var at := BattleSystem._at_m(repo, state, attacker if is_foe else defender)
-				Play.place(repo, state, reserve, at, ArmySystem.ORDER_STANDBY)
+				Play.place(repo, state, reserve, at + Vector2i(-10 if is_foe else 10, 4), ArmySystem.ORDER_STANDBY)
 				assert_true(BattleSystem.join(repo, state, id, reserve, side))
 		var events := BattleSystem.settle_day(repo, state)
 		for event: Dictionary in events:
@@ -241,7 +259,7 @@ func test_withdrawal_walks_real_route_through_camp_gate_before_leaving() -> void
 	var origin := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
 	entry["camp_state"] = {"phase": CampSystem.CAMPED, "site": {"x_m": origin.x, "y_m": origin.y}}
 	entry["order"] = ArmySystem.ORDER_MARCH
-	ArmySystem.aim_entry(repo, entry, origin + Vector2i(100000, 0))
+	ArmySystem.aim_entry(repo, entry, origin - Vector2i(100000, 0))
 	CampSystem.request_departure(state, code, state.absolute_day(), true)
 	battle["actions"]["def"] = {"kind": "retreat"}
 	var id := int(battle["id"])

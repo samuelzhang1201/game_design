@@ -2,14 +2,17 @@
 
 `BattleRanged` uses saved whole-metre group positions and `group_facing` for
 direct fire. A shot lies beyond `battle_group_contact_m`, within the inclusive
-`battle_ranged_reach_m`, and inside the forward cone whose lateral/forward
+`battle_ranged_reach_m`, both measured beyond the sum of the two drawn pieces’
+`unit_footprints` radii, and inside the forward cone whose lateral/forward
 ratio is at most `battle_ranged_cone_permille`. The saved whole-degree facing
 is converted to a transient integer direction. Squared distances, dot and
 cross products decide reach, cone and obstruction; no projectile, rendering,
 wall-clock or random draw decides eligibility.
 
 Every positive-count friendly group, including the shooter's own front ranks,
-obstructs the open firing segment with `battle_ranged_block_radius_m`.
+obstructs the open firing segment with its own installed footprint radius.
+`clear_shot`’s point-only arithmetic adapter retains its explicitly configured
+blocker discs; production supplies the actual heterogeneous pieces.
 Tangency within the segment blocks; touching only an excluded endpoint does
 not. Only the shooter itself is excluded. Each eligible group counts once,
 regardless of how many enemy groups it can reach. Rear ranks receive no
@@ -22,7 +25,8 @@ sightings. A received designated target restricts shots to that target; an attac
 close interceptor still permits lawful local self-defence.
 Pursuit remains bounded by its received region and protected withdrawal bars
 fire. Captured, withdrawing and uncommitted reserve shooters cannot fire;
-close reserves may still defend.
+close reserves may still defend. Incoming context alone retains reachable rear-guard
+melee exposure; withdrawing shooters retain zero firing and strength output.
 No fresh route, target, task or hidden-position cache is written by this helper.
 
 At actual close group contact, a ranged-dominant unit's attack becomes local
@@ -37,7 +41,13 @@ melee/contact and mounted charge rules.
 personnel with the fraction actually firing or in melee. Incoming casualty
 contexts also scale the ranged share by that fraction against EACH specific
 target; reaching one enemy never exposes its remote ally. Non-ranged threat
-retains its previous semantics. Ranged context uses actual firing personnel;
+requires actual reachable front-personnel contact too. The reserve strength
+factor remains unchanged and does not grant remote casualty or morale output.
+Incoming geometry retains reachable holding melee defence. Actual round planning
+requires an attack or lawful self-defence on each specific pair, so a remote
+attack cannot make two contacting holders inflict casualties or negative morale.
+Potential context queries retain their withdrawal hand values without starting a round. Safe-withdrawal protection is applied once by the context's
+opposing-power share, rather than again by the incoming contact fraction. Ranged context uses actual firing personnel;
 close defence uses melee. Every factor has its source and readable reason.
 
 The existing atomic round freezes per-unit loss rates, contexts, negative morale exposure and actions

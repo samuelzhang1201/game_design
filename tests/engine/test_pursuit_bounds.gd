@@ -171,7 +171,11 @@ func _group_fixture(xs: Array[int]) -> Dictionary:
 		2: {"vertex_ids": PackedInt32Array([1, 4, 5, 2]), "height": 30.0, "biome_id": 1}}
 	repo.manors = {1: {"province_code": f.inside}, 2: {"province_code": f.outside}}
 	MapEconomy.forget()
-	repo.balance["battle_group_contact_m"] = 100
+	# Two 20 m radii + 60 m edge reach retain the 100 m centre boundary.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
+	repo.balance["battle_group_contact_m"] = 60
 	repo.balance["battle_reserve_permille"] = 500
 	f.battle.att = [f.a]
 	f.state.regiments[f.a].x_m = -20

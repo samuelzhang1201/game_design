@@ -10,6 +10,8 @@ var realm: String
 
 func before_each() -> void:
 	repo = SuiteData.no_clearance(SuiteData.open_country(SuiteData.repo()))
+	# A single front piece makes the authored 100-per-mille casualty tier fully reachable.
+	repo.balance["battle_group_size"] = 10000
 	repo.balance["family_loss_opinion_dead_cadre"] = -2
 	repo.balance["family_loss_opinion_dead_named"] = -2
 	state = Scenario.contact(repo, 10)

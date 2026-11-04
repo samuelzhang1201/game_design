@@ -2,7 +2,7 @@ extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## P4.4d3: a battle unit's deployed groups are the ground it holds. Its blocker
 ## radius is the larger of its arm radius and the farthest group's distance from
-## the anchor (rounded up) + battle_group_spacing_m / 2 (25 m), so a column
+## the anchor (rounded up) + its installed piece radius (synthetic 25 m here), so a column
 ## outside the battle keeps clear of the deployment. Hand-computed.
 
 var repo: DataRepository
@@ -10,6 +10,9 @@ var repo: DataRepository
 
 func before_each() -> void:
 	repo = SuiteData.flat_ground(SuiteData.repo())
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 25
+		row.pitch_m = 100
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
 	for g in repo.army_town_reach:
@@ -126,3 +129,9 @@ func _passer_detours(deployed: bool) -> bool:
 func test_a_passer_by_goes_round_a_deployment_and_straight_past_a_lone_unit() -> void:
 	assert_false(_passer_detours(false), "3000 m off a unit of 1140 + 1140: straight")
 	assert_true(_passer_detours(true), "its groups reach 3025, so 1140 + 3025 > 3000: round")
+
+func test_radius_uses_the_installed_piece_instead_of_half_the_spacing() -> void:
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 43
+		row.pitch_m = 172
+	assert_eq(_radius_with(10, [Vector2i(30, 40)]), 93, "50 m offset + actual 43 m radius")

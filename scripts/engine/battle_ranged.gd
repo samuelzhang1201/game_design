@@ -20,7 +20,7 @@ static func point(row: Dictionary) -> Vector2i:
 	return Vector2i(int(row["x_m"]), int(row["y_m"]))
 
 
-static func touching(repo: DataRepository, battle: Dictionary, code: String) -> bool:
+static func touching(repo: DataRepository, battle: Dictionary, code: String, state: GameState) -> bool:
 	var side := BattleRules.side_of(battle, code)
 	if side == "":
 		return false
@@ -28,46 +28,40 @@ static func touching(repo: DataRepository, battle: Dictionary, code: String) -> 
 	for row: Dictionary in battle.get("groups", {}).get(code, []):
 		for foe: String in battle["def" if side == "att" else "att"]:
 			for other: Dictionary in battle.get("groups", {}).get(foe, []):
-				var d := point(other) - point(row)
-				if int(row["count"]) > 0 and int(other["count"]) > 0 and d.length_squared() <= reach * reach:
+				if int(row["count"]) > 0 and int(other["count"]) > 0 \
+						and BattleGroups.in_reach(repo, state, code, row, foe, other, reach):
 					return true
 	return false
 
 
 ## Inclusive reach and cone edge; a friendly disc tangent to the open segment blocks.
 static func clear_shot(repo: DataRepository, from: Vector2i, to: Vector2i,
-		facing: Vector2i, friends: Array[Vector2i]) -> bool:
+		facing: Vector2i, friends: Array[Vector2i], radius_from := 0, radius_to := 0, discs: Array = []) -> bool:
 	var d := to - from
 	var length_sq := d.length_squared()
 	var reach := int(repo.bal("battle_ranged_reach_m"))
 	var close := int(repo.bal("battle_group_contact_m"))
-	if length_sq <= close * close or length_sq > reach * reach:
+	var contact := BattleGroupGeometry.pair([from.x, from.y], radius_from, [to.x, to.y], radius_to, close)
+	var range_ := BattleGroupGeometry.pair([from.x, from.y], radius_from, [to.x, to.y], radius_to, reach)
+	if not contact.ok or not range_.ok or contact.in_reach or not range_.in_reach:
 		return false
 	var forward := d.x * facing.x + d.y * facing.y
 	var cross := d.x * facing.y - d.y * facing.x
 	if forward <= 0 or absi(cross) * 1000 > forward * int(repo.bal("battle_ranged_cone_permille")):
 		return false
-	var radius := int(repo.bal("battle_ranged_block_radius_m"))
+	var blockers: Array = discs.duplicate()
 	for at: Vector2i in friends:
-		var offset := at - from
-		var along := offset.x * d.x + offset.y * d.y
-		if along <= 0:
-			if offset.length_squared() < radius * radius:
-				return false
-			continue
-		if along >= length_sq:
-			if (at - to).length_squared() < radius * radius:
-				return false
-			continue
-		var area := offset.x * d.y - offset.y * d.x
-		if area * area <= radius * radius * length_sq:
-			return false
+		blockers.append({"x_m": at.x, "y_m": at.y, "radius_m": int(repo.bal("battle_ranged_block_radius_m"))})
+	for blocker: Dictionary in blockers:
+		var hit := BattleGroupGeometry.segment_disc([from.x, from.y], [to.x, to.y],
+			[blocker.x_m, blocker.y_m], int(blocker.radius_m))
+		if not hit.ok or hit.blocked: return false
 	return true
 
 
 ## Count each group once. An optional other field retains both sources' commands and terms.
 static func counts(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
-		target := "", opposing_battle: Dictionary = {}) -> Dictionary:
+		target := "", opposing_battle: Dictionary = {}, incoming_context := false, active_round := false) -> Dictionary:
 	var out := {"firing": 0, "melee": 0, "fit": 0}
 	var rows: Array = battle.get("groups", {}).get(code, [])
 	for row: Dictionary in rows:
@@ -77,8 +71,8 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 			or bool(BattleSystem._stored(state, code).get("captured", false)):
 		return out
 	var action := BattleSystem.unit_action(repo, state, battle, code)
-	var in_melee := touching(repo, battle, code)
-	if action["kind"] == "retreat" or (not in_melee and battle.get("reserves", {}).has(code) and action["task_id"] == ""):
+	var in_melee := touching(repo, battle, code, state)
+	if (action["kind"] == "retreat" and not (incoming_context and in_melee)) or (not in_melee and battle.get("reserves", {}).has(code) and action["task_id"] == ""):
 		return out
 	var task := BattleTaskSystem.current(state, code)
 	var designated := String(task.get("request", {}).get("target_unit", "")) if action["task_id"] != "" else ""
@@ -88,22 +82,24 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 	var close := int(repo.bal("battle_group_contact_m"))
 	var sight := int(repo.bal("ai_sight_km" if ArmySystem.is_foe(state, code) else "player_sight_km") * 1000)
 	var axis := Vector2i((WarFront.facing_vector(int(battle.get("group_facing", {}).get(code, 0))) * 1000).round())
-	var friends: Array[Vector2i] = []
+	var friends: Array = []
 	for member: String in battle[side]:
 		for row: Dictionary in battle.get("groups", {}).get(member, []):
 			if int(row["count"]) > 0:
-				friends.append(point(row))
+				friends.append({"x_m": row.x_m, "y_m": row.y_m,
+					"radius_m": BattleGroups.piece(repo, state, member).get("radius_m", -1)})
 	if not opposing_battle.is_empty():
 		for member: String in opponents[friendly]:
 			for row: Dictionary in opponents.get("groups", {}).get(member, []):
 				if int(row["count"]) > 0:
-					friends.append(point(row))
+					friends.append({"x_m": row.x_m, "y_m": row.y_m,
+					"radius_m": BattleGroups.piece(repo, state, member).get("radius_m", -1)})
 	for row: Dictionary in rows:
 		if int(row["count"]) <= 0:
 			continue
 		var from := point(row)
-		var blockers: Array[Vector2i] = friends.duplicate()
-		blockers.erase(from)  # exclude this shooter, retaining any overlapping other group
+		var blockers: Array = friends.duplicate()
+		blockers.erase({"x_m": from.x, "y_m": from.y, "radius_m": BattleGroups.piece(repo, state, code).get("radius_m", -1)})  # exclude this shooter, retaining any overlapping other group
 		var inside := true
 		var region := String(action.get("pursuit_region", ""))
 		if region != "":
@@ -113,6 +109,8 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 			if target != "" and target != foe:
 				continue
 			var self_defence: bool = in_melee and BattleSystem.unit_action(repo, state, opponents, foe)["kind"] == "attack"
+			if active_round and action["kind"] != "attack" and not self_defence:
+				continue # A remote attack cannot authorize this holding pair to hurt each other.
 			if not self_defence and (not inside or (designated != "" and designated != foe)):
 				continue
 			if not BattleSystem._can_fight(repo, state, foe) or bool(BattleSystem._stored(state, foe).get("captured", false)):
@@ -130,7 +128,10 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 			var withdrawing := BattleOrders.kind(opponents, other) == "retreat" or bool(BattleSystem._stored(state, foe).get("battle_retreat", false))
 			if not opposing_battle.is_empty():
 				withdrawing = BattleSystem.unit_action(repo, state, opponents, foe)["kind"] == "retreat"
-			if withdrawing and not "pursue" in legal:
+			# combat_context already suppresses the bound opponent's power share once.
+			var protected_share := incoming_context and BattleRules._binds(battle,
+				"safe_withdrawal", "protect", state.absolute_day(), [foe], code)
+			if withdrawing and not "pursue" in legal and not protected_share:
 				continue
 			var visible := BattleSystem._at_m(repo, state, foe) - BattleSystem._at_m(repo, state, code)
 			if visible.length_squared() > sight * sight:
@@ -141,10 +142,12 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 					continue
 				var to := point(enemy)
 				if in_melee:
-					if row["role"] == "front" and (to - from).length_squared() <= close * close:
+					if row["role"] == "front" and BattleGroups.in_reach(repo, state, code, row, foe, enemy, close):
 						out["melee"] += int(row["count"])
 						engaged = true
-				elif clear_shot(repo, from, to, axis, blockers):
+				elif action["kind"] == "attack" and share(repo, state, code) > 0 and clear_shot(repo, from, to, axis, [],
+						int(BattleGroups.piece(repo, state, code).get("radius_m", -1)),
+						int(BattleGroups.piece(repo, state, foe).get("radius_m", -1)), blockers):
 					out["firing"] += int(row["count"])
 					engaged = true
 				if engaged:
@@ -159,9 +162,9 @@ static func active_permille(count: Dictionary) -> int:
 	return (int(count["firing"]) + int(count["melee"])) * 1000 / int(count["fit"]) if int(count["fit"]) > 0 else 0
 
 
-## Preserve non-ranged threat; ranged personnel contribute only where they can fight.
+## Each equipment share contributes only where its actual personnel can reach.
 static func incoming_permille(repo: DataRepository, state: GameState, battle: Dictionary,
-		side: String, target := "") -> int:
+		side: String, target := "", active_round := true) -> int:
 	# Arithmetic adapters/old records retain their context until production refreshes groups.
 	if not battle.has("groups"):
 		return 1000
@@ -170,9 +173,12 @@ static func incoming_permille(repo: DataRepository, state: GameState, battle: Di
 	for code: String in battle["def" if side == "att" else "att"]:
 		var fit := ArmySystem.fit_count(repo, state, code)
 		var ranged := share(repo, state, code)
-		var factor := active_permille(counts(repo, state, battle, code, target)) if ranged > 0 else 1000
+		var actual := counts(repo, state, battle, code, target, {}, true, active_round)
+		var factor := active_permille(actual)
+		@warning_ignore("integer_division")
+		var melee := int(actual.melee) * 1000 / int(actual.fit) if int(actual.fit) > 0 else 0
 		total += fit
 		@warning_ignore("integer_division")
-		active += fit * (1000 - ranged + ranged * factor / 1000)
+		active += fit * ((1000 - ranged) * melee / 1000 + ranged * factor / 1000)
 	@warning_ignore("integer_division")
 	return active / total if total > 0 else 1000

@@ -88,9 +88,18 @@ func test_unknown_day_protocol_refuses_before_ui_journal_write() -> void:
 func test_failed_personnel_round_pauses_clock_and_preserves_transaction() -> void:
 	Game.restart()
 	Game.data = SuiteData.no_clearance(SuiteData.open_country(SuiteData.repo()))
+	# One front piece per side, admitted before the frozen personnel-write retry.
+	Game.data.balance["battle_group_size"] = 10000
+	for row: Dictionary in Game.data.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	Game.state = Scenario.contact(Game.data, 10)
 	Game.engine = TickEngine.new(Game.data)
 	Game.data.battle_events.clear()
+	var player := String(preload("res://tests/invasion_play.gd").land_regiments(Game.data, 400)[0])
+	var at := BattleSystem._at_m(Game.data, Game.state, player)
+	for code: String in Game.state.foes:
+		preload("res://tests/invasion_play.gd").place(Game.data, Game.state, code, at + Vector2i(140, 0), ArmySystem.ORDER_STANDBY)
 	BattleSystem.detect_contacts(Game.data, Game.state)
 	var battle: Dictionary = Game.state.battles[0]
 	battle["actions"] = {"att": {"kind": "attack"}, "def": {"kind": "hold"}}
@@ -106,6 +115,8 @@ func test_failed_personnel_round_pauses_clock_and_preserves_transaction() -> voi
 	for arm: String in Game.data.world_table("military", "unit_types"):
 		Game.state.army_roster[attacker][arm] = "0"
 	Game.state.army_roster[attacker]["infantry"] = str(fit)
+	assert_true(BattleGroups.refresh(Game.data, Game.state, battle))
+	BattleGroups.deploy_day(Game.data, Game.state, battle)
 	var food := int(BattleSystem._stored(Game.state, attacker)["supplies"])
 	Game.state.day_resolution = DayResolution.begin(Game.state.absolute_day(), false)
 	Game.state.day_resolution["phase"] = "FIXED_TACTICAL_SUBSTEPS"

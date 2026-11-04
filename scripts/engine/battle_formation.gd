@@ -62,7 +62,7 @@ static func context(repo: DataRepository, state: GameState, battle: Dictionary, 
 					if incoming["role"] != "front":
 						continue
 					var offset := Vector2(int(incoming["x_m"]) - int(own["x_m"]), int(incoming["y_m"]) - int(own["y_m"]))
-					if offset.length_squared() > 0.0 and offset.length_squared() <= reach * reach \
+					if offset.length_squared() > 0.0 and BattleGroups.in_reach(repo, state, member, own, code, incoming, int(reach)) \
 							and facing.dot(offset.normalized()) < frontal:
 						out["flanked"] = true
 						break

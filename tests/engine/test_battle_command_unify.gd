@@ -5,8 +5,14 @@ extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 
 func _fixture(a_skill := 5, b_skill := 7) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
+	# Keep the named officers and full personnel; only the synthetic field geometry is reduced.
+	repo.balance["battle_group_size"] = 10000
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := SuiteData.campaign(repo, 9447)
+	state.town_seat.clear()
 	var mine := state.regiments.keys()
 	mine.sort()
 	var foes := state.foes.keys()
@@ -31,7 +37,7 @@ func _fixture(a_skill := 5, b_skill := 7) -> Dictionary:
 		BattleFormation.ensure(b)
 		BattleReport.enroll(state, b, String(b["att"][0]), "att")
 		BattleReport.enroll(state, b, String(b["def"][0]), "def")
-		BattleGroups.refresh(repo, state, b)
+		assert_true(BattleGroups.refresh(repo, state, b), "The commander fixture admits every occupied row")
 		BattleCommand.update_battle(repo, state, b)
 	var a := String(state.military_rosters[p1].commander_id)
 	var b_id := String(state.military_rosters[p2].commander_id)

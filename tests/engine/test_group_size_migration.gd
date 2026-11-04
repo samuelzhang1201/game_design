@@ -3,7 +3,11 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture() -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
+	#1m discs leave the retained10,20/50,60 points56m apart; only group size changes.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 1
+		row.pitch_m = 4
 	var state := SuiteData.campaign(repo, 319)
 	var codes := state.regiments.keys()
 	codes.sort()
@@ -13,8 +17,10 @@ func _fixture() -> Dictionary:
 		{"slot": 2, "count": 50, "role": "front", "x_m": 10, "y_m": 20, "path_m": [[11, 20]]},
 		{"slot": 4, "count": 50, "role": "reserve", "x_m": 30, "y_m": 40},
 		{"slot": 7, "count": 1, "role": "front", "x_m": 50, "y_m": 60}]},
-		"group_facing": {code: 90}, "group_anchor_m": {code: [0, 0]}}
+		"place_x_m": 0, "place_y_m": 0, "group_facing": {code: 90}, "group_anchor_m": {code: [0, 0]}}
 	state.battles = [battle]
+	state.regiments[code].x_m = 0
+	state.regiments[code].y_m = 0
 	state.regiments[code].group_next_slot = 8
 	state.military_migration.living_cap_version = 2
 	state.military_migration.organization_pending = false
@@ -120,7 +126,8 @@ func test_living_partition_regroups_new_size_rows_created_during_a_legacy_day() 
 	state.military_cohorts[id].fit += 1001 - current
 	state.military_cohorts[id].initial += 1001 - current
 	state.military_migration.living_cap_version = 1
-	var battle := {"id": 319, "att": [code], "def": [], "groups": {}}
+	var battle := {"id": 319, "att": [code], "def": [], "groups": {},
+		"place_x_m": BattleSystem._at_m(repo,state,code).x, "place_y_m": BattleSystem._at_m(repo,state,code).y}
 	battle.erase("groups")
 	state.battles = [battle]
 	BattleGroups.refresh(repo, state, battle)
@@ -160,7 +167,11 @@ func test_pending_round_defers_group_regrouping_in_other_battles_too() -> void:
 	idle.att = [other]
 	idle.groups = {other: idle.groups[f.code]}
 	idle.group_facing = {other: 0}
-	idle.group_anchor_m = {other: [0, 0]}
+	# Independent fields must not reuse each other's occupied physical points.
+	for row: Dictionary in idle.groups[other]: row.x_m = int(row.x_m) + 1000
+	f.state.regiments[other].x_m = 1000
+	f.state.regiments[other].y_m = 0
+	idle.group_anchor_m = {other: [1000, 0]}
 	f.state.battles.append(idle)
 	f.state.battles[0].pending_round = {"roll": 99, "frozen": [50, 50, 1]}
 	var before := SaveLoad.state_hash(f.state)
@@ -174,6 +185,7 @@ func test_pending_round_defers_group_regrouping_in_other_battles_too() -> void:
 
 func test_legacy_deployment_frontage_keeps_the_saved_group_size() -> void:
 	var f := _fixture()
+	f.state.town_seat.clear()  # Both compared envelopes belong to mobile columns.
 	var codes: Array = f.state.regiments.keys()
 	codes.sort()
 	var other := String(codes[1])
@@ -191,8 +203,9 @@ func test_legacy_deployment_frontage_keeps_the_saved_group_size() -> void:
 	var targets := BattleGroups.deployment(f.repo, f.state, battle)
 	var ys := [targets[f.code].y, targets[other].y]
 	ys.sort()
-	# Three legacy groups have two front groups: each unit is100m wide.
-	assert_eq(ys, [-50, 50])
+	# Saved y20..60 plus1m radii gives42m occupied widths;100m gap gives envelope centres+/-71.
+	# The saved rows sit40m beyond their anchor: target anchors are -111 and31.
+	assert_eq(ys, [-111, 31])
 	assert_eq(SaveLoad.state_hash(f.state), before)
 
 func test_monthly_battle_recovery_updates_physical_rows_on_the_same_day() -> void:
@@ -229,7 +242,7 @@ func test_frozen_legacy_flank_snapshot_keeps_saved_group_geometry() -> void:
 	var before := SaveLoad.state_hash(f.state)
 	BattleTaskSystem._snapshot_flank(f.repo, f.state, observer, record)
 	assert_eq(record.flank.known.points_m.size(), 3, "101 fit still occupy three frozen50 groups")
-	assert_eq(int(record.flank.known.radius_m), 50, "three line slots span50 metres either side")
+	assert_eq(int(record.flank.known.radius_m), 94, "Actual saved point10,20 lies ceil(sqrt(90^2+20^2))+1=94m from the anchor")
 	assert_eq(SaveLoad.state_hash(f.state), before, "observing cannot migrate the frozen state")
 
 	f.state.day_resolution.clear()
@@ -238,4 +251,4 @@ func test_frozen_legacy_flank_snapshot_keeps_saved_group_geometry() -> void:
 	var migrated := {"request": {"target_unit": f.code}}
 	BattleTaskSystem._snapshot_flank(f.repo, restored, observer, migrated)
 	assert_eq(migrated.flank.known.points_m.size(), 2, "after the boundary and JSON load the target uses100 groups")
-	assert_eq(int(migrated.flank.known.radius_m), 25)
+	assert_eq(int(migrated.flank.known.radius_m), 94, "The retained first physical row still determines the observed envelope")

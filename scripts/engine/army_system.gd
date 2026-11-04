@@ -246,13 +246,24 @@ static func _recover_month(repo: DataRepository, state: GameState) -> void:
 			continue
 		var restored := wound_recovery(repo, wounded_count(repo, state, code))
 		if restored > 0:
-			var result := MilitaryRoster.transfer_units(repo, state, "recovery:%d:%s" % [state.tick, code],
-				[{"unit_code": code, "from": "wounded", "to": "fit", "count": restored}], "Monthly wound recovery: " + code)
-			if result.has("error"):
-				continue
 			var battle := BattleSystem.battle_of(state, code)
+			if not (battle.get("pending_round", {}) as Dictionary).is_empty(): continue
+			var candidate := state if battle.is_empty() else GameState.from_dict(state.to_dict(), false)
+			var result := MilitaryRoster.transfer_units(repo, candidate, "recovery:%d:%s" % [state.tick, code],
+				[{"unit_code": code, "from": "wounded", "to": "fit", "count": restored}], "Monthly wound recovery: " + code)
+			if result.has("error"): continue
 			if not battle.is_empty():
-				BattleGroups.refresh(repo, state, battle)
+				var proposed := BattleSystem.battle_of(candidate, code)
+				if not BattleGroups.refresh(repo, candidate, proposed): continue
+				for field: String in ["military_cohorts", "military_rosters", "military_events"]:
+					state.set(field, candidate.get(field))
+				for side: String in BattleSystem.SIDES:
+					for member: String in proposed[side]:
+						var entry := BattleSystem._stored(state, member)
+						entry.clear()
+						entry.merge(BattleSystem._stored(candidate, member))
+				battle.clear()
+				battle.merge(proposed)
 		state.conduct_marks[marker] = state.tick
 
 ## The supplies a regiment eats on day `day` (1..DAYS_PER_TICK) of a month
@@ -1230,8 +1241,8 @@ static func _clear_route(entry: Dictionary) -> void:
 	entry.erase("waypoints_m")
 
 
-## Halt a regiment where it stands. A column halted on the road settles
-## there as an arrival does (ArmyGround.settle); a standing one keeps its ground.
+## Halt where the regiment stands. Outside a battle a marcher settles as an
+## arrival does; admitted battle rows retain their physical halt point.
 static func set_garrison(repo: DataRepository, state: GameState, code: String) -> void:
 	ensure(repo, state)
 	if not state.regiments.has(code):
@@ -1244,7 +1255,7 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 	entry.erase("departure")
 	drop_hold(entry)
 	_clear_route(entry)
-	if marching:
+	if marching and BattleSystem.battle_of(state, code).is_empty():
 		ArmyGround.settle(repo, state, code)
 
 
@@ -1286,9 +1297,10 @@ static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1,
 			_clear_route(entry)
 			entry.erase("departure")
 		var travelled: Array = []
+		var passed: Array = []
 		var arrived_today := false
 		if not pursuit_stopped:
-			arrived_today = _march_one(repo, state, code, entry, state.absolute_day(), blockers, [], pace_divisor,
+			arrived_today = _march_one(repo, state, code, entry, state.absolute_day(), blockers, passed, pace_divisor,
 				substep_index, int(daily_budgets.get(code, -1)), -1, travelled)
 			if not bool(entry.get("battle_retreat", false)) and int(entry.get("disengaging", 0)) != 1:
 				BattleTaskSystem.credit_pursuit(repo, state, code,
@@ -1300,7 +1312,7 @@ static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1,
 			ArmyGround.leave(repo, state, code)
 		if arrived_today:
 			var halted_by := String(entry.get("halted_by", ""))
-			if halted_by == "" or not _enemies(blockers, code, halted_by):
+			if BattleSystem.battle_of(state, code).is_empty() and (halted_by == "" or not _enemies(blockers, code, halted_by)):
 				# a column halted before a unit it is not at war with camps on the
 				# side it came from; before an enemy it stands where it halted
 				ArmyGround.settle(repo, state, code,
@@ -1325,7 +1337,7 @@ static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1,
 			if String(draft.get("order", "")) == WarDrafts.GARRISON and not draft.has("hold"):
 				WarDrafts.strike(state, code)
 		for battle: Dictionary in state.battles:
-			BattleGroups.follow_anchor(repo, state, battle, code)
+			BattleGroups.follow_anchor(repo, state, battle, code, passed)
 		_note_place(blockers, code, state.regiments[code])
 	# The foes' second pass (spec 2026-10-07-enemy-ai-and-battle §2), in code
 	# order and by the same even step: a column in a battle stands; one that
@@ -1343,13 +1355,14 @@ static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1,
 				BattleGroups.follow_anchor(repo, state, battle, code)
 			_resume_departure(repo, state, code, fe)
 			var aim := Vector2i(int(fe.get("dest_x_m", 0)), int(fe.get("dest_y_m", 0)))
-			if _march_one(repo, state, code, fe, state.absolute_day(), blockers, [], pace_divisor,
+			var passed: Array = []
+			if _march_one(repo, state, code, fe, state.absolute_day(), blockers, passed, pace_divisor,
 					substep_index, int(daily_budgets.get(code, -1))):
 				var hb := String(fe.get("halted_by", ""))
-				if hb != "" and not _enemies(blockers, code, hb):
+				if BattleSystem.battle_of(state, code).is_empty() and hb != "" and not _enemies(blockers, code, hb):
 					_spread_foe(repo, state, code, fe, aim, blockers)
 			for battle: Dictionary in state.battles:
-				BattleGroups.follow_anchor(repo, state, battle, code)
+				BattleGroups.follow_anchor(repo, state, battle, code, passed)
 			_note_place(blockers, code, state.foes[code])
 	return arrived
 
@@ -1481,7 +1494,7 @@ static func clearance_blockers(repo: DataRepository, state: GameState) -> Dictio
 			else pack_to_metres(repo, position_of(repo, state, all[code]))
 		var radius := int(row[1])
 		if spread.has(code):                # its deployed groups are the ground it holds
-			radius = maxi(radius, _group_reach(repo, spread[code], at))
+			radius = maxi(radius, _group_reach(repo, spread[code], at, state, code))
 		rad[code] = radius
 		maxr = maxi(maxr, radius)
 		pos[code] = at
@@ -1510,7 +1523,7 @@ static func _deployment_reach(_repo: DataRepository, state: GameState) -> Dictio
 
 ## The radius that covers a unit's groups round `anchor`: the farthest group's
 ## distance rounded up to whole metres, plus half the group spacing.
-static func _group_reach(repo: DataRepository, rows: Array, anchor: Vector2i) -> int:
+static func _group_reach(repo: DataRepository, rows: Array, anchor: Vector2i, state: GameState, code: String) -> int:
 	var far := 0
 	for g: Dictionary in rows:
 		var dx := int(g["x_m"]) - anchor.x
@@ -1523,7 +1536,7 @@ static func _group_reach(repo: DataRepository, rows: Array, anchor: Vector2i) ->
 			d -= 1
 		far = maxi(far, d)
 	@warning_ignore("integer_division")
-	return far + int(repo.bal("battle_group_spacing_m")) / 2
+	return far + int(BattleGroups.piece(repo, state, code).get("radius_m", 0))
 
 
 ## What never changes about a roster unit: [headcount, clearance radius, kingdom]
@@ -1724,7 +1737,8 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 				step_budget = UnitGait.run_step_m(repo, step_budget)
 			var was_packing := String(current.get("camp_state", {}).get("phase", CampSystem.NONE)) == CampSystem.PACKING
 			var travelled: Array = []
-			var walked := _march_one(repo, state, code, saved, state.absolute_day(), blockers, [],
+			var passed: Array = []
+			var walked := _march_one(repo, state, code, saved, state.absolute_day(), blockers, passed,
 				pace_divisor, substep_index, budget, step_budget, travelled)
 			saved["day_walked_m"] = walked_today + (int(travelled[0]) if not travelled.is_empty() else 0)
 			saved_entries[code] = saved.duplicate(true)
@@ -1744,13 +1758,13 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 					if command_changed:
 						current["x_m"] = int(saved["x_m"])
 						current["y_m"] = int(saved["y_m"])
-						if String(current.get("order", "")) == ORDER_GARRISON:
+						if String(current.get("order", "")) == ORDER_GARRISON and BattleSystem.battle_of(state, code).is_empty():
 							current["dest_x_m"] = int(current["x_m"])
 							current["dest_y_m"] = int(current["y_m"])
 							ArmyGround.settle(repo, state, code)
 					else:
 						_publish_march_state(current, saved)
-						if halted_by == "" or not _enemies(blockers, code, halted_by):
+						if BattleSystem.battle_of(state, code).is_empty() and (halted_by == "" or not _enemies(blockers, code, halted_by)):
 							ArmyGround.settle(repo, state, code,
 								Vector2i(int(saved["x_m"]), int(saved["y_m"])) if halted_by != "" else ArmyGround.NONE)
 						if halted_by != "" and (blockers.get("pos", {}) as Dictionary).has(halted_by):
@@ -1768,7 +1782,7 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 				else:
 					var aim := Vector2i(int(saved.get("dest_x_m", 0)), int(saved.get("dest_y_m", 0)))
 					var halted_by := String(saved.get("halted_by", ""))
-					if halted_by != "" and not _enemies(blockers, code, halted_by):
+					if BattleSystem.battle_of(state, code).is_empty() and halted_by != "" and not _enemies(blockers, code, halted_by):
 						_spread_foe(repo, state, code, saved, aim, blockers)
 					if command_changed:
 						current["x_m"] = int(saved["x_m"])
@@ -1786,7 +1800,7 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 				if command_changed:
 					current["x_m"] = int(saved["x_m"])
 					current["y_m"] = int(saved["y_m"])
-					if substep_index >= pace_divisor - 1 and String(current.get("order", "")) == ORDER_GARRISON:
+					if substep_index >= pace_divisor - 1 and String(current.get("order", "")) == ORDER_GARRISON and BattleSystem.battle_of(state, code).is_empty():
 						current["dest_x_m"] = int(current["x_m"])
 						current["dest_y_m"] = int(current["y_m"])
 						ArmyGround.settle(repo, state, code)
@@ -1814,7 +1828,7 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 			saved["march_step"] = [state.absolute_day(), substep_index]
 			saved_entries[code] = saved
 			for battle: Dictionary in state.battles:
-				BattleGroups.follow_anchor(repo, state, battle, code)
+				BattleGroups.follow_anchor(repo, state, battle, code, passed)
 			UnitGait.refresh(repo, state, code, current)
 			_note_place(blockers, code, current)
 	return arrived
@@ -1845,6 +1859,33 @@ static func _retire_saved_march(saved: Dictionary, current: Dictionary) -> void:
 
 
 static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
+		abs_day: int, blockers: Dictionary = {}, passed_out: Array = [], pace_divisor := 1,
+		substep_index := 0, daily_budget := -1, step_budget := -1, travelled_out: Array = []) -> bool:
+	var battle := BattleSystem.battle_of(state, code)
+	if not (battle.get("pending_round", {}) as Dictionary).is_empty(): return false
+	if battle.get("groups", {}).get(code, []).is_empty():
+		return _walk_one(repo, state, code, entry, abs_day, blockers, passed_out, pace_divisor,
+			substep_index, daily_budget, step_budget, travelled_out)
+	if int(battle.get("geometry_version", 0)) != 1: return false
+	var proposed := entry.duplicate(true)
+	var passed: Array = []
+	var travelled: Array = []
+	var arrived := _walk_one(repo, state, code, proposed, abs_day, blockers, passed, pace_divisor,
+		substep_index, daily_budget, step_budget, travelled)
+	var from := Vector2i(int(entry.x_m), int(entry.y_m))
+	var points: Array = passed + [Vector2i(int(proposed.x_m), int(proposed.y_m))]
+	for point: Vector2i in points:
+		var delta := point - from
+		if not BattleGroups.motion(repo, state, battle, code, from, delta, ceili(Vector2(delta).length())): return false
+		from = point
+	entry.clear()
+	entry.merge(proposed)
+	passed_out.append_array(passed)
+	travelled_out.append_array(travelled)
+	return arrived
+
+
+static func _walk_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
 		abs_day: int, blockers: Dictionary = {}, passed_out: Array = [], pace_divisor := 1,
 		substep_index := 0, daily_budget := -1, step_budget := -1, travelled_out: Array = []) -> bool:
 	if bool(entry.get("captured", false)):

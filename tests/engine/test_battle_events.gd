@@ -161,6 +161,7 @@ func test_local_decision_revalidates_before_consuming_day_token() -> void:
 
 func test_true_join_reserve_changes_only_attacking_contribution() -> void:
 	var f := _fixture()
+	SuiteData.open_country(f.repo) # Reserve-event arithmetic needs legal open ranks, not pack shoreline.
 	_only(f, "ev_33")
 	var other := ""
 	for code: String in f.state.regiments:
@@ -345,6 +346,23 @@ func test_failed_round_retry_keeps_one_event_and_one_paid_receipt() -> void:
 	f.battle.town = ""
 	f.battle.actions = {"att": {"kind": "attack"}}
 	f.state.regiments[f.code].supplies = 100000
+	# Admit actual contact before freezing this new day's failed-round transaction.
+	f.repo = SuiteData.open_country(f.repo)
+	for row: Dictionary in f.repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
+	var foe := String(f.battle.def[0])
+	f.state.regiments[f.code].x_m = 10000
+	f.state.regiments[f.code].y_m = 10000
+	f.state.regiments[f.code].facing_deg = 0
+	f.state.foes[foe].x_m = 10140
+	f.state.foes[foe].y_m = 10000
+	f.state.foes[foe].facing_deg = 180
+	for arm: String in f.repo.world_table("military", "unit_types"):
+		f.state.army_roster[f.code][arm] = "0"
+	f.state.army_roster[f.code].is_royal = "0"
+	f.state.army_roster[f.code].infantry = str(ArmySystem.fit_count(f.repo, f.state, f.code))
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
 	f.state.day_resolution = _fighting_day(f.state)
 	var engine := TickEngine.new(f.repo)
 	var blocked := engine.resolve_day(f.state)

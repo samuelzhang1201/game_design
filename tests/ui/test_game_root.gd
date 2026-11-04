@@ -25,7 +25,7 @@ func after_each() -> void:
 func _battle_root(two := false, day := 10, real_panel := false) -> GameRoot:
 	_battle_original_data = Game.data
 	Game.restart()
-	Game.data = SuiteData.repo()
+	Game.data = SuiteData.open_country(SuiteData.repo()) # Encounter controls use legal open formation ground.
 	Game.data.balance["map3d_default"] = 0.0
 	Game.state = BattleScenario.two_battles(Game.data, day) if two else BattleScenario.contact(Game.data, day)
 	Game.engine = TickEngine.new(Game.data)

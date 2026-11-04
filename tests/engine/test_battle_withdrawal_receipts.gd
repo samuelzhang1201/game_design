@@ -8,6 +8,10 @@ const Play := preload("res://tests/invasion_play.gd")
 
 func _fixture() -> Dictionary:
 	var repo := SuiteData.no_clearance(SuiteData.open_country(SuiteData.repo()))
+	# Receipt fixtures need separate friendly ground, independent of installed art size.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
 	var state := Scenario.contact(repo, 10)
 	BattleSystem.detect_contacts(repo, state)
 	var battle: Dictionary = state.battles[0]
@@ -16,7 +20,7 @@ func _fixture() -> Dictionary:
 	others.erase(unit)
 	var other := String(others[0])
 	var at := BattleSystem._at_m(repo, state, unit)
-	Play.place(repo, state, other, at, ArmySystem.ORDER_STANDBY)
+	Play.place(repo, state, other, at + Vector2i(0, 1000), ArmySystem.ORDER_STANDBY)
 	assert_true(BattleSystem.join(repo, state, int(battle.id), other, "def"))
 	battle.actions = {"att": {"kind": "hold"}, "def": {"kind": "hold"}}
 	assert_true(BattleSystem._start_retreat(repo, state, unit, battle))
@@ -27,6 +31,7 @@ func _fixture() -> Dictionary:
 func _separate(f: Dictionary) -> void:
 	var entry: Dictionary = f.state.regiments[f.unit]
 	entry.x_m = int(f.at.x) - 30000
+	assert_true(BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.unit), "The separated unit takes its physical rows with it")
 
 
 func test_partial_withdrawal_without_an_attack_has_one_public_receipt() -> void:
@@ -82,6 +87,19 @@ func test_last_departure_uses_the_existing_end_receipt_only() -> void:
 	assert_eq(out.events[0].left, [{"code": f.unit, "side": "def", "why": "withdrawn"}])
 
 
+func _line_at(f: Dictionary, code: String, at: Vector2i) -> void:
+	var entry := BattleSystem._stored(f.state, code)
+	entry.x_m = at.x
+	entry.y_m = at.y
+	var rows: Array = f.battle.groups[code]
+	var points := BattleGroups.layout(f.repo, "line", rows.size(), at, 0, 80)
+	for i: int in rows.size():
+		rows[i].x_m = points[i].x
+		rows[i].y_m = points[i].y
+		rows[i].role = "front"
+	f.battle.group_anchor_m[code] = [at.x, at.y]
+
+
 func test_contact_observer_rejects_separation_other_hosts_and_empty_opposition() -> void:
 	var f := _fixture()
 	var observer := Invasion.new()
@@ -90,13 +108,16 @@ func test_contact_observer_rejects_separation_other_hosts_and_empty_opposition()
 	f.state.foes[foe]["host"] = "receipt_main"
 	var at := BattleSystem._at_m(f.repo, f.state, foe)
 	var reach := int(f.repo.bal("battle_contact_km") * 1000)
-	for code: String in f.battle.def:
-		f.state.regiments[code]["x_m"] = at.x + reach
-		f.state.regiments[code]["y_m"] = at.y
+	_line_at(f, foe, at)
+	var n := (f.battle.groups[foe] as Array).size()
+	var m := (f.battle.groups[f.unit] as Array).size()
+	# Inclusive edge reach = 5000 m + two 20 m radii; row parities align at 40 m.
+	_line_at(f, f.unit, at + Vector2i(reach + 40, (n - m) * 40))
+	_line_at(f, f.other, at + Vector2i(reach + 1000, 1000))
+	assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
 	assert_true(observer._main_in_contact(f.state, "receipt_main"), "inclusive physical boundary")
 	assert_false(observer._main_in_contact(f.state, "another_host"), "other units cannot stand in for the main host")
-	for code: String in f.battle.def:
-		f.state.regiments[code]["x_m"] += 1
+	assert_true(BattleGroups.translate(f.repo, f.state, f.battle, f.unit, Vector2i(1, 0)))
 	assert_false(observer._main_in_contact(f.state, "receipt_main"), "saved membership alone does not prove contact")
 	f.battle.def.clear()
 	assert_false(observer._main_in_contact(f.state, "receipt_main"), "no opposing member means no exposure")

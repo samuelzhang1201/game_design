@@ -14,6 +14,11 @@ func _fixture() -> Dictionary:
 		tier.attacker_morale = 0
 		tier.defender_morale = 0
 		tier.rout = "none"
+	# Synthetic20m discs:20+20+60 edge metres keep the100m contact-centre fixture.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 20
+		row.pitch_m = 80
+	repo.balance.battle_group_contact_m = 60
 	var state := SuiteData.campaign(repo, 9478)
 	state.day = 10
 	state.ai_hosts.clear()
@@ -186,6 +191,7 @@ func test_real_field_encounter_pauses_task_and_keeps_known_target_geometry() -> 
 		var opponent := "att" if BattleRules.side_of(b, f.a) == "def" else "def"
 		b.actions[opponent] = {"kind": "retreat"}
 		Play.place(f.repo, state, f.interceptor, BASE + Vector2i(0, -10000), ArmySystem.ORDER_STANDBY)
+		assert_true(BattleGroups.follow_anchor(f.repo, state, b, f.interceptor), "The interceptor takes its rows away from contact")
 		BattleSystem._stored(state, f.interceptor)["battle_retreat"] = true
 		assert_eq(Play.day(TickEngine.new(f.repo), state, true).status, "complete")
 		assert_true(BattleSystem.battle_of(state, f.a).is_empty(), "actual separation ends the interception")

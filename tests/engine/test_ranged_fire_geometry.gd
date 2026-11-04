@@ -4,6 +4,10 @@ const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture(gap := 300, people := 100, formation := "line") -> Dictionary:
 	var repo := SuiteData.open_country(SuiteData.repo())
+	# Small synthetic pieces isolate the existing metre-scale fire/cone fixtures.
+	for row: Dictionary in repo.unit_footprints.values():
+		row.radius_m = 10
+		row.pitch_m = 50
 	var state := SuiteData.campaign(repo, 9463)
 	var codes := state.regiments.keys()
 	codes.sort()
@@ -11,6 +15,7 @@ func _fixture(gap := 300, people := 100, formation := "line") -> Dictionary:
 	var friend := String(codes[1])
 	var enemy := String(state.foes.keys()[0])
 	for code: String in [a, friend, enemy]:
+		state.army_roster[code].is_royal = "0"
 		for arm: String in repo.world_table("military", "unit_types"):
 			state.army_roster[code][arm] = "0"
 		state.army_roster[code]["archers" if code == a else "infantry"] = str(people)
@@ -39,6 +44,27 @@ func _power(f: Dictionary) -> int:
 func test_out_of_range_has_no_ranged_power() -> void:
 	var f := _fixture(5000)
 	assert_eq(_power(f), 0, "An attack warrant cannot shoot across five kilometres")
+
+func test_remote_melee_has_no_incoming_loss_or_morale_exposure() -> void:
+	var f := _fixture(5000)
+	f.state.army_roster[f.a].archers = "0"
+	f.state.army_roster[f.a].infantry = "100"
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 0,
+		"Unreachable non-ranged people cannot inflict remote casualties or morale damage")
+
+func test_installed_heterogeneous_edge_reach_and_target_loss_boundaries() -> void:
+	var f := _fixture(2259)
+	f.repo.unit_footprints = SuiteData.repo().unit_footprints.duplicate(true)
+	# Archer932 + infantry927 + ranged400 =2259; melee edge ends at1959.
+	assert_eq(_shots(f).firing, 100)
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 1000)
+	f.battle.groups[f.enemy][0].x_m += 1
+	f.state.foes[f.enemy].x_m += 1
+	assert_eq(_shots(f).firing, 0)
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 0)
+	f.battle.groups[f.enemy][0].x_m = 2959
+	f.state.foes[f.enemy].x_m = 2959
+	assert_eq(_shots(f).melee, 100)
 
 func _shots(f: Dictionary, target := "") -> Dictionary:
 	return BattleRanged.counts(f.repo, f.state, f.battle, f.a, target)
@@ -195,6 +221,33 @@ func test_each_target_requires_its_own_fire_geometry() -> void:
 	assert_eq(Personnel.count(f.state, f.enemy, "dead"), 4)
 	assert_eq(Personnel.count(f.state, distant, "dead"), 0, "An in-range enemy does not expose its remote ally")
 
+func test_historical_pending_round_finishes_once_before_geometry_admission() -> void:
+	var f := _fixture(300, 50)
+	_fixed_losses(f)
+	var cohort := ""
+	for id: String in f.state.military_rosters[f.enemy].cohort_ids:
+		if int(f.state.military_cohorts[id].fit) > 0: cohort = id
+	var origin := String(f.state.military_cohorts[cohort].source_population_field)
+	f.state.military_cohorts[cohort].source_population_field = "invalid"
+	assert_eq(BattleSystem.step_battle(f.repo, f.state, 9463).status, "error")
+	f.battle.erase("geometry_version")
+	f.repo.unit_footprints = SuiteData.repo().unit_footprints.duplicate(true)
+	var frozen := SaveLoad.state_hash(f.state)
+	assert_eq(MilitaryReorganization.reconcile(f.repo, f.state).status, "deferred")
+	assert_eq(SaveLoad.state_hash(f.state), frozen)
+	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
+	for state: GameState in [f.state, restored]:
+		state.military_cohorts[cohort].source_population_field = origin
+		assert_eq(BattleSystem.step_battle(f.repo, state, 9463).status, "complete")
+		assert_eq(Personnel.count(state, f.enemy, "dead"), 4, "Historical frozen ranged loss stays frozen")
+		assert_eq(MilitaryReorganization.reconcile(f.repo, state).status, "complete")
+		assert_eq(int(state.battles[0].geometry_version), 1)
+		assert_true(BattleGroups.placement(f.repo, state, state.battles[0]).ok)
+		var settled := SaveLoad.state_hash(state)
+		assert_eq(BattleSystem.step_battle(f.repo, state, 9463).status, "complete")
+		assert_eq(SaveLoad.state_hash(state), settled, "Same-day replay cannot repeat the historical loss or costs")
+	assert_eq(SaveLoad.state_hash(f.state), SaveLoad.state_hash(restored))
+
 func test_designated_target_does_not_authorize_shooting_someone_else() -> void:
 	var f := _fixture(300, 50)
 	var distant := String(f.state.foes.keys()[1])
@@ -286,11 +339,43 @@ func test_mixed_equipment_scales_only_its_ranged_personnel_share() -> void:
 	f.state.army_roster[f.a].archers = "100"
 	f.state.army_roster[f.a].infantry = "100"
 	assert_eq(BattleRanged.share(f.repo, f.state, f.a), 500)
-	# Half of the ranged half fires; the melee half retains its existing threat.
-	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 750)
+	# Half of the ranged half fires:500 *500 /1000 =250. Remote melee contributes zero.
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 250)
 	f.battle.group_facing[f.a] = 180
 	assert_eq(_shots(f).firing, 0)
-	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 500)
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 0)
 	var strength := BattleSystem.unit_strength(f.repo, f.state, f.a, Callable(), true, [f.enemy])
 	assert_true(strength.factors.any(func(row: Dictionary) -> bool:
 		return row.source == "contact:ranged" and row.permille == 250))
+
+func test_remote_advance_does_not_make_two_contacting_holders_hurt_each_other() -> void:
+	var f := _fixture(120, 100)
+	f.state.town_seat.clear()
+	f.state.army_roster[f.a].archers = "0"
+	f.state.army_roster[f.a].infantry = "100"
+	f.battle.att.append(f.friend)
+	f.battle.actions = {"att": {"kind": "hold"}, "def": {"kind": "hold"}}
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	var order := {"id": "remote-advance", "unit": f.friend, "battle_id": 9463,
+		"task": "advance", "target_unit": f.enemy}
+	assert_eq(BattleTaskSystem.issue_task(f.repo, f.state, order).status, "pending")
+	assert_eq(BattleTaskSystem.deliver_task(f.repo, f.state, order.id).status, "received")
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "hold")
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.enemy).kind, "hold")
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.friend).kind, "attack")
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "att", f.a), 0)
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 0)
+	_fixed_losses(f)
+	for row: Dictionary in f.repo.battle_outcomes:
+		row.attacker_morale = -10
+		row.defender_morale = -10
+	assert_eq(BattleSystem.step_battle(f.repo, f.state, 9463).status, "complete")
+	for code: String in [f.a, f.enemy, f.friend]:
+		assert_eq(ArmySystem.fit_count(f.repo, f.state, code), 100, "No reachable attacking pair: " + code)
+		assert_eq(Personnel.count(f.state, code, "dead"), 0)
+		assert_eq(Personnel.count(f.state, code, "wounded"), 0)
+		assert_eq(int(BattleSystem._stored(f.state, code).morale), 100)
+	var twin := GameState.from_dict(f.state.to_dict(), false)
+	var held := SaveLoad.state_hash(twin)
+	assert_eq(BattleSystem.step_battle(f.repo, twin, 9463).status, "complete")
+	assert_eq(SaveLoad.state_hash(twin), held, "JSON retry of the remote-only round is inert")

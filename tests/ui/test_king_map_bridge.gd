@@ -123,7 +123,7 @@ func test_paused_root_binds_once_and_forwards_only_changed_snapshots() -> void:
 	assert_eq(view.received["king"]["x_m"], Game.state.king_state["x_m"])
 
 func test_blocked_encounter_keeps_the_committed_king_and_camp_stationary() -> void:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo()) # Royal pause projection needs an admitted open field.
 	var state := SuiteData.campaign(repo, 994)
 	state.day = 16
 	state.king_state = {"x_m": 1000, "y_m": 2000, "route": [[1000, 202000]],

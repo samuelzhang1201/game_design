@@ -7,7 +7,7 @@ var old_data: DataRepository
 
 func before_each() -> void:
 	old_data = Game.data
-	Game.data = SuiteData.repo()
+	Game.data = SuiteData.open_country(SuiteData.repo()) # Clock/decision fixtures need legal open ranks.
 	Game.restart()
 	Game.state = Scenario.contact(Game.data, 10)
 	Game.engine = TickEngine.new(Game.data)
