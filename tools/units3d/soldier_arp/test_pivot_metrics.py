@@ -833,6 +833,84 @@ class NativeMetricTest(unittest.TestCase):
             metric.native_request(state, 0, 0, .5, .25.hex(), 'source', 0, [1e50, 0., 0.])
 
 
+class MaterialCoverageTest(unittest.TestCase):
+    def example(self, factory, kind='stance'):
+        raw, cases = factory()
+        first = raw['header']['cases'][0]['patches'][0]
+        raw['header']['cases'][0]['patches'] = [
+            dict(first, id='support', kind=kind, end=.5),
+            dict(first, id='swing', kind='swing', start=.5)]
+        raw['header']['budget'] = {'contact_um': 100000, 'authority': 'synthetic',
+            'source_sha256': raw['header']['inputs']['terrain']['sha256']}
+        return raw, cases
+
+    def test_explicit_partitions_and_exact_exits(self):
+        points = {label: [[0., 0., 0.]] for label in ('source', 'reference', 'mapped')}
+        for factory in (raw_control, native_control):
+            for kind in ('stance', 'toe'):
+                with self.subTest(mode=factory.__name__, kind=kind), tempfile.TemporaryDirectory() as tmp:
+                    raw, cases = self.example(factory, kind)
+                    state = metric.validate_raw_observation(raw, cases)
+                    self.assertEqual(state['material_gaps'], [])
+                    if factory is native_control:
+                        q, r = Path(tmp)/'requests', Path(tmp)/'responses'
+                        with metric.NativeRun(state, 1, query_output=q) as run:
+                            for phase in cases[0]['phases']:
+                                run.frame(points, 0, phase, float(.5*phase).hex())
+                            run.finish()
+                        with q.open('rb') as source:
+                            stream = metric.QueryStream(source, 'requests', metric.query_header(state))
+                            rows = [oracle(row) for row in stream]
+                        # Three variants x three phases + two independent interval anchors.
+                        self.assertEqual(len(rows), 11)
+                        self.assertEqual(stream.footer['row_count'], 11)
+                        header = dict(metric.query_header(state), request_stream_sha256=stream.footer['stream_sha256'])
+                        with r.open('wb') as output:
+                            footer = metric.write_query_stream(output, 'responses', header, rows)
+                        self.assertEqual(footer['row_count'], 11)
+                        with metric.NativeRun(state, 1, query_responses=r) as run:
+                            frames = [run.frame(points, 0, u, float(.5*u).hex()) for u in cases[0]['phases']]
+                            run.finish()
+                    else:
+                        frames = [metric.raw_physical_metrics(points, state, 0, u) for u in cases[0]['phases']]
+                    for label in points:
+                        self.assertEqual(frames[0][label]['patches'][0]['budget_status'], 'WITHIN_FINITE_SAMPLES')
+                        incoming = frames[1][label]['patches'][0]
+                        outgoing = frames[1][label]['exit_patches'][0]
+                        self.assertEqual(incoming['id'], 'swing')
+                        self.assertEqual(incoming['budget_status'], 'SWING_NO_STANCE_VERDICT')
+                        self.assertEqual(outgoing['id'], 'support')
+                        self.assertEqual(outgoing['budget_status'], 'WITHIN_FINITE_SAMPLES')
+                        for frame in frames:
+                            self.assertEqual(frame[label]['coverage']['status'], 'COMPLETE_FINITE')
+                            self.assertEqual(frame[label]['whole_mesh_min_signed_world_m'], 0.)
+
+    def test_per_vertex_gaps_and_invalid_intervals(self):
+        for factory in (raw_control, native_control):
+            for kind in ('stance', 'toe', 'swing'):
+                with self.subTest(mode=factory.__name__, kind=kind):
+                    raw, cases = self.example(factory, kind)
+                    self.assertEqual(metric.validate_raw_observation(raw, cases)['material_gaps'], [])
+                    patches = raw['header']['cases'][0]['patches']
+                    patches[1]['vertices'] = [1]
+                    self.assertEqual(metric.validate_raw_observation(raw, cases)['material_gaps'], [
+                        'case 1 vertex 0: missing material intervals 0.5..1.0',
+                        'case 1 vertex 1: missing material intervals 0.0..0.5'])
+                    patches[1]['vertices'] = [0]
+                    patches.pop()
+                    self.assertIn('case 1 vertex 0: missing material intervals 0.5..1.0',
+                                  metric.validate_raw_observation(raw, cases)['material_gaps'])
+                    for field, value, reason in [('end', 1., 'overlapping material intervals'),
+                            ('vertices', [0, 0], 'invalid material vertices'),
+                            ('vertices', [-1], 'invalid material vertices'),
+                            ('end', .25, 'uncaptured interval endpoint'),
+                            ('anchors', [], 'missing physical world anchors')]:
+                        invalid, cases = self.example(factory, kind)
+                        invalid['header']['cases'][0]['patches'][0][field] = value
+                        with self.subTest(field=field, value=value), self.assertRaisesRegex(ValueError, reason):
+                            metric.validate_raw_observation(invalid, cases)
+
+
 class NativeRunTest(unittest.TestCase):
     def run_requests(self, state, path):
         points = {label: [[1., .9, 0.]] for label in ('source', 'reference', 'mapped')}
