@@ -47,6 +47,8 @@ static func mergeable(repo: DataRepository, state: GameState, a: Dictionary, b: 
 	for battle: Dictionary in [a, b]:
 		if not (battle.get("pending_round", {}) as Dictionary).is_empty():
 			return false
+		if not BattleGroups.placement(repo, state, battle).ok:
+			return false
 		for side: String in BattleSystem.SIDES:
 			if (battle[side] as Array).is_empty():
 				return false

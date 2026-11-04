@@ -130,6 +130,7 @@ func _end_day(s: GameState) -> Array:
 
 
 func test_stance_order_lands_after_day_end_and_applies_next_day() -> void:
+	SuiteData.open_country(repo) # Delivery timing requires legal ranks, independent of pack shoreline.
 	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)
 	# a long, bloodless, dice-free battle nobody leaves

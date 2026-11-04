@@ -62,6 +62,29 @@ func test_contact_inside_reach_merges_by_allegiance() -> void:
 	assert_ne(String(events[0].reason), "")
 	assert_true(events[0] in s.report_events)
 
+func test_closed_reserve_refuses_merge_before_aliases_or_records_publish() -> void:
+	var f := _fixture()
+	for code: String in [f.p1, f.f1, f.p2, f.f2]:
+		var battle: Dictionary = f.b1 if code in [f.p1, f.f1] else f.b2
+		assert_true(BattleGroups.translate(f.repo, f.state, battle, code, Vector2i(1000, 1000)))
+	Personnel.replace(f.repo, f.state, f.f1, 200)
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.b1))
+	var reserve: Dictionary = f.b1.groups[f.f1][1]
+	var cells := PackedByteArray()
+	cells.resize(1000 * 3000)
+	cells.fill(0)
+	cells[int(reserve.y_m / 10) * 1000 + int(reserve.x_m / 10)] = 255
+	f.repo.balance.army_march_grid_px = 1
+	var grid := MarchPath.build(f.repo, 1000, 3000, 10, cells)
+	MarchPath.use(f.repo, grid)
+	for code: String in [f.p1, f.f1, f.p2, f.f2]:
+		var at := BattleSystem._at_m(f.repo, f.state, code)
+		assert_true(grid.clear(at, at), "All anchors and the touching fronts remain dry")
+	var before := SaveLoad.state_hash(f.state)
+	assert_eq(BattleMerge.day(f.repo, f.state), [], "A closed reserve cannot publish a merge")
+	assert_eq(SaveLoad.state_hash(f.state), before, "Aliases, warrants, parties and reports stay atomic")
+	MarchPath.forget()
+
 func test_reach_is_inclusive_and_only_whole_metres() -> void:
 	var f := _fixture(Vector2i(140, 0))
 	BattleMerge.day(f.repo, f.state)

@@ -155,7 +155,8 @@ func test_king_report_carries_authored_facts_without_dispatch_fee() -> void:
 
 
 func test_tick_transaction_does_not_repeat_king_movement_after_encounter_pause() -> void:
-	var repo := SuiteData.repo()
+	# Royal substep timing needs an admitted battle, independent of pack shoreline.
+	var repo := SuiteData.open_country(SuiteData.repo())
 	var state := SuiteData.campaign(repo, 994)
 	state.day = 16
 	state.king_state = {"x_m": 1000, "y_m": 2000, "route": [], "follow_code": "",
