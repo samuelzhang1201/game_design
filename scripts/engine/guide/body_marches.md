@@ -194,6 +194,25 @@ TIME/MARCH admission and hash projections remain separate.
 Direct/JSON latest-plan retries validate the full endpoint and inner plan before
 returning a detached no-op. Modified cost, RNG, queues, receipts, policy or terrain
 rejects. Failures publish no staged cost, pose, route or RNG. The inner commit is
-private staging and cannot replay an outer contact endpoint. This step leaves
-that active timeline at contact; closure, later lifecycle/providers, day driver,
-installed policy, rendering and production activation remain separate work.
+private staging and cannot replay an outer contact endpoint. Later lifecycle/
+providers, day driver, installed policy, rendering and production activation
+remain separate work.
+
+`BodyMotion.close_battle_locomotion_candidate` accepts only the explicit contact
+boundary at Q. It validates the whole outer endpoint and the active battle TIME
+proof, including every identity, endpoint, policy, terrain and reconstructed
+sweep. On a detached clone it copies the exact motion digest/cursor/priority
+into `body_battle.closed_motion` and removes only `body_motion`. Poses, counts,
+paths, supply, RNG, day stage and sequences stay exact. Its result is exactly
+`{status,reason,candidate}`, with a null candidate on error. Missing/early/stale
+or corrupt controls fail before retirement.
+
+Closure is private staging: its enclosing contact transaction must publish a
+new outer receipt and endpoint digest together. The old outer result is invalid
+on this intermediate clone, so it cannot be used as a public source. Once sealed,
+the closed descriptor survives JSON and later valid row retirement without
+retaining or replaying the old plan. New motion must be strictly later than the
+closed cursor, including standalone TIME and MARCH sources. When no active
+receipt exists, surviving requested identities retain closed priority; new
+identities follow stable unit/slot order. Subsequent active receipts supersede
+that priority. Closure never creates movement budget or processes casualties.

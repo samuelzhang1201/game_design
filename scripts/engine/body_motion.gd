@@ -15,6 +15,8 @@ static func _plan(repo: DataRepository, state: GameState, intents: Array, abs_da
 	var validated := _battle_source(repo, state, march_boundary) if battle else _validate(repo, state, march_boundary)
 	if validated.status != "complete": return _error("Motion requires complete unfrozen bodies: " + validated.reason)
 	if not state.military_migration.has("body_version"): return _error("Motion requires explicitly initialized current bodies")
+	var closed_error := UnitBodies._closed_motion_cursor_error(state, abs_day, substep)
+	if not closed_error.is_empty(): return _error(closed_error)
 	if not march_boundary.is_empty() and (int(march_boundary.abs_day) != abs_day or int(march_boundary.substep) != substep):
 		return _error("Motion cursor disagrees with explicit boundary")
 	var raw_saved: Variant = state.military_migration.get("body_motion", {})
@@ -66,7 +68,8 @@ static func _plan(repo: DataRepository, state: GameState, intents: Array, abs_da
 		ordered.append({"unit": raw.unit, "slot": int(raw.slot), "path_m": path, "budget_m": int(raw.budget_m), "hostile": raw.hostile})
 	ordered.sort_custom(_less)
 	var canonical_intents := ordered.duplicate(true)
-	var priority: Array = saved.get("priority", [])
+	var priority: Array = saved.get("priority", []) if not saved.is_empty() else state.military_migration.get("body_battle", {}).get("closed_motion", {}).get("priority", []).duplicate(true)
+	for identity: Dictionary in priority: identity.slot = int(identity.slot)
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ai := priority.find(_identity(a))
 		var bi := priority.find(_identity(b))
@@ -136,6 +139,8 @@ static func commit(repo: DataRepository, state: GameState, proposed: Dictionary,
 		or not cursor.basis is String or not cursor.intents is Array or not _priority_ok(cursor.priority): return _failure("Invalid plan cursor")
 	var validation := _validate(repo, state, march_boundary)
 	if validation.status != "complete" or not state.military_migration.has("body_version"): return _failure("Commit requires complete unfrozen candidate")
+	var closed_error := UnitBodies._closed_motion_cursor_error(state, int(cursor.abs_day), int(cursor.substep))
+	if not closed_error.is_empty(): return _failure(closed_error)
 	if not march_boundary.is_empty() and (int(march_boundary.abs_day) != int(cursor.abs_day) or int(march_boundary.substep) != int(cursor.substep)):
 		return _failure("Motion cursor disagrees with explicit boundary")
 	var raw_saved: Variant = state.military_migration.get("body_motion", {})
@@ -758,7 +763,7 @@ static func _plan_locomotion(repo: DataRepository, state: GameState, intents: Ar
 			lookup[_id(body)] = bodies.size()
 			bodies.append(body)
 	var ordered := canonical_intents.duplicate(true)
-	var priority: Array = [] if saved == null else saved.priority.duplicate(true)
+	var priority: Array = state.military_migration.get("body_battle", {}).get("closed_motion", {}).get("priority", []).duplicate(true) if saved == null else saved.priority.duplicate(true)
 	for identity: Dictionary in priority: identity.slot = int(identity.slot)
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ai := priority.find(_identity(a))
@@ -969,6 +974,8 @@ static func commit_locomotion_candidate(repo: DataRepository, state: GameState, 
 	if _hash(cursor.boundary) != _hash(march_boundary): return _failure("Locomotion boundary mismatch")
 	var validated := _validate(repo, state, march_boundary)
 	if validated.status != "complete" or not state.military_migration.has("body_version"): return _failure("Locomotion requires initialized complete bodies")
+	var closed_error := UnitBodies._closed_motion_cursor_error(state, int(cursor.abs_day), int(cursor.substep))
+	if not closed_error.is_empty(): return _failure(closed_error)
 	var raw: Variant = state.military_migration.get("body_motion")
 	if state.military_migration.has("body_motion"):
 		if not _loco_saved_source_ok(repo, state, raw, march_boundary): return _failure("Invalid saved motion control")
@@ -1082,3 +1089,21 @@ static func commit_battle_locomotion_candidate(repo: DataRepository, state: Game
 	if UnitBodies._battle_world(repo, candidate).status != "complete" or not _battle_saved_source_ok(repo, candidate, candidate.military_migration.body_motion):
 		return _failure("Battle TIME final physical validation failed")
 	return {"status": "complete", "reason": "Committed private battle timeline", "candidate": candidate}
+
+static func close_battle_locomotion_candidate(repo: DataRepository, source: GameState, boundary: Dictionary) -> Dictionary:
+	var failure := {"status": "error", "reason": "Closure requires the explicit contact boundary at Q", "candidate": null}
+	if boundary.get("kind") != "battle" or boundary.get("stage") != "contact": return failure
+	var validated := UnitBodies.validate_battle_candidate(repo, source, boundary)
+	if validated.status != "complete":
+		failure.reason = validated.reason
+		return failure
+	if not source.military_migration.has("body_motion"):
+		failure.reason = "No active battle timeline to close"
+		return failure
+	var candidate: GameState = validated.candidate
+	var closed: Dictionary = candidate.military_migration.body_motion.duplicate(true)
+	closed.erase("plan")
+	candidate.military_migration.body_battle.closed_motion = closed
+	candidate.military_migration.erase("body_motion")
+	# Private staging: the enclosing contact transaction must seal its own receipt/result.
+	return {"status": "complete", "reason": "Closed verified battle timeline at Q", "candidate": candidate}

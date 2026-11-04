@@ -2282,6 +2282,8 @@ static func _body_source_error(repo: DataRepository, state: GameState, version: 
 	var tx := state.day_resolution
 	if int(tx.day) != state.day or int(tx.absolute_day) != state.absolute_day(): return "Candidate march day mismatch"
 	var control: Dictionary = tx.body_march
+	var closed_error := UnitBodies._closed_motion_cursor_error(state, int(control.abs_day), int(control.next_substep))
+	if not closed_error.is_empty(): return closed_error
 	var raw: Variant = state.military_migration.get("body_motion")
 	if state.military_migration.has("body_motion"):
 		if not (BodyMotion._saved_ok(raw) if version == 1 else BodyMotion._loco_saved_source_ok(repo, state, raw, _body_boundary(state))): return "Invalid inner motion receipt"
