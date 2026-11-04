@@ -265,3 +265,42 @@ and random draw without repeating departure costs, daily meals or attack costs.
 ## Battle groups
 
 Saved groups, size migration, deployment and contact: [Battle groups](battle_groups.md).
+
+## Isolated candidate flank and pursuit movement
+
+`BattleTaskSystem.flank_intent_candidate` is a pure received-route provider for
+`BodyBattleMotion`; ordinary `deploy_flank` and field tracking keep their existing
+callers until atomic activation. It validates raw received snapshot, waypoint,
+contact-phase and pursuit controls before motion. Body-opted saves retain these
+task controls as raw JSON through both import branches; legacy unopted task saves
+retain their codec. Missing groups never acquire a formation layout.
+
+Visible target observations copy exact sole-owner body points and measured radii,
+with actual explicit/owner facing. Hidden targets retain their last known geometry
+and route. Both wings check the full translated body circles in the existing
+terrain router; only the
+next saved corner is offered to TIME, with the one shared slice/tactical cap.
+Source queries do not update receipts, consume supply or move an anchor.
+Committed minimum reached route prefixes alone retire corners; a blocked body
+cannot complete the wing for its peers. Actual lawful measured-surface contact
+commits `flank.phase=contact` once and never starts a second circle. No task label,
+observation or route completion grants a side/rear multiplier.
+
+Pending cancellation leaves the received writer active; delivered cancellation
+clears it through the existing task ledger. Capability, packing, reserves, current
+control/law (including target-scoped protected withdrawal) and actual interception
+can hold the selected flank without falling
+through to another writer. Pursuit movement uses its received route/region bound
+and remaining metre allowance; actual committed body legs, including detours,
+are charged once by the existing route settlement. A reservation whose actual
+detour leaves the received region rejects the entire transaction. Outer retries retain
+route, phase, supply and credit unchanged. Actual nonbattle withdrawal bypasses
+a prior bounded offensive march hold and never spends its pursuit credit; a
+residual withdrawal flag inside a live field does not grant that bypass. Failure
+discards all private staging.
+
+Numerical certificate fixtures certify candidate arithmetic only. Ordinary
+campaign activation, later battle writers, personnel settlement, all twelve
+formation gates, installed all-arm art certification and native-window acceptance
+remain separate. The terrain router's Vector2i coordinate range remains an
+explicit fail-closed routing limit; saved whole-metre routes use TIME's bounds.

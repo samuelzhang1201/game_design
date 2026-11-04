@@ -34,6 +34,8 @@ static func _source_error(repo: DataRepository, source: GameState, boundary: Dic
 	if source.military_migration.has("body_motion"): return "Previous movement requires explicit closure"
 	var charge_error := BattleCharge._candidate_error(repo, source)
 	if not charge_error.is_empty(): return charge_error
+	var flank_error := BattleTaskSystem._flank_candidate_error(source)
+	if not flank_error.is_empty(): return flank_error
 	var tx := source.day_resolution
 	var codes: Array = source.regiments.keys() + source.foes.keys()
 	var land: Array = []
@@ -100,6 +102,7 @@ static func _collect(repo: DataRepository, source: GameState, boundary: Dictiona
 	providers = providers.duplicate()
 	if not providers.has("deployment"): providers.deployment = BattleGroups.deployment_intent_candidate
 	if not providers.has("charge"): providers.charge = BattleCharge.intent_candidate
+	if not providers.has("flank"): providers.flank = BattleTaskSystem.flank_intent_candidate
 	var error := _source_error(repo, source, boundary)
 	if not error.is_empty(): return {"error": error}
 	for key: Variant in providers:
@@ -124,8 +127,15 @@ static func _collect(repo: DataRepository, source: GameState, boundary: Dictiona
 		if not battle.is_empty() and battle.get("group_anchor_m", {}).has(code): here = battle.group_anchor_m[code].duplicate()
 		var held := writer == "hold" or bool(entry.get("captured", false)) or not CampSystem.can_march_entry(entry, source.absolute_day()) or MilitaryRoster.fit(staged, code) <= 0
 		var task := BattleTaskSystem.current(staged, code)
+		var offensive_pursuit := writer == "pursuit_march" and (not battle.is_empty() or (int(entry.get("disengaging", 0)) != 1 and not bool(entry.get("battle_retreat", false))))
 		if task.get("status", "") in ["bounded", "search_failed", "completed"] \
-			and ((writer == "pursuit_march" and task.has("pursuit")) or (writer == "flank" and task.get("request", {}).get("task") == "flank")): held = true
+			and ((offensive_pursuit and task.has("pursuit")) or (writer == "flank" and task.get("request", {}).get("task") == "flank")): held = true
+		if offensive_pursuit:
+			var request: Dictionary = task.get("request", {})
+			if task.get("status") != "received" or request.get("source") != "player" or ArmySystem.is_foe(staged, code) \
+				or (not battle.is_empty() and int(entry.get("disengaging", 0)) == 1) \
+				or ArmySystem.realm_of(repo, code, staged) != repo.resolve_realm("player_realm"): held = true
+			elif not battle.is_empty() and BattleTaskSystem.combat_action(repo, staged, battle, code).kind != "attack": held = true
 		if not battle.is_empty() and writer in ["withdrawal", "pursuit_march", "flank", "charge"]:
 			var required: String = {"withdrawal": "retreat", "pursuit_march": "pursue", "flank": "attack", "charge": "charge"}[writer]
 			var target: String = task.get("request", {}).get("target_unit", "")
@@ -134,6 +144,8 @@ static func _collect(repo: DataRepository, source: GameState, boundary: Dictiona
 		else:
 			UnitGait.refresh(repo, staged, code, entry)
 			if budget > 0 and UnitGait.pays_run(repo, staged, code, entry, count): budget = UnitGait.run_step_m(repo, budget)
+		if offensive_pursuit and task.get("status") == "received" and task.has("pursuit") and int(task.request.max_route_m) > 0:
+			budget = mini(budget, maxi(0, int(task.request.max_route_m) - int(task.pursuit.route_m)))
 		if tactical: budget = mini(budget, _share(int(repo.balance.battle_deploy_step_m), count, slice))
 		if budget < 0 or budget > BodyMotion.LOCAL_LIMIT: return {"error": "Unsafe union slice budget"}
 		var contribution := {"status": "complete", "reason": "Waiting for movement capability" if held else "", "error": "", "unit": code, "path_m": [here]}
@@ -179,6 +191,22 @@ static func _stage(repo: DataRepository, source: GameState, boundary: Dictionary
 	if collected.has("error"): return collected
 	var motion := BodyMotion.plan_battle_locomotion_candidate(repo, collected.candidate, collected.intents, boundary)
 	if not BodyMotion._loco_plan_ok(motion, true): return {"error": str(motion.get("reasons", {}).get("error", "Invalid union motion"))}
+	# The reservation may detour away from the desired route; bounds apply to its actual legs too.
+	for unit: Dictionary in collected.units:
+		if unit.writer != "pursuit_march": continue
+		var entry := UnitBodies._entry(source, unit.unit)
+		var task := BattleTaskSystem.current(source, unit.unit)
+		if int(entry.get("disengaging", 0)) == 1 or bool(entry.get("battle_retreat", false)) or not task.has("pursuit"): continue
+		var region: String = task.request.region
+		for move: Dictionary in motion.moves:
+			if move.unit != unit.unit or move.used_m == 0: continue
+			if move.used_m > BodyMotion.JSON_INTEGER_MAX - int(task.pursuit.route_m): return {"error": "Actual pursuit credit exceeds the exact JSON range"}
+			if region.is_empty(): continue
+			var path := BodyMotion._loco_path(move)
+			for point: Array in path:
+				if absi(int(point[0])) > 2147483647 or absi(int(point[1])) > 2147483647: return {"error": "Pursuit region route exceeds terrain-router bounds"}
+			if MarchPath.region_exit(repo, source, Vector2i(path[0][0], path[0][1]), MarchRoute.from_pairs(path.slice(1)), region) >= 0.0:
+				return {"error": "Actual pursuit detour leaves its received region"}
 	collected.plan = {"version": 1, "request": {"kind": "move"}, "boundary": boundary.duplicate(true),
 		"basis": {"source": BodyMotion._hash([source.to_dict(), {"kind": "move"}, boundary, _context(repo, source)])}, "motion": motion, "contacts": []}
 	return collected
@@ -253,6 +281,7 @@ static func commit_candidate(repo: DataRepository, source: GameState, proposed: 
 			if not owner.has("group_anchor_m"): owner.group_anchor_m = {}
 			owner.group_anchor_m[code] = common.back().duplicate()
 		BattleCharge._settle_candidate(repo, source, candidate, code, unit.writer, common, staged.plan.motion.moves)
+		BattleTaskSystem._settle_flank_candidate(repo, source, candidate, code, unit.writer, common)
 	candidate.day_resolution.journal.arrivals.append_array(arrivals)
 	candidate.day_resolution.body_battle.stage = "contact"
 	candidate.day_resolution.body_battle.sequence = str(int(boundary.sequence) + 1)

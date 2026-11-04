@@ -2816,7 +2816,9 @@ static func march_intent_candidate(repo: DataRepository, source: GameState, unit
 	var result := {"status": "complete", "reason": "", "error": "", "unit": unit, "path_m": [here]}
 	if saved.order != ORDER_MARCH or bool(entry.get("captured", false)) or not BattleSystem.may_withdraw(source, unit) \
 		or not CampSystem.can_march_entry(entry, source.absolute_day()) or is_naval(repo, source, unit) \
-		or BattleTaskSystem.current(source, unit).get("status", "") == "bounded":
+		or (BattleTaskSystem.current(source, unit).get("status", "") == "bounded" \
+			and (not BattleSystem.battle_of(source, unit).is_empty() \
+				or (int(entry.get("disengaging", 0)) != 1 and not bool(entry.get("battle_retreat", false))))):
 		result.reason = "Received march waits for capability, packing or pursuit permission"
 		return result
 	var path: Array = [here]

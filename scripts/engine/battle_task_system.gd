@@ -553,7 +553,7 @@ static func _snapshot_flank(repo: DataRepository, state: GameState, unit: String
 
 ## Two outboard approaches. Every leg uses the terrain router, then rejects its
 ## unreachable straight-line fallback and shortcuts through the known enemy.
-static func flank_route(repo: DataRepository, here: Vector2i, known: Dictionary) -> Array:
+static func flank_route(repo: DataRepository, here: Vector2i, known: Dictionary, body_offsets: Array = []) -> Array:
 	var centre := Vector2i(int(known["x_m"]), int(known["y_m"]))
 	var face := WarFront.facing_vector(int(known["facing_deg"]))
 	var across := Vector2(-face.y, face.x)
@@ -595,6 +595,9 @@ static func flank_route(repo: DataRepository, here: Vector2i, known: Dictionary)
 			for point: Vector2i in leg:
 				if grid != null and not grid.clear(previous, point, [grid.cell_of(here)]):
 					valid = false
+				for offset: Vector2i in body_offsets:
+					var swept: Array = [[previous.x + offset.x, previous.y + offset.y], [point.x + offset.x, point.y + offset.y]]
+					if not ArmySystem._body_path_terrain(grid, swept, int(known.own_radius_m)).is_empty(): valid = false
 				for enemy: Vector2i in points:
 					if Geometry2D.get_closest_point_to_segment(Vector2(enemy), Vector2(previous), Vector2(point)).distance_to(Vector2(enemy)) < reach - 1.0:
 						valid = false
@@ -678,3 +681,184 @@ static func deploy_flank(repo: DataRepository, state: GameState, battle: Diction
 	if BattleGroups.engaged_counts(repo, state, battle, unit, String(record["request"]["target_unit"])).x > 0:
 		flank["phase"] = "contact"
 	return true
+
+
+## Raw received geometry stays separate from the legacy layout/tracking writers.
+static func _flank_candidate_error(source: GameState) -> String:
+	for code: String in source.regiments.keys() + source.foes.keys():
+		var ledger: Variant = source.unit_tasks.get(code, {})
+		if not ledger is Dictionary or not ledger.get("orders", {}) is Dictionary: return "Invalid task ledger"
+		for record: Variant in ledger.get("orders", {}).values():
+			if not record is Dictionary: return "Invalid task record"
+			if record.has("pursuit"):
+				var pursuit: Variant = record.pursuit
+				if not pursuit is Dictionary or not BodyMotion._keys(pursuit, ["start_x_m", "start_y_m", "route_m"]) \
+					or not BodyMotion._loco_point([pursuit.start_x_m, pursuit.start_y_m]) \
+					or not BodyMotion._loco_integer(pursuit.route_m) or pursuit.route_m < 0: return "Invalid received pursuit control"
+			if not record.has("flank"): continue
+			var flank: Variant = record.flank
+			if not flank is Dictionary: return "Invalid received flank"
+			for key: Variant in flank:
+				if key not in ["known", "path_m", "phase"]: return "Unknown received flank control"
+			if flank.has("phase") and (not flank.phase is String or flank.phase != "contact"): return "Invalid flank contact phase"
+			if flank.has("known"):
+				var known: Variant = flank.known
+				if not known is Dictionary or not BodyMotion._keys(known, ["x_m", "y_m", "facing_deg", "radius_m", "piece_radius_m", "own_radius_m", "points_m"]) \
+					or not BodyMotion._loco_point([known.x_m, known.y_m]) or not known.points_m is Array or known.points_m.is_empty(): return "Invalid received flank snapshot"
+				for key: String in ["facing_deg", "radius_m", "piece_radius_m", "own_radius_m"]:
+					if not BodyMotion._natural(known[key]) or known[key] > (359 if key == "facing_deg" else BodyMotion.LOCAL_LIMIT): return "Invalid received flank number"
+				for point: Variant in known.points_m:
+					if not BodyMotion._loco_point(point): return "Invalid received flank point"
+			if flank.has("path_m"):
+				if not flank.has("known") or not flank.path_m is Array: return "Invalid received flank route"
+				for point: Variant in flank.path_m:
+					if not BodyMotion._loco_point(point): return "Invalid received flank waypoint"
+	return ""
+
+static func _flank_candidate_touch(repo: DataRepository, state: GameState, unit: String, enemy: String) -> bool:
+	var own := BattleGroupGeometry.footprint(repo, state.army_roster[unit])
+	var other := BattleGroupGeometry.footprint(repo, state.army_roster[enemy])
+	for row: Dictionary in UnitBodies.rows(repo, state, unit):
+		for foe: Dictionary in UnitBodies.rows(repo, state, enemy):
+			var a: Array = [row.x_m, row.y_m]
+			var b: Array = [foe.x_m, foe.y_m]
+			var pair := BattleGroupGeometry.pair(a, own.radius_m, b, other.radius_m, int(repo.bal("battle_group_contact_m")))
+			if pair.ok and not pair.overlap and pair.in_reach \
+				and ArmySystem._body_path_terrain(MarchPath.of_pack(repo), [a, b], 0).is_empty(): return true
+	return false
+
+## Prepare a detached observation/route; never seed groups or inspect a target's destination.
+static func _flank_candidate_record(repo: DataRepository, source: GameState, unit: String) -> Dictionary:
+	var record := current(source, unit)
+	if record.get("status") != "received" or record.get("flank", {}).get("phase") == "contact": return record
+	var target: String = record.request.target_unit
+	var entry := UnitBodies._entry(source, unit)
+	var enemy := UnitBodies._entry(source, target)
+	if enemy.is_empty(): return record
+	var own_owner := BattleSystem.battle_of(source, unit)
+	var here: Array = own_owner.get("group_anchor_m", {}).get(unit, [entry.x_m, entry.y_m]).duplicate()
+	var there: Array = [enemy.x_m, enemy.y_m]
+	var dx := BodyMotion._difference(there[0], here[0])
+	var dy := BodyMotion._difference(there[1], here[1])
+	var sight := float(Sighting.sight_m(repo))
+	var seen := absf(dx) <= sight and absf(dy) <= sight and dx * dx + dy * dy <= sight * sight
+	var flank: Dictionary = record.get("flank", {})
+	if seen:
+		if bool(enemy.get("captured", false)) or MilitaryRoster.fit(source, target) <= 0:
+			record.status = "completed"
+			record.reason = "The visible designated enemy can no longer fight"
+			return record
+		var owner := BattleSystem.battle_of(source, target)
+		if owner.get("group_anchor_m", {}).has(target): there = owner.group_anchor_m[target].duplicate()
+		var previous: Dictionary = flank.get("known", {})
+		var facing := int(enemy.get("facing_deg", owner.get("group_facing", {}).get(target, previous.get("facing_deg", 0))))
+		if not enemy.has("facing_deg") and owner.is_empty() and not previous.is_empty():
+			var observed := Vector2(BodyMotion._difference(there[0], previous.x_m), BodyMotion._difference(there[1], previous.y_m))
+			if observed != Vector2.ZERO: facing = WarFront.facing_deg(observed)
+		var own := BattleGroupGeometry.footprint(repo, source.army_roster[unit])
+		var other := BattleGroupGeometry.footprint(repo, source.army_roster[target])
+		var points: Array = []
+		var radius: int = other.radius_m
+		for row: Dictionary in UnitBodies.rows(repo, source, target):
+			var point: Array = [row.x_m, row.y_m]
+			points.append(point)
+			radius = maxi(radius, BodyMotion._distance_ceil(there, point) + int(other.radius_m))
+		var known := {"x_m": there[0], "y_m": there[1], "facing_deg": facing, "radius_m": radius,
+			"piece_radius_m": other.radius_m, "own_radius_m": own.radius_m, "points_m": points}
+		if flank.get("known", {}) != known:
+			flank.known = known
+			flank.erase("path_m")
+	if flank.has("known") and not flank.has("path_m"):
+		# shortcut: the existing terrain router uses Vector2i, reject outside its range until that router supports int64.
+		for point: Array in [here, [flank.known.x_m, flank.known.y_m]] + flank.known.points_m:
+			if absi(int(point[0])) > 2147483647 - BodyMotion.LOCAL_LIMIT or absi(int(point[1])) > 2147483647 - BodyMotion.LOCAL_LIMIT:
+				record.flank = flank
+				return record
+		var offsets: Array = []
+		for row: Dictionary in UnitBodies.rows(repo, source, unit):
+			var x := BodyMotion._difference(row.x_m, here[0])
+			var y := BodyMotion._difference(row.y_m, here[1])
+			if absf(x) > BodyMotion.LOCAL_LIMIT or absf(y) > BodyMotion.LOCAL_LIMIT:
+				record.flank = flank
+				return record
+			offsets.append(Vector2i(int(x), int(y)))
+		flank.path_m = MarchRoute.to_pairs(flank_route(repo, Vector2i(here[0], here[1]), flank.known, offsets))
+	if flank.has("path_m"):
+		while not flank.path_m.is_empty() and flank.path_m[0] == here: flank.path_m.pop_front()
+	record.flank = flank
+	return record
+
+static func _flank_candidate_allowed(repo: DataRepository, state: GameState, battle: Dictionary, unit: String, record: Dictionary) -> bool:
+	if record.get("status") != "received" or record.request.task != "flank" or record.request.target_unit.is_empty() \
+		or record.get("flank", {}).get("phase") == "contact": return false
+	var entry := UnitBodies._entry(state, unit)
+	if bool(entry.get("captured", false)) or MilitaryRoster.fit(state, unit) <= 0 or not CampSystem.can_march_entry(entry, state.absolute_day()): return false
+	if record.request.source == "player" and (ArmySystem.is_foe(state, unit) or ArmySystem.realm_of(repo, unit, state) != repo.resolve_realm("player_realm")): return false
+	if battle.is_empty(): return int(record.request.battle_id) >= 0
+	if battle.get("reserves", {}).has(unit) or BattleSystem.canonical(state, int(record.request.battle_id)) != int(battle.id): return false
+	var side := BattleRules.side_of(battle, unit)
+	var target: String = record.request.target_unit
+	if BattleRules.side_of(battle, target) != ("def" if side == "att" else "att") \
+		or not BodyBattleContact._barred(repo, state, battle, battle, side, unit, target).is_empty(): return false
+	for enemy: String in battle["def" if side == "att" else "att"]:
+		if enemy != target and MilitaryRoster.fit(state, enemy) > 0 and not bool(UnitBodies._entry(state, enemy).get("captured", false)) \
+			and _flank_candidate_touch(repo, state, unit, enemy): return false
+	return true
+
+## Pure received-route contribution; only committed shared motion advances the route.
+static func flank_intent_candidate(repo: DataRepository, source: GameState, battle_id: int, unit: String, budget_m: int) -> Dictionary:
+	var failure := {"status": "error", "reason": "Invalid candidate flank", "error": "Invalid candidate flank", "unit": unit, "path_m": []}
+	if repo == null or source == null or budget_m < 0 or budget_m > BodyMotion.LOCAL_LIMIT or not source.day_resolution.get("body_battle") is Dictionary: return failure
+	var error := BodyBattleMotion._source_error(repo, source, BodyBattleMotion._boundary(source))
+	if not error.is_empty():
+		failure.reason = error
+		failure.error = error
+		return failure
+	source = UnitBodies._copy(source)
+	var battle := BattleSystem.battle_of(source, unit)
+	if UnitBodies._entry(source, unit).is_empty() or int(battle.get("id", 0)) != battle_id: return failure
+	var entry := UnitBodies._entry(source, unit)
+	var here: Array = battle.get("group_anchor_m", {}).get(unit, [entry.x_m, entry.y_m]).duplicate()
+	var result := {"status": "complete", "reason": "Flank waits for its received route, capability or lawful contact", "error": "", "unit": unit, "path_m": [here]}
+	var record := current(source, unit)
+	if record.is_empty() or not _flank_candidate_allowed(repo, source, battle, unit, record) or budget_m == 0: return result
+	record = _flank_candidate_record(repo, source, unit)
+	if record.status != "received": return result
+	var path: Array = record.get("flank", {}).get("path_m", [])
+	if path.is_empty():
+		result.reason = "No reachable received flank route within terrain-router bounds"
+		return result
+	for point: Array in path:
+		if absf(BodyMotion._difference(point[0], here[0])) > BodyMotion.LOCAL_LIMIT or absf(BodyMotion._difference(point[1], here[1])) > BodyMotion.LOCAL_LIMIT: return failure
+	var desired := BodyMotion._clip([here, path[0]], budget_m)
+	if desired.size() > 1 and not battle.is_empty():
+		var axis := Vector2(BodyMotion._difference(desired.back()[0], here[0]), BodyMotion._difference(desired.back()[1], here[1])).normalized()
+		var gap := BattleCharge._candidate_gap(repo, source, battle, unit, record.request.target_unit, axis)
+		if not is_inf(gap): desired = BodyMotion._clip(desired, maxi(0, mini(budget_m, ceili(gap))))
+	var footprint := BattleGroupGeometry.footprint(repo, source.army_roster[unit])
+	for row: Dictionary in UnitBodies.rows(repo, source, unit):
+		var translated: Array = []
+		for point: Array in desired: translated.append([int(row.x_m) + int(point[0]) - int(here[0]), int(row.y_m) + int(point[1]) - int(here[1])])
+		if not ArmySystem._body_path_terrain(MarchPath.of_pack(repo), translated, int(footprint.radius_m)).is_empty(): return result
+	result.path_m = desired
+	result.reason = "Received flank follows its next actual waypoint" if desired.size() > 1 else "At actual contact; flank cannot circle again"
+	return result
+
+static func _settle_flank_candidate(repo: DataRepository, source: GameState, candidate: GameState, unit: String, writer: String, common: Array) -> void:
+	if writer != "flank": return
+	# Historical agreement queries can infer parties; keep those writes off the caller.
+	source = UnitBodies._copy(source)
+	var battle := BattleSystem.battle_of(source, unit)
+	var record := current(source, unit)
+	if record.is_empty() or not _flank_candidate_allowed(repo, source, battle, unit, record): return
+	record = _flank_candidate_record(repo, source, unit)
+	var id: String = candidate.unit_tasks[unit].current_id
+	if record.status == "received" and record.has("flank"):
+		var remaining: Array = record.flank.get("path_m", [])
+		if not remaining.is_empty() and common.back() == remaining[0] and common.size() > 1: remaining.pop_front()
+		record.flank.path_m = remaining
+		var committed_battle := BattleSystem.battle_of(candidate, unit)
+		if not committed_battle.is_empty() and _flank_candidate_touch(repo, candidate, unit, record.request.target_unit) \
+			and BodyBattleContact._barred(repo, candidate, committed_battle, committed_battle, BattleRules.side_of(committed_battle, unit), unit, record.request.target_unit).is_empty():
+			record.flank.phase = "contact"
+	candidate.unit_tasks[unit].orders[id] = record
