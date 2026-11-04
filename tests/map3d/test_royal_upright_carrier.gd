@@ -264,3 +264,206 @@ func test_extraction_binds_actual_royal_model_root_and_keeps_override_unavailabl
 	var skeleton: Node3D = model.find_children("*","Skeleton3D",true,false)[0]
 	assert_false(c.extract(ctx,child,skeleton).ok,"R1 model carrier cannot silently become the skeleton carrier")
 	assert_false(c.evaluate(captured.packet,Vector2.ZERO,Vector2.ZERO,0.0,0.0,"right",captured.packet.sha256).ok)
+
+func test_nonmaximal_pixel_jump_does_not_reject_continuous_seat() -> void:
+	var c := _carrier()
+	if c == null: return
+	var p := _placement()
+	p.extent = Vector2(1,0)
+	p.ring = 4
+	var packet := _packet(c,p)
+	for side: String in ["left","right"]:
+		var result: Dictionary = c.evaluate(packet,Vector2(20,20),Vector2(1,0),0.0,0.0,side,packet.sha256)
+		assert_true(result.ok,"center jumps2→0 but x=21 stays the unique seat maximum")
+		if result.ok:
+			assert_almost_eq(result.H.origin.y,2.1,.000001)
+			assert_almost_eq(result.H_S.origin.y,.1,.000001)
+
+func _royal_input() -> Dictionary:
+	var repo := SuiteData.repo()
+	var reg: Dictionary = {}
+	for row: Dictionary in MapObjects.regiments_of(repo,repo.resolve_realm("player_realm")):
+		if String(row.get("is_royal","0")) == "1": reg = row; break
+	var piece := Map3DBattleGroups.build(repo,reg,{"rows":[{"slot":0,"count":1,"role":"front","x_m":0,"y_m":0}],"facing_deg":0})
+	autofree(piece.node)
+	return {"ctx":Map3DContext.new(repo,{"pack_origin":[0,0],"m_per_px":50.0,"sea_y":5.0}),
+		"child":piece.groups[0].piece,"model":piece.groups[0].piece.figs[0]}
+
+func test_loaded_source_provenance_binds_r1_and_rejects_same_bounds_stale_native_data() -> void:
+	var c := _carrier()
+	if c == null: return
+	var input := _royal_input()
+	var captured: Dictionary = c.extract(input.ctx,input.child,input.model)
+	assert_true(captured.ok)
+	if not captured.ok: return
+	assert_true(captured.packet.placement.identity.has("r1"),"outer tscn path/hash cannot bind inherited native animation/skin")
+	var player: AnimationPlayer = input.model.find_children("*","AnimationPlayer",true,false)[0]
+	var library_name: StringName = player.get_animation_library_list()[0]
+	var library: AnimationLibrary = player.get_animation_library(library_name).duplicate(true)
+	player.remove_animation_library(library_name)
+	player.add_animation_library(library_name,library)
+	var before: Transform3D = input.model.transform
+	var bounds: AABB = input.child.bounds_model
+	library.get_animation("MARCH").length += .001
+	var stale: Dictionary = c.extract(input.ctx,input.child,input.model)
+	assert_false(stale.ok,"same scene path, root and bounds with different loaded MARCH bytes must reject")
+	assert_false(stale.has("packet"))
+	assert_eq(input.model.transform,before)
+	assert_eq(input.child.bounds_model,bounds)
+
+func test_source_binding_checks_existing_r1_source_and_import_receipts() -> void:
+	var c := _carrier()
+	if c == null: return
+	var input := _royal_input()
+	assert_true(c.has_method("_bind_source"),"extract needs one shared loaded-source verifier")
+	if not c.has_method("_bind_source"): return
+	var calibration: Map3DRoyalLocomotionSource = load("res://assets/3D/units/royal/royal_locomotion_source.tres")
+	var current: Dictionary = c._bind_source(input.child,input.model,calibration)
+	assert_true(current.ok,str(current))
+	if not current.ok: return
+	assert_true(current.identity.has("source_sha256"))
+	assert_false(current.identity.imports.is_empty())
+	for path: String in calibration.source_hashes:
+		if not path.ends_with(".glb") and not path.ends_with(".glb.import"): continue
+		var bad: Map3DRoyalLocomotionSource = calibration.duplicate(true)
+		bad.source_hashes[path] = "0".repeat(64)
+		var result: Dictionary = c._bind_source(input.child,input.model,bad)
+		assert_false(result.ok,path)
+		assert_false(result.has("identity"))
+	var mesh: MeshInstance3D = input.model.find_children("*","MeshInstance3D",true,false)[0]
+	mesh.skin = mesh.skin.duplicate(true)
+	var bind: Transform3D = mesh.skin.get_bind_pose(0)
+	bind.origin.x += .001
+	mesh.skin.set_bind_pose(0,bind)
+	assert_false(c._bind_source(input.child,input.model,calibration).ok,"loaded skin changes cannot retain native source identity")
+
+func test_outward_source_math_bounds_do_not_choose_a_physical_budget() -> void:
+	var c := _carrier()
+	if c == null: return
+	var p := _placement()
+	p.extent = Vector2.ZERO
+	p.ancestor = Transform3D(Basis.IDENTITY,Vector3(1,2,3))
+	var packet := _packet(c,p)
+	var result: Dictionary = c.evaluate(packet,Vector2(10.75,10.75),Vector2(1,0),0.0,0.0,"right",packet.sha256)
+	assert_true(result.ok)
+	assert_true(result.has("enclosures"),"H and per-S derivative need source-operation bounds")
+	if not result.has("enclosures"): return
+	assert_eq(result.enclosures.status,"ENCLOSED_CONTROL")
+	assert_lte(result.enclosures.H[7][0],3.075)
+	assert_gte(result.enclosures.H[7][1],3.075)
+	assert_lte(result.enclosures.H_S[7][0],.1)
+	assert_gte(result.enclosures.H_S[7][1],.1)
+	assert_false(result.native_covered,"synthetic grid remains a control even with valid interval algebra")
+	assert_eq(result.physical_allowance.status,"NOT_SELECTED")
+
+func test_trig_enclosure_and_exact_native_scalar_cases() -> void:
+	var c := _carrier()
+	if c == null: return
+	assert_true(c.has_method("_trig_interval"))
+	if not c.has_method("_trig_interval"): return
+	assert_eq(c._interval([0.0,0.0],[20.0,20.0],"*"),[0.0,0.0])
+	assert_eq(c._interval([20.0,20.0],[20.0,20.0],"/"),[1.0,1.0])
+	for angle: float in [0.0,PI/4,PI/2,-PI/2,PI,TAU,-3.5*PI]:
+		var box: Array = c._trig_interval([angle,angle],false)
+		assert_lte(box[0],sin(angle))
+		assert_gte(box[1],sin(angle))
+		assert_gte(box[0],-1.0)
+		assert_lte(box[1],1.0)
+	var sin_zero: Array = c._trig_interval([0.0,0.0],false)
+	assert_eq(sin_zero,[0.0,0.0])
+	var cos_zero: Array = c._trig_interval([0.0,0.0],true)
+	assert_eq(cos_zero,[1.0,1.0])
+
+func test_actual_domain_receipt_keeps_terrain_bounds_and_full_parameter_family() -> void:
+	var c := _carrier()
+	if c == null: return
+	var input := _royal_input()
+	var captured: Dictionary = c.extract(input.ctx,input.child,input.model)
+	assert_true(captured.ok)
+	if not captured.ok: return
+	var packet: Dictionary = captured.packet
+	var receipt: Dictionary = c.domain(packet)
+	assert_eq(receipt.heading_udeg,[0,359999999])
+	assert_eq(receipt.turn_udeg,[-179999999,180000000])
+	assert_eq(receipt.duration_q,[1,BodyMotion.LOCOMOTION_Q])
+	assert_true(receipt.has("admission"),"domain needs copied actual engine-circle terrain, not a descriptive range")
+	if not receipt.has("admission"): return
+	assert_eq(receipt.admission.status,"BOUND_GEOMETRIC_SUPERSET")
+	assert_eq(receipt.admission.radius_m,int(input.ctx.repo.unit_footprints.royal.radius_m))
+	var op := BodyMotion._loco_op("hold",0,BodyMotion.LOCOMOTION_Q,[0,0],[0,0],0,0)
+	assert_false(c._admission(packet,op).ok,"a stationary center outside the measured circle bounds is excluded by actual terrain predicate")
+	assert_true(receipt.has("classifier_sha256"))
+	assert_false(receipt.has("physical_E"))
+
+func test_unknown_ancestor_drivers_and_nonfinite_derived_math_are_unavailable() -> void:
+	var c := _carrier()
+	if c == null: return
+	var input := _royal_input()
+	input.model.top_level = true
+	assert_false(c.extract(input.ctx,input.child,input.model).ok,"a top-level model does not inherit constant A")
+	var p := _placement()
+	p.extent = Vector2.ZERO
+	var packet := _packet(c,p)
+	var result: Dictionary = c.evaluate(packet,Vector2(10,10),Vector2.ZERO,0.0,1e308,"right",packet.sha256)
+	assert_false(result.ok,"finite input is not permission to return a nonfinite derived matrix")
+	assert_eq(result.reason,"carrier_numeric_range")
+	var grid := _grid()
+	grid.regions[Vector2i.ZERO].height[5] = INF
+	packet = _packet(c,p,grid)
+	assert_eq(c.evaluate(packet,Vector2(25,25),Vector2.ZERO,0.0,0.0,"right",packet.sha256).reason,"terrain_infinite")
+
+func test_live_tree_generated_empty_simulator_does_not_relabel_a_source_modifier() -> void:
+	var c := _carrier()
+	if c == null: return
+	var input := _royal_input()
+	add_child(input.child.node.get_parent())
+	var captured: Dictionary = c.extract(input.ctx,input.child,input.model)
+	assert_true(captured.ok,"entering the real tree creates an empty internal compatibility simulator; actual R1 source is unchanged")
+	var skeleton: Skeleton3D = input.model.find_children("*","Skeleton3D",true,false)[0]
+	var authored := PhysicalBoneSimulator3D.new()
+	skeleton.add_child(authored)
+	assert_false(c.extract(input.ctx,input.child,input.model).ok,"an authored or populated modifier must remain unavailable")
+
+func test_native_corner_control_does_not_replace_query_control() -> void:
+	var c := _carrier()
+	if c == null: return
+	var p := _placement()
+	p.extent = Vector2.ZERO
+	var grid := _grid()
+	grid.regions[Vector2i.ZERO].control[5] = 4
+	var packet := _packet(c,p,grid)
+	var result: Dictionary = c.evaluate(packet,Vector2(10.75,10.75),Vector2(1,0),0.0,0.0,"right",packet.sha256)
+	assert_true(result.ok,"native bilerp reads corner HEIGHT without testing corner CONTROL")
+	if not result.ok: return
+	assert_eq(result.enclosures.status,"ENCLOSED_CONTROL")
+	assert_lte(result.enclosures.H[7][0],1.075)
+	assert_gte(result.enclosures.H[7][1],1.075)
+
+func test_injected_cached_land_grid_cannot_be_relabelled_as_pack_domain() -> void:
+	var c := _carrier()
+	if c == null: return
+	var repo := SuiteData.repo()
+	var original := MarchPath.of_pack(repo)
+	assert_not_null(original)
+	if original == null: return
+	var altered := MarchPath.load_pack(repo)
+	altered.closed[0] = 1-altered.closed[0]
+	MarchPath.use(repo,altered)
+	var receipt: Dictionary = c._domain_source(repo)
+	MarchPath.use(repo,original)
+	assert_eq(receipt.status,"UNAVAILABLE")
+	assert_eq(receipt.reason,"cached_land_grid_mismatch")
+
+func test_bilinear_shared_edge_cannot_become_a_roundoff_jump() -> void:
+	var c := _carrier()
+	if c == null: return
+	var p := _placement()
+	p.extent = Vector2.ZERO
+	var grid := _grid([0.0,0.0,0.0,0.0],-10000.0)
+	for item: Array in [[0,-5880.82568359375],[1,3607.99951171875],[4,-1448.1539306640625],[5,-3717.056640625]]:
+		grid.regions[Vector2i.ZERO].height[int(item[0])] = item[1]
+	var packet := _packet(c,p,grid)
+	# Both cells share b,d. Polynomial cancellation differs by 2^-40; geometry is continuous.
+	var result: Dictionary = c.evaluate(packet,Vector2(20,11.711236953735352),Vector2(1,0),0.0,0.0,"left",packet.sha256)
+	assert_true(result.ok,"a shared bilerp edge is continuous even when expanded-polynomial rounding differs")
+	if result.ok: assert_almost_eq(result.H_S.origin.y,130.19741592511596,.00001)
