@@ -315,10 +315,10 @@ func test_source_binding_checks_existing_r1_source_and_import_receipts() -> void
 	var c := _carrier()
 	if c == null: return
 	var input := _royal_input()
-	assert_true(c.has_method("_bind_source"),"extract needs one shared loaded-source verifier")
-	if not c.has_method("_bind_source"): return
+	assert_true(c.Source.has_method("_bind_source"),"extract needs one shared loaded-source verifier")
+	if not c.Source.has_method("_bind_source"): return
 	var calibration: Map3DRoyalLocomotionSource = load("res://assets/3D/units/royal/royal_locomotion_source.tres")
-	var current: Dictionary = c._bind_source(input.child,input.model,calibration)
+	var current: Dictionary = c.Source._bind_source(input.child,input.model,calibration)
 	assert_true(current.ok,str(current))
 	if not current.ok: return
 	assert_true(current.identity.has("source_sha256"))
@@ -327,7 +327,7 @@ func test_source_binding_checks_existing_r1_source_and_import_receipts() -> void
 		if not path.ends_with(".glb") and not path.ends_with(".glb.import"): continue
 		var bad: Map3DRoyalLocomotionSource = calibration.duplicate(true)
 		bad.source_hashes[path] = "0".repeat(64)
-		var result: Dictionary = c._bind_source(input.child,input.model,bad)
+		var result: Dictionary = c.Source._bind_source(input.child,input.model,bad)
 		assert_false(result.ok,path)
 		assert_false(result.has("identity"))
 	var mesh: MeshInstance3D = input.model.find_children("*","MeshInstance3D",true,false)[0]
@@ -335,7 +335,7 @@ func test_source_binding_checks_existing_r1_source_and_import_receipts() -> void
 	var bind: Transform3D = mesh.skin.get_bind_pose(0)
 	bind.origin.x += .001
 	mesh.skin.set_bind_pose(0,bind)
-	assert_false(c._bind_source(input.child,input.model,calibration).ok,"loaded skin changes cannot retain native source identity")
+	assert_false(c.Source._bind_source(input.child,input.model,calibration).ok,"loaded skin changes cannot retain native source identity")
 
 func test_outward_source_math_bounds_do_not_choose_a_physical_budget() -> void:
 	var c := _carrier()
@@ -359,19 +359,19 @@ func test_outward_source_math_bounds_do_not_choose_a_physical_budget() -> void:
 func test_trig_enclosure_and_exact_native_scalar_cases() -> void:
 	var c := _carrier()
 	if c == null: return
-	assert_true(c.has_method("_trig_interval"))
-	if not c.has_method("_trig_interval"): return
-	assert_eq(c._interval([0.0,0.0],[20.0,20.0],"*"),[0.0,0.0])
-	assert_eq(c._interval([20.0,20.0],[20.0,20.0],"/"),[1.0,1.0])
+	assert_true(c.Bounds.has_method("_trig_interval"))
+	if not c.Bounds.has_method("_trig_interval"): return
+	assert_eq(c.Bounds._interval([0.0,0.0],[20.0,20.0],"*"),[0.0,0.0])
+	assert_eq(c.Bounds._interval([20.0,20.0],[20.0,20.0],"/"),[1.0,1.0])
 	for angle: float in [0.0,PI/4,PI/2,-PI/2,PI,TAU,-3.5*PI]:
-		var box: Array = c._trig_interval([angle,angle],false)
+		var box: Array = c.Bounds._trig_interval([angle,angle],false)
 		assert_lte(box[0],sin(angle))
 		assert_gte(box[1],sin(angle))
 		assert_gte(box[0],-1.0)
 		assert_lte(box[1],1.0)
-	var sin_zero: Array = c._trig_interval([0.0,0.0],false)
+	var sin_zero: Array = c.Bounds._trig_interval([0.0,0.0],false)
 	assert_eq(sin_zero,[0.0,0.0])
-	var cos_zero: Array = c._trig_interval([0.0,0.0],true)
+	var cos_zero: Array = c.Bounds._trig_interval([0.0,0.0],true)
 	assert_eq(cos_zero,[1.0,1.0])
 
 func test_actual_domain_receipt_keeps_terrain_bounds_and_full_parameter_family() -> void:
@@ -467,3 +467,78 @@ func test_bilinear_shared_edge_cannot_become_a_roundoff_jump() -> void:
 	var result: Dictionary = c.evaluate(packet,Vector2(20,11.711236953735352),Vector2(1,0),0.0,0.0,"left",packet.sha256)
 	assert_true(result.ok,"a shared bilerp edge is continuous even when expanded-polynomial rounding differs")
 	if result.ok: assert_almost_eq(result.H_S.origin.y,130.19741592511596,.00001)
+
+func test_touching_cell_box_never_excludes_the_endpoint_one_sided_slope() -> void:
+	var c := _carrier()
+	if c == null: return
+	var p := _placement()
+	p.origin = Vector2(21,10)
+	p.extent = Vector2(0,21)
+	p.ring = 4
+	var grid := _grid([0.0,0.0,0.0,0.0],-1000.0)
+	grid.regions.clear()
+	for rx: int in [-1,0]:
+		var height := PackedFloat32Array()
+		for z in 4:
+			for x in 4: height.append(20.0-absf(float(rx*4+x))*20.0)
+		grid.regions[Vector2i(rx,0)] = {"height":height,"control":PackedInt32Array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])}
+	var packet := _packet(c,p,grid)
+	# Unique maximum20 at q_x=0: h=20-|x|, so left slope+1, right slope-1.
+	for endpoints: Array in [[-1,0,1.0],[0,1,0.0],[1,0,1.0],[0,-1,0.0]]:
+		var heading: int = 0 if endpoints[1] > endpoints[0] else 180000000
+		var op := BodyMotion._loco_op("move",0,BodyMotion.LOCOMOTION_Q,[endpoints[0],0],[endpoints[1],0],heading)
+		for side: String in ["left","right"]:
+			var result: Dictionary = c.sample(packet,op,endpoints[2],side,packet.sha256)
+			assert_true(result.ok,str(result))
+			if not result.ok: continue
+			assert_almost_eq(result.H_S.origin.y,1.0 if side == "left" else -1.0,.000001)
+			assert_eq(result.enclosures.status,"UNAVAILABLE","a box touching a moving cell cut cannot certify just the cell on its interior")
+			assert_eq(result.enclosures.get("reason"),"native_cell_side_unresolved")
+	var direct: Dictionary = c.Bounds._sample_enclosure(grid,[[0.0,0.0000019073486328125],[10.0,10.0]],
+		[[1.0,1.0],[0.0,0.0]],[[0.0,0.0],[0.0,0.0]],"left")
+	assert_false(direct.ok,"the box permits x=0 and its incoming x<0 branch")
+	assert_eq(direct.get("reason"),"native_cell_side_unresolved")
+
+func test_extra_animation_tree_root_writer_rejects_without_a_packet() -> void:
+	var c := _carrier()
+	if c == null: return
+	var input := _royal_input()
+	add_child(input.child.node.get_parent())
+	var baseline: Dictionary = c.extract(input.ctx,input.child,input.model)
+	assert_true(baseline.ok)
+	var tree := AnimationTree.new()
+	input.model.add_child(tree)
+	var animation := Animation.new()
+	animation.length = 1.0
+	var track: int = animation.add_track(Animation.TYPE_POSITION_3D)
+	animation.track_set_path(track,NodePath(".:position"))
+	animation.track_insert_key(track,0.0,input.model.position)
+	animation.track_insert_key(track,1.0,input.model.position+Vector3(5,0,0))
+	var library := AnimationLibrary.new()
+	library.add_animation("write_root",animation)
+	tree.add_animation_library("",library)
+	tree.root_node = NodePath("..")
+	var branch := AnimationNodeAnimation.new()
+	branch.animation = "write_root"
+	tree.tree_root = branch
+	tree.active = true
+	var before: Transform3D = input.model.transform
+	var result: Dictionary = c.extract(input.ctx,input.child,input.model)
+	assert_false(result.ok,"a second mixer can write A independently of the validated AnimationPlayer")
+	assert_eq(result.get("reason"),"unproved_source_mixer")
+	assert_false(result.has("packet"),"reject atomically instead of retaining the baseline identity")
+	assert_eq(input.model.transform,before,"source extraction leaves the live actor untouched")
+	tree.advance(0.0)
+	tree.advance(.5)
+	tree.advance(.25)
+	assert_almost_eq(input.model.position.x,before.origin.x+3.75,.000001,"the rejected script-free mixer really can move the root")
+
+func test_shortcut_radius_box_touch_remains_unavailable() -> void:
+	var c := _carrier()
+	if c == null: return
+	assert_true(c.Bounds.SHORTCUT_SQUARED == float(PackedFloat32Array([.0001])[0]),"comparison uses the exact native binary32 constant")
+	# Directed binary32 squared-distance bounds touch0.0001f at this input.
+	var result: Dictionary = c.Bounds._sample_enclosure(_grid(),[[.01,.01],[.000003,.000003]],
+		[[1.0,1.0],[0.0,0.0]],[[0.0,0.0],[0.0,0.0]],"left")
+	assert_false(result.ok,"touching the shortcut comparison is not strict branch separation")
+	assert_eq(result.get("reason"),"native_shortcut_rounding_cut")
