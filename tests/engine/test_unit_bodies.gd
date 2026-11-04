@@ -487,6 +487,17 @@ func test_passive_serialization_and_production_route_unchanged() -> void:
 			assert_true(boundary > 0)
 			source = source.substr(0, boundary)
 			assert_false(source.contains("body_march_candidate("), "ordinary callers cannot reach candidate APIs")
+		elif path == "battle_groups":
+			var boundary := source.find("## Candidate targets translate existing bodies only;")
+			assert_true(boundary > 0, "explicit candidate section must follow ordinary entry points")
+			var candidate := source.substr(boundary)
+			assert_true(candidate.contains("static func deployment_intent_candidate("))
+			assert_true(candidate.contains("UnitBodies."), "only the explicit candidate section may use body APIs")
+			for legacy: String in ["translate(", "follow_anchor(", "refresh("]:
+				assert_false(candidate.contains(legacy), "candidate deployment cannot call legacy " + legacy)
+			source = source.substr(0, boundary)
+			for entry: String in ["deployment_intent_candidate(", "_body_deployment(", "_body_close_front(", "BodyBattleMotion."]:
+				assert_false(source.contains(entry), "ordinary callers cannot reach candidate APIs")
 		assert_false(source.contains("UnitBodies."), path)
 	assert_false(FileAccess.get_file_as_string("res://scripts/ui/game.gd").contains("UnitBodies."))
 

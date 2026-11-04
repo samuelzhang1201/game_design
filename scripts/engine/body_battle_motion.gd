@@ -95,6 +95,8 @@ static func _writer(repo: DataRepository, state: GameState, code: String, battle
 	return "hold"
 
 static func _collect(repo: DataRepository, source: GameState, boundary: Dictionary, providers: Dictionary) -> Dictionary:
+	providers = providers.duplicate()
+	if not providers.has("deployment"): providers.deployment = BattleGroups.deployment_intent_candidate
 	var error := _source_error(repo, source, boundary)
 	if not error.is_empty(): return {"error": error}
 	for key: Variant in providers:
@@ -134,8 +136,8 @@ static func _collect(repo: DataRepository, source: GameState, boundary: Dictiona
 		var contribution := {"status": "complete", "reason": "Waiting for movement capability" if held else "", "error": "", "unit": code, "path_m": [here]}
 		if not held:
 			if tactical:
-				# A provider sees a private clone; reject all side effects, including RNG.
-				var isolated := UnitBodies._copy(staged)
+				# Providers validate the sealed source; paid gait changes stay in the staging clone.
+				var isolated := UnitBodies._copy(source)
 				var before := BodyMotion._hash(isolated.to_dict())
 				var raw: Variant = providers[writer].call(repo, isolated, int(battle.get("id", 0)), code, budget)
 				if not raw is Dictionary or BodyMotion._hash(isolated.to_dict()) != before: return {"error": "Tactical provider mutated its source or returned invalid contribution"}

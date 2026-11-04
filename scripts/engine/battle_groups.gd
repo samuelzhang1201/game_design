@@ -758,3 +758,194 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 	refresh(repo, state, battle)
 	for code: String in charges:
 		BattleCharge.move(repo, state, battle, code, String(charges[code]))
+
+
+## Candidate targets translate existing bodies only; no tactical slot materialization.
+## Scalar local projections retain whole world coordinates without Vector2i narrowing.
+static func _body_deployment(repo: DataRepository, state: GameState, battle: Dictionary) -> Dictionary:
+	var place: Array = [battle.get("place_x_m"), battle.get("place_y_m")]
+	if not BodyMotion._loco_point(place): return {}
+	var angle: Variant = battle.get("deployment_axis_deg")
+	if not battle.has("deployment_axis_deg"):
+		var means := {}
+		for side: String in BattleSystem.SIDES:
+			var x := 0.0
+			var y := 0.0
+			if battle[side].is_empty(): return {}
+			for code: String in battle[side]:
+				var entry := UnitBodies._entry(state, code)
+				var dx := BodyMotion._difference(entry.x_m, place[0])
+				var dy := BodyMotion._difference(entry.y_m, place[1])
+				if absf(dx) > BodyMotion.LOCAL_LIMIT or absf(dy) > BodyMotion.LOCAL_LIMIT: return {}
+				x += dx
+				y += dy
+			means[side] = [x / battle[side].size(), y / battle[side].size()]
+		angle = rad_to_deg(atan2(means.att[1] - means.def[1], means.att[0] - means.def[0]))
+	elif not BodyMotion._loco_integer(angle) or angle < 0 or angle >= 360: return {}
+	var ax := cos(deg_to_rad(float(angle)))
+	var ay := sin(deg_to_rad(float(angle)))
+	var gap: Variant = repo.balance.get("battle_line_gap_m")
+	if not BodyMotion._loco_integer(gap) or gap < 0 or gap > BodyMotion.LOCAL_LIMIT: return {}
+	var out := {}
+	for side: String in BattleSystem.SIDES:
+		var sign := -1 if side == "att" else 1
+		var codes: Array = battle[side].duplicate()
+		codes.sort()
+		var bounds := {}
+		var total := 0.0
+		var front := -INF
+		for code: String in codes:
+			var entry := UnitBodies._entry(state, code)
+			var footprint := BattleGroupGeometry.footprint(repo, state.army_roster[code])
+			if not footprint.ok: return {}
+			var low := INF
+			var high := -INF
+			for row: Dictionary in battle.groups[code]:
+				var x := BodyMotion._difference(row.x_m, entry.x_m)
+				var y := BodyMotion._difference(row.y_m, entry.y_m)
+				if absf(x) > BodyMotion.LOCAL_LIMIT or absf(y) > BodyMotion.LOCAL_LIMIT: return {}
+				low = minf(low, -ay * x + ax * y)
+				high = maxf(high, -ay * x + ax * y)
+				front = maxf(front, sign * (ax * x + ay * y) + footprint.radius_m)
+			var width: float = high - low + 2.0 * footprint.radius_m if not is_inf(low) else 0.0
+			bounds[code] = {"low": low - footprint.radius_m if width > 0 else 0.0, "width": width}
+			total += width + gap
+		if is_inf(front):
+			for code: String in codes:
+				var entry := UnitBodies._entry(state, code)
+				out[code] = [int(entry.x_m), int(entry.y_m)]
+			continue
+		var back: float = front + gap / 2.0
+		for enemy: String in battle["def" if side == "att" else "att"]:
+			if ArmyGround.seated_in(repo, state, enemy) == "" and not bool(UnitBodies._entry(state, enemy).get("captured", false)): continue
+			var footprint := BattleGroupGeometry.footprint(repo, state.army_roster[enemy])
+			if not footprint.ok: return {}
+			for row: Dictionary in battle.groups[enemy]:
+				var x := BodyMotion._difference(row.x_m, place[0])
+				var y := BodyMotion._difference(row.y_m, place[1])
+				if absf(x) > BodyMotion.LOCAL_LIMIT or absf(y) > BodyMotion.LOCAL_LIMIT: return {}
+				back = maxf(back, front + footprint.radius_m + gap - sign * (ax * x + ay * y))
+		var cursor: float = -(total - gap) / 2.0
+		for code: String in codes:
+			var entry := UnitBodies._entry(state, code)
+			var lateral: float = cursor - bounds[code].low
+			var point: Array = [int(place[0]) + int(round(-sign * ax * back - ay * lateral)),
+				int(place[1]) + int(round(-sign * ay * back + ax * lateral))]
+			if not BodyMotion._loco_point(point): return {}
+			for axis: int in 2:
+				if absf(BodyMotion._difference(point[axis], entry.x_m if axis == 0 else entry.y_m)) > BodyMotion.LOCAL_LIMIT: return {}
+			out[code] = point if bounds[code].width > 0 else [int(entry.x_m), int(entry.y_m)]
+			cursor += bounds[code].width + gap
+			if ArmyGround.seated_in(repo, state, code) != "" or bool(entry.get("captured", false)):
+				out[code] = [int(entry.x_m), int(entry.y_m)]
+	return {"targets": out, "axis": [ax, ay]}
+
+static func deployment_intent_candidate(repo: DataRepository, source: GameState,
+		battle_id: int, unit: String, budget_m: int) -> Dictionary:
+	var result := {"status": "error", "reason": "Invalid deployment input", "error": "Invalid deployment input", "unit": unit, "path_m": []}
+	if repo == null or source == null or budget_m < 0 or budget_m > BodyMotion.LOCAL_LIMIT or source.day_resolution.is_empty(): return result
+	var control: Variant = source.day_resolution.get("body_battle")
+	if not control is Dictionary: return result
+	var boundary := {"version": 1, "kind": "battle", "abs_day": control.get("abs_day"), "substep": control.get("next_substep"), "sequence": control.get("sequence"), "stage": control.get("stage")}
+	var error := BodyBattleMotion._source_error(repo, source, boundary)
+	if not error.is_empty():
+		result.reason = error
+		result.error = error
+		return result
+	# Existing law queries infer historical parties; keep that metadata private.
+	source = UnitBodies._copy(source)
+	var battle := UnitBodies._battle(source, BodyBattleContact._canonical_id(source, battle_id))
+	var side := BattleRules.side_of(battle, unit)
+	if battle.is_empty() or side == "": return result
+	var entry := UnitBodies._entry(source, unit)
+	var here: Array = [int(entry.x_m), int(entry.y_m)]
+	result = {"status": "complete", "reason": "Holding deployment", "error": "", "unit": unit, "path_m": [here]}
+	if BodyBattleMotion._writer(repo, source, unit, battle) != "deployment":
+		result.reason = "A higher-priority writer owns this unit"
+		return result
+	if budget_m == 0 or bool(entry.get("captured", false)) or MilitaryRoster.fit(source, unit) <= 0 \
+		or ArmyGround.seated_in(repo, source, unit) != "" or not CampSystem.can_march_entry(entry, source.absolute_day()) \
+		or withdrawing(source, battle) or battle.get("reserves", {}).has(unit): return result
+	var enemies: Array = battle["def" if side == "att" else "att"].duplicate()
+	enemies.sort()
+	if enemies.is_empty():
+		result.reason = "No opposing battlefield members"
+		return result
+	var contact := BodyBattleContact.query_candidate(repo, source, int(battle.id), unit, enemies, boundary)
+	if contact.status != "complete":
+		return {"status": "error", "reason": contact.reason, "error": contact.reason, "unit": unit, "path_m": []}
+	if contact.engaged > 0:
+		result.reason = "Already in lawful physical contact"
+		return result
+	var layout := _body_deployment(repo, source, battle)
+	var targets: Dictionary = layout.get("targets", {})
+	if not targets.has(unit):
+		return {"status": "error", "reason": "Invalid candidate deployment geometry", "error": "Invalid candidate deployment geometry", "unit": unit, "path_m": []}
+	var target: Array = targets[unit]
+	var action := BattleSystem.unit_action(repo, source, battle, unit)
+	if action.kind == "attack" and not action.has("pursuit_target") \
+		and BattleRanged.share(repo, source, unit) >= int(repo.bal("battle_context_arm_threshold_permille")):
+		var back := maxf(0.0, float(repo.bal("battle_ranged_reach_m") - repo.bal("battle_line_gap_m")) / 2.0 - sqrt(2.0))
+		var facing: Variant = battle.get("group_facing", {}).get(unit)
+		if not BodyMotion._loco_integer(facing) or facing < 0 or facing >= 360:
+			return {"status": "error", "reason": "Missing candidate deployment facing", "error": "Missing candidate deployment facing", "unit": unit, "path_m": []}
+		var face := deg_to_rad(float(facing))
+		target = [int(target[0]) - int(round(cos(face) * back)), int(target[1]) - int(round(sin(face) * back))]
+	else:
+		var task := BattleTaskSystem.current(source, unit)
+		var close_line: bool = task.is_empty() or (task.get("request", {}).get("task") == "advance" and action.kind == "attack")
+		var sign := -1 if side == "att" else 1
+		if close_line and not action.has("pursuit_target") and sign * (BodyMotion._difference(here[0], target[0]) * layout.axis[0] + BodyMotion._difference(here[1], target[1]) * layout.axis[1]) >= 0:
+			var approach := _body_close_front(repo, source, battle, unit, targets)
+			if not approach.is_empty(): target = [int(here[0]) + int(approach[0]), int(here[1]) + int(approach[1])]
+	var path := BodyMotion._clip([here, target], budget_m)
+	var footprint := BattleGroupGeometry.footprint(repo, source.army_roster[unit])
+	for row: Dictionary in battle.groups[unit]:
+		var translated: Array = []
+		for point: Array in path: translated.append([int(row.x_m) + int(point[0]) - int(here[0]), int(row.y_m) + int(point[1]) - int(here[1])])
+		var terrain := ArmySystem._body_path_terrain(MarchPath.of_pack(repo), translated, int(footprint.radius_m))
+		if not terrain.is_empty():
+			result.reason = terrain
+			return result
+	result.path_m = path
+	result.reason = "Existing-body deployment toward its occupied line" if path.size() > 1 else "At deployment line"
+	return result
+
+static func _body_close_front(repo: DataRepository, source: GameState, battle: Dictionary,
+		unit: String, targets: Dictionary) -> Array:
+	var own := BattleGroupGeometry.footprint(repo, source.army_roster[unit])
+	var side := BattleRules.side_of(battle, unit)
+	var enemies: Array = battle["def" if side == "att" else "att"].duplicate()
+	enemies.sort()
+	var best := INF
+	var from: Array = []
+	var to: Array = []
+	var radius := 0
+	for row: Dictionary in battle.groups[unit]:
+		for enemy: String in enemies:
+			var entry := UnitBodies._entry(source, enemy)
+			if targets.get(enemy) != [int(entry.x_m), int(entry.y_m)] \
+				or BodyBattleMotion._writer(repo, source, enemy, battle) != "deployment" \
+				or not BodyBattleContact._barred(repo, source, battle, battle, side, unit, enemy).is_empty(): continue
+			var footprint := BattleGroupGeometry.footprint(repo, source.army_roster[enemy])
+			for other: Dictionary in battle.groups[enemy]:
+				var pair := BattleGroupGeometry.pair([row.x_m, row.y_m], int(own.radius_m),
+					[other.x_m, other.y_m], int(footprint.radius_m), int(repo.bal("battle_group_contact_m")))
+				if not pair.ok or pair.in_reach: continue
+				var gap: float = sqrt(float(pair.distance_sq)) - own.radius_m - footprint.radius_m - repo.bal("battle_group_contact_m")
+				if gap < best:
+					best = gap
+					from = [int(row.x_m), int(row.y_m)]
+					to = [int(other.x_m), int(other.y_m)]
+					radius = int(footprint.radius_m)
+	if from.is_empty(): return []
+	var x := BodyMotion._difference(to[0], from[0])
+	var y := BodyMotion._difference(to[1], from[1])
+	var distance := sqrt(x * x + y * y)
+	for rounding: Array in [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]]:
+		var delta: Array = [int(round(x * best / distance)) + rounding[0], int(round(y * best / distance)) + rounding[1]]
+		var point: Array = [int(from[0]) + int(delta[0]), int(from[1]) + int(delta[1])]
+		var pair := BattleGroupGeometry.pair(point, int(own.radius_m), to, radius, int(repo.bal("battle_group_contact_m")))
+		if pair.ok and not pair.overlap and pair.in_reach \
+			and ArmySystem._body_path_terrain(MarchPath.of_pack(repo), [point, to], 0).is_empty(): return delta
+	return []
