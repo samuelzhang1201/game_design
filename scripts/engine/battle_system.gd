@@ -1104,6 +1104,96 @@ static func _separated(repo: DataRepository, state: GameState, code: String, ene
 	return true
 
 
+static func _retreat_candidate_error(source: GameState) -> String:
+	for code: String in source.regiments.keys() + source.foes.keys():
+		if UnitBodies._naval(source, code): continue
+		var entry := UnitBodies._entry(source, code)
+		if not ArmySystem._body_entry_ok(entry): return "Invalid raw withdrawal entry: " + code
+		for field: String in ["withdrawal_reason", "withdrawal_cause"]:
+			if entry.has(field) and not entry[field] is String: return "Invalid raw withdrawal reason"
+	for battle: Dictionary in source.battles:
+		if battle.has("routed_side") and battle.routed_side not in ["att", "def"]: return "Invalid raw routed side"
+		if not battle.get("actions", {}) is Dictionary: return "Invalid raw withdrawal actions"
+		for action: Variant in battle.get("actions", {}).values():
+			if not action is Dictionary or not action.get("kind", "hold") is String: return "Invalid raw withdrawal action"
+			if action.has("reason") and not action.reason is String: return "Invalid raw withdrawal action reason"
+	return ""
+
+## Private desired route/cost staging; neither this helper nor its provider publishes motion.
+static func _retreat_route_candidate(repo: DataRepository, source: GameState, battle_id: int, unit: String) -> Dictionary:
+	var result := {"candidate": null, "path_m": [], "reason": "Withdrawal waits for authority, capability or a safe destination"}
+	var state := UnitBodies._copy(source)
+	var battle := UnitBodies._battle(state, battle_id)
+	var side := BattleRules.side_of(battle, unit)
+	if battle.is_empty() or side.is_empty(): return result
+	var entry := UnitBodies._entry(state, unit)
+	if BodyBattleMotion._writer(repo, state, unit, battle) != "withdrawal" \
+		or "retreat" not in BattleRules.legal_actions(repo, state, battle_id, side, unit) \
+		or bool(entry.get("captured", false)) or MilitaryRoster.fit(state, unit) <= 0: return result
+	var received: Array = entry.get("route_m", [])
+	if entry.order == ArmySystem.ORDER_MARCH and not received.is_empty() and received.back() != [entry.dest_x_m, entry.dest_y_m]:
+		result.reason = "Received withdrawal route does not reach its destination"
+		return result
+	if not _start_retreat(repo, state, unit, battle):
+		result.reason = entry.get("withdrawal_reason", result.reason)
+		return result
+	var here: Array = battle.get("group_anchor_m", {}).get(unit, [entry.x_m, entry.y_m]).duplicate()
+	var path: Array = [here]
+	for point: Vector2i in ArmySystem._path_of(entry):
+		if path.back() != [point.x, point.y]: path.append([point.x, point.y])
+	var destination: Array = [entry.dest_x_m, entry.dest_y_m]
+	if path.back() != destination or (path.size() == 1 and here != destination): return result
+	var footprint := BattleGroupGeometry.footprint(repo, state.army_roster[unit])
+	var reach := int(round(repo.bal("battle_contact_km") * 1000.0))
+	var other := "def" if side == "att" else "att"
+	for enemy: String in battle[other]:
+		var opponent := UnitBodies._entry(state, enemy)
+		var pair := BattleGroupGeometry.pair(destination, 0, [opponent.x_m, opponent.y_m], 0, reach)
+		if not pair.ok or pair.in_reach:
+			result.reason = "No reachable safe destination: departure remains inside encounter reach"
+			return result
+	for row: Dictionary in battle.groups[unit]:
+		var translated: Array = []
+		for point: Array in path:
+			if not BodyMotion._loco_point(point) or absf(BodyMotion._difference(point[0], here[0])) > BodyMotion.LOCAL_LIMIT \
+				or absf(BodyMotion._difference(point[1], here[1])) > BodyMotion.LOCAL_LIMIT: return result
+			translated.append([int(row.x_m) + int(point[0]) - int(here[0]), int(row.y_m) + int(point[1]) - int(here[1])])
+		var terrain := ArmySystem._body_path_terrain(MarchPath.of_pack(repo), translated, int(footprint.radius_m))
+		if not terrain.is_empty():
+			result.reason = "No reachable safe destination: " + terrain
+			return result
+		for enemy: String in battle[other]:
+			var radius := BattleGroupGeometry.footprint(repo, state.army_roster[enemy])
+			for peer: Dictionary in battle.groups[enemy]:
+				var pair := BattleGroupGeometry.pair(translated.back(), int(footprint.radius_m), [peer.x_m, peer.y_m], int(radius.radius_m), reach)
+				if not pair.ok or pair.in_reach:
+					result.reason = "No reachable safe destination: occupied departure remains inside encounter reach"
+					return result
+	entry.erase("withdrawal_reason")
+	if not entry.has("withdrawal_cause"): entry.withdrawal_cause = "rout" if battle.get("routed_side", "") == side else "retreat"
+	result.candidate = state
+	result.path_m = path
+	result.reason = "Received withdrawal follows its actual safe route"
+	return result
+
+static func retreat_intent_candidate(repo: DataRepository, source: GameState, battle_id: int, unit: String, budget_m: int) -> Dictionary:
+	var failure := {"status": "error", "reason": "Invalid candidate withdrawal", "error": "Invalid candidate withdrawal", "unit": unit, "path_m": []}
+	if repo == null or source == null or budget_m < 0 or budget_m > BodyMotion.LOCAL_LIMIT or not source.day_resolution.get("body_battle") is Dictionary: return failure
+	var error := BodyBattleMotion._source_error(repo, source, BodyBattleMotion._boundary(source))
+	if not error.is_empty():
+		failure.reason = error
+		failure.error = error
+		return failure
+	var battle := BattleSystem.battle_of(source, unit)
+	if battle.is_empty() or int(battle.id) != battle_id: return failure
+	var entry := UnitBodies._entry(source, unit)
+	var here: Array = battle.get("group_anchor_m", {}).get(unit, [entry.x_m, entry.y_m]).duplicate()
+	var route := _retreat_route_candidate(repo, source, battle_id, unit)
+	var path: Array = [here]
+	if route.candidate != null and CampSystem.can_march_entry(UnitBodies._entry(route.candidate, unit), source.absolute_day()):
+		path = BodyMotion._clip(route.path_m, budget_m)
+	return {"status": "complete", "reason": route.reason, "error": "", "unit": unit, "path_m": path}
+
 static func _start_retreat(repo: DataRepository, state: GameState, code: String, battle: Dictionary) -> bool:
 	var entry := _stored(state, code)
 	if bool(entry.get("battle_retreat", false)):
