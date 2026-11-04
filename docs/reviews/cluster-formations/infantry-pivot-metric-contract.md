@@ -321,12 +321,14 @@ animated XZ; they never choose height from animated boot Y.
 
 All bounds below are in world metres except unit-normal errors (dimensionless).
 Require conservative bounds on position `e_p`, fixed anchor `e_a`, sampled height
-and normalized normals. At intended XZ, height error must include native capture
-error plus `L_h * (query_rounding_xz + position_error_xz)`; normal error similarly
-includes `L_n * (query_rounding_xz + position_error_xz)`. L_h/L_n must bound the
-actual frozen surface over that neighbourhood, with proof; surveys or a maximum
-observed residual are not bounds. Holes, switches or ridges without such bounds
-leave that contribution unknown. Anchor queries use their own independent bounds.
+and normalized normals. L_h/L_n require a proof for the actual frozen method and
+its declared target/domain. A real-coordinate surface target needs bounds over
+the entire real neighbourhood. A finite quantized-API target may instead use the
+conditional native-domain proof below; its lattice constant is **not** a
+Lipschitz constant of the real-coordinate surface or of its stepwise extension.
+Surveys or a maximum observed residual are not bounds. Holes, switches or ridges
+without the required bounds leave that contribution unknown. Anchor queries use
+their own independent bounds.
 Let `e_q` bound the full ground-point uncertainty, including XZ and height terms,
 and `e_n`, `e_na` bound normalized n and n_a. Conservative propagated bounds are:
 
@@ -348,6 +350,71 @@ native uncertainty terms must not be dropped to obtain identical verdicts.
 Vertical and local-normal comparisons remain separately named; v1's model error
 uses the legacy normal-separation definition, not a new vertical budget.
 Whole-mesh penetration remains adverse even outside stance patches.
+
+#### Quantized native target and both endpoint conversions
+
+For finite native measurement only, the target at a real XZ coordinate x may be
+the observation `F(Q(x))`: Q is the actual componentwise nearest/ties-to-even
+binary32 API conversion, and F is the frozen native method on its native inputs,
+including the declared raw/sea/override selection. Define D as the **entire real
+uncertainty domain**, including every required vertex, phase, operation, placement
+and independently fixed anchor neighbourhood. This interpretation changes none
+of that coverage. Let Lambda contain all of `Q(D)` and every nominal query; bind
+the coordinate chart, units, method, binary, resources and selection in the proof.
+Nonfinite conversions, holes and invalid or ambiguous normalized normals remain
+adverse/unavailable; they are not removed to obtain a smaller admissible domain.
+Every normal-offset lookup and every region/cell/sea/override branch needed by F
+must be covered, even when its stencil extends outside the top-level query box.
+
+A proved output diameter R and positive lower bound delta on the distance between
+**any distinct** native coordinates in Lambda imply `L = R/delta`: equal native
+coordinates give equal outputs by frozen-method determinism; unequal coordinates
+have output distance at most R and input distance at least delta. This requires
+range and separation proofs for the whole domain, with outward arithmetic.
+For height, R and delta are in world metres and L_h is dimensionless; for valid
+normalized normals R is dimensionless and L_n has units 1/m. Normal diameter 2
+is usable only after validity, normalization and all required branches are
+proved. Stored RF extrema, adjacent-pair quotients or sampled native extrema do
+not bound the full method's output arithmetic or normal stencils. If such proof
+is unavailable, the corresponding contributor remains null/UNKNOWN.
+
+For intended coordinate p and any true x in its full neighbourhood, let
+`||x-p|| <= e_p`, `q=Q(p)`, `q_x=Q(x)`, measured `r=||q-p||`, and prove uniformly
+`||Q(x)-x|| <= eta` over that neighbourhood. All norms here are XZ Euclidean norms
+in world metres (convert both axes with `world_unit_m`, not per-axis maxima).
+Then `||q_x-q|| <= e_p + r + eta`. This bounds the quantized target over **all
+real x**, without asserting continuity. The adapter's existing radius is
+`rho = e_p + r + query_coordinate + arithmetic_guards`, rounded outward.
+`query_coordinate` must include eta plus every other applicable query-coordinate
+error, with derivation/evidence and no omitted or double-counted contributor.
+Nominal rounding r alone does not include the unknown endpoint's conversion.
+Use `height_error = e_h_capture + L_h*rho` and
+`normal_error = e_n_capture + L_n*rho + normalization_guard` in the existing
+propagation. Position/anchor bounds also retain their full 3D obligations.
+
+The declared surface rectangle is in coordinate units. The adapter conservatively
+requires its outward-expanded p-centred box of radius `rho/world_unit_m` inside
+that rectangle. Prove that Lambda contains q and every Q(x) in the full real
+neighbourhood, including boundary rounding cells; independently prove the F
+stencils there. A numeric field or a successful rectangle check cannot establish
+those external facts. Anchors need their own e_a, nominal rounding, uniform eta,
+native-domain and fixed-normal proof, throughout the interval and its outgoing
+exit. A vertex proof cannot substitute for an anchor proof. Sea-switch normal
+ambiguity and all existing UNKNOWN/null propagation remain in force.
+
+For example, nearest rounding on a unit lattice with p=7/16 and x=9/16 gives
+q=0, q_x=1. For native F(0)=0, F(1)=1 and L=1, omitting eta gives radius
+`1/8 + 7/16 = 9/16 < 1`, which fails. Including the uniform eta=1/2 gives
+17/16 and encloses the difference. This is a synthetic counterexample, not a
+native certificate; the adapter regressions also exercise a binary32 cell crossing.
+
+This target bounds an API observation only. Its discrepancy from rendered
+triangles/LOD or physical planted contact is a separate obligation, never zero
+by interpretation. No new E, physical PASS, source normalization, replacement
+ground, accepted native stream, strict-Gram waiver or continuous-motion claim
+follows. Capture retains the actual full-stencil range/arithmetic proofs,
+position/anchor bounds, material annotation, native stream and visual acceptance;
+all original P4 requirements remain.
 
 ### Complete coverage and bounded transport
 
