@@ -454,16 +454,16 @@ def validate_raw_observation(observation, cases):
                                        'normal': [0., 1., 0.] if native_mode else surface['normal']}})
     missing = validate_material_cases({'cases': legacy_rows, 'budget': h['budget']}, cases)
     for row in h['cases']:
-        vertices = sorted({v for p in row['patches'] if p['kind'] != 'swing' for v in p['vertices']})
+        vertices = sorted({v for p in row['patches'] for v in p['vertices']})
         for vertex in vertices:
             covered = 0.
-            for patch in sorted((p for p in row['patches'] if vertex in p['vertices'] and p['kind'] != 'swing'),
+            for patch in sorted((p for p in row['patches'] if vertex in p['vertices']),
                                 key=lambda p: p['start']):
                 if patch['start'] > covered:
-                    missing.append(f"case {row['turn_udeg']} vertex {vertex}: missing stance {covered}..{patch['start']}")
+                    missing.append(f"case {row['turn_udeg']} vertex {vertex}: missing material intervals {covered}..{patch['start']}")
                 covered = max(covered, patch['end'])
             if covered < 1:
-                missing.append(f"case {row['turn_udeg']} vertex {vertex}: missing stance {covered}..1.0")
+                missing.append(f"case {row['turn_udeg']} vertex {vertex}: missing material intervals {covered}..1.0")
     unknown = []
     if native_mode:
         require(isinstance(h['uncertainty'], dict) and h['uncertainty'], 'missing native uncertainty records')
