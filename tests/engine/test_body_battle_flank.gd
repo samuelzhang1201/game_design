@@ -407,3 +407,88 @@ func test_pursuit_total_uses_json_range_and_rejects_actual_credit_overflow() -> 
 	var planned := BodyBattleMotion.plan_candidate(f.repo, f.state, BodyBattleMotion._boundary(f.state))
 	assert_eq(planned.status, "error", "actual committed credit must remain in the exact JSON range")
 	assert_eq(BodyMotion._hash(f.state.to_dict()), before)
+
+func test_bounded_prior_pursuit_does_not_stop_actual_withdrawal() -> void:
+	for json_roundtrip: bool in [false, true]:
+		var f: Dictionary = _pursuit()
+		var code: String = f.code
+		f.state.unit_tasks[code].orders.pursue.status = "bounded"
+		f.state.regiments[code].disengaging = 1
+		f.state.day_resolution.march_entries[code].disengaging = 1
+		if json_roundtrip: f.state = GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())), false)
+		var before := BodyMotion._hash(f.state.to_dict())
+		var boundary := BodyBattleMotion._boundary(f.state)
+		var p := BodyBattleMotion.plan_candidate(f.repo, f.state, boundary)
+		assert_eq(p.status, "complete", p.reason)
+		if p.plan.is_empty(): continue
+		var result := BodyBattleMotion.commit_candidate(f.repo, f.state, p.plan, boundary)
+		assert_eq(result.status, "complete", result.reason)
+		assert_eq(BodyMotion._hash(f.state.to_dict()), before)
+		if result.candidate == null: continue
+		assert_gt(p.plan.motion.moves[0].used_m, 0, "actual nonbattle withdrawal must not be stopped by its prior bounded pursuit")
+		assert_eq(BattleTaskSystem.current(result.candidate, code).pursuit.route_m, 90)
+		assert_eq(BattleTaskSystem.current(result.candidate, code).status, "bounded")
+		var offensive := UnitBodies._copy(f.state)
+		offensive.regiments[code].disengaging = 0
+		offensive.day_resolution.march_entries[code].disengaging = 0
+		var held := _move(f, offensive)
+		if held.candidate != null:
+			assert_eq(held.plan.motion.moves[0].used_m, 0, "ordinary bounded offensive march still holds")
+			assert_eq(UnitBodies._entry(held.candidate, code).x_m, 50000)
+
+func _withdrawal_hold(_repo: DataRepository, state: GameState, _battle_id: int, unit: String, _budget: int) -> Dictionary:
+	var at: Dictionary = UnitBodies._entry(state, unit)
+	return {"status": "complete", "reason": "Explicit unavailable-future-writer hold for protected target only", "error": "", "unit": unit, "path_m": [[at.x_m, at.y_m]]}
+
+func test_protected_withdrawal_cannot_commit_offensive_flank_contact() -> void:
+	for json_roundtrip: bool in [false, true]:
+		var f: Dictionary = _fixture()
+		_put(f, f.enemy, [52831, 60000])
+		var record: Dictionary = f.state.unit_tasks[f.code].orders.flank
+		record.flank.known.x_m = 52831
+		record.flank.known.points_m = [[52831, 60000]]
+		record.flank.path_m = [[52000, 60000], [52000, 65000]]
+		f.state.foes[f.enemy].battle_retreat = true
+		f.state.battles[0].parley = {"agreed": {"safe_withdrawal": {"policy": "protect", "until_day": 0}}, "parties": {"att": [f.code, f.other], "def": [f.enemy]}}
+		if json_roundtrip: f.state = GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())), false)
+		var barred := BodyBattleContact._barred(f.repo, f.state, f.state.battles[0], f.state.battles[0], "att", f.code, f.enemy)
+		assert_false(barred.is_empty(), "fixture target really has protected withdrawal")
+		var before := BodyMotion._hash(f.state.to_dict())
+		var boundary := BodyBattleMotion._boundary(f.state)
+		var p := BodyBattleMotion.plan_candidate(f.repo, f.state, boundary, {"withdrawal": _withdrawal_hold})
+		assert_eq(p.status, "complete", p.reason)
+		if p.plan.is_empty(): continue
+		var result := BodyBattleMotion.commit_candidate(f.repo, f.state, p.plan, boundary, {"withdrawal": _withdrawal_hold})
+		assert_eq(result.status, "complete", result.reason)
+		assert_eq(BodyMotion._hash(f.state.to_dict()), before)
+		if result.candidate == null: continue
+		var phase: String = BattleTaskSystem.current(result.candidate, f.code).flank.get("phase", "")
+		var query := BodyBattleContact.query_candidate(f.repo, result.candidate, 8, f.code, [f.enemy], BodyBattleMotion._boundary(result.candidate))
+		assert_ne(phase, "contact", "protected withdrawal cannot publish lawful offensive flank contact")
+		assert_eq(UnitBodies._entry(result.candidate, f.code).x_m, 50000, "protected withdrawal bars offensive approach")
+		assert_eq(query.engaged, 0)
+		assert_eq(BattleTaskSystem.current(result.candidate, f.code).flank.path_m, record.flank.path_m)
+
+func test_unrelated_party_withdrawal_agreement_does_not_bar_flank() -> void:
+	for json_roundtrip: bool in [false, true]:
+		var f := _fixture()
+		_put(f, f.enemy, [52831, 60000])
+		var record: Dictionary = f.state.unit_tasks[f.code].orders.flank
+		record.flank.known.x_m = 52831
+		record.flank.known.points_m = [[52831, 60000]]
+		record.flank.path_m = [[52000, 60000], [52000, 65000]]
+		f.state.foes[f.enemy].battle_retreat = true
+		f.state.battles[0].parley = {"agreed": {"safe_withdrawal": {"policy": "protect", "until_day": 0}}, "parties": {"att": [f.other], "def": [f.enemy]}}
+		if json_roundtrip: f.state = _json(f.state)
+		assert_eq(BodyBattleContact._barred(f.repo, f.state, f.state.battles[0], f.state.battles[0], "att", f.code, f.enemy), "")
+		var before := BodyMotion._hash(f.state.to_dict())
+		var boundary := BodyBattleMotion._boundary(f.state)
+		var planned := BodyBattleMotion.plan_candidate(f.repo, f.state, boundary, {"withdrawal": _withdrawal_hold})
+		assert_eq(planned.status, "complete", planned.reason)
+		if planned.plan.is_empty(): continue
+		var result := BodyBattleMotion.commit_candidate(f.repo, f.state, planned.plan, boundary, {"withdrawal": _withdrawal_hold})
+		assert_eq(result.status, "complete", result.reason)
+		assert_eq(BodyMotion._hash(f.state.to_dict()), before)
+		if result.candidate != null:
+			assert_eq(UnitBodies._entry(result.candidate, f.code).x_m, 51000)
+			assert_eq(BattleTaskSystem.current(result.candidate, f.code).flank.phase, "contact")

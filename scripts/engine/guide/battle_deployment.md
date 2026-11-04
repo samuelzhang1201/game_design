@@ -288,12 +288,16 @@ observation or route completion grants a side/rear multiplier.
 
 Pending cancellation leaves the received writer active; delivered cancellation
 clears it through the existing task ledger. Capability, packing, reserves, current
-control/law and actual interception can hold the selected flank without falling
+control/law (including target-scoped protected withdrawal) and actual interception
+can hold the selected flank without falling
 through to another writer. Pursuit movement uses its received route/region bound
 and remaining metre allowance; actual committed body legs, including detours,
 are charged once by the existing route settlement. A reservation whose actual
 detour leaves the received region rejects the entire transaction. Outer retries retain
-route, phase, supply and credit unchanged. Failure discards all private staging.
+route, phase, supply and credit unchanged. Actual nonbattle withdrawal bypasses
+a prior bounded offensive march hold and never spends its pursuit credit; a
+residual withdrawal flag inside a live field does not grant that bypass. Failure
+discards all private staging.
 
 Numerical certificate fixtures certify candidate arithmetic only. Ordinary
 campaign activation, later battle writers, personnel settlement, all twelve

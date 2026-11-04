@@ -799,7 +799,7 @@ static func _flank_candidate_allowed(repo: DataRepository, state: GameState, bat
 	var side := BattleRules.side_of(battle, unit)
 	var target: String = record.request.target_unit
 	if BattleRules.side_of(battle, target) != ("def" if side == "att" else "att") \
-		or "attack" not in BattleRules.legal_actions(repo, state, int(battle.id), side, unit, target): return false
+		or not BodyBattleContact._barred(repo, state, battle, battle, side, unit, target).is_empty(): return false
 	for enemy: String in battle["def" if side == "att" else "att"]:
 		if enemy != target and MilitaryRoster.fit(state, enemy) > 0 and not bool(UnitBodies._entry(state, enemy).get("captured", false)) \
 			and _flank_candidate_touch(repo, state, unit, enemy): return false
@@ -857,5 +857,8 @@ static func _settle_flank_candidate(repo: DataRepository, source: GameState, can
 		var remaining: Array = record.flank.get("path_m", [])
 		if not remaining.is_empty() and common.back() == remaining[0] and common.size() > 1: remaining.pop_front()
 		record.flank.path_m = remaining
-		if not battle.is_empty() and _flank_candidate_touch(repo, candidate, unit, record.request.target_unit): record.flank.phase = "contact"
+		var committed_battle := BattleSystem.battle_of(candidate, unit)
+		if not committed_battle.is_empty() and _flank_candidate_touch(repo, candidate, unit, record.request.target_unit) \
+			and BodyBattleContact._barred(repo, candidate, committed_battle, committed_battle, BattleRules.side_of(committed_battle, unit), unit, record.request.target_unit).is_empty():
+			record.flank.phase = "contact"
 	candidate.unit_tasks[unit].orders[id] = record
