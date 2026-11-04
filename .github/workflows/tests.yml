@@ -34,6 +34,7 @@ jobs:
           python3 tools/test_select_gut_tests.py
           python3 tools/test_run_tests.py
           python3 tools/test_run_with_timeout.py
+          python3 tools/units3d/soldier_arp/test_pivot_contact_evidence.py
           sh -n run_tests.sh
           bash -n .codex/hooks/session-start.sh
           python3 - <<'PY'
