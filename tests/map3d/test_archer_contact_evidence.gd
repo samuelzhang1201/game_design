@@ -117,7 +117,7 @@ func test_retained_evidence_replays_complete_frozen_arrays_and_anatomical_invent
 	var path: String = "res://docs/reviews/cluster-formations/evidence/archers-contact/material-support.json"
 	assert_true(FileAccess.file_exists(path), "substantive material evidence is retained")
 	if not FileAccess.file_exists(path): return
-	assert_eq(FileAccess.get_sha256(path), "e9da7f6ebfee60593516d1c4376d89ef7ac0eef827e433f73f5ba51231271522", "frozen anatomy, raw skin, rest/binds and fixed anchors cannot be silently replaced")
+	assert_eq(FileAccess.get_sha256(path), "c27538df347f1daeb1955040ccd0c07b761bc4738a7865b72e21b3501d4c6d30", "frozen anatomy, raw skin, rest/binds and fixed anchors cannot be silently replaced")
 	var evidence: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
 	var expected_arrays: Array[String] = [
 		"23f91375895b6c5aeb74f743a6cdfe144d2956f6ce16364ecb6c5d2080eee24e",
@@ -184,3 +184,35 @@ func test_retained_evidence_replays_complete_frozen_arrays_and_anatomical_invent
 	for old: Dictionary in evidence.annotation.legacy_diagnostics:
 		assert_false(String(labels[int(old.triangle)]).begins_with("excluded"), "original diagnostics remain in collision domain")
 	assert_eq(FileAccess.get_sha256("res://docs/reviews/cluster-formations/evidence/archers-contact/anatomy-atlas.png"), evidence.atlas.sha256)
+
+
+func test_transfer_observations_keep_tilted_samples_and_bind_unbounded_envelopes() -> void:
+	var evidence: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://docs/reviews/cluster-formations/evidence/archers-contact/material-support.json"))
+	var observed: Dictionary = evidence.observed_native_march
+	for example: Array in [[8,"left","heel-low/toe-up"], [24,"right","heel-low/toe-up"], [24,"left","heel-high/toe-low"], [25,"left","heel-high/toe-low"], [26,"left","heel-high/toe-low"], [10,"right","heel-high/toe-low"]]:
+		assert_true(String(observed.phase_sample_labels[example[0]][example[1]]).begins_with(example[2]), "finite morphology at sample " + str(example))
+	var frames: Dictionary = {}
+	for frame: Dictionary in observed.native_frames: frames[frame.shot.id] = frame
+	for transfer: Dictionary in observed.unresolved_transfers:
+		assert_null(transfer.phase_bracket, "no finite image envelope is a physical transition bound")
+		assert_eq(transfer.get("bound_status", ""), "unbounded")
+		if transfer.get("bound_status") != "unbounded": continue
+		for envelope: Dictionary in transfer.finite_sample_envelopes:
+			for endpoint: String in ["start_query", "end_query"]:
+				var query: Dictionary = envelope[endpoint]
+				assert_eq(query.clip, "MARCH")
+				assert_eq(query.frames.size(), 2)
+				for ref: Dictionary in query.frames:
+					assert_true(frames.has(ref.id))
+					if not frames.has(ref.id): continue
+					assert_eq(frames[ref.id].sha256, ref.sha256)
+					assert_eq(frames[ref.id].shot.phase, query.phase)
+					assert_eq(frames[ref.id].native_time_s, query.native_time_s)
+		var covered: Array = []
+		for envelope: Dictionary in transfer.finite_sample_envelopes:
+			covered.append_array(envelope.inspected_sample_phases)
+		var disputed: Array = [0.25] if transfer.side == "left" else [0.75]
+		if transfer.kind == "heel rise through toe-off":
+			disputed = [0.75,0.78125,0.8125] if transfer.side == "left" else [0.3125]
+		for phase: float in disputed:
+			assert_true(covered.has(phase), "all disputed finite transfer samples remain inside the inspected envelope")
