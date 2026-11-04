@@ -224,6 +224,145 @@ class PhaseTests(unittest.TestCase):
                 capture.read_bound(p, digest)
 
 
+class CorrelatedTriangleTests(unittest.TestCase):
+    def surface(self, vertices=None, weights=None, joints=None):
+        return {'vertices': vertices or [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]],
+                'joints': joints or [[0, 0, 0, 0]]*3,
+                'weights': weights or [[1., 0., 0., 0.]]*3}
+
+    def span(self, surface, translation=(-10., 10.)):
+        native = {'length': 1., 'bones': [{'name': 'root', 'parent': -1,
+            'default_position': [0, 0, 0], 'rest': np.eye(4)[:3].ravel().tolist(),
+            'default_rotation': [0, 0, 0, 1], 'default_scale': [1, 1, 1]}],
+            'tracks': [{'path': 'Rig:root', 'type': 1, 'interpolation': 1, 'keys': [
+                {'time': 0., 'value': [translation[0], 0, 0]},
+                {'time': 1., 'value': [translation[1], 0, 0]}]}]}
+        return phase.surface_span_box(native, surface, [np.eye(4)], 0., .99999, {}, phase.Budget())
+
+    def test_shared_translation_closes_integrated_shape_where_vertex_boxes_cannot(self):
+        # Losing a common transform before edge subtraction recreates this failure.
+        box = self.span(self.surface())
+        atlas = phase.make_atlas([Q(0), Q(1)], [Q(0), Q(1)], '0'*64, 1.)
+        patches = {'hoof': {'native_sole_vertices': [0, 1, 2],
+            'native_triangles': [[0, 1, 2]], 'native_sole_triangles': [7]}}
+        records, _, _ = phase.closed_metrics([{'seconds': [0., .99999], 'vertex_bounds': box}],
+            atlas, patches, {'hoof': (Q(0), Q(1))}, {'hoof': self.span(self.surface(), (0., 0.))},
+            np.ones(3, dtype=bool), 1.)
+        shape = records[0]['triangle_shape']['hoof']
+        self.assertEqual(shape['unclosed_area_or_orientation'], [])
+        self.assertGreater(shape['min_twice_area_lower_m2'], .99)
+        self.assertEqual(phase.triangle_shape(box[np.array([[0, 1, 2]])],
+            capture.Float32Box([self.surface()['vertices']]))['unclosed_area_or_orientation'], [0])
+
+    def test_unequal_raw_weights_retain_translation_and_actual_collapse(self):
+        surface = self.surface(weights=[[.9, 0, 0, 0], [1., 0, 0, 0], [1., 0, 0, 0]])
+        box = self.span(surface, (-11., -9.))
+        self.assertTrue(hasattr(box, 'skin_contexts'), 'shared native skin context is missing')
+        proof = phase.correlated_triangle(box, surface, [0, 1, 2])
+        self.assertLessEqual(proof['twice_area_interval'][0], 0)
+        self.assertNotEqual(proof['edge_coefficients'][0][0]['homogeneous'][3], 0)
+        # x1-x0=1 + (1-.9)*T vanishes at T=-1/(1-.9).
+        self.assertLess(proof['edges'][0]['interval'][0][0], 0)
+        self.assertGreater(proof['edges'][0]['interval'][1][0], 0)
+
+
+    def test_native_rounding_residual_and_stale_matrix_certificate_cannot_be_dropped(self):
+        box = self.span(self.surface())
+        proof = phase.correlated_triangle(box, self.surface(), [0, 1, 2])
+        self.assertTrue(all(e > 0 for row in proof['branches'][0]['vertex_native_residual_absolute'] for e in row))
+        # A certificate must bind its values, rather than alias the mutable arrays.
+        box.skin_contexts[0]['transforms'].lo[0, 0, 0] = 0.
+        with self.assertRaisesRegex(ValueError, 'Stale shared skin'):
+            phase.correlated_triangle(box, self.surface(), [0, 1, 2])
+
+    def test_duplicate_slots_and_nonunit_factors_keep_exact_coefficients(self):
+        surface = self.surface(weights=[[.25, .5, 0, 0]]*3)
+        proof = phase.correlated_triangle(self.span(surface), surface, [0, 1, 2])
+        self.assertEqual(proof['edge_coefficients'][0], [{'bind_index': 0,
+            'homogeneous': (Q(3, 4), Q(0), Q(0), Q(0))}])
+        self.assertGreater(proof['twice_area_interval'][0], .56)
+        self.assertLess(proof['twice_area_interval'][1], .57)
+        altered = copy.deepcopy(surface); altered['weights'][1] = [.25, .4, 0, 0]
+        with self.assertRaisesRegex(ValueError, 'Source/bind/raw'):
+            phase.correlated_triangle(self.span(surface), altered, [0, 1, 2])
+
+    def test_collinear_thin_reversed_and_rotated_faces_keep_original_metric(self):
+        for height, nondegenerate in [(0., False), (1e-3, True)]:
+            surface = self.surface(vertices=[[0, 0, 0], [1, 0, 0], [0, height, 0]])
+            box = self.span(surface, (0., 0.))
+            shape = phase.correlated_shape(box, box, [[0, 1, 2]])
+            self.assertEqual(not shape['unclosed_area_or_orientation'], nondegenerate)
+        surface = self.surface(); now = self.span(surface, (0., 0.))
+        reversed_ = self.surface(vertices=[[0, 0, 0], [0, 1, 0], [1, 0, 0]])
+        shape = phase.correlated_shape(self.span(reversed_, (0., 0.)), now, [[0, 1, 2]])
+        self.assertEqual(shape['opposite_orientation'], [0])
+        # A rigid 180-degree rotation preserves area but reverses this fixed dot.
+        rotated = self.surface(vertices=[[0, 0, 0], [-1, 0, 0], [0, 1, 0]])
+        shape = phase.correlated_shape(self.span(rotated, (0., 0.)), now, [[0, 1, 2]])
+        self.assertGreater(shape['min_twice_area_lower_m2'], .99)
+        self.assertEqual(shape['opposite_orientation'], [0])
+
+
+    def test_certificate_replay_rejects_dropped_error_influences_and_forged_correlation(self):
+        box = self.span(self.surface())
+        proof = phase.json_value(phase.correlated_triangle(box, self.surface(), [0, 1, 2]))
+        certificates = {c['sha256']: phase.json_value(c['identity']) for c in box.skin_contexts}
+        self.assertTrue(hasattr(phase, 'validate_shape_certificate'), 'shape proof replay is missing')
+        phase.validate_shape_certificate(proof, certificates)
+        mutations = [lambda p: p['branches'][0]['vertex_native_residual_absolute'][0].__setitem__(0, [0, 1]),
+            lambda p: p['edge_coefficients'][0][0]['homogeneous'].__setitem__(0, [0, 1]),
+            lambda p: p['raw_vertices_joints_weights'][0][2].__setitem__(0, 0.),
+            lambda p: p['shared_transform_certificates'].__setitem__(0, '0'*64),
+            lambda p: p['cross_interval'][0].__setitem__(2, .5),
+            lambda p: p['twice_area_interval'].__setitem__(0, 2.)]
+        for mutate in mutations:
+            bad = copy.deepcopy(proof); mutate(bad)
+            with self.subTest(mutation=mutations.index(mutate)), self.assertRaises(ValueError):
+                phase.validate_shape_certificate(bad, certificates)
+
+
+    def test_ftz_input_loss_is_bounded_before_large_vertex_multiplication(self):
+        surface = self.surface(vertices=[[2.**20, 0, 0], [0, 1, 0], [0, 0, 1]])
+        transforms = np.eye(4)[:3].reshape(1, 3, 4)
+        transforms[0, 0, 0] = 2.**-127
+        context = phase.skin_context(capture.Float32Box(transforms), surface, [np.eye(4)], 0., 0.)
+        # A subnormal matrix operand can flush to zero before multiplying 2^20.
+        self.assertGreaterEqual(phase.skin_vertex_residual(context, 0)[0], Q(2)**-107)
+
+
+    def test_actual_cross_refutation_catches_changed_native_vertex(self):
+        surface = self.surface(); box = self.span(surface, (0., 0.))
+        proof = phase.correlated_triangle(box, surface, [0, 1, 2])
+        self.assertTrue(hasattr(phase, 'shape_refutation'), 'actual cross refutation is missing')
+        self.assertEqual(phase.shape_refutation([proof], surface['vertices'], [[0, 1, 2]]), [])
+        self.assertEqual(phase.shape_refutation([proof], [[0, 0, 0], [2, 0, 0], [0, 1, 0]], [[0, 1, 2]]), [0])
+
+
+    def test_mixed_bind_coefficients_keep_parent_translation_dependencies_and_native_rounding(self):
+        surface = self.surface(weights=[[.75, .25, 0, 0], [.5, .5, 0, 0], [.25, .75, 0, 0]],
+            joints=[[0, 1, 0, 0]]*3)
+        transforms = np.tile(np.eye(4)[:3], (2, 1, 1)); transforms[1, 2, 3] = 1.
+        lo, hi = transforms.copy(), transforms.copy(); lo[:, 0, 3] = -10.; hi[:, 0, 3] = 10.
+        ctx = phase.skin_context(capture.Float32Box(lo, hi), surface, [np.eye(4)]*2, 0., 1.)
+        box = phase.SkinSpan(capture.Float32Box(np.zeros((3, 3))), [ctx])
+        proof = phase.correlated_triangle(box, surface, [0, 1, 2])
+        self.assertEqual([r['homogeneous'][3] for r in proof['edge_coefficients'][0]], [Q(-1, 4), Q(1, 4)])
+        for translation in [-10., .1, 10.]:
+            actual = transforms.astype(np.float32); actual[:, 0, 3] = translation
+            points = []
+            for vertex, joints, weights in zip(surface['vertices'], surface['joints'], surface['weights']):
+                value = np.zeros(3, dtype=np.float32)
+                for joint, weight in zip(joints, weights):
+                    matrix = actual[joint]; v = np.asarray(vertex, dtype=np.float32)
+                    point = matrix[:, 0]*v[0]
+                    point = point+matrix[:, 1]*v[1]; point = point+matrix[:, 2]*v[2]
+                    point = point+matrix[:, 3]
+                    value = value+point*np.float32(weight)
+                points.append(value)
+            self.assertEqual(phase.shape_refutation([proof], points, [[0, 1, 2]]), [])
+        self.assertTrue(capture.Float32Box(*proof['cross_interval']).contains([-.25, -.5, 1.]).all())
+
+
 class FiniteAcosTests(unittest.TestCase):
     @staticmethod
     def directed(x, precision, upper):
@@ -980,6 +1119,50 @@ class AcceptedScalarTests(unittest.TestCase):
         self.assertEqual(unknown, set())
         self.assertEqual(checks, 3318)
         self.assertEqual(len(authority.constant_records), 6)
+
+
+@unittest.skipUnless(os.environ.get('CAV_TRIANGLE_REPORT'), 'explicit new correlated triangle report required')
+class AcceptedTriangleReportTests(unittest.TestCase):
+    def test_actual_all_face_spans_birth_targets_history_and_negative_gates(self):
+        report = json.loads(Path(os.environ['CAV_TRIANGLE_REPORT']).read_text())
+        phase.validate_diagnostic(report)
+        self.assertEqual(report['version'], 6)
+        self.assertEqual(len(report['inputs']), 803)
+        self.assertEqual(len(report['accepted257_input_bindings']), 802)
+        rows = report['continuous_native']['closed_boxes']
+        self.assertEqual(len(rows), 40)
+        areas = [p for row in rows for area in row['triangle_area'].values() for p in area['certificates']]
+        self.assertEqual(len(areas), 7760)
+        self.assertGreater(sum(p['twice_area_interval'][0] > 0 for p in areas), 0)
+        cases = report['previous_shape_accounting']['shape_cases']
+        self.assertEqual(len(cases), 2797)
+        self.assertGreater(sum(c['outcome'] == 'CLOSED' for c in cases), 0)
+        for key, coordinates, shapes in [('baseline_accounting', 69, 18),
+                ('previous_operation_accounting', 19, 3028), ('previous_norm_accounting', 18, 3677)]:
+            self.assertEqual(len(report[key]['coordinate_boxes']), coordinates)
+            self.assertEqual(len(report[key]['shape_cases']), shapes)
+        self.assertIsNone(report['claims']['policy_E'])
+        self.assertFalse(report['claims']['success_dependency'])
+        # Local certificate replay tests all residual/wedge mutations cheaply;
+        # these report mutations catch coverage and predecessor/gate bypasses.
+        for mutate in [lambda r: r.update(version=5),
+                lambda r: r['inputs'].update(shape_baseline_report='0'*64),
+                lambda r: r['claims'].update(surface_unblocked=True),
+                lambda r: r['shape_proof'].update(method='independent-boxes'),
+                lambda r: r['previous_shape_accounting']['shape_cases'].pop(),
+                lambda r: rows[0]['triangle_area'].pop(next(iter(rows[0]['triangle_area'])))]:
+            # Restore only touched containers; avoid copying the large immutable report.
+            original_version = report['version']; original_inputs = dict(report['inputs'])
+            original_claims = dict(report['claims']); original_shape = dict(report['shape_proof'])
+            original_cases = list(report['previous_shape_accounting']['shape_cases'])
+            original_area = dict(rows[0]['triangle_area'])
+            mutate(report)
+            with self.assertRaises((ValueError, KeyError)):
+                phase.validate_diagnostic(report)
+            report['version'] = original_version; report['inputs'] = original_inputs
+            report['claims'] = original_claims; report['shape_proof'] = original_shape
+            report['previous_shape_accounting']['shape_cases'] = original_cases
+            rows[0]['triangle_area'] = original_area
 
 
 if __name__ == '__main__':

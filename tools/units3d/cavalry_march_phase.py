@@ -840,6 +840,244 @@ def basis_span_box(position, q, scale):
     return native.box_stack([native.box_dot(b, diagonal[:, i], 3) for i in range(3)]+[position], axis=1)
 
 
+
+SHAPE_BASELINE_SHA = '10608d454ec204b92433d33e8149e561ef1289bb3f87eb4e6510006e73e290cd'
+SHAPE_METHOD = 'shared-native-skin-signed-homogeneous-wedge-with-ordered-lbs-residual-v1'
+
+
+class SkinSpan(native.Float32Box):
+    """Coordinate enclosure plus the actual shared rounded skin matrices."""
+    def __init__(self, box, contexts):
+        super().__init__(box.lo, box.hi)
+        self.skin_contexts = contexts
+
+    outward = staticmethod(native.Float32Box.outward)
+
+    def __getitem__(self, key):
+        result = super().__getitem__(key)
+        if not isinstance(key, tuple) and np.asarray(result.lo).ndim == 2:
+            ids = self.skin_contexts[0]['vertex_ids'][key]
+            return SkinSpan(result, [{**c, 'vertex_ids': ids} for c in self.skin_contexts])
+        return result
+
+
+def skin_context(transforms, surface, binds, lo, hi):
+    raw = tuple((tuple(map(float, p)), tuple(map(int, j)), tuple(map(float, w)))
+                for p, j, w in zip(native.Float32Box(surface['vertices']).lo, surface['joints'], native.Float32Box(surface['weights']).lo))
+    identity = {'method': SHAPE_METHOD, 'seconds': [lo, hi],
+                'source_sha256': canonical_digest((raw, binds)),
+                'matrix_interval': [transforms.lo, transforms.hi]}
+    return {'transforms': transforms, 'raw': raw, 'identity': identity,
+            'sha256': canonical_digest(identity), 'vertex_ids': np.arange(len(raw)), 'cache': {}}
+
+
+def validate_skin_context(context):
+    require(context['identity']['method'] == SHAPE_METHOD
+            and context['sha256'] == canonical_digest(context['identity'])
+            and np.array_equal(context['transforms'].lo, context['identity']['matrix_interval'][0])
+            and np.array_equal(context['transforms'].hi, context['identity']['matrix_interval'][1]),
+            'Stale shared skin correlation certificate')
+
+
+def skin_vertex_residual(context, vertex_id):
+    """Native ordered dot+origin, weight and four accumulations minus exact LBS.
+
+    Matrix entries are the actual already-rounded native values. roundoff_sum
+    covers every term ordering/contraction; rnd includes directed rounding/FTZ.
+    """
+    if vertex_id in context['cache']:
+        return context['cache'][vertex_id]
+    position, joints, weights = context['raw'][vertex_id]
+    position, weights = tuple(map(rational, position)), tuple(map(rational, weights))
+    matrices = context['transforms']
+    answer = []
+    tiny = scalar.minnormal(24)
+    for axis in range(3):
+        magnitudes, errors = [], []
+        for joint, weight in zip(joints, weights):
+            row = box_magnitudes(matrices[joint][axis])
+            terms = [row[k]*abs(position[k]) for k in range(3)]+[row[3]]
+            # Input flushing precedes multiplication; result-only FTZ misses
+            # a tiny matrix operand multiplied by a large source coordinate.
+            point_error = roundoff_sum(terms)+tiny*(sum(row[:3])+sum(map(abs, position))+6)
+            magnitude = sum(terms)*weight
+            error = (weight*point_error+scalar.rnd((sum(terms)+point_error)*weight, 24)
+                     +tiny*(sum(terms)+point_error+weight))
+            magnitudes.append(magnitude); errors.append(error)
+        error = sum(errors)
+        for _ in range(4):
+            error += scalar.rnd(sum(magnitudes)+error, 24)+2*tiny
+        answer.append(error)
+    context['cache'][vertex_id] = tuple(answer)
+    return tuple(answer)
+
+
+@lru_cache(maxsize=LIMITS['max_constraints'])
+def triangle_coefficients(raw):
+    influences = []
+    for position, joints, weights in raw:
+        row = {}
+        h = tuple(map(rational, position))+(Q(1),)
+        for joint, weight in zip(joints, weights):
+            previous = row.setdefault(joint, [Q(0)]*4)
+            for k in range(4):
+                previous[k] += rational(weight)*h[k]
+        influences.append(row)
+    edges = []
+    for target in (1, 2):
+        edges.append(tuple((joint, tuple(influences[target].get(joint, (Q(0),)*4)[k]
+            -influences[0].get(joint, (Q(0),)*4)[k] for k in range(4)))
+            for joint in sorted(set(influences[0]) | set(influences[target]))))
+    return tuple(edges)
+
+
+
+@lru_cache(maxsize=LIMITS['max_constraints'])
+def triangle_wedge(coefficients):
+    maps = [dict(e) for e in coefficients]
+    variables = sorted({(joint, k) for e in coefficients for joint, h in e for k, c in enumerate(h) if c})
+    terms = []
+    for j, k in variables:
+        for l, m in variables:
+            coefficient = (maps[0].get(j, (Q(0),)*4)[k]*maps[1].get(l, (Q(0),)*4)[m]
+                           -maps[1].get(j, (Q(0),)*4)[k]*maps[0].get(l, (Q(0),)*4)[m])
+            if coefficient:
+                terms.append((j, k, l, m, coefficient))
+    return tuple(terms)
+
+def cross_box(a, b):
+    return native.box_stack([a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2],
+                             a[0]*b[1]-a[1]*b[0]])
+
+
+def correlated_triangle(box, surface, face):
+    require(isinstance(box, SkinSpan), 'Missing shared native skin matrices')
+    contexts, crosses, edges_output, residual_output = [], [], [], []
+    ids = [int(box.skin_contexts[0]['vertex_ids'][i]) for i in face]
+    raw = tuple(box.skin_contexts[0]['raw'][i] for i in ids)
+    if surface is not None:
+        supplied = tuple((tuple(map(float, native.Float32Box(surface['vertices'][i]).lo)), tuple(map(int, surface['joints'][i])),
+                          tuple(map(float, native.Float32Box(surface['weights'][i]).lo))) for i in ids)
+        require(supplied == raw, 'Source/bind/raw influence differs from correlation certificate')
+    require(len(raw) == 3 and all(len(p) == 3 and len(j) == len(w) == 4
+            and np.isfinite(p).all() and np.isfinite(w).all() and min(w) >= 0
+            for p, j, w in raw), 'Missing/invalid native triangle influence')
+    coefficients = triangle_coefficients(raw)
+    for context in box.skin_contexts:
+        validate_skin_context(context)
+        require(tuple(context['raw'][i] for i in ids) == raw, 'Loop source influence mismatch')
+    cache_key = ('triangle', tuple(ids), tuple(c['sha256'] for c in box.skin_contexts))
+    cache = box.skin_contexts[0]['cache']
+    if cache_key in cache:
+        return cache[cache_key]
+    for context in box.skin_contexts:
+        validate_skin_context(context)
+        require(tuple(context['raw'][i] for i in ids) == raw, 'Loop source influence mismatch')
+        matrices = context['transforms']; f = native.Float32Box
+        require(all(type(joint) is int and 0 <= joint < len(matrices.lo) for _, joints, _ in raw for joint in joints),
+                'Missing native bind influence')
+        residuals = [skin_vertex_residual(context, i) for i in ids]
+        errors = [tuple(residuals[0][k]+residuals[e][k] for k in range(3)) for e in (1, 2)]
+        references = []
+        for edge in coefficients:
+            value = f([0., 0., 0.])
+            for joint, h in edge:
+                for k, coefficient in enumerate(h):
+                    if coefficient:
+                        value = value+matrices[joint][:, k]*float_box((coefficient, coefficient))
+            references.append(value)
+        # Expand the wedge BEFORE interval evaluation. Both edge terms use the
+        # same matrix variable; antisymmetric exact coefficients cancel first.
+        terms = triangle_wedge(coefficients)
+        if terms:
+            j, k, l, m, coefficients_ = zip(*terms)
+            a, b = np.array([1, 2, 0])[:, None], np.array([2, 0, 1])[:, None]
+            first = f(matrices.lo[np.array(j)[None, :], a, np.array(k)[None, :]],
+                      matrices.hi[np.array(j)[None, :], a, np.array(k)[None, :]])
+            second = f(matrices.lo[np.array(l)[None, :], b, np.array(m)[None, :]],
+                       matrices.hi[np.array(l)[None, :], b, np.array(m)[None, :]])
+            exact_coefficients = np.asarray(list(map(float, coefficients_)))
+            products = first*second*f.outward(exact_coefficients, exact_coefficients)
+            reference_cross = f([0., 0., 0.])
+            for i in range(len(terms)):
+                reference_cross = reference_cross+products[:, i]
+        else:
+            reference_cross = f([0., 0., 0.])
+        delta = [native.Float32Box.outward(-np.array(list(map(float, e))), np.array(list(map(float, e)))) for e in errors]
+        cross = reference_cross+cross_box(references[0], delta[1])+cross_box(delta[0], references[1])+cross_box(delta[0], delta[1])
+        actual_edges = [r+d for r, d in zip(references, delta)]
+        direct = cross_box(*actual_edges)
+        cross = f(np.maximum(cross.lo, direct.lo), np.minimum(cross.hi, direct.hi))
+        crosses.append(cross)
+        contexts.append(context['sha256'])
+        edges_output.append([{'interval': [e.lo, e.hi], 'native_residual_absolute': error}
+                             for e, error in zip(actual_edges, errors)])
+        residual_output.append(residuals)
+    cross = hull(crosses)
+    minimum = np.where((cross.lo <= 0) & (cross.hi >= 0), 0., np.minimum(abs(cross.lo), abs(cross.hi)))
+    maximum = np.maximum(abs(cross.lo), abs(cross.hi))
+    squares = native.Float32Box.outward(minimum*minimum, maximum*maximum)
+    total = squares[0]+squares[1]+squares[2]
+    area = native.Float32Box(np.maximum(total.lo, 0), total.hi).sqrt()
+    result = {'method': SHAPE_METHOD, 'vertex_ids': ids, 'raw_vertices_joints_weights': raw,
+            'shared_transform_certificates': contexts,
+            'edge_coefficients': [[{'bind_index': joint, 'homogeneous': h} for joint, h in edge] for edge in coefficients],
+            'branches': [{'edges': edges, 'vertex_native_residual_absolute': residual}
+                         for edges, residual in zip(edges_output, residual_output)],
+            'edges': edges_output[0], 'cross_interval': [cross.lo, cross.hi],
+            'twice_area_interval': [float(max(area.lo, 0)), float(area.hi)]}
+    cache[cache_key] = result
+    return result
+
+
+
+
+def shape_refutation(proofs, vertices, faces):
+    """Actual rows/interiors can refute a bound; they never establish it."""
+    triangles = np.asarray(vertices)[np.asarray(faces)]
+    crosses = np.cross(triangles[:, 1]-triangles[:, 0], triangles[:, 2]-triangles[:, 0])
+    lo = np.asarray([p['cross_interval'][0] for p in proofs])
+    hi = np.asarray([p['cross_interval'][1] for p in proofs])
+    return np.flatnonzero(np.any((crosses < lo) | (crosses > hi), axis=1)).tolist()
+
+def validate_shape_certificate(proof, certificates):
+    """Replay signed coefficients, all native residuals and the normal enclosure."""
+    require(proof['method'] == SHAPE_METHOD and len(proof['vertex_ids']) == 3,
+            'Shape method/source cardinality')
+    raw = [tuple(tuple(v) for v in row) for row in proof['raw_vertices_joints_weights']]
+    require(len(raw) == 3, 'Missing raw triangle influences')
+    contexts = []
+    for digest in proof['shared_transform_certificates']:
+        require(digest in certificates, 'Missing shared skin certificate')
+        identity = certificates[digest]
+        require(canonical_digest(identity) == digest, 'Forged shared skin certificate')
+        contexts.append({'identity': identity, 'sha256': digest,
+            'transforms': native.Float32Box(*identity['matrix_interval']),
+            'raw': dict(zip(proof['vertex_ids'], raw)), 'cache': {},
+            'vertex_ids': np.asarray(proof['vertex_ids'])})
+    require(1 <= len(contexts) <= 2, 'Missing/extra terminal shape branch')
+    box = SkinSpan(native.Float32Box(np.zeros((3, 3))), contexts)
+    expected = correlated_triangle(box, None, [0, 1, 2])
+    require(json_value(expected) == json_value(proof), 'Shape certificate differs from native residual/wedge replay')
+
+def correlated_shape(current, birth, triangles):
+    proofs, unknown, opposite = [], [], []
+    for i, face in enumerate(triangles):
+        now, anchor = correlated_triangle(current, None, face), correlated_triangle(birth, None, face)
+        normal = native.Float32Box(*now['cross_interval'])
+        birth_normal = native.Float32Box(*anchor['cross_interval'])
+        orientation = native.box_dot(normal, birth_normal, 3)
+        proof = {'current': now, 'birth': anchor,
+                 'orientation_interval': [float(orientation.lo), float(orientation.hi)]}
+        if now['twice_area_interval'][0] <= 0 or orientation.lo <= 0:
+            unknown.append(i)
+        if orientation.hi < 0:
+            opposite.append(i)
+        proofs.append(proof)
+    return {'min_twice_area_lower_m2': min(p['current']['twice_area_interval'][0] for p in proofs),
+            'unclosed_area_or_orientation': unknown, 'opposite_orientation': opposite, 'certificates': proofs,
+            'scope': 'Actual rounded native raw-LBS vertices; real model-space triangle area and unchanged birth-normal dot. Common exact proof travel cancels; no world/support/contact inference.'}
+
 def surface_span_box(capture, surface, binds, lo, hi, functions, budget):
     f = native.Float32Box
     require(len(capture['bones']) == len(binds), 'Bind cardinality')
@@ -901,10 +1139,12 @@ def surface_span_box(capture, surface, binds, lo, hi, functions, budget):
         transform = transforms[joints[:, i]]
         point = native.box_dot(transform[:, :, :3], vertices[:, None, :], 3)+transform[:, :, 3]
         result = result+point*weights[:, i, None]
+    result = SkinSpan(result, [skin_context(transforms, surface, binds, lo, hi)])
     if hi == capture['length']:
         # Player fposmod owns the exact terminal as zero; direct queries also
         # expose the terminal key. Keep both, without assuming their equality.
-        result = hull([result, surface_span_box(capture, surface, binds, 0., 0., functions, budget)])
+        zero = surface_span_box(capture, surface, binds, 0., 0., functions, budget)
+        result = SkinSpan(hull([result, zero]), result.skin_contexts+zero.skin_contexts)
     return result
 
 
@@ -1144,17 +1384,18 @@ def continuous_verify(capture, surface, binds, atlas, functions, budget=None):
         try:
             box = surface_span_box(capture, surface, binds, lo, hi, functions, budget)
             # Independent dense/adversarial arithmetic comparison on the full mesh.
-            outside = []
+            outside, refutation_points = [], []
             for time in [lo, (lo+hi)/2, hi]:
                 independent_evaluations += 1
                 points = sampled_points(capture, surface, binds, time)
+                refutation_points.append((time, points))
                 indices = np.argwhere(~box.contains(points))
                 if len(indices):
                     outside.append({'seconds': time, 'vertex_components': indices[:16].tolist()})
             if outside:
                 raise Unclosed('independent_interior_outside_enclosure', violations=outside,
                                next_input='Resolve concrete native-interpolation/mixer or search-branch counterexample before using this box.')
-            closed.append({'seconds': [lo, hi], 'vertex_bounds': box, 'depth': depth})
+            closed.append({'seconds': [lo, hi], 'vertex_bounds': box, 'depth': depth, 'refutation_points': refutation_points})
         except (ValueError, FloatingPointError) as error:
             detail = error.detail if isinstance(error, Unclosed) else {'reason': str(error), 'next_input': 'A tighter native-operation interval proving this denominator/branch, retaining all influences.'}
             if splits < LIMITS['refinement_splits'] and hi-lo > 1e-9:
@@ -1181,12 +1422,12 @@ def verify_partition(closed, unclosed, length):
 
 
 def validate_diagnostic(report):
-    require(type(report['version']) is int and report['version'] in (1, 2, 3, 4, 5), 'Report version')
-    if report['version'] in (2, 3, 4, 5):
+    require(type(report['version']) is int and report['version'] in (1, 2, 3, 4, 5, 6), 'Report version')
+    if report['version'] in (2, 3, 4, 5, 6):
         binding = report['input_binding']
         require(binding['kind'] == 'native-reacquired-v1' and type(binding['version']) is int
                 and binding['version'] == 1, 'Input binding version')
-        require(report['step_id'] == ('CAV-CONTACT-PHASE-ACOS-CONSTANTS' if report['version'] == 5 else 'CAV-CONTACT-PHASE-QUATERNION-NORM' if report['version'] == 4 else ('CAV-CONTACT-PHASE-SLERP-BOUNDS' if report['version'] == 3 else 'CAV-CONTACT-PHASE-INPUT-BINDING'))
+        require(report['step_id'] == ('CAV-CONTACT-PHASE-TRIANGLE-BOUNDS' if report['version'] == 6 else 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if report['version'] == 5 else 'CAV-CONTACT-PHASE-QUATERNION-NORM' if report['version'] == 4 else ('CAV-CONTACT-PHASE-SLERP-BOUNDS' if report['version'] == 3 else 'CAV-CONTACT-PHASE-INPUT-BINDING'))
                 and report['atlas_input_packet']['input_binding'] == binding
                 and report['atlas']['input_sha256'] == canonical_digest(report['atlas_input_packet'])
                 and report['inputs']['manifest'] == binding['manifest_sha256']
@@ -1197,7 +1438,7 @@ def validate_diagnostic(report):
     else:
         require(not any(k in report for k in ('input_binding', 'atlas_input_packet', 'input_locations')),
                 'Mixed legacy/new provenance')
-    if report['version'] in (3, 4, 5):
+    if report['version'] in (3, 4, 5, 6):
         require('arithmetic_proof' in report and report['atlas_input_packet'].get('arithmetic_proof') == report['arithmetic_proof']
                 and report['arithmetic_proof']['verifier_sha256'] == ARITHMETIC_VERIFIER_SHA
                 and report['inputs']['arithmetic_capture'] == report['arithmetic_proof']['capture_file_sha256']
@@ -1208,7 +1449,7 @@ def validate_diagnostic(report):
                 'Arithmetic proof/atlas binding differs')
         require(len(report['baseline_accounting']['coordinate_boxes']) == 69
                 and len(report['baseline_accounting']['shape_cases']) == 18, 'Incomplete prior unknown accounting')
-    if report['version'] in (4, 5):
+    if report['version'] in (4, 5, 6):
         require(report['inputs']['norm_baseline_report'] == NORM_BASELINE_SHA
                 and report['atlas_input_packet']['norm_baseline_report_sha256'] == NORM_BASELINE_SHA,
                 'Norm proof/accepted255 binding differs')
@@ -1229,7 +1470,7 @@ def validate_diagnostic(report):
                     return Q(*v) if isinstance(v, list) else rational(v)
                 require(lower('mixer_rounded_norm_squared') > 0 and lower('basis_rounded_norm_squared') > 0
                         and len(branch['hamilton_roundoff']) == 2, 'Unproved norm denominator')
-    if report['version'] == 5:
+    if report['version'] in (5, 6):
         require(report['inputs']['acos_baseline_report'] == ACOS_BASELINE_SHA
                 and report['atlas_input_packet']['acos_baseline_report_sha256'] == ACOS_BASELINE_SHA,
                 'Finite acos/accepted256 binding differs')
@@ -1246,6 +1487,9 @@ def validate_diagnostic(report):
             require(proof['input_word'] in ACOS_WORDS.get(identity, ()), 'Finite acos proof transplanted to another key')
             require(canonical_digest(proof['source_keys']) == ACOS_KEY_SHA[proof['track']], 'Finite acos source keys changed')
             expected = finite_acos_constant(scalar.MAC_PROFILE['acosf'], proof['input_word'], report['arithmetic_proof'])
+            # Frozen older proofs bind their own producer, not this replay file.
+            expected['consumer_algorithm_sha256'] = report['inputs']['tools/units3d/cavalry_march_phase.py']
+            expected['sha256'] = canonical_digest({k: v for k, v in expected.items() if k != 'sha256'})
             require({k: v for k, v in proof.items() if k not in ('track', 'key_index', 'source_keys')} == json_value(expected),
                     'Finite acos proof differs from rounded instruction replay')
         for domain in report['continuous_native']['scalar_domain_records']:
@@ -1261,6 +1505,79 @@ def validate_diagnostic(report):
                     omega = float_box((min(Q(*p['omega_interval'][0]) for p in matched),
                                        max(Q(*p['omega_interval'][1]) for p in matched)))
                     require(branch['omega_interval'] == json_value(list(box_interval(omega))), 'Stale finite acos omega hull')
+    if report['version'] == 6:
+        require(all(report['claims'][k] is False for k in ['success_dependency', 'verified_physical_candidate',
+                'phase_runtime_unblocked', 'surface_unblocked', 'contact_certificate'])
+                and report['claims']['policy_E'] is None and report['claims']['original_12_gates_preserved'] is True,
+                'Diagnostic cannot grant physical acceptance or select E')
+        require(report['inputs']['shape_baseline_report'] == SHAPE_BASELINE_SHA
+                and report['atlas_input_packet']['shape_baseline_report_sha256'] == SHAPE_BASELINE_SHA
+                and report['atlas_input_packet']['shape_method'] == SHAPE_METHOD
+                and report['shape_proof']['method'] == SHAPE_METHOD, 'Shape proof/accepted257 binding differs')
+        require(len(report['accepted257_input_bindings']) == 802
+                and set(report['accepted257_input_bindings']) <= set(report['inputs'])
+                and len(report['previous_shape_accounting']['shape_cases']) == 2797,
+                'Incomplete accepted257 binding/case accounting')
+        matrices = report['shape_proof']['shared_skin_certificates']
+        seen, area_count, orientation_count = set(), 0, 0
+        patches = report['shape_proof']['full_material_patches']
+        require(sum(len(p['native_sole_triangles']) for p in patches.values()) == 194,
+                'Incomplete original material faces')
+        def check_time(part, seconds):
+            actual = [matrices[k]['seconds'] for k in part['shared_transform_certificates']]
+            require(actual[0] == seconds and (len(actual) == 1 or
+                    (seconds[1] == report['atlas']['clip_seconds'] and actual[1] == [0., 0.])),
+                    'Correlation certificate transplanted to another phase/birth reference')
+        require(len({f for p in patches.values() for f in p['native_sole_triangles']}) == 194,
+                'Duplicated/dropped original material face')
+        for row in report['continuous_native']['closed_boxes']:
+            require(set(row['triangle_area']) == set(patches), 'Missing full-cycle material area patch')
+            for hoof, area in row['triangle_area'].items():
+                require(area['native_triangle_ids'] == patches[hoof]['native_sole_triangles']
+                        and len(area['certificates']) == len(area['native_triangle_ids']), 'Dropped/changed source area face')
+                unknown = []
+                for index, proof in enumerate(area['certificates']):
+                    require(proof['vertex_ids'] == patches[hoof]['native_triangles'][index], 'Material winding/face changed')
+                    check_time(proof, row['seconds'])
+                    identity = canonical_digest(proof)
+                    if identity not in seen:
+                        validate_shape_certificate(proof, matrices); seen.add(identity)
+                    if proof['twice_area_interval'][0] <= 0:
+                        unknown.append(index)
+                    area_count += 1
+                require(area['unclosed_area'] == unknown, 'Area nondegeneracy outcome changed')
+            for hoof, shape in row['triangle_shape'].items():
+                require(shape['native_triangle_ids'] == patches[hoof]['native_sole_triangles']
+                        and len(shape['certificates']) == len(shape['native_triangle_ids']), 'Dropped birth-orientation face')
+                unknown, opposite = [], []
+                for index, proof in enumerate(shape['certificates']):
+                    for reference in ('current', 'birth'):
+                        part = proof[reference]
+                        require(part['vertex_ids'] == patches[hoof]['native_triangles'][index], 'Birth/current winding changed')
+                        birth = float(Q(*report['source_support_constraints'][hoof][0]))*report['atlas']['clip_seconds']
+                        check_time(part, row['seconds'] if reference == 'current' else [birth, birth])
+                        identity = canonical_digest(part)
+                        if identity not in seen:
+                            validate_shape_certificate(part, matrices); seen.add(identity)
+                    dot = native.box_dot(native.Float32Box(*proof['current']['cross_interval']),
+                                         native.Float32Box(*proof['birth']['cross_interval']), 3)
+                    require(proof['orientation_interval'] == [float(dot.lo), float(dot.hi)], 'Original birth-normal criterion changed')
+                    if proof['current']['twice_area_interval'][0] <= 0 or dot.lo <= 0:
+                        unknown.append(index)
+                    if dot.hi < 0:
+                        opposite.append(index)
+                    orientation_count += 1
+                require(shape['unclosed_area_or_orientation'] == unknown and shape['opposite_orientation'] == opposite,
+                        'Birth-orientation outcome changed')
+        comparisons = report['shape_proof']['native_cross_refutations']
+        require(comparisons and all(not row['violated_native_triangle_ids'] for row in comparisons)
+                and {row['kind'] for row in comparisons} == {'adversarial_binary64_interior', 'frozen_native_ordered_vertices'}
+                and sum(row['faces_checked'] for row in comparisons) ==
+                    report['work_used']['correlated_triangles']['cross_refutation_faces'], 'Native cross refutation missing/failed')
+        require(area_count == 194*40 and orientation_count == 2797
+                and report['work_used']['correlated_triangles']['area_targets'] == area_count
+                and report['work_used']['correlated_triangles']['birth_orientation_targets'] == orientation_count,
+                'Incomplete full-cycle area/original birth target coverage')
     require(report['status'] == 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY', 'Diagnostic status changed')
     validate_atlas(report['atlas'])
     require(canonical_digest(report['atlas']) == report['atlas_sha256'], 'Atlas coefficients/digest changed')
@@ -1343,7 +1660,10 @@ def closed_metrics(closed, atlas, patches, supports, birth_boxes, body_mask, sca
             if 'native_triangles' in patches[hoof]:
                 local_index = {v: i for i, v in enumerate(ids)}
                 local_triangles = np.array([[local_index[v] for v in face] for face in patches[hoof]['native_triangles']])
-                record['triangle_shape'][hoof] = triangle_shape(current[local_triangles], anchor[local_triangles])
+                if isinstance(box, SkinSpan) and isinstance(birth_boxes[hoof], SkinSpan):
+                    record['triangle_shape'][hoof] = correlated_shape(box[ids], birth_boxes[hoof], local_triangles)
+                else:
+                    record['triangle_shape'][hoof] = triangle_shape(current[local_triangles], anchor[local_triangles])
                 record['triangle_shape'][hoof]['native_triangle_ids'] = patches[hoof]['native_sole_triangles']
         records.append(record)
     diameter = {hoof: float(np.max(norm_upper(box-box, [0, 2]))) for hoof, box in patch_union.items()}
@@ -1402,7 +1722,7 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
 
     manifest, capture, surface, binds, patches, supports, functions, witness, context = load_inputs(
         review_path, native_manifest=native_manifest, bundle_root=bundle_root)
-    arithmetic = baseline = norm_baseline = acos_baseline = None
+    arithmetic = baseline = norm_baseline = acos_baseline = shape_baseline = None
     if proof_mode:
         baseline = native.read_bound(baseline_report, BASELINE_SHA)
         validate_diagnostic(baseline)
@@ -1410,7 +1730,13 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         norm_baseline = native.read_bound(norm_baseline_report, NORM_BASELINE_SHA)
         validate_diagnostic(norm_baseline)
         require(norm_baseline['version'] == 3, 'Expected accepted255 baseline')
-        acos_baseline = native.read_bound(acos_baseline_report, ACOS_BASELINE_SHA)
+        supplied = reacquired.read_json(acos_baseline_report)
+        if supplied.get('version') == 5:
+            shape_baseline = native.read_bound(acos_baseline_report, SHAPE_BASELINE_SHA)
+            validate_diagnostic(shape_baseline)
+            acos_baseline = native.read_bound(Path(shape_baseline['input_locations']['acos_baseline_report']), ACOS_BASELINE_SHA)
+        else:
+            acos_baseline = native.read_bound(acos_baseline_report, ACOS_BASELINE_SHA)
         validate_diagnostic(acos_baseline)
         require(acos_baseline['version'] == 4, 'Expected accepted256 baseline')
         arithmetic = ScalarAuthority(reacquired.read_json(arithmetic_capture), reacquired.read_json(arithmetic_receipt),
@@ -1441,6 +1767,8 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
     if arithmetic is not None:
         input_packet.update(arithmetic_proof=arithmetic.binding, baseline_report_sha256=BASELINE_SHA,
                             norm_baseline_report_sha256=NORM_BASELINE_SHA, acos_baseline_report_sha256=ACOS_BASELINE_SHA)
+    if shape_baseline is not None:
+        input_packet.update(shape_baseline_report_sha256=SHAPE_BASELINE_SHA, shape_method=SHAPE_METHOD)
     atlas = make_atlas(phases, distances, canonical_digest(input_packet), capture['length'])
     samples, sampled, obstruction = captured_obstructions(capture, surface, binds, patches, supports,
                                                          samples_path, witness)
@@ -1533,6 +1861,40 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
     unclosed.extend(rejected)
     verify_partition(closed, unclosed, capture['length'])
     records, diameter, body_world = closed_metrics(closed, atlas, patches, supports, birth_boxes, body_mask, scale)
+    shape_contexts, shape_comparisons = {}, []
+    if shape_baseline is not None:
+        require([r['seconds'] for r in records] == [r['seconds'] for r in shape_baseline['continuous_native']['closed_boxes']]
+                and not unclosed, 'Accepted257 coordinate partition changed')
+        for item, record in zip(closed, records):
+            record['triangle_area'] = {}
+            for hoof, patch in patches.items():
+                proofs = [correlated_triangle(item['vertex_bounds'], surface, face) for face in patch['native_triangles']]
+                record['triangle_area'][hoof] = {'native_triangle_ids': patch['native_sole_triangles'], 'certificates': proofs,
+                    'unclosed_area': [i for i, proof in enumerate(proofs) if proof['twice_area_interval'][0] <= 0]}
+        for item, record in zip(closed, records):
+            lo, hi = item['seconds']
+            points = [('adversarial_binary64_interior', t, p) for t, p in item['refutation_points']]
+            points += [('frozen_native_ordered_vertices', sample_['time'], sample_['skinned_skeleton_local'][0])
+                       for sample_ in samples if lo <= sample_['time'] <= hi]
+            for kind, time, vertices in points:
+                for hoof, patch in patches.items():
+                    proofs = record['triangle_area'][hoof]['certificates']
+                    bad = shape_refutation(proofs, vertices, patch['native_triangles'])
+                    shape_comparisons.append({'kind': kind, 'seconds': time, 'box_seconds': [lo, hi], 'hoof': hoof,
+                        'faces_checked': len(proofs), 'violated_native_triangle_ids': [patch['native_sole_triangles'][i] for i in bad]})
+                    require(not bad, f'Native triangle normal refutation: {kind} {time} {hoof} {bad}')
+        for box in [r['vertex_bounds'] for r in closed]+list(birth_boxes.values()):
+            for c in box.skin_contexts:
+                validate_skin_context(c)
+                shape_contexts[c['sha256']] = c['identity']
+        used['correlated_triangles'] = {'area_targets': sum(len(p['native_sole_triangles']) for p in patches.values())*len(closed),
+            'area_target_bound': sum(len(p['native_sole_triangles']) for p in patches.values())*LIMITS['continuous_boxes'],
+            'birth_orientation_targets': sum(len(s['native_triangle_ids']) for r in records for s in r['triangle_shape'].values()),
+            'orientation_target_bound': sum(len(p['native_sole_triangles']) for p in patches.values())*LIMITS['continuous_boxes'],
+            'per_cross_monomial_bound': 3*(3*4*4)**2,
+            'cross_refutation_faces': sum(r['faces_checked'] for r in shape_comparisons),
+            'cross_refutation_face_bound': (3*LIMITS['continuous_boxes']+2*LIMITS['dense_native_capture_rows'])*194,
+            'scope': 'Two signed edges, at most twelve native slot identities/four homogeneous coordinates per face; three fixed wedge sums and at most two terminal contexts. No added subdivision or LIMITS.'}
     evaluations = len(phases)+used['independent_track_evaluations']+len(samples)+sum(r.get('refutation_rows', 0) for r in norm_targets)
     require(evaluations <= LIMITS['proposal_evaluations'], 'Declared proposal evaluation budget exhausted')
     lower = obstruction['strongest_sampled_transverse_endpoint']['bounds_m']['entry_drift_xz'][0]
@@ -1595,15 +1957,26 @@ def build(review_path, *, native_manifest=None, bundle_root=None,
         changed = {k for k, v in old_inputs.items() if inputs[k] != v}
         require(changed <= {'tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py'},
                 'Accepted256 nonalgorithm input changed')
+    if shape_baseline is not None:
+        require(len(shape_baseline['inputs']) == 802 and set(shape_baseline['inputs']) <= set(inputs), 'Lost accepted257 input names')
+        require({k for k, v in shape_baseline['inputs'].items() if inputs[k] != v} <=
+                {'tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py'}, 'Accepted257 nonalgorithm input changed')
+        inputs['shape_baseline_report'] = SHAPE_BASELINE_SHA
     return json_value({
         **({'input_binding': context['binding'], 'input_locations': context['locations'],
             'atlas_input_packet': input_packet} if context else {}),
-        'version': 5 if arithmetic else (2 if context else 1), 'step_id': 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if arithmetic else ('CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE'), 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
+        'version': 6 if shape_baseline is not None else 5 if arithmetic else (2 if context else 1), 'step_id': 'CAV-CONTACT-PHASE-TRIANGLE-BOUNDS' if shape_baseline is not None else 'CAV-CONTACT-PHASE-ACOS-CONSTANTS' if arithmetic else ('CAV-CONTACT-PHASE-INPUT-BINDING' if context else 'CAV-CONTACT-PHASE'), 'status': 'DIAGNOSTIC_UNKNOWN_NOT_SUCCESS_DEPENDENCY',
         **({'arithmetic_proof': arithmetic.binding, 'baseline_accounting': baseline_accounting(baseline, records, unclosed),
             'previous_operation_accounting': baseline_accounting(norm_baseline, records, unclosed),
             'norm_target_replays': norm_targets, 'acos_target_replays': acos_targets,
             'previous_norm_accounting': baseline_accounting(acos_baseline, records, unclosed),
             'accepted256_input_bindings': acos_baseline['inputs']} if arithmetic else {}),
+        **({'previous_shape_accounting': baseline_accounting(shape_baseline, records, unclosed),
+            'accepted257_input_bindings': shape_baseline['inputs'],
+            'shape_proof': {'method': SHAPE_METHOD, 'full_material_patches': patches,
+                'shared_skin_certificates': shape_contexts, 'native_cross_refutations': shape_comparisons,
+                'birth_reference': 'Unchanged source support start, original native point-fit transform enclosure and winding. Dot uses independent current/birth times in the same skeleton metric.',
+                'native_residual': 'Exact captured binary32 raw inputs and shared already-rounded skin matrices; three products/two sums plus origin, weight product and four ordered accumulations. Every rounding direction, optional FMA contraction and FTZ via accepted rnd; no reassociation identity is asserted for native code.'}} if shape_baseline is not None else {}),
         'inputs': inputs, 'work_budget_declared_before_fit': LIMITS, 'work_used': {**used, 'proposal_evaluations': evaluations},
         'accepted_anatomy': {'manifest_status_preserved': manifest['status'], 'independent_component_verdict': context['binding']['verdict'] if context else str(review_path),
                              'four_patches': {h: {'vertices': len(p['native_sole_vertices']), 'triangles': len(p['native_sole_triangles'])} for h, p in patches.items()}},
@@ -1661,7 +2034,8 @@ def main():
         p.add_argument('--arithmetic-receipt', type=Path)
         p.add_argument('--baseline-report', type=Path)
         p.add_argument('--norm-baseline-report', type=Path)
-        p.add_argument('--acos-baseline-report', type=Path)
+        p.add_argument('--acos-baseline-report', type=Path,
+            help='Accepted256 v4 for v5 replay, or accepted257 v5 for correlated-triangle v6 proof.')
     args = parser.parse_args()
     try:
         existing = None
@@ -1674,7 +2048,7 @@ def main():
         require(proof_mode == (args.arithmetic_receipt is not None) == (args.baseline_report is not None),
                 'Arithmetic capture, receipt and baseline required together')
         if existing is not None:
-            require(existing['version'] == (5 if proof_mode else (2 if fresh else 1)), 'Report/input mode mismatch')
+            require(existing['version'] in ((5, 6) if proof_mode else ((2,) if fresh else (1,))), 'Report/input mode mismatch')
         report = build(args.review_record.resolve(),
                        native_manifest=args.native_manifest.resolve() if fresh else None,
                        bundle_root=args.bundle_root.resolve() if fresh else None,
