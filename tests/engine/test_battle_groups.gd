@@ -500,3 +500,116 @@ func test_physical_queries_reject_malformed_rows_and_preserve_repository() -> vo
 	assert_false(Geometry.rigid_step([{ "x_m": 0, "y_m": 0}], 3, [0, 0], 0,
 		[{"x_m": 5, "y_m": 4, "radius_m": -1}]).ok)
 	assert_false(Geometry.segment_disc([0, 0], [10, 0], [5, 0], -1).ok)
+
+func _row_ground(f: Dictionary, blocked: Vector2i) -> MarchPath:
+	var cells := PackedByteArray()
+	cells.resize(100 * 100)
+	cells.fill(0)
+	if blocked != Vector2i(-1, -1): cells[blocked.y * 100 + blocked.x] = 255
+	f.repo.balance.army_march_grid_px = 1
+	var grid := MarchPath.build(f.repo, 100, 100, 100, cells)
+	MarchPath.use(f.repo, grid)
+	return grid
+
+func test_seed_refuses_a_closed_row_even_when_both_anchors_are_dry() -> void:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 200)
+	for side: String in BattleSystem.SIDES: f.battle.formations[side].current = "line"
+	var grid := _row_ground(f, Vector2i(9, 20)) # Front at(960,2000); anchor at(1000,2000).
+	assert_true(grid.clear(Vector2i(1000, 2000), Vector2i(1000, 2000)))
+	assert_true(grid.clear(Vector2i(1000, 4000), Vector2i(1000, 4000)))
+	var before := SaveLoad.state_hash(f.state)
+	assert_false(BattleGroups.refresh(f.repo, f.state, f.battle))
+	assert_eq(SaveLoad.state_hash(f.state), before, "No rows, anchors, slots or version publish on blocked ground")
+	MarchPath.forget()
+
+func test_new_contact_refuses_a_closed_reserve_row_before_any_publication() -> void:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 200)
+	f.state.battles.clear()
+	_row_ground(f, Vector2i(10, 19)) # Default second rank at(1000,1920), behind a dry anchor.
+	var before := SaveLoad.state_hash(f.state)
+	var events: Array = []
+	BattleSystem._start(f.repo, f.state, f.a, f.enemy, "", events)
+	assert_eq(f.state.battles, [])
+	assert_eq(events, [])
+	assert_eq(SaveLoad.state_hash(f.state), before, "Rejected contact cannot halt troops or consume an ID")
+	MarchPath.forget()
+
+func test_recovery_refuses_a_new_closed_rear_row_without_consuming_people_or_receipt() -> void:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	Personnel.replace(f.repo, f.state, f.a, 200)
+	Personnel.move(f.repo, f.state, f.a, "fit", "wounded", 100)
+	Personnel.replace(f.repo, f.state, f.enemy, 100)
+	f.state.regiments[f.a].facing_deg = 90
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	for code: String in f.state.military_rosters: f.state.conduct_marks["recovery:" + code] = f.state.tick
+	f.state.conduct_marks.erase("recovery:" + f.a)
+	_row_ground(f, Vector2i(10, 19)) # Growth appends the first new reserve80m behind the surviving front.
+	var before := SaveLoad.state_hash(f.state)
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_eq(SaveLoad.state_hash(f.state), before)
+	_row_ground(f, Vector2i(-1, -1))
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_gt(ArmySystem.fit_count(f.repo, f.state, f.a), 100)
+	assert_eq(f.battle.groups[f.a].size(), 2)
+	var recovered := SaveLoad.state_hash(f.state)
+	ArmySystem._recover_month(f.repo, f.state)
+	assert_eq(SaveLoad.state_hash(f.state), recovered)
+	MarchPath.forget()
+
+func test_garrison_delivery_retains_admitted_battle_haltpoint_and_frozen_rows() -> void:
+	for blocked: bool in [false, true]:
+		for frozen: bool in [false, true]:
+			var f := _fixture()
+			f.state.town_seat.clear()
+			for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 100)
+			var town := ""
+			for candidate: String in f.repo.burgs:
+				if ArmyGround.holds(f.repo, f.state, String(f.state.army_roster[f.a].kingdom_code), candidate):
+					town = candidate
+					break
+			assert_ne(town, "")
+			var centre := ArmyGround.town_point_m(f.repo, town)
+			var entry: Dictionary = f.state.regiments[f.a]
+			entry.merge({"x_m": centre.x + 100, "y_m": centre.y, "order": ArmySystem.ORDER_MARCH,
+				"camp_town": "", "dest_x_m": centre.x + 1000, "dest_y_m": centre.y,
+				"route_m": [[centre.x + 1000, centre.y]]}, true)
+			f.state.foes[f.enemy].x_m = centre.x if blocked else centre.x + 4000
+			f.state.foes[f.enemy].y_m = centre.y
+			assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+			if frozen: f.battle.pending_round = {"roll": 17, "unit_actions": {}}
+			var before: Dictionary = f.battle.duplicate(true)
+			var at := BattleSystem._at_m(f.repo, f.state, f.a)
+			# The normal action creates its courier; ordinary delivery must keep the admitted point.
+			f.state.metrics.treasury = 10000
+			assert_true(ActionSystem.new(f.repo).execute(ActionRequest.make("ARMY_GARRISON", {"regiment": f.a}), f.state).ok)
+			assert_eq(f.state.couriers.size(), 1)
+			assert_eq(CourierSystem._deliver(f.repo, f.state, f.state.couriers[0]).type, "delivered")
+			assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), at)
+			assert_eq(f.battle, before, "Rows, paths, anchor snapshots and a pending plan remain unchanged")
+			assert_eq(entry.order, ArmySystem.ORDER_GARRISON)
+			assert_eq(Vector2i(int(entry.dest_x_m), int(entry.dest_y_m)), at)
+			assert_false(entry.has("route_m"))
+			assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+			if not frozen: assert_true(BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.a))
+
+func test_join_refuses_a_closed_new_rank_without_halting_or_spending_a_slot() -> void:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 100)
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	var codes: Array = f.state.regiments.keys()
+	codes.sort()
+	var friend := String(codes[1])
+	Personnel.replace(f.repo, f.state, friend, 200)
+	f.state.regiments[friend].merge({"x_m": 2000, "y_m": 2000, "facing_deg": 90,
+		"order": ArmySystem.ORDER_MARCH}, true)
+	_row_ground(f, Vector2i(20, 19)) # Its anchor is dry; its new second rank would stand at(2000,1920).
+	var before := SaveLoad.state_hash(f.state)
+	assert_false(BattleSystem.join(f.repo, f.state, int(f.battle.id), friend, "att"))
+	assert_eq(SaveLoad.state_hash(f.state), before)
+	MarchPath.forget()

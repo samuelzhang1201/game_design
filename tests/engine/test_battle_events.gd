@@ -161,6 +161,7 @@ func test_local_decision_revalidates_before_consuming_day_token() -> void:
 
 func test_true_join_reserve_changes_only_attacking_contribution() -> void:
 	var f := _fixture()
+	SuiteData.open_country(f.repo) # Reserve-event arithmetic needs legal open ranks, not pack shoreline.
 	_only(f, "ev_33")
 	var other := ""
 	for code: String in f.state.regiments:

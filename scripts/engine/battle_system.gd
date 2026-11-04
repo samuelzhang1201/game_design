@@ -842,7 +842,7 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		var tier := tier_of(repo, eff).duplicate(true)
 		var contexts := {}
 		for side: String in SIDES:
-			var context := combat_context(repo, state, b, side)
+			var context := combat_context(repo, state, b, side, "", true)
 			contexts[side] = context
 			var key := "attacker_loss_permille" if side == "att" else "defender_loss_permille"
 			var base_loss := int(tier.get(key, 0))
@@ -856,7 +856,7 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 				if not tier.has("unit_loss_permille"):
 					tier["unit_loss_permille"] = {}
 				for code: String in b[side]:
-					var unit_context := combat_context(repo, state, b, side, code)
+					var unit_context := combat_context(repo, state, b, side, code, true)
 					@warning_ignore("integer_division")
 					tier["unit_loss_permille"][code] = base_loss * int(unit_context["loss_permille"]) / 1000
 					if not tier.has("unit_morale_permille"):
@@ -971,8 +971,8 @@ static func _broken(repo: DataRepository, state: GameState, codes: Array) -> boo
 	return fit == 0 or morale <= fit * int(repo.bal("battle_break_morale"))
 
 
-## The incoming-loss context follows real equipment, action and binding terms.
-static func combat_context(repo: DataRepository, state: GameState, battle: Dictionary, side: String, unit := "") -> Dictionary:
+## Potential exposure follows equipment and terms; a live round requires an active pair.
+static func combat_context(repo: DataRepository, state: GameState, battle: Dictionary, side: String, unit := "", active_round := false) -> Dictionary:
 	var other := "def" if side == "att" else "att"
 	var kind := "melee"
 	var scale := 1000
@@ -1043,7 +1043,7 @@ static func combat_context(repo: DataRepository, state: GameState, battle: Dicti
 		if kind != "melee":
 			scale = int(repo.bal("battle_context_" + kind + "_permille"))
 	@warning_ignore("integer_division")
-	scale = scale * BattleRanged.incoming_permille(repo, state, battle, side, unit) / 1000
+	scale = scale * BattleRanged.incoming_permille(repo, state, battle, side, unit, active_round) / 1000
 	for code: String in members:
 		for modifier: Dictionary in battle.get("event_modifiers", []):
 			if modifier.unit == code and int(modifier.until_day) >= state.absolute_day():

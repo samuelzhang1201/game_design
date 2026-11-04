@@ -142,8 +142,9 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 		if not battle.has("groups"):
 			proposed.group_size_version = 2 if size == int(repo.bal("battle_group_size")) else 1
 			proposed.group_size_men = size
-		if not placement(repo, state, proposed, false).ok:
-			if battle.has("groups"): return false
+		var admission := placement(repo, state, proposed, false)
+		if not admission.ok:
+			if not bool(admission.get("overlap", false)) or battle.has("groups"): return false
 			seeded_anchors = deployment(repo, state, proposed)
 			if seeded_anchors.size() != anchors.size() or _relayout(repo, state, proposed, seeded_anchors) != "": return false
 			if not placement(repo, state, proposed, false).ok: return false
@@ -279,23 +280,21 @@ static func migrate_geometry(repo: DataRepository, state: GameState, battle: Dic
 	proposed.deployment_axis_deg = WarFront.facing_deg(axis)
 	var error := _relayout(repo, state, proposed, anchors, false)
 	if error != "": return {"status": "error", "error": error}
-	if not placement(repo, state, proposed, false).ok:
+	var admission := placement(repo, state, proposed, false)
+	if not admission.ok:
+		if not bool(admission.get("overlap", false)): return {"status": "error", "error": admission.error}
 		error = _relayout(repo, state, proposed, anchors)
 		if error != "": return {"status": "error", "error": error}
-	if not placement(repo, state, proposed, false).ok:
+	admission = placement(repo, state, proposed, false)
+	if not admission.ok:
+		if not bool(admission.get("overlap", false)): return {"status": "error", "error": admission.error}
 		anchors = deployment(repo, state, proposed)
 		if anchors.size() != proposed.att.size() + proposed.def.size():
 			return {"status": "error", "error": "No complete legacy geometry deployment"}
 		error = _relayout(repo, state, proposed, anchors)
 		if error != "": return {"status": "error", "error": error}
-	var admission := placement(repo, state, proposed)
+	admission = placement(repo, state, proposed)
 	if not admission.ok: return {"status": "error", "error": admission.error}
-	var grid := MarchPath.of_pack(repo)
-	for code: String in anchors:
-		for row: Dictionary in proposed.groups[code]:
-			var point := Vector2i(int(row.x_m), int(row.y_m))
-			if grid != null and not grid.clear(point, point):
-				return {"status": "error", "error": "Legacy geometry is on blocked ground: " + code + " " + str(point)}
 	for code: String in anchors:
 		var at: Vector2i = anchors[code]
 		var entry := BattleSystem._stored(state, code)
@@ -377,6 +376,7 @@ static func in_reach(repo: DataRepository, state: GameState, code: String, row: 
 ## Validate the complete proposed rows before publishing any slot or anchor.
 static func placement(repo: DataRepository, state: GameState, battle: Dictionary, include_other_fields := true) -> Dictionary:
 	var occupied: Array = []
+	var grid := MarchPath.of_pack(repo)
 	var fields: Array = [battle]
 	if include_other_fields:
 		for other: Dictionary in state.battles:
@@ -398,12 +398,15 @@ static func placement(repo: DataRepository, state: GameState, battle: Dictionary
 				if not _whole(row.get("count")) or int(row.count) <= 0:
 					return {"ok": false, "error": "Invalid occupied row count: " + code}
 				var point := [row.get("x_m"), row.get("y_m")]
+				var at := Vector2i(int(point[0]), int(point[1]))
+				if field == battle and grid != null and not grid.clear(at, at):
+					return {"ok": false, "error": "Occupied battle row is on blocked ground: " + code + " " + str(at)}
 				for prior: Dictionary in occupied:
 					if field != battle and not prior.proposed: continue
 					var pair := BattleGroupGeometry.pair(point, int(footprint.radius_m), prior.point, int(prior.radius), 0)
 					if not pair.ok: return {"ok": false, "error": String(pair.reason)}
 					if pair.overlap:
-						return {"ok": false, "error": "Occupied battle discs overlap: " + code + " / " + String(prior.code)}
+						return {"ok": false, "overlap": true, "error": "Occupied battle discs overlap: " + code + " / " + String(prior.code)}
 				occupied.append({"point": point, "radius": footprint.radius_m, "code": code, "proposed": field == battle})
 	return {"ok": true}
 

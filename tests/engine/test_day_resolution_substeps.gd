@@ -631,7 +631,8 @@ func test_main_v3_mid_march_cursor_continues_without_replaying_metres() -> void:
 	assert_eq(loaded.to_dict(), state.to_dict())
 
 func test_unversioned_started_feature_day_keeps_its_completed_work() -> void:
-	var data := SuiteData.repo()
+	# Saved-cursor validation needs a legal field, independent of pack shoreline.
+	var data := SuiteData.open_country(SuiteData.repo())
 	var state := BattleScenario.contact(data, 10)
 	var fights := BattleSystem.prepare_day(data, state)
 	var token := "%d:encounter:%d" % [state.absolute_day(), int(state.battles[0].id)]
@@ -654,7 +655,8 @@ func test_unversioned_started_feature_day_keeps_its_completed_work() -> void:
 	assert_eq(loaded.to_dict(), state.to_dict())
 
 func test_saved_battle_cursor_past_end_is_refused_atomically_in_v3_and_v4() -> void:
-	var data := SuiteData.repo()
+	# Saved-cursor validation needs a legal field, independent of pack shoreline.
+	var data := SuiteData.open_country(SuiteData.repo())
 	for version in [3, 4]:
 		var state := BattleScenario.contact(data, 10)
 		BattleSystem.prepare_day(data, state)

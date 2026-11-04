@@ -176,6 +176,8 @@ func test_blocked_day_transaction_round_trip_preserves_cursor_and_journal() -> v
 
 
 func test_real_substep_encounter_save_resumes_the_same_round_once() -> void:
+	# This save/cursor fixture needs open formation ground, independent of pack shoreline.
+	SuiteData.open_country(repo)
 	var state := BattleScenario.contact(repo, 10)
 	var blocked := TickEngine.new(repo).resolve_day(state)
 	assert_eq(blocked["status"], "blocked")

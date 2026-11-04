@@ -61,7 +61,7 @@ static func clear_shot(repo: DataRepository, from: Vector2i, to: Vector2i,
 
 ## Count each group once. An optional other field retains both sources' commands and terms.
 static func counts(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
-		target := "", opposing_battle: Dictionary = {}, incoming_context := false) -> Dictionary:
+		target := "", opposing_battle: Dictionary = {}, incoming_context := false, active_round := false) -> Dictionary:
 	var out := {"firing": 0, "melee": 0, "fit": 0}
 	var rows: Array = battle.get("groups", {}).get(code, [])
 	for row: Dictionary in rows:
@@ -109,6 +109,8 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 			if target != "" and target != foe:
 				continue
 			var self_defence: bool = in_melee and BattleSystem.unit_action(repo, state, opponents, foe)["kind"] == "attack"
+			if active_round and action["kind"] != "attack" and not self_defence:
+				continue # A remote attack cannot authorize this holding pair to hurt each other.
 			if not self_defence and (not inside or (designated != "" and designated != foe)):
 				continue
 			if not BattleSystem._can_fight(repo, state, foe) or bool(BattleSystem._stored(state, foe).get("captured", false)):
@@ -162,7 +164,7 @@ static func active_permille(count: Dictionary) -> int:
 
 ## Each equipment share contributes only where its actual personnel can reach.
 static func incoming_permille(repo: DataRepository, state: GameState, battle: Dictionary,
-		side: String, target := "") -> int:
+		side: String, target := "", active_round := true) -> int:
 	# Arithmetic adapters/old records retain their context until production refreshes groups.
 	if not battle.has("groups"):
 		return 1000
@@ -171,7 +173,7 @@ static func incoming_permille(repo: DataRepository, state: GameState, battle: Di
 	for code: String in battle["def" if side == "att" else "att"]:
 		var fit := ArmySystem.fit_count(repo, state, code)
 		var ranged := share(repo, state, code)
-		var actual := counts(repo, state, battle, code, target, {}, true)
+		var actual := counts(repo, state, battle, code, target, {}, true, active_round)
 		var factor := active_permille(actual)
 		@warning_ignore("integer_division")
 		var melee := int(actual.melee) * 1000 / int(actual.fit) if int(actual.fit) > 0 else 0

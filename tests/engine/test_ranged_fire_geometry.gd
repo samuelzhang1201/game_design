@@ -347,3 +347,35 @@ func test_mixed_equipment_scales_only_its_ranged_personnel_share() -> void:
 	var strength := BattleSystem.unit_strength(f.repo, f.state, f.a, Callable(), true, [f.enemy])
 	assert_true(strength.factors.any(func(row: Dictionary) -> bool:
 		return row.source == "contact:ranged" and row.permille == 250))
+
+func test_remote_advance_does_not_make_two_contacting_holders_hurt_each_other() -> void:
+	var f := _fixture(120, 100)
+	f.state.town_seat.clear()
+	f.state.army_roster[f.a].archers = "0"
+	f.state.army_roster[f.a].infantry = "100"
+	f.battle.att.append(f.friend)
+	f.battle.actions = {"att": {"kind": "hold"}, "def": {"kind": "hold"}}
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	var order := {"id": "remote-advance", "unit": f.friend, "battle_id": 9463,
+		"task": "advance", "target_unit": f.enemy}
+	assert_eq(BattleTaskSystem.issue_task(f.repo, f.state, order).status, "pending")
+	assert_eq(BattleTaskSystem.deliver_task(f.repo, f.state, order.id).status, "received")
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "hold")
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.enemy).kind, "hold")
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.friend).kind, "attack")
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "att", f.a), 0)
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 0)
+	_fixed_losses(f)
+	for row: Dictionary in f.repo.battle_outcomes:
+		row.attacker_morale = -10
+		row.defender_morale = -10
+	assert_eq(BattleSystem.step_battle(f.repo, f.state, 9463).status, "complete")
+	for code: String in [f.a, f.enemy, f.friend]:
+		assert_eq(ArmySystem.fit_count(f.repo, f.state, code), 100, "No reachable attacking pair: " + code)
+		assert_eq(Personnel.count(f.state, code, "dead"), 0)
+		assert_eq(Personnel.count(f.state, code, "wounded"), 0)
+		assert_eq(int(BattleSystem._stored(f.state, code).morale), 100)
+	var twin := GameState.from_dict(f.state.to_dict(), false)
+	var held := SaveLoad.state_hash(twin)
+	assert_eq(BattleSystem.step_battle(f.repo, twin, 9463).status, "complete")
+	assert_eq(SaveLoad.state_hash(twin), held, "JSON retry of the remote-only round is inert")

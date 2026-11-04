@@ -43,8 +43,10 @@ contexts also scale the ranged share by that fraction against EACH specific
 target; reaching one enemy never exposes its remote ally. Non-ranged threat
 requires actual reachable front-personnel contact too. The reserve strength
 factor remains unchanged and does not grant remote casualty or morale output.
-Incoming geometry retains reachable holding melee defence; no round starts without
-an actual attack. Safe-withdrawal protection is applied once by the context's
+Incoming geometry retains reachable holding melee defence. Actual round planning
+requires an attack or lawful self-defence on each specific pair, so a remote
+attack cannot make two contacting holders inflict casualties or negative morale.
+Potential context queries retain their withdrawal hand values without starting a round. Safe-withdrawal protection is applied once by the context's
 opposing-power share, rather than again by the incoming contact fraction. Ranged context uses actual firing personnel;
 close defence uses melee. Every factor has its source and readable reason.
 

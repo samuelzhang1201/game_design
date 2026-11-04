@@ -31,7 +31,8 @@ func test_saved_rows_drive_actual_nodes() -> void:
 	assert_eq(SaveLoad.state_hash(state), before)
 
 func test_real_encounter_retains_ordinary_figure_size_and_returns_to_it() -> void:
-	var repo := SuiteData.repo()
+	# Scale continuity uses real installed figures on an explicitly open field.
+	var repo := SuiteData.open_country(SuiteData.repo())
 	var state := preload("res://tests/fixtures/battle_scenario.gd").contact(repo, 10)
 	var foe := String(state.foes.keys()[0])
 	state.foes[foe]["order"] = ArmySystem.ORDER_GARRISON

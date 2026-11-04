@@ -1241,8 +1241,8 @@ static func _clear_route(entry: Dictionary) -> void:
 	entry.erase("waypoints_m")
 
 
-## Halt a regiment where it stands. A column halted on the road settles
-## there as an arrival does (ArmyGround.settle); a standing one keeps its ground.
+## Halt where the regiment stands. Outside a battle a marcher settles as an
+## arrival does; admitted battle rows retain their physical halt point.
 static func set_garrison(repo: DataRepository, state: GameState, code: String) -> void:
 	ensure(repo, state)
 	if not state.regiments.has(code):
@@ -1255,7 +1255,7 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 	entry.erase("departure")
 	drop_hold(entry)
 	_clear_route(entry)
-	if marching:
+	if marching and BattleSystem.battle_of(state, code).is_empty():
 		ArmyGround.settle(repo, state, code)
 
 
