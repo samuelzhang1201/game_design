@@ -246,10 +246,19 @@ def constant(value, radius=F(1, 2)):
 
 
 def read_memory(profile, offset, count):
-    raw = bytes.fromhex(profile["code"])
-    start = offset - profile["code_offset"]
-    require(0 <= start and start + count <= len(raw), "operand_outside_capture")
-    return raw[start:start + count]
+    spans = [(profile["code_offset"], profile["code"])]
+    spans += [(record["offset"], record["bytes"]) for record in profile.get("extra_code", []) + profile.get("operands", [])]
+    for address, hexbytes in spans:
+        raw = bytes.fromhex(hexbytes)
+        start = offset - address
+        if 0 <= start and start + count <= len(raw):
+            return raw[start:start + count]
+    raise Rejected("operand_outside_capture: " + hex(offset))
+
+
+def rip_target(profile, pc, displacement_offset, instruction_size):
+    displacement = int.from_bytes(read_memory(profile, pc + displacement_offset, 4), "little", signed=True)
+    return pc + instruction_size + displacement
 
 
 def coefficients(profile, offset, count):

@@ -47,6 +47,21 @@ class NativeArithmeticTests(unittest.TestCase):
         with self.assertRaisesRegex(proof.Rejected, "output_not_ignored"):
             proof.require_ignored(TOOL.with_name("unignored-output"))
 
+    def test_rip_reference_uses_instruction_end_and_signed_displacement(self):
+        code = {"code_offset": 0x100, "code": "c5fb100500000000"}
+        self.assertEqual(proof.rip_target(code, 0x100, 4, 8), 0x108)
+        code = {"code_offset": 0x200, "code": "c4e2f1a905fcffffff"}
+        self.assertEqual(proof.rip_target(code, 0x200, 5, 9), 0x205)
+
+    def test_native_disjoint_code_and_constant_reads_have_exact_extent(self):
+        profile = {"code_offset": 0x100, "code": "00010203",
+                   "extra_code": [{"offset": 0x200, "bytes": "11223344"}],
+                   "operands": [{"offset": 0x400, "count": 8, "bytes": "000000000000f03f"}]}
+        self.assertEqual(proof.read_memory(profile, 0x201, 2), bytes.fromhex("2233"))
+        self.assertEqual(proof.coefficients(profile, 0x400, 1), [1])
+        with self.assertRaisesRegex(proof.Rejected, "outside_capture"):
+            proof.read_memory(profile, 0x203, 2)
+
     def test_selected_disk_uuid_and_build_id_are_independent_of_process_claim(self):
         macho = bytearray(56)
         struct.pack_into("<I", macho, 0, 0xfeedfacf)

@@ -127,14 +127,15 @@ static void linux_operands(unsigned index, const void *base, uintptr_t entry) {
     struct operand_pool pool = {0};
     scan_operands(&pool, base, entry, 512);
     const uintptr_t expected[] = {0x6dc10, 0x80670, 0x17ff0};
-    const uintptr_t extra[] = {0x6e010, 0x80860, 0x78180};
-    const size_t sizes[] = {0x90, 0x30, 0x330};
+    const uintptr_t extra[] = {0x6e010, 0x80860, 0x78130};
+    const size_t sizes[] = {0x100, 0x30, 0x380};
     fprintf(out, ",\"extra_code\":[");
     if (entry == expected[index] && readonly_span(base, extra[index], sizes[index])) {
         fprintf(out, "{\"offset\":%" PRIuPTR ",\"bytes\":", extra[index]);
         hex((const char *)base + extra[index], sizes[index]); fputc('}', out);
         scan_operands(&pool, base, extra[index], sizes[index]);
         if (index == 0) add_operand(&pool, base, 0xd2be0, 49 * 32);
+        if (index == 2) add_operand(&pool, base, 0x9c7b0, 8);
     }
     fprintf(out, "],\"operands\":[");
     for (size_t i = 0; i < pool.used; ++i) {
