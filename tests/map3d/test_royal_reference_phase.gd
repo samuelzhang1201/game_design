@@ -212,17 +212,15 @@ func test_real_detached_native_length_identity_and_keys() -> void:
 	assert_eq(result.rate_denominator, "1")
 	assert_ne(animation.length, 12.0)
 	var seen: Dictionary = {}
+	var unattainable: Array[String] = []
 	for track: int in animation.get_track_count():
 		for key: int in animation.track_get_key_count(track):
-			var q: int = clampi(roundi(animation.track_get_key_time(track, key) / animation.length * Q), 0, Q)
-			for side: int in [-1, 0, 1]:
-				var at: int = clampi(q + side, 0, Q)
-				if seen.has(at): continue
-				seen[at] = true
-				var sampled: Dictionary = Phase.sample(source, config, _request(binding, at), binding)
-				assert_true(sampled.ok)
-				assert_gte(sampled.native_time, 0.0)
-				assert_lte(sampled.native_time, animation.length)
+			var time: float = animation.track_get_key_time(track, key)
+			if time <= 0.0 or time >= animation.length or seen.has(Phase._bits(time)): continue
+			seen[Phase._bits(time)] = true
+			if not _assert_native_key_bracket(time, animation.length): unattainable.append(Phase._bits(time))
+	_assert_native_seam(animation.length)
+	gut.p("Actual native key controls: %s interior keys; noninteger-q keys (IEEE time bits): %s" % [seen.size(), unattainable])
 	var changed: Dictionary = source.duplicate(true)
 	changed.identity.source_sha256 = "stale"
 	assert_false(Phase.sample(changed, config, _request(binding), binding).ok)
@@ -316,3 +314,67 @@ func test_cyclic_or_nonstring_source_identity_is_not_serializable() -> void:
 	cyclic.clear()
 	source.identity = {1: "nonstring-key"}
 	assert_false(Phase.law(source, _config).ok)
+
+
+# Zero-seed controls are proof-only; the production SHA offset is tested above.
+func _assert_native_coordinate(length: float, day: int, q: int) -> Dictionary:
+	var sampled: Dictionary = Phase.coordinate(length, 1, length, day, 0, q, 0)
+	assert_true(sampled.ok)
+	assert_eq(sampled.classification, "proof_domain_control")
+	assert_false(sampled.has("receipt"))
+	assert_eq(sampled.rate_numerator, "1")
+	assert_eq(sampled.rate_denominator, "1")
+	assert_eq(sampled.winding, str(day + (1 if q == Q else 0)))
+	var numerator: int = q % Q
+	var a: int = numerator
+	var b: int = Q
+	while b:
+		var remainder: int = a % b
+		a = b
+		b = remainder
+	@warning_ignore("integer_division")
+	assert_eq(sampled.phase_numerator, str(numerator / a))
+	@warning_ignore("integer_division")
+	assert_eq(sampled.phase_denominator, str(Q / a))
+	assert_eq(sampled.phase, float(numerator) / Q)
+	# Independent two-operation float expectation; allowance only for its rounding.
+	assert_almost_eq(sampled.native_time, float(numerator) * length / Q, length * 4e-16)
+	return sampled
+
+func _assert_native_key_bracket(time: float, length: float) -> bool:
+	var key_ratio: Array[Phase.Natural] = Phase._binary64(time)
+	var length_ratio: Array[Phase.Natural] = Phase._binary64(length)
+	var numerator: Phase.Natural = key_ratio[0].multiply(length_ratio[1])
+	var denominator: Phase.Natural = key_ratio[1].multiply(length_ratio[0])
+	var q_ratio: Array[Phase.Natural] = numerator.multiply(Natural.of(Q)).divide(denominator)
+	var lower: int = q_ratio[0].small()
+	var exact: bool = q_ratio[1].limbs == [0]
+	var before: Dictionary = _assert_native_coordinate(length, 0, lower - 1 if exact else lower)
+	var after: Dictionary = _assert_native_coordinate(length, 0, lower + 1)
+	for row: Array in [[before, -1], [after, 1]]:
+		var sample: Dictionary = row[0]
+		var side: int = Natural.of(sample.phase_numerator.to_int()).multiply(denominator).compare(numerator.multiply(Natural.of(sample.phase_denominator.to_int())))
+		assert_eq(side, row[1], "exact phase residue must reach the requested native key side")
+	assert_lte(before.native_time, time)
+	assert_gte(after.native_time, time)
+	if exact:
+		var at: Dictionary = _assert_native_coordinate(length, 0, lower)
+		assert_eq(Phase._bits(at.native_time), Phase._bits(time), "achievable exact native key")
+	# Otherwise the key's exact q is fractional: only its bracket was reached.
+	return exact
+
+func _assert_native_seam(length: float) -> void:
+	var before: Dictionary = _assert_native_coordinate(length, 0, Q - 1)
+	var at: Dictionary = _assert_native_coordinate(length, 0, Q)
+	var after: Dictionary = _assert_native_coordinate(length, 1, 1)
+	assert_eq(before.winding, "0")
+	assert_eq(at.winding, "1")
+	assert_eq(after.winding, "1")
+	assert_gt(before.phase, after.phase, "residue wraps at the seam while lift advances")
+	assert_gt(before.native_time, after.native_time)
+	assert_lt(before.native_time, length)
+	assert_gt(after.native_time, 0.0)
+	assert_eq(at.native_time, 0.0)
+	assert_eq(at.phase_numerator, "0")
+	assert_eq(at.phase_denominator, "1")
+	assert_eq(at, _assert_native_coordinate(length, 1, 0), "same exact seam from the next day")
