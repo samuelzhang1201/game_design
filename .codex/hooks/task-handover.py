@@ -3,12 +3,20 @@
 import json
 import fcntl
 import os
+import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 RULES = Path(__file__).with_suffix(".md")
+PRD_STEP = re.compile(r'Step (10|[1-9])|BG-[1-6]|CS-[1-5]\.[1-5]|EV-[1-4]|CH-[1-5]|FS-[1-4]|RD-[1-3]|EC-[1-3]|AR-[1-4]|L0|M[1-6]|harness')
+PRODUCT_FIELDS = ('prd_step', 'player_outcome', 'wired', 'owner_approval')
+MAX_UNWIRED_PREREQUISITE_DEPTH = 2
+MAX_UNWIRED_BACKLOG = 5
+HARNESS_PATHS = ('.codex', '.github', 'AGENTS.md', 'CLAUDE.md', 'cicd_procedure.md', 'run_tests.sh',
+                 'tests/categories.json', 'tools/select_gut_tests.py', 'tools/test_select_gut_tests.py',
+                 'tools/run_with_timeout.py', 'tools/test_run_with_timeout.py', 'tools/test_run_tests.py')
 
 
 def registry_path(cwd):
@@ -150,6 +158,59 @@ def record_pr_handoff(graph, data):
     edges[source] = target
 
 
+def unwired_depth(steps, step_id):
+    """Layers of unwired prerequisites; a step from before the gate counts as unwired."""
+    step = steps.get(step_id)
+    if (step is None or step.get('wired') is True or step.get('prd_step') == 'harness' or
+            step.get('owner_approval')):
+        return 0
+    return 1 + max((unwired_depth(steps, dep) for dep in step['dependencies']), default=0)
+
+
+def unwired_backlog(steps):
+    """Unwired steps since the last owner approval or merged player-reachable step."""
+    count = 0
+    for step in reversed(list(steps.values())):
+        if step.get('prd_step') == 'harness' or step['status'] in ('superseded', 'cancelled'):
+            continue
+        if step.get('owner_approval') or (step.get('wired') is True and step['status'] == 'merged'):
+            break
+        count += step.get('wired') is not True
+    return count
+
+
+def check_product_gate(steps, task):
+    """Every new step names its MVP purpose; long unwired runs wait for the owner."""
+    step_id, prd_step, outcome, wired = (task['step_id'], task.get('prd_step'),
+                                         task.get('player_outcome'), task.get('wired'))
+    if not isinstance(prd_step, str) or not PRD_STEP.fullmatch(prd_step):
+        raise ValueError('dispatch requires prd_step naming a PRD section 5-6 step or harness')
+    if not isinstance(outcome, str) or not outcome.strip():
+        raise ValueError('dispatch requires player_outcome: what the player gets from this step or its chain')
+    if not isinstance(wired, bool):
+        raise ValueError('dispatch requires wired: whether merging this step alone changes ordinary play')
+    if prd_step == 'harness':
+        if wired or any(not any(name == path or name.startswith(path + '/') for path in HARNESS_PATHS)
+                        for name in task['owned_files']):
+            raise ValueError('a harness step is unwired and owns only harness files')
+    approval = task.get('owner_approval')
+    if approval is not None:
+        if (not isinstance(approval, dict) or set(approval) != {'statement', 'reference'} or
+                any(not isinstance(value, str) or not value.strip() for value in approval.values())):
+            raise ValueError('owner_approval requires a statement and a reference')
+        if not re.search(r'(?<![\w-])' + re.escape(step_id) + r'(?![\w-])', approval['statement']):
+            raise ValueError('owner_approval must name this step; a blanket authorization does not count')
+    if wired or prd_step == 'harness' or approval is not None:
+        return
+    depth = max((unwired_depth(steps, dep) for dep in task['dependencies']), default=0)
+    backlog = unwired_backlog(steps) + 1
+    if depth > MAX_UNWIRED_PREREQUISITE_DEPTH or backlog > MAX_UNWIRED_BACKLOG:
+        raise ValueError(f'product gate: {step_id} has {depth} unwired prerequisite layers (limit '
+                         f'{MAX_UNWIRED_PREREQUISITE_DEPTH}) and would make {backlog} unwired steps (limit '
+                         f'{MAX_UNWIRED_BACKLOG}). Stop and ask the owner; only an owner_approval naming '
+                         'this step continues the chain.')
+
+
 def record_dispatch(graph, data):
     tasks = data.get('tasks')
     if not isinstance(tasks, list) or not tasks:
@@ -204,7 +265,11 @@ def record_dispatch(graph, data):
             continue
         if task.get('status') not in ('active', 'merged') or 'terminal' in task:
             raise ValueError('use step_terminal to retire an existing active step')
-        if old is not None:
+        if old is None:
+            check_product_gate(steps, task)
+        else:
+            if any(task.get(key) != old.get(key) for key in PRODUCT_FIELDS):
+                raise ValueError('product declaration cannot change after registration')
             for key in ('dispatcher_session_id', 'dependencies', 'acceptance',
                         'worktree', 'branch', 'implementation_session_id', 'creation_result'):
                 if task[key] != old[key]:

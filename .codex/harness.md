@@ -8,6 +8,16 @@
 - Escalate only for concrete complexity: unresolved ambiguity or a reproduced hard failure may need Sol / medium; genuinely complex architecture, cross-subsystem invariants or difficult determinism/save reasoning may need Astra / high within the same owner pair. State the reason for escalation; a long test run or many files alone is not a reason. Do not create an extra architect session. Role profiles do not authorize extra agents or changes to permissions/MCP/trust.
 - Requirements already authorized by the owner remain authorized. A roadmap, event inbox or unrelated checkpoint is not permission to expand scope. Resume from the current step's compact checkpoint rather than restarting brainstorming or rereading every guide.
 
+## Product gate
+
+Every newly registered step answers what it does for the MVP (`docs/design/PRD.md` §6–7). `check_product_gate` in `.codex/hooks/task-handover.py` refuses the registration otherwise.
+
+- `prd_step`: a PRD requirement or step (`Step 5`, `CS-5.1`, `AR-2`, `M3` …), or `harness` for a step owning only harness files. `player_outcome`: what the player gets from this step or the chain it serves. `wired`: `true` only if merging this step alone changes ordinary campaign play; candidate APIs, tools, proofs, measurements and contracts are `false`.
+- **Stop and ask the owner** when a new unwired step would sit on more than `MAX_UNWIRED_PREREQUISITE_DEPTH` (2) layers of unwired prerequisites, or would exceed `MAX_UNWIRED_BACKLOG` (5) unwired steps since the last merged wired step or owner approval. Steps registered before this gate count as unwired. Put the chain, its cost and the alternatives to the owner, then register only what they approve.
+- `owner_approval` (`statement`, `reference`) records the owner's decision on the step it names, and restarts both counts. An earlier blanket authorization, a roadmap or a recommendation is not approval. Never restate `wired`, `prd_step` or the dependencies to pass the gate; these fields are immutable once registered.
+- The PR description repeats the three fields. Review checks them as acceptance: a `wired: true` PR must name the ordinary-play path it changes and a check that goes through it, otherwise it returns to implementation.
+- Steps already registered finish under their existing declaration. The hook validates declarations only; it cannot authenticate the owner's approval or prove `wired`.
+
 ## Branch and PR delivery
 
 - Inspect the actual checkout, branch, HEAD and dirty files first. Use a fresh isolated worktree and a `codex/` branch based on current `origin/main` for each new step. Keep unrelated uncommitted work in its existing checkout. Do not switch a dirty shared checkout, reset another session's files, or carry a previous feature into the new PR.

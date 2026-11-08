@@ -146,16 +146,125 @@ class HandoverHookTests(unittest.TestCase):
             result = hook.respond(dict(self.event,cwd=str(other),session_id='other'))
             self.assertEqual(result['decision'],'block')
     def task(self, step='a', owner='worker-a', files=None, dependencies=None, **fields):
+        fields = {'status': 'active', 'prd_step': 'Step 5',
+                  'player_outcome': 'the faction petition appears at court', 'wired': True, **fields}
         return dict(step_id=step, dispatcher_session_id='old', dependencies=dependencies or [],
                     owned_files=files or ['tools/a.py'], acceptance='targeted checks pass',
                     worktree=str(self.root / step), branch='codex/'+step,
                     implementation_session_id=owner, review_session_id=None,
-                    creation_result={'status':'created', 'session_id':owner},
-                    status='active', **fields)
+                    creation_result={'status':'created', 'session_id':owner}, **fields)
     def dispatch(self, tasks):
         self.marker.update(kind='dispatch', tasks=tasks)
         self.save()
         return hook.respond(self.event)
+    def unwired(self, step, dependencies=None, **fields):
+        return self.task(step, 'worker-'+step, ['tools/'+step+'.py'], dependencies, wired=False, **fields)
+    def done(self, step, dependencies=None, **fields):
+        return self.unwired(step, dependencies, **{'status': 'merged', 'accepted': True, **fields})
+    def task_merged(self, task):
+        return {key: value for key, value in task.items() if key != 'status'} | {'status': 'merged', 'accepted': True}
+    def legacy(self, *names):
+        """A registry written before the gate: merged chain without product fields."""
+        steps, previous = {}, []
+        for name in names:
+            step = self.done(name, previous)
+            for key in ('prd_step', 'player_outcome', 'wired'):
+                del step[key]
+            steps[name], previous = step, [name]
+        hook.registry_path(self.root).write_text(json.dumps({'edges': {}, 'prs': {}, 'steps': steps}))
+        return steps
+    def approval(self, statement):
+        return {'statement': statement, 'reference': 'owner chat 2026-11-09'}
+    def test_new_step_must_name_its_prd_step_and_player_outcome(self):
+        bad = [{'prd_step': 'P4'}, {'prd_step': ''}, {'player_outcome': ' '}, {'wired': 'yes'}]
+        for fields in bad:
+            with self.subTest(fields=fields):
+                self.assertEqual(self.dispatch([self.task(**fields)])['decision'], 'block')
+        for key in ('prd_step', 'player_outcome', 'wired'):
+            with self.subTest(missing=key):
+                task = self.task()
+                del task[key]
+                self.assertEqual(self.dispatch([task])['decision'], 'block')
+        self.assertFalse(hook.registry_path(self.root).exists())
+        for name in ('Step 10', 'CS-5.1', 'AR-2', 'M6', 'L0'):
+            with self.subTest(prd_step=name):
+                self.assertIsNotNone(hook.PRD_STEP.fullmatch(name))
+    def test_steps_registered_before_the_gate_keep_working(self):
+        steps = self.legacy('old-a')
+        steps['old-a'].update(status='active')
+        del steps['old-a']['accepted']
+        hook.registry_path(self.root).write_text(json.dumps({'edges': {}, 'prs': {}, 'steps': steps}))
+        self.assertEqual(self.dispatch([steps['old-a']]), {})
+        self.assertEqual(self.dispatch([dict(steps['old-a'], status='merged', accepted=True)]), {})
+    def test_product_declaration_cannot_change_after_registration(self):
+        task = self.unwired('a')
+        self.assertEqual(self.dispatch([task]), {})
+        for fields in ({'prd_step': 'Step 6'}, {'player_outcome': 'something else'}, {'wired': True},
+                       {'owner_approval': self.approval('a approved')}):
+            with self.subTest(fields=fields):
+                self.assertEqual(self.dispatch([dict(task, **fields)])['decision'], 'block')
+    def test_unwired_prerequisite_chain_stops_past_two_layers(self):
+        # a <- b is two layers under c, allowed; a <- b <- c is three under d, refused.
+        self.assertEqual(self.dispatch([self.done('a')]), {})
+        self.assertEqual(self.dispatch([self.done('b', ['a'])]), {})
+        self.assertEqual(self.dispatch([self.done('c', ['b'])]), {})
+        before = hook.registry_path(self.root).read_text()
+        result = self.dispatch([self.unwired('d', ['c'])])
+        self.assertEqual(result['decision'], 'block')
+        self.assertIn('ask the owner', result['reason'])
+        self.assertEqual(hook.registry_path(self.root).read_text(), before)
+    def test_step_the_player_can_reach_may_land_a_deep_chain(self):
+        self.legacy('a', 'b', 'c', 'd')
+        self.assertEqual(self.dispatch([self.task('landing', 'worker-l', ['tools/l.py'], ['d'])]), {})
+    def test_steps_from_before_the_gate_count_as_unwired(self):
+        self.legacy('a', 'b', 'c')
+        self.assertEqual(self.dispatch([self.unwired('d', ['c'])])['decision'], 'block')
+    def test_owner_approval_must_name_the_step(self):
+        self.legacy('a', 'b', 'c')
+        for approval in (self.approval('all recommendations approved'), {'statement': 'd approved'},
+                         {'statement': ' ', 'reference': 'x'}, 'd approved'):
+            with self.subTest(approval=approval):
+                task = self.unwired('d', ['c'], owner_approval=approval)
+                self.assertEqual(self.dispatch([task])['decision'], 'block')
+        self.assertEqual(self.dispatch([self.unwired('d', ['c'], owner_approval=self.approval('Go ahead with d'))]), {})
+    def test_owner_approval_restarts_the_chain_and_backlog(self):
+        self.legacy('a', 'b', 'c')
+        self.assertEqual(self.dispatch([self.done('d', ['c'], owner_approval=self.approval('d approved'))]), {})
+        self.assertEqual(self.dispatch([self.done('e', ['d'])]), {})
+        self.assertEqual(self.dispatch([self.done('f', ['e'])]), {})
+        self.assertEqual(self.dispatch([self.done('g', ['f'])]), {})
+        self.assertEqual(self.dispatch([self.unwired('h', ['g'])])['decision'], 'block')
+    def test_backlog_of_unwired_steps_stops_at_the_limit(self):
+        for step in 'abcde':
+            self.assertEqual(self.dispatch([self.unwired(step)]), {})
+        self.assertEqual(self.dispatch([self.unwired('f')])['decision'], 'block')
+        self.assertEqual(self.dispatch([self.task('f', 'worker-f', ['tools/f.py'])]), {})
+    def test_merged_reachable_step_clears_the_backlog_but_an_open_one_does_not(self):
+        for step in 'abcde':
+            self.assertEqual(self.dispatch([self.done(step)]), {})
+        landing = self.task('landing', 'worker-l', ['tools/l.py'])
+        self.assertEqual(self.dispatch([landing]), {})
+        self.assertEqual(self.dispatch([self.unwired('f')])['decision'], 'block')
+        self.assertEqual(self.dispatch([self.task_merged(landing)]), {})
+        self.assertEqual(self.dispatch([self.unwired('f')]), {})
+    def test_harness_steps_do_not_count_and_cannot_touch_the_game(self):
+        harness = dict(prd_step='harness', player_outcome='none: rule maintenance', wired=False)
+        for step in 'vwxyz':
+            self.assertEqual(self.dispatch([self.unwired(step)]), {})
+        self.assertEqual(self.dispatch([self.task('h', 'worker-h', ['.codex/hooks/x.py'], **harness)]), {})
+        self.assertEqual(self.dispatch([self.task('i', 'worker-i', ['scripts/engine/x.gd'], **harness)])['decision'], 'block')
+        self.assertEqual(self.dispatch([self.task('j', 'worker-j', ['.codex/y.md'], **dict(harness, wired=True))])['decision'], 'block')
+        self.assertEqual(self.dispatch([self.unwired('k')])['decision'], 'block')
+    def test_retired_steps_do_not_fill_the_backlog(self):
+        steps = self.legacy('a', 'b', 'c', 'd', 'e', 'f')
+        for step in steps.values():
+            step.update(status='superseded', dependencies=[])
+        hook.registry_path(self.root).write_text(json.dumps({'edges': {}, 'prs': {}, 'steps': steps}))
+        self.assertEqual(self.dispatch([self.unwired('g')]), {})
+    def test_start_rules_state_the_product_gate(self):
+        text = hook.respond({'hook_event_name': 'SessionStart'})['hookSpecificOutput']['additionalContext']
+        self.assertIn('prd_step', text)
+        self.assertIn('owner_approval', text)
     def test_independent_dispatch_and_identical_retry(self):
         tasks = [self.task(), self.task('b','worker-b',['tools/b.py'])]
         self.assertEqual(self.dispatch(tasks), {})
