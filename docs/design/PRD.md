@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft v2.0 — MVP redefined as a complete Chapter 1 (supersedes v1.1's "first playable"). Owner 2026-09-18: the MVP is a **complete first chapter with every feature, all of its art and all of its gameplay** — nothing placeholder, nothing "for later" inside Chapter 1. **Owner 2026-10-04: that one chapter is the prologue** (`docs/design/CHAPTER_0.md`, built), expanded so the three arcs of §7 play inside it — there is no separate Chapter 1 in the MVP (§7) |
-| **Date** | 2026-09-04 (statuses and facts re-aligned with the code and `CLAUDE.md` on 2026-09-18) |
+| **Date** | 2026-09-04 (statuses re-aligned with `origin/main` and the GitHub PRs on 2026-11-08; the progress table is in §6) |
 | **Author** | Yumeng Zhang |
 | **Scope** | Chapter 1, fully functional and fully illustrated: base loop + Council System through faction stage 6 (Tomas only) + chapter framework + raid defense + all chapter-1 art |
 | **Source design** | `docs/design/COUNCIL_SYSTEM.md`, `docs/design/MANOR_SYSTEM.md`, `RANDOM_EVENTS.md` (repository root), `game_story/chapter_0/game_start.md` + the data CSVs in `data/` (all paths from the repository root) |
@@ -31,7 +31,7 @@ The core architectural bet is unchanged: **the deterministic engine decides ever
 - Chapter 2+ content (the close screen sets hooks; nothing past the close is playable).
 - Succession, heirs, aging, minister death by age; assassination (stage-4+ mechanic, still post-MVP — Tomas's conspiracy resolves through revolt/deposition, not the knife).
 - Faction stages 4–6 for any faction other than Tomas's.
-- Seat unlocks beyond the founding five; AI opponent kingdoms; military simulation beyond the raid-defense resolution (§7.4). *(Note 2026-09-18: the regiments already carry morale, wounded, supplies and training, settled monthly — `ArmySystem`, owner 2026-09-17, `docs/superpowers/specs/2026-09-17-regiment-state-design.md` — and the manor economy of `docs/design/MANOR_SYSTEM.md` was built ahead of the chapter steps; neither is a battle simulation.)*
+- Seat unlocks beyond the founding five; AI opponent kingdoms; military simulation beyond the raid-defense resolution (§7.4). *(Note 2026-09-18: the regiments already carry morale, wounded, supplies and training, settled monthly — `ArmySystem`, owner 2026-09-17, `docs/superpowers/specs/2026-09-17-regiment-state-design.md` — and the manor economy of `docs/design/MANOR_SYSTEM.md` was built ahead of the chapter steps; neither is a battle simulation.)* *(Note 2026-11-08: the "no military simulation" limit is overtaken: the owner-approved battle system, specs `2026-10-07-enemy-ai-and-battle-design.md`, `2026-10-16-battle-system-design.md`, `2026-10-17-unit-behavior-and-battlefield-design.md`, is in the game; see Step 8.)*
 - Steam release, key-proxy backend, monetization, multiplayer.
 
 ## 3. Player and platform
@@ -73,7 +73,23 @@ the thirtieth day ends the month = the tick
 
 Build strictly in this order; each step is independently playtestable. Steps 1–5 are the v1.1 scope; steps 6–10 are new with this revision.
 
-**Status (2026-09-18, from the code):** Step 1 built except the scaffolding phases; Step 2 built; Steps 3–9 not built (Step 4's relationship graph is); the random-events pool built; Step 10 partly (cast art done). Between the steps, work went into the map, the manor economy, the regiments and the UI (see `CLAUDE.md`).
+**Status (2026-11-08, from `origin/main` at `7c9012c0` and the GitHub PRs through #272):** Step 1 built except the scaffolding phases; Step 2 built; the random-events pool built; Steps 3, 5, 6, 7 and 9 not built, and Step 4 only its relationship graph; Step 8 replaced by a full battle system; Step 10 partly. The systems are well ahead of the story: the arcs of §7 cannot yet be played. Build order: PRD order was not followed after the map look route. Since 2026-10-16 almost all merged work is the battle system, so Steps 3–7 are still next.
+
+**MVP completion: about 52%.** The percentages and weights are a judgement from the evidence named in each row, not a measurement; read the total as ±10 points.
+
+| Workstream | PRD | Weight | Done | Evidence |
+|---|---|---:|---:|---|
+| Base loop, council core, ambient events | BG, Steps 1–2, EV | 12 | 95% | Handlers and tests in place; CS-1.5 scaffolding phases missing |
+| Council politics | Steps 3–5 | 13 | 5% | No debates, courtier recruitment or faction engine; only the relationship graph |
+| Chapter story | Steps 6, 7, 9 | 22 | 20% | Act I (21 beats) is built; Acts II–III, the arc tracker, stages 4–6 and the chapter close are not (spec `2026-10-05-prologue-three-acts-design.md`, approved, not built) |
+| Military | Step 8 and its replacement | 20 | 65% | Battle phases P1–P5 and P6.1 merged; P6.2–P6.3 and P7 have no PR; physical cluster formations 6 of 29 tasks merged, none wired into production |
+| Intelligence and LEDGER | L0, M1–M6 | 8 | 90% | Reports, belief, spies, missives; supply, workshop, governors, audit, industry and trade all execute; owner's list of extra nodes open |
+| 3D map look | AR-4, look route | 8 | 80% | Route phases landed; the last critic rounds barely moved scores, and the next step is owner-approved art |
+| Screens and HUD | Goals | 5 | 80% | Every screen exists; no CHRONICLE, no chapter cards |
+| Art integration | Step 10 | 8 | 55% | Cast and Act I illustrations done; ambient event art, chapter cards, artillery and spy models missing |
+| Balance, performance, export | §9, §12 | 4 | 20% | Balance questions unanswered; the game has never been exported (no `export_presets.cfg`) |
+
+**Cluster formations** (plan `2026-10-25-cluster-formations.md`) all stay behind candidate APIs; ordinary campaign play keeps the existing route. Merged: CF01, CF02, CF03, CF04a, CF04b, CF08. CF04c: render in draft #201, waiting on locomotion certificates for infantry, cavalry, archers and royal (drafts #221, #231, #236). CF05: 9 of 13 B-steps merged; B-WITHDRAW is #272, red on `test_unit_bodies.gd` at its last run; B-MERGE, B-END and B-ROUND are unstarted. CF06: contracts only. CF07 and CF09–CF25, which include the eight formations the player would actually see, are unstarted.
 
 ### Step 1 — Founding council, briefings, clickable suggestions
 
@@ -124,7 +140,7 @@ Full design in `RANDOM_EVENTS.md`.
 - **EV-3** Fairness rule: no single event may cripple a campaign; severe outcomes only arrive at the end of a visible, chosen-into chain. Trait-gated options are shown/hidden deterministically — never hidden dice.
 - **EV-4** Event scene prose is **authored, never model-written** (`StorySource` reads `RANDOM_EVENTS.md` verbatim); events therefore cost no API calls to present.
 
-*Status: EV-1–EV-4 built (`EventSystem`, `TriggerDsl`, `EventEffects`). An event stops the clock and is shown in the audience window on the council stage.*
+*Status: EV-1–EV-4 built (`EventSystem`, `TriggerDsl`, `EventEffects`), with 30 ambient events in `data/story/events.csv` and six battle events (EV-31–EV-36) in `RANDOM_EVENTS.md`. An event stops the clock and is shown in the audience window on the council stage.*
 
 ### Step 6 — Chapter framework (new)
 
@@ -134,7 +150,7 @@ Full design in `RANDOM_EVENTS.md`.
 - **CH-4** Chapter title card on campaign start ("Chapter One — <name>") after the opening narration.
 - **CH-5** Pacing guardrails: arcs cannot all resolve before year 2 (dwell minimums), and the chapter forces escalation beats if an arc has idled for a year (tunable in data).
 
-*Status: not yet built (no `data/chapter_arcs.csv`). The opening narration from `game_story/chapter_0/game_start.md` is built; the title card is not.*
+*Status: not yet built (no `data/chapter_arcs.csv`, no CHRONICLE). The opening narration from `game_story/chapter_0/game_start.md` is built; the title card is not. The story's calendar and handover are designed in `docs/superpowers/specs/2026-10-05-prologue-three-acts-design.md` (approved, not built).*
 
 ### Step 7 — Faction stages 4–6, Tomas only (new; was post-MVP)
 
@@ -151,7 +167,7 @@ Full design in `RANDOM_EVENTS.md`.
 - **RD-2** Readiness actions (`LEVY_RAISE`, `FORTIFY_BORDER`, `MUSTER_DRILL` — the latter two added to the action set) are useful *before* the raid and visibly referenced by the outcome narration ("the levies Hale drilled all winter held the ford").
 - **RD-3** Every outcome is survivable; "disaster" scars metrics and the Chronicle but never ends the campaign (the fairness rule EV-3 extended to raids).
 
-*Status: not yet built. `LEVY_RAISE` executes; `FORTIFY_BORDER` and `MUSTER_DRILL` do not exist yet. The regiment state (`ArmySystem`: morale, wounded, supplies, training) is built and is the natural input for RD-1.*
+*Status: RD-1's thin formula was not built and the need is met by a full simulation: enemy hosts, raids and sieges (`EnemyAi`, `RaidSystem`, `SiegeSystem`), day-resolved battles, commanders, the king in the field, camps, terms, prisoners and reports, and area tasks (battle plan phases P1–P5 and P6.1; player siege works P6.2, their staging P6.3 and final integration P7 have no PR). RD-3 holds: a lost town costs the crown and never ends the campaign (`DefeatSystem`). Open against RD-2: `LEVY_RAISE` executes; `FORTIFY_BORDER` and `MUSTER_DRILL` do not exist. The owner has not ruled whether they are still wanted.*
 
 ### Step 9 — Chapter-1 event chains (new)
 
@@ -159,14 +175,14 @@ Full design in `RANDOM_EVENTS.md`.
 - **EC-2** Chain events reference arc stage in their triggers (via the trigger DSL) so story beats land in order and react to how the player has treated the arc so far.
 - **EC-3** All chain prose is authored, never model-written — unchanged hard rule.
 
-*Status: not yet built; `RANDOM_EVENTS.md` holds the 20 ambient events only.*
+*Status: not yet built. Act I's 21 beats and the one war beat (`war_01`) are the only chain events (`data/story/chapter_events.csv`); nothing yet carries the three arcs through Acts II–III.*
 
 ### Step 10 — Art integration pass (new)
 
-- **AR-1 Cast art.** Final full-body portrait for **all 16 characters in `roles.csv`** — the five ministers (Chaplain gets his own art, ending the courier duplicate), the royal family (queen, princess, Duke Tomas, Lady Ysolde), court and city figures (Hale, Corina, Edgar, Malvern, Tessa, Cassian, Corvin), and the foreign cast (Osric, Isabeau, Petra, Emperor Constans). *Status: done for the whole cast of 21 (`data/council/founding_council.csv` + `data/council/roles.csv`). The pipeline is now the Flux one (`assets/imagegen/`): one library `K-` entry per character in `docs/references/art_prompt_library.md`, `assets/imagegen/cast_art.csv`, `install_map_art.py cast` → `assets/2D/portraits/cast/<id>.png` (chip) and `assets/2D/portraits/cast/full/<id>.png` (figure), colour kept; the earlier `tools/clean_portrait_art.py` route is superseded.*
-- **AR-2 Event art.** One illustration per chapter-1 chain event and per ambient event used in chapter 1, shown in the event popup where the placeholder frame sits today. Same pipeline; a shared default per event category is acceptable as fallback during development but **no placeholder may be visible at MVP sign-off**. *Status: not yet built — events stand in the CK3-style audience window with the round-table portrait, no illustration.*
+- **AR-1 Cast art.** Final full-body portrait for **all 16 characters in `roles.csv`** — the five ministers (Chaplain gets his own art, ending the courier duplicate), the royal family (queen, princess, Duke Tomas, Lady Ysolde), court and city figures (Hale, Corina, Edgar, Malvern, Tessa, Cassian, Corvin), and the foreign cast (Osric, Isabeau, Petra, Emperor Constans). *Status: done for the whole cast of 21 (`data/council/founding_council.csv` + `data/council/roles.csv`). The pipeline is `assets/imagegen/`: one library `K-` entry per character in `docs/references/art_prompt_library.md`, `assets/imagegen/cast_art.csv`, `install_map_art.py cast` → `assets/2D/portraits/cast/<id>.png` (chip) and `assets/2D/portraits/cast/full/<id>.png` (figure), colour kept; the earlier `tools/clean_portrait_art.py` route is superseded.*
+- **AR-2 Event art.** One illustration per chapter-1 chain event and per ambient event used in chapter 1, shown in the event popup where the placeholder frame sits today. Same pipeline; a shared default per event category is acceptable as fallback during development but **no placeholder may be visible at MVP sign-off**. *Status: partly: all 21 Act I beats (`assets/2D/events/illustrations/`) and six battle events (`assets/2D/events/battle/`) have illustrations; the 30 ambient events and `war_01` do not.*
 - **AR-3 Chapter cards.** Chapter-1 title card, chapter-close card (variant art or tinting per major outcome mix is a stretch goal; one card minimum), and the game-over (deposition) card. *Status: not yet built.*
-- **AR-4** The world map is done and interactive in all gameplay screens, and is the standing bar for art finish: nothing shipped in chapter 1 should look less finished than the map view. *Status (2026-09-18): there is no render PNG any more (owner 2026-09-11) — the game draws the Azgaar pack's cells itself, the ground in satellite-photograph biome tiles lit by the pack's height (owner 2026-09-17), aerial-photograph settlements, banded sea, dashed borders, and generated house arms; a 3D MAP tab shows the same world as a Terrain3D landscape with clickable towns and provinces and live borders (owner 2026-09-18, `scripts/map3d/`). The UI around it is a dark theme after Crusader Kings III (owner 2026-09-15).*
+- **AR-4** The world map is done and interactive in all gameplay screens, and is the standing bar for art finish: nothing shipped in chapter 1 should look less finished than the map view. *Status (2026-11-08): the campaign map is the 3D Terrain3D map, the only map (`scripts/map3d/`), with clickable towns and provinces, live borders, weather and regiment pieces. Installed unit models are infantry, cavalry, archers, royal and courier; artillery borrows the infantry body and the spy has no model of its own.*
 
 **LEDGER (owner 2026-09-30):** L0 built ahead of Step 3 (it adds no mechanic); M1 supply and morale, M2 the war workshop and M4 battle land with Step 8; M3 governors, skimming and the audit after Step 8; M5 raw materials and artisans and M6 markets are in the MVP (spec `2026-09-30-ledger-ontology-design.md` §8).
 
