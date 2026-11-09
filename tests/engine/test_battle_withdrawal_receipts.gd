@@ -174,3 +174,37 @@ func test_a_retreating_column_gives_up_its_deployed_clearance() -> void:
 	assert_eq(int(ArmySystem.clearance_blockers(repo, state)["r"][column]), 5000 + radius, "the ground it holds")
 	entry["battle_retreat"] = true
 	assert_eq(int(ArmySystem.clearance_blockers(repo, state)["r"][column]), undeployed, "the ground it is leaving")
+
+
+## An enemy standing on the road halts an ordinary march, but a withdrawing
+## column goes round it: halted there it could neither fight nor ever leave.
+func test_only_a_withdrawing_column_goes_round_an_enemy_on_its_road() -> void:
+	var repo := SuiteData.flat_ground(SuiteData.repo())
+	var state := SuiteData.campaign(repo, 7)
+	var host := Play.host(repo, "main")
+	var column := String(EnemyAi.regiments_of(state, host)[0])
+	var enemy := String(Play.land_regiments(repo, 400)[0])
+	for code: String in state.army_roster.keys():
+		if code != column and code != enemy:
+			state.army_roster.erase(code)
+			state.regiments.erase(code)
+			state.foes.erase(code)
+	var entry: Dictionary = state.foes[column]
+	var here := Vector2i(int(entry.x_m), int(entry.y_m))
+	Play.place(repo, state, enemy, here + Vector2i(20000, 0), ArmySystem.ORDER_STANDBY)
+	var aim := here + Vector2i(60000, 0)
+	entry.order = ArmySystem.ORDER_MARCH
+	entry.dest_x_m = aim.x
+	entry.dest_y_m = aim.y
+	var verdict := func() -> String:
+		return String(ArmySystem._clearance(repo, state, column, entry, here, [aim], 40000.0, ArmySystem.clearance_blockers(repo, state)).kind)
+	assert_eq(state.ai_hosts[host].mode, "ASSEMBLE", "a host not going home")
+	assert_eq(verdict.call(), "halt", "an ordinary march stands before the enemy")
+	entry.battle_retreat = true
+	assert_eq(verdict.call(), "detour", "a column retreating from a battle")
+	entry.erase("battle_retreat")
+	entry.disengaging = 1
+	assert_eq(verdict.call(), "detour", "a column falling back after its battle")
+	entry.erase("disengaging")
+	state.ai_hosts[host].mode = "RETREAT"
+	assert_eq(verdict.call(), "detour", "a column of a host going home")

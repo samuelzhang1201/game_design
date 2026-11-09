@@ -20,7 +20,7 @@ const _SOURCES: Dictionary = {
 	"res://scripts/map3d/map3d_royal_locomotion_source.gd":"b4301e3953e92676cdb0386bf4324c9e779687c665dfd9c9433a0083d3e827e7",
 	"res://scripts/map3d/map3d_world_loader.gd":"b59e4fb2cb7223fbd1989047fce0b2c5e05ab2cd0f3878a24fc212c9dc4c61bd",
 	"res://scripts/engine/body_motion.gd":"3b1206a72c4785c72295bb2d0847b3c76ea3f7cf2c411adaf040202e33389c53",
-	"res://scripts/engine/army_system.gd":"a10899ddd6696726a2741dc77443439b3dbc8d67ff8cb04848028cf0363eb65e",
+	"res://scripts/engine/army_system.gd":"8ca9982a4c5db6a2c792d76c87caab046c488934dc48c22360dfecbf7c540532",
 	"res://scripts/engine/march_path.gd":"8f4b63b38c2f1e447ece94f09851939b1336a1a9f51880e05a07c8719264e568",
 	"res://scripts/engine/unit_bodies.gd":"e5ef5385575531e95914d0adb6cd6dcf59751d093a29e428fc48284a8621b4ca",
 	"res://scripts/engine/war_front.gd":"73c5fa064b95c84f4e5c5215bf120bd7ff7e496792179810ed59ba64d053a6dc",

@@ -2121,7 +2121,11 @@ static func _clearance(repo: DataRepository, state: GameState, code: String, ent
 	var bi := int(hit["index"])
 	var blocker := String(names[bi])
 	var dm := int(ds[bi]) + 1
-	if _enemies(blockers, code, blocker) or MarchClearance.dist2(dest, centres[bi]) < dm * dm:
+	# A withdrawing column goes round an enemy too: halted there it could neither
+	# fight nor ever leave. Every other march stands before the enemy it meets.
+	var withdrawing := bool(entry.get("battle_retreat", false)) or int(entry.get("disengaging", 0)) == 1 \
+		or BattleSystem.homeward(state, code)
+	if (_enemies(blockers, code, blocker) and not withdrawing) or MarchClearance.dist2(dest, centres[bi]) < dm * dm:
 		return {"kind": "halt", "at": hit["at"], "leg": hit["leg"], "blocker": blocker}
 	# go round: the units not at war with it whose octagons touch the first's, and each other's
 	var friends: Array = []
@@ -2133,7 +2137,7 @@ static func _clearance(repo: DataRepository, state: GameState, code: String, ent
 			first = friends.size()
 		# a clump is the first unit and the units STANDING round it; a column on the
 		# march is its own obstacle (a host strung out on a road is not one wall)
-		if i == bi or (not _enemies(blockers, code, String(names[i])) and not bool((blockers["moving"] as Dictionary)[names[i]])):
+		if i == bi or ((withdrawing or not _enemies(blockers, code, String(names[i]))) and not bool((blockers["moving"] as Dictionary)[names[i]])):
 			friends.append(i)
 			friend_centres.append(centres[i])
 			friend_ds.append(ds[i])
