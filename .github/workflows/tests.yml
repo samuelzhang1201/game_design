@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, edited]
+  schedule:
+    - cron: '17 18 * * *'
   workflow_dispatch:
     inputs:
       include:
@@ -58,13 +60,13 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
           MANUAL_INCLUDE: ${{ inputs.include }}
         run: |
-          if [ "$EVENT_NAME" = workflow_dispatch ]; then
-            python3 tools/select_gut_tests.py --functional \
-              --request-text "GUT_INCLUDE: $MANUAL_INCLUDE" --github-output "$GITHUB_OUTPUT"
-          else
+          if [ "$EVENT_NAME" = pull_request ]; then
             git fetch --no-tags --depth=1 origin "$BASE_SHA"
             python3 tools/select_gut_tests.py --base "$BASE_SHA" \
               --request-text "$PR_BODY" --github-output "$GITHUB_OUTPUT"
+          else
+            python3 tools/select_gut_tests.py --functional \
+              --request-text "GUT_INCLUDE: $MANUAL_INCLUDE" --github-output "$GITHUB_OUTPUT"
           fi
       - name: Check a Codex PR declares its product fields
         if: ${{ github.event_name == 'pull_request' }}

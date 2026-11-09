@@ -220,6 +220,22 @@ class SelectionTests(unittest.TestCase):
                 'HARNESS_RESULT': 'success', 'RUN_GUT': run_gut, 'SELECTED_RESULT': selected})
             self.assertEqual(result.returncode, expected)
 
+    def test_scheduled_run_selects_every_functional_category_without_a_base(self):
+        workflow = Path('.github/workflows/tests.yml').read_text()
+        self.assertRegex(workflow, r"(?m)^  schedule:\n    - cron: '[^']+'$")
+        selection = textwrap.dedent(workflow.split('id: scope', 1)[1].split('        run: |\n', 1)[1]
+                                    .split('      - name:', 1)[0])
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / 'output'
+            result = subprocess.run(['bash', '-e', '-c', selection], capture_output=True, text=True, env={
+                **os.environ, 'EVENT_NAME': 'schedule', 'BASE_SHA': '', 'PR_BODY': '', 'MANUAL_INCLUDE': '',
+                'GITHUB_OUTPUT': str(output)})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            lines = output.read_text()
+        self.assertIn('run-gut=true', lines)
+        matrix = json.loads(lines.split('matrix=', 1)[1].splitlines()[0])
+        self.assertEqual({entry['category'] for entry in matrix['include']}, set(selector.functional_categories()))
+
     def test_batch_requires_one_category_and_valid_manifest_index(self):
         for args in [['--batch', '1'], ['--category', 'engine-military', '--batch', '0'],
                      ['--category', 'engine-military', '--batch', '5'],
