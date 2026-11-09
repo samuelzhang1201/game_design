@@ -337,6 +337,8 @@ func _rout_the_raiders(s: GameState, h: String) -> Array:
 	keep["eff_max"] = 1000
 	repo.battle_outcomes.clear()
 	repo.battle_outcomes.append(keep)
+	# Battle rows need legal ground, and the rout leaves through its saved rows.
+	repo = SuiteData.open_country(repo)
 	var mine := String(Play.land_regiments(repo, 400)[0])
 	var at := Vector2i(int(s.regiments[mine]["x_m"]), int(s.regiments[mine]["y_m"]))
 	# the rest of the army out of the way: a camp round the spot would join
@@ -350,6 +352,9 @@ func _rout_the_raiders(s: GameState, h: String) -> Array:
 	var events := BattleSystem.settle_day(repo, s)
 	# Spoils pass only after this routed host physically yields the field.
 	for c: String in EnemyAi.regiments_of(s, h):
+		var battle := BattleSystem.battle_of(s, c)
+		if not battle.is_empty():
+			assert_true(BattleGroups.translate(repo, s, battle, c, at + Vector2i(100000, 0) - Vector2i(int(s.foes[c]["x_m"]), int(s.foes[c]["y_m"]))))
 		_place(s, c, at + Vector2i(100000, 0), ArmySystem.ORDER_STANDBY)
 	s.day += 1
 	events.append_array(BattleSystem.settle_day(repo, s))
