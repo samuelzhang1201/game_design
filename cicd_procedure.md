@@ -31,9 +31,9 @@ Stop hook 只验证显式记录；派工方先登记完整任务并通过 `--che
 
 ## What runs 自动选择
 
-`.github/workflows/tests.yml` runs on PRs against `main` and manual dispatch, without rerunning on merge. `harness-checks` always validates hook behavior, selector behavior, runner failure gates, shell/config syntax and guide caps. Pure guidance/harness changes start no Godot process.
+`.github/workflows/tests.yml` runs on PRs against `main` and manual dispatch, without rerunning on merge. `harness-checks` always validates hook behavior, selector behavior, runner failure gates, shell/config syntax and guide caps. On a `codex/` PR numbered `FIRST_CHECKED_PR` or later it also requires the product fields as standalone PR body lines (`.codex/harness.md`); editing the body reruns the check. This only checks the declaration: it cannot prove `wired` or the owner's approval, and `claude/` and other branches are not covered. Pure guidance/harness changes start no Godot process.
 
-工作流在面向 `main` 的 PR 和手动触发时运行。专用检查始终运行；仅文档或 harness 改动不启动 Godot。
+工作流在面向 `main` 的 PR 和手动触发时运行。专用检查始终运行，并要求新的 `codex/` PR 正文用独立行声明产品字段；仅文档或 harness 改动不启动 Godot。
 
 `tools/select_gut_tests.py` compares the base commit with the checked-out tree, including deletions and both sides of renames. `tests/categories.json` is the ordered content manifest: expensive content overrides functional subsystem patterns. Functional suites retain single-formula, hand-computed, local save and short deterministic contracts even when they use balance tables or a campaign fixture. Mixed clearance/raid/siege scenario suites opt in as whole files because they also play extended campaign loops; their assertions remain intact. New long campaign/outcome sweeps belong in an opt-in category; new unclassified test directories fail closed.
 

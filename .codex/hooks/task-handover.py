@@ -20,6 +20,11 @@ MAX_UNWIRED_BACKLOG = 5
 HARNESS_PATHS = ('.codex', '.github', 'AGENTS.md', 'CLAUDE.md', 'cicd_procedure.md', 'run_tests.sh',
                  'tests/categories.json', 'tools/select_gut_tests.py', 'tools/test_select_gut_tests.py',
                  'tools/run_with_timeout.py', 'tools/test_run_with_timeout.py', 'tools/test_run_tests.py')
+FIRST_CHECKED_PR = 279  # Earlier PRs finish under their existing declaration.
+
+
+def is_harness_file(name):
+    return any(name == path or name.startswith(path + '/') for path in HARNESS_PATHS)
 
 
 def registry_path(cwd):
@@ -266,8 +271,7 @@ def check_product_gate(steps, task, refused):
     if not isinstance(wired, bool):
         raise ValueError('dispatch requires wired: whether merging this step alone changes ordinary play')
     if prd_step == 'harness':
-        if wired or any(not any(name == path or name.startswith(path + '/') for path in HARNESS_PATHS)
-                        for name in task['owned_files']):
+        if wired or not all(is_harness_file(name) for name in task['owned_files']):
             raise ValueError('a harness step is unwired and owns only harness files')
     approval = task.get('owner_approval')
     if approval is not None:
@@ -291,6 +295,42 @@ def check_product_gate(steps, task, refused):
                                  f'{MAX_UNWIRED_PREREQUISITE_DEPTH}) and would make {backlog} unwired steps (limit '
                                  f'{MAX_UNWIRED_BACKLOG}). Stop and ask the owner; only an owner_approval naming '
                                  'this step continues the chain.', task)
+
+
+def pr_body_problems(body, branch, number, files):
+    """A Codex PR repeats its product declaration, so CI covers work that never went through dispatch."""
+    if not branch.startswith('codex/') or number < FIRST_CHECKED_PR:
+        return []
+    fields, problems = {}, []
+    for name in DECLARED_PRODUCT_FIELDS:
+        values = re.findall(r'^(?:- )?' + name + r':[ \t]*(.*?)[ \t\r]*$', body, re.M)
+        if len(values) != 1 or not values[0]:
+            problems.append(f'PR body needs exactly one non-empty "{name}: ..." line')
+        else:
+            fields[name] = values[0]
+    prd_step, wired = fields.get('prd_step'), fields.get('wired')
+    if prd_step is not None and not PRD_STEP.fullmatch(prd_step):
+        problems.append(f'prd_step "{prd_step}" names no PRD step or harness')
+    if wired is not None and wired not in ('true', 'false'):
+        problems.append(f'wired must be true or false, not "{wired}"')
+    if prd_step == 'harness':
+        if wired == 'true':
+            problems.append('a harness PR has wired: false')
+        problems += [f'prd_step harness cannot change {name}' for name in files if not is_harness_file(name)]
+    return problems
+
+
+def check_pr():
+    """`--check-pr`: the CI gate, reading the PR from the environment and its diff from Git."""
+    diff = subprocess.run(['git', 'diff', '--name-only', '--no-renames', '-z', os.environ['BASE_SHA'], '--'],
+                          capture_output=True, text=True, check=True).stdout
+    problems = pr_body_problems(os.environ.get('PR_BODY', ''), os.environ['PR_BRANCH'],
+                                int(os.environ['PR_NUMBER']), [name for name in diff.split('\0') if name])
+    for problem in problems:
+        print(problem)
+    if problems:
+        print('Declare the product fields as standalone PR body lines; see the product gate in .codex/harness.md.')
+    return 1 if problems else 0
 
 
 def record_dispatch(graph, data):
@@ -499,6 +539,8 @@ def respond_to_stop(event):
 if __name__ == "__main__":
     if sys.argv[1:2] == ['--check']:
         sys.exit(check_plan(sys.argv[2]))
+    if sys.argv[1:2] == ['--check-pr']:
+        sys.exit(check_pr())
     try:
         event = json.load(sys.stdin)
         result = respond(event)
