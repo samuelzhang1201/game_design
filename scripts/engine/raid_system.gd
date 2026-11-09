@@ -326,7 +326,7 @@ static func _mark(repo: DataRepository, state: GameState, cell: int, h: String) 
 static func _beaten(state: GameState, battle_events: Array) -> Dictionary:
 	var out: Dictionary = {}
 	for e: Dictionary in battle_events:
-		if not String(e.get("kind", "")) in ["round", "end"]:
+		if not String(e.get("kind", "")) in ["round", "end", "withdrawal"]:
 			continue
 		for l: Dictionary in e.get("left", []):
 			if not String(l.get("why", "")) in BEATEN:

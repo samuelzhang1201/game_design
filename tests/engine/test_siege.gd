@@ -55,6 +55,8 @@ func _town_and_garrison(s: GameState) -> Array:
 ## (every other regiment of the player's sent off its quarters), `host`'s
 ## columns stand at the town's point, its mind SIEGE on the town. Returns the town.
 func _besiege(s: GameState, host: String, garrison: Array) -> String:
+	# Hand-placed hosts deploy round the town's point: open ground, as battle rows need it legal.
+	repo = SuiteData.open_country(repo)
 	var town := String(_town_and_garrison(s)[0])
 	assert_ne(town, "", "the pack quarters a regiment in a town of its own")
 	var at := _town_m(town)
@@ -74,6 +76,15 @@ func _besiege(s: GameState, host: String, garrison: Array) -> String:
 	EnemyAi.ensure_deployments(repo, s)
 	assert_eq(EnemyAi.garrison_of(repo, s, town), garrison, "the garrison is the test's")
 	return town
+
+
+## The host's columns attack as infantry: a ranged column only defends at close contact.
+func _attack_on_foot(s: GameState, codes: Array) -> void:
+	for c: String in codes:
+		BattleSystem._stored(s, c)["battle_plan"] = "attack"
+		for arm: String in repo.world_table("military", "unit_types"):
+			s.army_roster[c][arm] = "0"
+		s.army_roster[c].infantry = str(ArmySystem.fit_count(repo, s, c))
 
 
 ## A campaign with the town's stores full (no hunger in the town).
@@ -765,6 +776,7 @@ func test_relief_force_joins_battle_and_can_lift_siege() -> void:
 	for c: String in relief:
 		_place(s, c, at, ArmySystem.ORDER_STANDBY)
 		assert_eq(ArmyGround.garrison_town(repo, s, c), "", c + " is no garrison")
+	_attack_on_foot(s, relief)
 	var ev := BattleSystem.settle_day(repo, s)
 	var starts := _of(ev, "start")
 	assert_eq(starts.size(), 1, "the relief meets the besiegers in the field")
@@ -780,6 +792,7 @@ func test_relief_force_joins_battle_and_can_lift_siege() -> void:
 		@warning_ignore("integer_division")
 		s.tick = 1 + (absolute - 1) / Calendar.DAYS_PER_TICK
 		s.day = 1 + (absolute - 1) % Calendar.DAYS_PER_TICK
+		ArmySystem.march_day(repo, s)
 		ev.append_array(BattleSystem.settle_day(repo, s))
 	assert_eq(_of(ev, "error"), [], "each observed battle day completes")
 	for e: Dictionary in ev:
@@ -936,6 +949,7 @@ func test_a_beaten_holding_host_still_pays_spoils_and_frees_the_town() -> void:
 	_only_tier("attacker_routed")
 	var mine := String(_mine()[0]) if String(_mine()[0]) != g else String(_mine()[1])
 	_place(s, mine, _town_m(town) + Vector2i(500, 0), ArmySystem.ORDER_STANDBY)
+	_attack_on_foot(s, EnemyAi.regiments_of(s, main))
 	s.day = 21
 	var fight := BattleSystem.settle_day(repo, s)
 	assert_gt(_of(fight, "round").size(), 0, "a battle")

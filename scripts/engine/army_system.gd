@@ -1493,7 +1493,9 @@ static func clearance_blockers(repo: DataRepository, state: GameState) -> Dictio
 		var at: Vector2i = Vector2i(int(st["x_m"]), int(st["y_m"])) if st.has("x_m") \
 			else pack_to_metres(repo, position_of(repo, state, all[code]))
 		var radius := int(row[1])
-		if spread.has(code):                # its deployed groups are the ground it holds
+		# Its deployed groups are the ground it holds; a retreating column is leaving
+		# that ground, and BattleGroups.motion still keeps its rows off every disc.
+		if spread.has(code) and not bool(st.get("battle_retreat", false)):
 			radius = maxi(radius, _group_reach(repo, spread[code], at, state, code))
 		rad[code] = radius
 		maxr = maxi(maxr, radius)

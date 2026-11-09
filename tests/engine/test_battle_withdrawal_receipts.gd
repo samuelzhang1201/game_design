@@ -138,3 +138,39 @@ func test_contact_observer_requires_live_members_on_both_sides() -> void:
 		assert_false(People.move(f.repo, f.state, code, "fit", "dead", MilitaryRoster.fit(f.state, code), "receipt boundary:" + code).has("error"))
 	assert_false(observer._main_in_contact(f.state, "receipt_main"), "opposition without fit personnel proves no contact")
 	observer.free()
+
+
+## 600 plunder x 500 per mille = 300 strategic, once: a rout told only by a
+## quiet withdrawal event is still a beaten host; a homeward withdrawal is not.
+func test_a_rout_told_by_a_withdrawal_event_pays_spoils_once() -> void:
+	var repo := SuiteData.repo()
+	repo.balance["battle_spoils_permille"] = 500.0
+	var state := SuiteData.campaign(repo, 7)
+	var host := Play.host(repo, "main")
+	var column := String(EnemyAi.regiments_of(state, host)[0])
+	state.ai_hosts[host]["plunder"] = 600
+	var strategic := float(state.metrics["strategic"])
+	var event := {"kind": "withdrawal", "battle_id": 1, "town": "", "place_x_m": 0, "place_y_m": 0, "left": [{"code": column, "side": "att", "why": "withdrawn"}]}
+	assert_eq(RaidSystem.settle_day(repo, state, [event]).filter(func(e: Dictionary) -> bool: return e.kind == "raid_spoils"), [], "homeward is not beaten")
+	assert_eq(int(state.ai_hosts[host]["plunder"]), 600)
+	event.left[0].why = "rout"
+	assert_eq(RaidSystem.settle_day(repo, state, [event]).filter(func(e: Dictionary) -> bool: return e.kind == "raid_spoils").size(), 1)
+	assert_eq(float(state.metrics["strategic"]), strategic + 300.0, "600 x 500 / 1000")
+	assert_eq(RaidSystem.settle_day(repo, state, [event]).filter(func(e: Dictionary) -> bool: return e.kind == "raid_spoils"), [], "nothing left to pay")
+
+
+## A row 5000 m from its anchor reaches 5000 m + the piece's radius; a column
+## retreating from that ground keeps only its undeployed radius, so two columns
+## leaving one field cannot halt each other for good.
+func test_a_retreating_column_gives_up_its_deployed_clearance() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 7)
+	var column := String(EnemyAi.regiments_of(state, Play.host(repo, "main"))[0])
+	var undeployed := int(ArmySystem.clearance_blockers(repo, state)["r"][column])
+	var entry: Dictionary = state.foes[column]
+	state.battles = [{"id": 1, "att": [column], "def": [], "groups": {column: [
+		{"x_m": int(entry.x_m) + 5000, "y_m": int(entry.y_m), "count": 100, "slot": 0, "role": "front"}]}}]
+	var radius := int(BattleGroups.piece(repo, state, column).radius_m)
+	assert_eq(int(ArmySystem.clearance_blockers(repo, state)["r"][column]), 5000 + radius, "the ground it holds")
+	entry["battle_retreat"] = true
+	assert_eq(int(ArmySystem.clearance_blockers(repo, state)["r"][column]), undeployed, "the ground it is leaving")
