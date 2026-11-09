@@ -20,6 +20,10 @@ class HandoverHookTests(unittest.TestCase):
         self.summary.write_text('Approved task; next: finish the named test.')
         self.event = {'hook_event_name': 'Stop', 'cwd': str(self.root), 'session_id': 'old'}
         self.marker = {'status': 'ready', 'source_session_id': 'old', 'summary_path': str(self.summary), 'next_task': 'finish test'}
+        # Most tests exercise one rule at a time; the receipt has its own tests below.
+        self.preflight_receipts = patch.object(hook, 'require_preflight')
+        self.preflight_receipts.start()
+        self.addCleanup(self.preflight_receipts.stop)
     def save(self):
         (self.root / '.superpowers/session-handovers/old.json').write_text(json.dumps(self.marker))
     def handoff(self, source='old', target='new', **fields):
@@ -208,11 +212,11 @@ class HandoverHookTests(unittest.TestCase):
         self.assertEqual(self.dispatch([self.done('a')]), {})
         self.assertEqual(self.dispatch([self.done('b', ['a'])]), {})
         self.assertEqual(self.dispatch([self.done('c', ['b'])]), {})
-        before = hook.registry_path(self.root).read_text()
+        before = self.graph()['steps']
         result = self.dispatch([self.unwired('d', ['c'])])
         self.assertEqual(result['decision'], 'block')
         self.assertIn('ask the owner', result['reason'])
-        self.assertEqual(hook.registry_path(self.root).read_text(), before)
+        self.assertEqual(self.graph()['steps'], before)
     def test_step_the_player_can_reach_may_land_a_deep_chain(self):
         self.legacy('a', 'b', 'c', 'd')
         self.assertEqual(self.dispatch([self.task('landing', 'worker-l', ['tools/l.py'], ['d'])]), {})
@@ -238,7 +242,7 @@ class HandoverHookTests(unittest.TestCase):
         for step in 'abcde':
             self.assertEqual(self.dispatch([self.unwired(step)]), {})
         self.assertEqual(self.dispatch([self.unwired('f')])['decision'], 'block')
-        self.assertEqual(self.dispatch([self.task('f', 'worker-f', ['tools/f.py'])]), {})
+        self.assertEqual(self.dispatch([self.task('landing', 'worker-l', ['tools/l.py'])]), {})
     def test_merged_reachable_step_clears_the_backlog_but_an_open_one_does_not(self):
         for step in 'abcde':
             self.assertEqual(self.dispatch([self.done(step)]), {})
@@ -553,6 +557,7 @@ class HandoverHookTests(unittest.TestCase):
                 "s=importlib.util.spec_from_file_location('h',"+repr(str(Path(hook.__file__)))+"); "
                 "h=importlib.util.module_from_spec(s);s.loader.exec_module(h); "
                 "h.registry_path=lambda cwd:pathlib.Path("+repr(str(common))+"); "
+                "h.require_preflight=lambda *_:None; "
                 "h.record_handoff(pathlib.Path('.'),json.loads("+repr(json.dumps(marker))+"))")
             processes.append(subprocess.Popen(['python3','-c',script], stdout=subprocess.PIPE, stderr=subprocess.PIPE))
         results = [p.communicate(timeout=10) for p in processes]
@@ -610,6 +615,114 @@ class HandoverHookTests(unittest.TestCase):
         linked = self.root/'linked'
         subprocess.run(['git','-C',str(self.root),'worktree','add','--detach','-q',str(linked)],check=True)
         self.assertEqual(hook.registry_path(self.root),hook.registry_path(linked))
+
+    def plan(self, *tasks):
+        session_fields = ('dispatcher_session_id', 'implementation_session_id', 'review_session_id',
+                          'creation_result', 'status', 'accepted')
+        return {'source_session_id': 'old',
+                'tasks': [{k: v for k, v in task.items() if k not in session_fields} for task in tasks]}
+    def run_check(self, plan):
+        path = self.root / 'plan.json'
+        path.write_text(json.dumps(plan))
+        return subprocess.run(['python3', hook.__file__, '--check', str(path)], cwd=self.root,
+                              capture_output=True, text=True, timeout=10)
+    def check(self, *tasks):
+        return self.run_check(self.plan(*tasks))
+    def graph(self):
+        return json.loads(hook.registry_path(self.root).read_text())
+    def fill_unwired_backlog(self):
+        for step in 'abcde':
+            task = self.unwired(step)
+            self.assertEqual(self.check(task).returncode, 0)
+            self.assertEqual(self.dispatch([task]), {})
+
+    def test_new_step_cannot_register_without_a_preflight_receipt(self):
+        self.preflight_receipts.stop()
+        result = self.dispatch([self.task()])
+        self.assertEqual(result['decision'], 'block')
+        self.assertIn('--check', result['reason'])
+    def test_preflight_passes_then_the_same_declaration_registers(self):
+        self.preflight_receipts.stop()
+        task = self.task()
+        checked = self.check(task)
+        self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+        self.assertEqual(json.loads(checked.stdout), {'ok': True})
+        self.assertNotIn('a', self.graph().get('steps', {}))
+        self.assertEqual(self.dispatch([task]), {})
+        graph = self.graph()
+        self.assertEqual(graph['steps']['a']['implementation_session_id'], 'worker-a')
+        self.assertEqual(graph['preflights'], {})
+    def test_declaration_changed_after_preflight_is_refused(self):
+        self.preflight_receipts.stop()
+        task = self.task()
+        self.assertEqual(self.check(task).returncode, 0)
+        self.assertEqual(self.dispatch([dict(task, wired=False)])['decision'], 'block')
+        self.assertEqual(self.dispatch([dict(task, owned_files=['tools/other.py'])])['decision'], 'block')
+        self.assertNotIn('a', self.graph().get('steps', {}))
+    def test_preflight_stops_the_product_gate_before_any_session_exists(self):
+        self.preflight_receipts.stop()
+        self.fill_unwired_backlog()
+        checked = self.check(self.unwired('f'))
+        self.assertEqual(checked.returncode, 1)
+        self.assertIn('product gate', json.loads(checked.stdout)['reason'])
+        self.assertNotIn('f', self.graph()['steps'])
+    def test_preflight_rejects_overlap_unmet_dependency_and_duplicates(self):
+        self.preflight_receipts.stop()
+        registered = self.task()
+        self.assertEqual(self.check(registered).returncode, 0)
+        self.assertEqual(self.dispatch([registered]), {})
+        overlap = self.check(self.task('b', 'worker-b', ['tools/a.py']))
+        self.assertIn('overlaps', json.loads(overlap.stdout)['reason'])
+        unmet = self.check(self.task('c', 'worker-c', ['tools/c.py'], ['a']))
+        self.assertIn('merged and accepted', json.loads(unmet.stdout)['reason'])
+        self.assertEqual(self.check(registered).returncode, 1)
+    def test_preflight_rejects_a_malformed_plan(self):
+        for plan in ({'tasks': []}, {'source_session_id': 'old'}, {'source_session_id': 'old', 'tasks': ['a']}, []):
+            result = self.run_check(plan)
+            self.assertEqual(result.returncode, 1, plan)
+            self.assertFalse(json.loads(result.stdout)['ok'])
+
+    def test_refused_step_cannot_be_relabelled_to_pass(self):
+        self.preflight_receipts.stop()
+        self.fill_unwired_backlog()
+        refused = self.unwired('f')
+        self.assertEqual(self.check(refused).returncode, 1)
+        relabelled = self.check(dict(refused, wired=True))
+        self.assertEqual(relabelled.returncode, 1)
+        self.assertIn('owner_approval', json.loads(relabelled.stdout)['reason'])
+        renamed = self.check(dict(refused, step_id='f2', wired=True))
+        self.assertEqual(renamed.returncode, 1)
+        self.assertIn('owner_approval', json.loads(renamed.stdout)['reason'])
+    def test_owner_approval_releases_a_refused_step(self):
+        self.preflight_receipts.stop()
+        self.fill_unwired_backlog()
+        refused = self.unwired('f')
+        self.assertEqual(self.check(refused).returncode, 1)
+        approved = dict(refused, owner_approval=self.approval('f approved'))
+        self.assertEqual(self.check(approved).returncode, 0)
+        self.assertEqual(self.dispatch([approved]), {})
+    def test_refusal_at_stop_is_also_remembered(self):
+        for step in 'abcde':
+            self.assertEqual(self.dispatch([self.unwired(step)]), {})
+        self.assertIn('product gate', self.dispatch([self.unwired('f')])['reason'])
+        self.assertEqual(self.graph()['refused']['f']['wired'], False)
+        self.assertIn('owner_approval', self.dispatch([dict(self.unwired('f'), wired=True)])['reason'])
+        self.assertNotIn('f', self.graph()['steps'])
+
+    def test_marker_fixed_after_a_block_is_recorded_on_the_continuation_stop(self):
+        pending = dict(self.task(), creation_result={'status': 'pending'})
+        self.assertEqual(self.dispatch([pending])['decision'], 'block')
+        self.marker.update(tasks=[self.task()])
+        self.save()
+        self.assertEqual(hook.respond(dict(self.event, stop_hook_active=True)), {})
+        self.assertIn('a', self.graph()['steps'])
+    def test_continuation_stop_never_blocks_twice_and_records_nothing_invalid(self):
+        self.marker.update(kind='dispatch', tasks=[dict(self.task(), creation_result={'status': 'pending'})])
+        self.save()
+        self.assertEqual(hook.respond(dict(self.event, stop_hook_active=True)), {})
+        self.assertFalse(hook.registry_path(self.root).exists())
+        (self.root / '.superpowers/session-handovers/old.json').write_text('{broken')
+        self.assertEqual(hook.respond(dict(self.event, stop_hook_active=True)), {})
 
 if __name__ == '__main__':
     unittest.main()
