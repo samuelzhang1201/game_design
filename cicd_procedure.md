@@ -39,13 +39,13 @@ Stop hook 只验证显式记录；派工方先登记完整任务，再记录唯�
 
 选择器比较基准提交与当前工作树，包含删除及重命名前后的路径。分类按测试内容和子系统；公式、局部存档和短确定性测试保留在功能类别，新增长战役或调参扫描必须显式归入可选类别。
 
-Known UI/map/ledger/war-room source paths select their functional consumers and bridges. Engine, runtime prose (`RANDOM_EVENTS.md`, `game_story/`), CSV/data, assets and unknown runtime paths conservatively select all functional categories. Changed or deleted tests select their affected category; mixed changes select the union. Harness/selector/runner/workflow changes and comment-only source changes use dedicated harness self-checks without GUT. Ordinary documentation and `.codex/` files also need no GUT. Categories run sorted scripts together, preserving the map hover/picker setup order. The military category alone declares `ci_batches: 4` in the manifest: CI runs four disjoint round-robin batches of its sorted scripts on separate runners. Script at sorted index i goes to batch (i modulo 4) + 1, preserving sorted order within each batch and spreading adjacent costly suites. Their union is the complete category, each script runs once, and the aggregate requires every batch. Other categories remain one batch. This is category routing, not a transitive dependency graph.
+Known UI/map/ledger/war-room source paths select their functional consumers and bridges. Other tool Python (`tools/**/*.py`) selects no GUT: `harness-checks` runs the `tools/imagegen` and `tools/units3d` Python tests instead; the proof tool GUT executes (`tools/units3d/royal_native_arithmetic/`) selects `map3d`. Engine, runtime prose (`RANDOM_EVENTS.md`, `game_story/`), CSV/data, assets and unknown runtime paths conservatively select all functional categories. Changed or deleted tests select their affected category; mixed changes select the union. Harness/selector/runner/workflow changes and comment-only source changes use dedicated harness self-checks without GUT. Ordinary documentation and `.codex/` files also need no GUT. Categories run sorted scripts together, preserving the map hover/picker setup order. The military category alone declares `ci_batches: 4` in the manifest: CI runs four disjoint round-robin batches of its sorted scripts on separate runners. Script at sorted index i goes to batch (i modulo 4) + 1, preserving sorted order within each batch and spreading adjacent costly suites. Their union is the complete category, each script runs once, and the aggregate requires every batch. Other categories remain one batch. This is category routing, not a transitive dependency graph.
 
-已知展示子系统只选相关消费者；引擎、共享夹具、运行时叙事、CSV、资源和未知运行时路径保守选择全部功能类别。测试文件的修改或删除选择它所属的类别。普通文档和 `.codex/` 改动只跑专用检查。
+已知展示子系统只选相关消费者；其余工具 Python 不启动 GUT，由 `harness-checks` 运行其 Python 测试（GUT 实际调用的 `royal_native_arithmetic` 选 `map3d`）；引擎、共享夹具、运行时叙事、CSV、资源和未知运行时路径保守选择全部功能类别。测试文件的修改或删除选择它所属的类别。普通文档和 `.codex/` 改动只跑专用检查。
 
-Ordinary runs exclude `simulation`, `gameplay` and `balance`. The 24-month conduct replay is in `tests/simulation/test_conduct_replay.gd`; the original file retains all ten unit tests. The year-long supply-garrison campaign also requires simulation opt-in.
+Ordinary runs exclude `simulation` and `gameplay`. The 24-month conduct replay is in `tests/simulation/test_conduct_replay.gd`; the original file retains all ten unit tests. The year-long supply-garrison campaign also requires simulation opt-in.
 
-普通运行不包含长模拟、玩法情景和调参类别。24 个月军纪重放单独存放，原文件的十个单元测试全部保留；全年驻军补给模拟同样需显式选择。
+普通运行不包含长模拟和玩法情景类别。24 个月军纪重放单独存放，原文件的十个单元测试全部保留；全年驻军补给模拟同样需显式选择。
 
 ## Explicit expensive checks 显式请求
 
@@ -57,7 +57,7 @@ When the plan/acceptance requires expensive coverage, add this exact standalone 
 GUT_INCLUDE: simulation,gameplay
 ```
 
-Available opt-in categories are `simulation`, `gameplay` and `balance`. Request only what the step needs. Merely mentioning a category in prose does not opt in. Unknown names fail the selector. Editing the PR body triggers a fresh selection run, so adding or removing a request updates the required matrix. The manual Actions workflow runs all functional categories and accepts comma-separated extra names in its `include` input. An empty category creates no job.
+Available opt-in categories are `simulation` and `gameplay`. Request only what the step needs. Merely mentioning a category in prose does not opt in. Unknown names fail the selector. Editing the PR body triggers a fresh selection run, so adding or removing a request updates the required matrix. The manual Actions workflow runs all functional categories and accepts comma-separated extra names in its `include` input. An empty category creates no job.
 
 只请求当前步骤需要的类别。修改 PR 正文会重新选择测试，添加或删除请求会更新必需矩阵。手动触发运行全部功能类别，并可在 `include` 输入框填额外类别；空类别不创建任务。
 

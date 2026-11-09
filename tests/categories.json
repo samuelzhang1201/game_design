@@ -8,12 +8,7 @@
     "gameplay": {
       "opt_in": true,
       "reason": "Authored invasion, clearance, raiding and siege scenarios played through the real campaign day loop; mixed scenario suites retain all assertions under explicit opt-in.",
-      "patterns": ["tests/gameplay/test_*.gd", "tests/engine/test_invasion_end_to_end.gd", "tests/engine/test_sighting_invasion.gd", "tests/engine/test_army_clearance.gd", "tests/engine/test_raid.gd", "tests/engine/test_siege.gd"]
-    },
-    "balance": {
-      "opt_in": true,
-      "reason": "Reserved for tuning/outcome sweeps; single-formula hand-computed assertions remain functional.",
-      "patterns": ["tests/balance/test_*.gd"]
+      "patterns": ["tests/engine/test_invasion_end_to_end.gd", "tests/engine/test_sighting_invasion.gd", "tests/engine/test_army_clearance.gd", "tests/engine/test_raid.gd", "tests/engine/test_siege.gd"]
     },
     "engine-military": {
       "ci_batches": 4,
@@ -38,6 +33,8 @@
     {"patterns": ["scripts/map3d/*", "scenes/map3d/*", "tools/map3d/*"], "categories": ["engine-economy", "map3d", "ui"]},
     {"patterns": ["scripts/ledger3d/*", "scenes/ledger3d/*", "tools/ledger/*"], "categories": ["engine-economy", "ledger3d", "ui"]},
     {"patterns": ["scripts/war_room/*", "scenes/war_room/*", "tools/war_room/*"], "categories": ["engine-military", "war_room", "ui"]},
-    {"patterns": ["scripts/llm/*"], "categories": ["engine-core", "ui"]}
+    {"patterns": ["scripts/llm/*"], "categories": ["engine-core", "ui"]},
+    {"patterns": ["tools/units3d/royal_native_arithmetic/*"], "categories": ["map3d"]},
+    {"patterns": ["tools/*.py"], "categories": []}
   ]
 }

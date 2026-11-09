@@ -402,26 +402,6 @@ func test_border_is_heavier_than_seam() -> void:
 	assert_lt(repo.bal("war_ink_town_halo_alpha"), 1.0)
 
 
-func test_glyphs_clear_the_capital_ring() -> void:
-	var checked := 0
-	for s: Dictionary in WarSheets.series(repo):
-		for t: Dictionary in WarSheetInk.strokes(repo, state, s, int(repo.bal("war_sheet_texture_px")))["towns"]:
-			if int(t["tier"]) < 3 or bool(t["walls"]):
-				continue
-			var ring := repo.bal("war_ink_town_px") * (1.0 + repo.bal("war_ink_town_tier_growth") * 3.0)
-			var outer := ring * (1.0 + repo.bal("war_ink_town_outer_gap_ratio"))
-			var halo := ring * repo.bal("war_ink_town_halo_ratio")
-			var need := maxf(outer, halo)
-			if String(t["works"]) != "":
-				assert_gte((t["works_at"] as Vector2).distance_to(t["at"]), need + repo.bal("war_ink_works_px") * 0.5, String(t["label"]))
-				checked += 1
-			if bool(t["market"]):
-				assert_gte((t["market_at"] as Vector2).distance_to(t["at"]), need + repo.bal("war_ink_market_px") * 0.5, String(t["label"]))
-				checked += 1
-	if checked == 0:
-		pending("no capital with a works or market glyph in the series")
-
-
 func test_a_towns_glyphs_never_touch_its_ring_or_each_other() -> void:
 	var tex := int(repo.bal("war_sheet_texture_px"))
 	var checked := 0
