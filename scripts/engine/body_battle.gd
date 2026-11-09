@@ -7,6 +7,11 @@ static func _result(status: String, reason: String, candidate: GameState = null,
 
 static func _request_ok(request: Dictionary) -> bool:
 	if request.get("kind") == "contacts": return BodyMotion._keys(request, ["kind"])
+	if request.get("kind") == "withdraw":
+		return BodyMotion._keys(request, ["kind", "unit", "battle_id", "reason"]) \
+			and request.unit is String and not request.unit.is_empty() \
+			and DayResolution._body_decimal(request.battle_id) and request.battle_id != "0" \
+			and request.reason is String and not request.reason.strip_edges().is_empty()
 	return BodyMotion._keys(request, ["kind", "unit", "battle_id", "side"]) \
 		and request.kind == "enter" and request.unit is String and not request.unit.is_empty() \
 		and DayResolution._body_decimal(request.battle_id) and request.battle_id != "0" \
@@ -14,6 +19,13 @@ static func _request_ok(request: Dictionary) -> bool:
 
 static func _contact_boundary_ok(boundary: Dictionary) -> bool:
 	if boundary.get("stage") != "contact": return false
+	var move := boundary.duplicate(true)
+	move.stage = "move"
+	return BodyMotion._battle_boundary_ok(move)
+
+static func _operation_boundary_ok(request: Dictionary, boundary: Dictionary) -> bool:
+	if request.get("kind") != "withdraw": return _contact_boundary_ok(boundary)
+	if boundary.get("stage") != "advance": return false
 	var move := boundary.duplicate(true)
 	move.stage = "move"
 	return BodyMotion._battle_boundary_ok(move)
@@ -35,7 +47,7 @@ static func _contacts_ok(contacts: Array) -> bool:
 static func _plan_ok(plan: Dictionary) -> bool:
 	return BodyMotion._keys(plan, ["version", "request", "boundary", "basis", "motion", "contacts"]) \
 		and BodyMotion._loco_integer(plan.version) and plan.version == 1 \
-		and plan.request is Dictionary and _request_ok(plan.request) and plan.boundary is Dictionary and _contact_boundary_ok(plan.boundary) \
+		and plan.request is Dictionary and _request_ok(plan.request) and plan.boundary is Dictionary and _operation_boundary_ok(plan.request, plan.boundary) \
 		and plan.basis is Dictionary and BodyMotion._keys(plan.basis, ["source"]) \
 		and plan.basis.source is String and BodyMotion._digest(plan.basis.source) \
 		and plan.motion is Dictionary and plan.motion.is_empty() and plan.contacts is Array and _contacts_ok(plan.contacts) \
@@ -164,14 +176,43 @@ static func _metadata_error(source: GameState) -> String:
 			if not BodyMotion._loco_integer(facing): return "Invalid raw body facing snapshot"
 	return ""
 
+static func _withdraw(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
+	var battle := BattleSystem.battle_of(source, request.unit)
+	if battle.is_empty() or int(battle.id) != int(request.battle_id) or BattleSystem.canonical(source, int(battle.id)) != int(battle.id):
+		return _result("error", "Withdrawal requires its canonical sole owner")
+	var route := BattleSystem._retreat_route_candidate(repo, source, int(battle.id), request.unit)
+	if route.candidate == null: return _result("deferred", route.reason)
+	var candidate: GameState = route.candidate
+	battle = BattleSystem.battle_of(candidate, request.unit)
+	var side := BattleRules.side_of(battle, request.unit)
+	if not BattleSystem._separated(repo, candidate, request.unit, battle["def" if side == "att" else "att"]):
+		return _result("deferred", "Withdrawal remains exposed inside actual encounter reach")
+	_seal_private(repo, candidate)
+	var transferred := UnitBodies.transfer_battle_candidate(repo, candidate, request.unit, int(battle.id), 0, "", boundary)
+	if transferred.status != "complete": return _result(transferred.status, transferred.reason)
+	candidate = transferred.candidate
+	battle = UnitBodies._battle(candidate, int(request.battle_id))
+	BattleReport.leave(candidate, battle, request.unit)
+	var entry := UnitBodies._entry(candidate, request.unit)
+	var cause: String = entry.get("withdrawal_cause", "retreat")
+	entry.erase("battle_retreat")
+	entry.erase("withdrawal_cause")
+	entry.erase("withdrawal_reason")
+	candidate.day_resolution.journal.battles.append({"kind": "withdrawal", "battle_id": int(request.battle_id),
+		"code": request.unit, "side": side, "why": cause, "reason": request.reason})
+	return _result("complete", "Staged exact separated withdrawal", candidate)
+
 static func _stage(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
 	if repo == null or source == null or not _request_ok(request): return _result("error", "Unsupported or malformed enrollment request")
 	var checked := UnitBodies.validate_battle_candidate(repo, source, boundary)
 	if checked.status == "error": return _result("error", checked.reason)
 	var metadata_error := _metadata_error(source)
 	if not metadata_error.is_empty(): return _result("error", metadata_error)
+	var retreat_error := BattleSystem._retreat_candidate_error(source)
+	if not retreat_error.is_empty(): return _result("error", retreat_error)
 	if checked.status != "complete": return _result(checked.status, checked.reason)
-	if boundary.kind != "battle" or boundary.stage != "contact": return _result("deferred", "Enrollment waits for contact stage")
+	if boundary.kind != "battle" or not _operation_boundary_ok(request, boundary): return _result("deferred", "Operation waits for its lifecycle stage")
+	if not source.day_resolution.pending_decision.is_empty(): return _result("deferred", "Pending decision prevents lifecycle operation")
 	if BodyBattleMotion._context(repo, source).is_empty(): return _result("error", "Missing accepted battle context")
 	var candidate: GameState = checked.candidate
 	if candidate.military_migration.has("body_motion"):
@@ -180,7 +221,11 @@ static func _stage(repo: DataRepository, source: GameState, request: Dictionary,
 		candidate = closed.candidate
 	var contacts: Array = []
 	var starts: Array = []
-	if request.kind == "enter":
+	if request.kind == "withdraw":
+		var exited := _withdraw(repo, candidate, request, boundary)
+		if exited.status != "complete": return exited
+		candidate = exited.candidate
+	elif request.kind == "enter":
 		var joined := _join(repo, candidate, request.unit, int(request.battle_id), request.side, boundary)
 		if joined.status != "complete": return joined
 		candidate = joined.candidate
@@ -271,7 +316,7 @@ static func commit_candidate(repo: DataRepository, source: GameState, proposed: 
 		if checked.status != "complete" or not _metadata_error(source).is_empty() or outer.receipt != receipt \
 			or boundary.abs_day != str(source.absolute_day()) \
 			or boundary.substep != source.day_resolution.body_battle.next_substep \
-			or source.day_resolution.body_battle.stage not in (["round", "advance"] if proposed.request.kind == "contacts" else ["contact"]):
+			or source.day_resolution.body_battle.stage not in (["round", "advance"] if proposed.request.kind == "contacts" else (["advance"] if proposed.request.kind == "withdraw" else ["contact"])):
 			return _result("error", "Invalid/stale enrollment replay")
 		return _result("complete", "Already committed enrollment", checked.candidate, BodyMotion._canonical(proposed))
 	var staged := _stage(repo, source, proposed.request, boundary)

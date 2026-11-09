@@ -111,8 +111,8 @@ entry does not discover/merge battles or replace production melee damage.
 
 ## Candidate contact enrollment
 
-`BodyBattle.plan_candidate` / `commit_candidate` accept only the closed
-`contacts` and `enter` requests from the CF05 contract at an admitted contact
+`BodyBattle.plan_candidate` / `commit_candidate` accept the closed
+`contacts`, `enter` and advance-stage `withdraw` requests from the CF05 contract at an admitted contact
 boundary. Planning leaves the source unchanged; commit independently replans
 and compares the entire canonical plan before publishing one detached state.
 Unsupported requests error; valid other stages and frozen rounds/decisions
@@ -173,3 +173,31 @@ complete endpoint. Direct/JSON retries add no preparation, movement or cost.
 Ordinary `translate`, `follow_anchor` and day dispatch retain their production
 entrances until the later atomic activation. Isolated test policies certify
 candidate arithmetic only, not installed animation or live play.
+
+## Candidate withdrawal
+
+`BattleSystem.retreat_intent_candidate` is the default exclusive withdrawal
+provider. Received retreat, an existing withdrawal or the routed side selects
+that writer; a request reason alone supplies no authority. It uses the existing
+retreat route, morale/store abandonment and departure rules on private staging.
+A whole desired route must have a safe destination outside the opponents'
+anchor and occupied-disc encounter reach and clear full-radius terrain. Missing
+safe ground yields a reasoned hold at the existing pose without abandonment.
+Protected enemies remain occupied obstacles in the same shared TIME sweep.
+
+The enclosing union transaction stages withdrawal costs once, pays gait once,
+and settles only the minimum actually reached ordered route prefix. Unreached
+route points remain in the received march snapshot for subsequent slices; body
+identities, partial counts and next-slot counters do not change. A blocked rear
+guard retains battle ownership and normal lawful incoming exposure. No provider
+moves rows, removes membership, adds personnel losses or grants an attack.
+
+`BodyBattle` additionally accepts the exact CF05 `withdraw` request at advance.
+It validates the original endpoint, legal retreat and actual anchor/body
+separation, transfers the exact store and anchor/facing snapshots to owner zero
+through `UnitBodies.transfer_battle_candidate`, then freezes the departure report
+and journal. The battle remains live for its separate terminal consumer. Frozen
+rounds/decisions and unseparated or unsafe departures defer unchanged; malformed
+requests and stale/forged receipts error without publication. Exact latest-plan
+retries through direct and JSON saves are detached no-ops. Ordinary day writers,
+end/cancel/merge, damage and campaign activation remain separate entrances.

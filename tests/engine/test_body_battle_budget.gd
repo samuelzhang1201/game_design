@@ -85,9 +85,9 @@ func test_one_share_and_writer() -> void:
 	assert_eq(installed.units[0].anchor_path_m, [[50000, 50000]], "a charge without a lawful mounted target holds")
 	f.state.battles[0].actions.att.kind = "retreat"
 	var missing: Dictionary = api.call("collect_candidate", f.repo, f.state, _boundary(f.state))
-	assert_eq(missing.status, "error", "unimplemented tactical provider never silently holds")
-	assert_eq(missing.intents, [])
-	assert_eq(missing.units, [])
+	assert_eq(missing.status, "complete", missing.reason)
+	assert_eq(missing.units[0].writer, "withdrawal")
+	assert_eq(missing.units[0].anchor_path_m, [[50000, 50000], [50002, 50000]], "installed withdrawal uses the same single capped route budget")
 
 func _json(state: GameState) -> GameState:
 	return GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())), false)
