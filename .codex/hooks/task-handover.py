@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Native Codex hook: bounded task handover guidance and ready-marker guard."""
+import copy
 import json
 import fcntl
 import os
@@ -11,7 +12,9 @@ from pathlib import Path
 
 RULES = Path(__file__).with_suffix(".md")
 PRD_STEP = re.compile(r'Step (10|[1-9])|BG-[1-6]|CS-[1-5]\.[1-5]|EV-[1-4]|CH-[1-5]|FS-[1-4]|RD-[1-3]|EC-[1-3]|AR-[1-4]|L0|M[1-6]|harness')
-PRODUCT_FIELDS = ('prd_step', 'player_outcome', 'wired', 'owner_approval')
+DECLARED_PRODUCT_FIELDS = ('prd_step', 'player_outcome', 'wired')
+PRODUCT_FIELDS = DECLARED_PRODUCT_FIELDS + ('owner_approval',)
+PREFLIGHT_FIELDS = PRODUCT_FIELDS + ('dependencies', 'owned_files', 'acceptance', 'worktree', 'branch')
 MAX_UNWIRED_PREREQUISITE_DEPTH = 2
 MAX_UNWIRED_BACKLOG = 5
 HARNESS_PATHS = ('.codex', '.github', 'AGENTS.md', 'CLAUDE.md', 'cicd_procedure.md', 'run_tests.sh',
@@ -28,32 +31,105 @@ def registry_path(cwd):
     return cwd / '.superpowers' / 'session-handover-graph.json'
 
 
+class ProductGateRefused(ValueError):
+    """The product gate stopped this task; the registry remembers what it declared."""
+
+    def __init__(self, message, task):
+        super().__init__(message)
+        self.task = task
+
+
 def valid_session(value):
     return isinstance(value, str) and bool(value) and all(c.isalnum() or c == '-' for c in value)
 
 
-def record_handoff(cwd, data):
-    """Validate declarations under one shared lock; never infer tool calls or CI results."""
+def load_registry(path):
+    return json.loads(path.read_text()) if path.exists() else {'edges': {}, 'prs': {}}
+
+
+def save_registry(path, graph):
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, delete=False) as out:
+            temporary = Path(out.name)
+            json.dump(graph, out, ensure_ascii=False, indent=2)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def update_registry(cwd, change):
+    """Apply one change under the shared lock; a failed change writes only a product-gate refusal."""
     path = registry_path(cwd)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.with_suffix('.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        graph = json.loads(path.read_text()) if path.exists() else {'edges': {}, 'prs': {}}
+        graph = load_registry(path)
+        try:
+            change(graph)
+        except ProductGateRefused as refusal:
+            graph = load_registry(path)
+            graph.setdefault('refused', {})[refusal.task['step_id']] = {
+                key: refusal.task.get(key) for key in ('branch',) + DECLARED_PRODUCT_FIELDS}
+            save_registry(path, graph)
+            raise
+        save_registry(path, graph)
+
+
+def record_handoff(cwd, data):
+    """Validate declarations under one shared lock; never infer tool calls or CI results."""
+    def change(graph):
         if data.get('kind') == 'dispatch':
             record_dispatch(graph, data)
         elif data.get('kind') == 'step_terminal':
             record_terminal(graph, data)
         else:
             record_pr_handoff(graph, data)
-        temporary = None
-        try:
-            with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, delete=False) as out:
-                temporary = Path(out.name)
-                json.dump(graph, out, ensure_ascii=False, indent=2)
-            os.replace(temporary, path)
-        finally:
-            if temporary is not None:
-                temporary.unlink(missing_ok=True)
+    update_registry(cwd, change)
+
+
+def declaration(task):
+    """What a preflight approved; session fields do not exist yet when it runs."""
+    return {key: task.get(key) for key in PREFLIGHT_FIELDS}
+
+
+def require_preflight(graph, task):
+    if graph.get('preflights', {}).get(task['step_id']) != declaration(task):
+        raise ValueError('step ' + task['step_id'] + ' has no matching preflight: run '
+                         'python3 .codex/hooks/task-handover.py --check <plan.json> before creating its session')
+
+
+def preflight(cwd, plan):
+    """Run every dispatch rule on a plan before any session exists; only a receipt or refusal is kept."""
+    if (not isinstance(plan, dict) or not valid_session(plan.get('source_session_id')) or
+            not isinstance(plan.get('tasks'), list) or not plan['tasks'] or
+            any(not isinstance(task, dict) for task in plan['tasks'])):
+        raise ValueError('a preflight plan requires source_session_id and complete tasks')
+    source = plan['source_session_id']
+    tasks = [dict(task, dispatcher_session_id=source, implementation_session_id=f'preflight-{index}',
+                  review_session_id=None, status='active',
+                  creation_result={'status': 'created', 'session_id': f'preflight-{index}'})
+             for index, task in enumerate(plan['tasks'])]
+    receipts = {task['step_id']: declaration(task) for task in tasks}
+
+    def change(graph):
+        trial = copy.deepcopy(graph)
+        trial.setdefault('preflights', {}).update(receipts)
+        record_dispatch(trial, {'source_session_id': source, 'tasks': tasks})
+        graph.setdefault('preflights', {}).update(receipts)
+    update_registry(cwd, change)
+
+
+def check_plan(path):
+    """`--check plan.json`: print the verdict; a dispatcher runs this before creating any session."""
+    try:
+        preflight(Path.cwd(), json.loads(Path(path).read_text(encoding='utf-8')))
+    except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
+        print(json.dumps({'ok': False, 'reason': str(error)}, ensure_ascii=False))
+        return 1
+    print(json.dumps({'ok': True}))
+    return 0
 
 
 def record_terminal(graph, data):
@@ -179,7 +255,7 @@ def unwired_backlog(steps):
     return count
 
 
-def check_product_gate(steps, task):
+def check_product_gate(steps, task, refused):
     """Every new step names its MVP purpose; long unwired runs wait for the owner."""
     step_id, prd_step, outcome, wired = (task['step_id'], task.get('prd_step'),
                                          task.get('player_outcome'), task.get('wired'))
@@ -200,15 +276,21 @@ def check_product_gate(steps, task):
             raise ValueError('owner_approval requires a statement and a reference')
         if not re.search(r'(?<![\w-])' + re.escape(step_id) + r'(?![\w-])', approval['statement']):
             raise ValueError('owner_approval must name this step; a blanket authorization does not count')
+    if approval is None and any(
+            (earlier_id == step_id or earlier['branch'] == task['branch']) and
+            any(task.get(key) != earlier[key] for key in DECLARED_PRODUCT_FIELDS)
+            for earlier_id, earlier in refused.items()):
+        raise ValueError('product gate: this work was refused as declared and cannot be declared differently; '
+                         'only an owner_approval naming ' + step_id + ' continues it.')
     if wired or prd_step == 'harness' or approval is not None:
         return
     depth = max((unwired_depth(steps, dep) for dep in task['dependencies']), default=0)
     backlog = unwired_backlog(steps) + 1
     if depth > MAX_UNWIRED_PREREQUISITE_DEPTH or backlog > MAX_UNWIRED_BACKLOG:
-        raise ValueError(f'product gate: {step_id} has {depth} unwired prerequisite layers (limit '
-                         f'{MAX_UNWIRED_PREREQUISITE_DEPTH}) and would make {backlog} unwired steps (limit '
-                         f'{MAX_UNWIRED_BACKLOG}). Stop and ask the owner; only an owner_approval naming '
-                         'this step continues the chain.')
+        raise ProductGateRefused(f'product gate: {step_id} has {depth} unwired prerequisite layers (limit '
+                                 f'{MAX_UNWIRED_PREREQUISITE_DEPTH}) and would make {backlog} unwired steps (limit '
+                                 f'{MAX_UNWIRED_BACKLOG}). Stop and ask the owner; only an owner_approval naming '
+                                 'this step continues the chain.', task)
 
 
 def record_dispatch(graph, data):
@@ -266,7 +348,8 @@ def record_dispatch(graph, data):
         if task.get('status') not in ('active', 'merged') or 'terminal' in task:
             raise ValueError('use step_terminal to retire an existing active step')
         if old is None:
-            check_product_gate(steps, task)
+            require_preflight(graph, task)
+            check_product_gate(steps, task, graph.get('refused', {}))
         else:
             if any(task.get(key) != old.get(key) for key in PRODUCT_FIELDS):
                 raise ValueError('product declaration cannot change after registration')
@@ -301,6 +384,7 @@ def record_dispatch(graph, data):
                                       task['status'] != 'active' or review != old['review_session_id']):
             raise ValueError('only an existing active step may add owned files')
         steps[step_id] = dict(task)
+        graph.get('preflights', {}).pop(step_id, None)
         if additions:
             steps[step_id]['original_owned_files'] = list(original)
     # Walk the full declared graph, including converging prerequisites.
@@ -356,8 +440,19 @@ def respond(event):
     name = event.get("hook_event_name", "")
     if name == "SessionStart":
         return {"hookSpecificOutput": {"hookEventName": name, "additionalContext": RULES.read_text(encoding="utf-8")}}
-    if name != "Stop" or event.get("stop_hook_active", False):
+    if name != "Stop":
         return {}
+    if not event.get("stop_hook_active", False):
+        return respond_to_stop(event)
+    # A continuation after a block still records a corrected marker, but never blocks twice.
+    try:
+        respond_to_stop(event)
+    except (OSError, ValueError, TypeError):
+        pass
+    return {}
+
+
+def respond_to_stop(event):
     cwd = Path(event.get("cwd", ".")).resolve()
     session_id = event.get("session_id", "")
     if not isinstance(session_id, str) or not session_id or any(not (c.isalnum() or c == "-") for c in session_id):
@@ -402,6 +497,8 @@ def respond(event):
     return {"decision": "block", "reason": "当前任务已到交接边界。读取精简检查点 " + str(summary) + "，为其中已授权的下一任务创建不继承历史的新 session（create_thread，禁止 fork/resume）；成功后将返回的 next_session_id 和 handed_off 状态写回 .superpowers/session-handovers/<source_session_id>.json，然后结束本 session。不要再实施下一任务，不要重读完整历史。若无新会话工具或用户已暂停，保留检查点并明确说明限制，不启动后台循环。"}
 
 if __name__ == "__main__":
+    if sys.argv[1:2] == ['--check']:
+        sys.exit(check_plan(sys.argv[2]))
     try:
         event = json.load(sys.stdin)
         result = respond(event)
