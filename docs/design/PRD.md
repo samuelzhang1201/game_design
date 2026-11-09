@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Draft v2.0 — MVP redefined as a complete Chapter 1 (supersedes v1.1's "first playable"). Owner 2026-09-18: the MVP is a **complete first chapter with every feature, all of its art and all of its gameplay** — nothing placeholder, nothing "for later" inside Chapter 1. **Owner 2026-10-04: that one chapter is the prologue** (`docs/design/CHAPTER_0.md`, built), expanded so the three arcs of §7 play inside it — there is no separate Chapter 1 in the MVP (§7) |
-| **Date** | 2026-09-04 (statuses re-aligned with `origin/main` and the GitHub PRs on 2026-11-08; the progress table is in §6) |
+| **Date** | 2026-09-04 (statuses re-aligned with `origin/main` and the GitHub PRs on 2026-11-10; the progress table is in §6) |
 | **Author** | Yumeng Zhang |
 | **Scope** | Chapter 1, fully functional and fully illustrated: base loop + Council System through faction stage 6 (Tomas only) + chapter framework + raid defense + all chapter-1 art |
 | **Source design** | `docs/design/COUNCIL_SYSTEM.md`, `docs/design/MANOR_SYSTEM.md`, `RANDOM_EVENTS.md` (repository root), `game_story/chapter_0/game_start.md` + the data CSVs in `data/` (all paths from the repository root) |
@@ -73,7 +73,7 @@ the thirtieth day ends the month = the tick
 
 Build strictly in this order; each step is independently playtestable. Steps 1–5 are the v1.1 scope; steps 6–10 are new with this revision.
 
-**Status (2026-11-08, from `origin/main` at `7c9012c0` and the GitHub PRs through #272):** Step 1 built except the scaffolding phases; Step 2 built; the random-events pool built; Steps 3, 5, 6, 7 and 9 not built, and Step 4 only its relationship graph; Step 8 replaced by a full battle system; Step 10 partly. The systems are well ahead of the story: the arcs of §7 cannot yet be played. Build order: PRD order was not followed after the map look route. Since 2026-10-16 almost all merged work is the battle system, so Steps 3–7 are still next.
+**Status (2026-11-10, from `origin/main` at `75aaac46` and the GitHub PRs through #280):** Step 1 built except the scaffolding phases; Step 2 built; the random-events pool built; Steps 3, 5, 6, 7 and 9 not built, and Step 4 only its relationship graph; Step 8 replaced by a full battle system; Step 10 partly. The systems are well ahead of the story: the arcs of §7 cannot yet be played. Build order: PRD order was not followed after the map look route. Since 2026-10-16 almost all merged work is the battle system, so Steps 3–7 are still next.
 
 **MVP completion: about 52%.** The percentages and weights are a judgement from the evidence named in each row, not a measurement; read the total as ±10 points.
 
@@ -82,14 +82,16 @@ Build strictly in this order; each step is independently playtestable. Steps 1�
 | Base loop, council core, ambient events | BG, Steps 1–2, EV | 12 | 95% | Handlers and tests in place; CS-1.5 scaffolding phases missing |
 | Council politics | Steps 3–5 | 13 | 5% | No debates, courtier recruitment or faction engine; only the relationship graph |
 | Chapter story | Steps 6, 7, 9 | 22 | 20% | Act I (21 beats) is built; Acts II–III, the arc tracker, stages 4–6 and the chapter close are not (spec `2026-10-05-prologue-three-acts-design.md`, approved, not built) |
-| Military | Step 8 and its replacement | 20 | 65% | Battle phases P1–P5 and P6.1 merged; P6.2–P6.3 and P7 have no PR; physical cluster formations 6 of 29 tasks merged, none wired into production |
+| Military | Step 8 and its replacement | 20 | 65% | Battle phases P1–P5 and P6.1 merged; P6.2–P6.3 and P7 have no PR; physical cluster formations 6 of 29 tasks merged, none wired into production; two known play defects open (below) |
 | Intelligence and LEDGER | L0, M1–M6 | 8 | 90% | Reports, belief, spies, missives; supply, workshop, governors, audit, industry and trade all execute; owner's list of extra nodes open |
 | 3D map look | AR-4, look route | 8 | 80% | Route phases landed; the last critic rounds barely moved scores, and the next step is owner-approved art |
 | Screens and HUD | Goals | 5 | 80% | Every screen exists; no CHRONICLE, no chapter cards |
 | Art integration | Step 10 | 8 | 55% | Cast and Act I illustrations done; ambient event art, chapter cards, artillery and spy models missing |
 | Balance, performance, export | §9, §12 | 4 | 20% | Balance questions unanswered; the game has never been exported (no `export_presets.cfg`) |
 
-**Cluster formations** (plan `2026-10-25-cluster-formations.md`) all stay behind candidate APIs; ordinary campaign play keeps the existing route. Merged: CF01, CF02, CF03, CF04a, CF04b, CF08. CF04c: render in draft #201, waiting on locomotion certificates for infantry, cavalry, archers and royal (drafts #221, #231, #236). CF05: 9 of 13 B-steps merged; B-WITHDRAW is #272, red on `test_unit_bodies.gd` at its last run; B-MERGE, B-END and B-ROUND are unstarted. CF06: contracts only. CF07 and CF09–CF25, which include the eight formations the player would actually see, are unstarted.
+**Cluster formations** (plan `2026-10-25-cluster-formations.md`) all stay behind candidate APIs; ordinary campaign play keeps the existing route. Merged: CF01, CF02, CF03, CF04a, CF04b, CF08. CF04c: render in draft #201, waiting on locomotion certificates for infantry, cavalry, archers and royal (drafts #221, #231, #236). CF05: 10 of 13 B-steps merged (B-WITHDRAW is #272, with its follow-up #277); B-MERGE, B-END and B-ROUND are unstarted. CF06: contracts only. CF07 and CF09–CF25, which include the eight formations the player would actually see, are unstarted.
+
+**Known military defects (2026-11-10).** #276 fixed two regressions from #248 that opt-in tests had caught and CI had not run: retreating columns that never left the field, and spoils lost on a quiet rout; #279 lets a withdrawing column go round an enemy on its road instead of halting for good. Still open on `main`: `BattleSystem._start` silently declines a battle when a deployment row lands on blocked ground, so contact beside water or scarps may never fight; and garrison deaths in the walled-town trial fell from 584 before #248 to 22, which needs a balance ruling. `simulation` and `gameplay` still run only on explicit request, and `main` itself runs no CI.
 
 ### Step 1 — Founding council, briefings, clickable suggestions
 
