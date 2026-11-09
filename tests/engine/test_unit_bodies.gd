@@ -487,6 +487,20 @@ func test_passive_serialization_and_production_route_unchanged() -> void:
 			assert_true(boundary > 0)
 			source = source.substr(0, boundary)
 			assert_false(source.contains("body_march_candidate("), "ordinary callers cannot reach candidate APIs")
+		elif path == "battle_system":
+			var begin := source.find("static func _retreat_candidate_error(")
+			var end := source.find("static func _start_retreat(", begin)
+			assert_true(begin > 0 and end > begin, "withdrawal candidate block must have explicit bounds")
+			if begin > 0 and end > begin:
+				var candidate := source.substr(begin, end - begin)
+				assert_eq(candidate.count("static func "), 3, "exclude only the three approved withdrawal candidate functions")
+				for method: String in ["_retreat_candidate_error", "_retreat_route_candidate", "retreat_intent_candidate"]:
+					assert_true(candidate.contains("static func " + method + "("))
+				assert_true(candidate.contains("UnitBodies."), "body access belongs to explicit candidates")
+				source = source.substr(0, begin) + source.substr(end)
+				assert_true(source.contains("static func _start_retreat("), "ordinary suffix remains guarded")
+			for entry: String in ["_retreat_candidate_error", "_retreat_route_candidate", "retreat_intent_candidate", "BodyBattleMotion."]:
+				assert_false(source.contains(entry), "ordinary callers cannot reach candidate APIs")
 		elif path == "battle_groups":
 			var boundary := source.find("## Candidate targets translate existing bodies only;")
 			assert_true(boundary > 0, "explicit candidate section must follow ordinary entry points")
