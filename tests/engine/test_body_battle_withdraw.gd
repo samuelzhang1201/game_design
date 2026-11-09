@@ -354,3 +354,98 @@ func test_inconsistent_received_route_never_falls_back_to_destination_chord() ->
 	assert_eq(contribution.path_m, [[50000, 60000]], "a stale route cannot authorize a straight shortcut to another destination")
 	assert_false(contribution.reason.is_empty())
 	assert_eq(BodyMotion._hash(f.state.to_dict()), before)
+
+func _foe_withdraws(f: Dictionary, dest: Array) -> void:
+	var entry := UnitBodies._entry(f.state, f.enemy)
+	entry.order = ArmySystem.ORDER_MARCH
+	entry.dest_x_m = dest[0]
+	entry.dest_y_m = dest[1]
+	entry.route_m = [dest.duplicate()]
+	entry.erase("gait")
+	f.state.battles[0].actions.def = {"kind": "retreat", "reason": "The host draws off"}
+	f.state.day_resolution.march_budgets[f.enemy] = 10000
+
+func test_cause_follows_the_production_order() -> void:
+	# [host mode, routed side, expected]: a rout outranks a host going home, as in BattleSystem._exits.
+	for row: Array in [[EnemyAi.MODE_WITHDRAW, "", "withdrawn"], [EnemyAi.MODE_RETREAT, "", "withdrawn"],
+		["", "", "retreat"], [EnemyAi.MODE_WITHDRAW, "def", "rout"]]:
+		var f := _fixture()
+		_put(f, f.enemy, [30000, 60000])
+		_foe_withdraws(f, [10000, 60000])
+		if not row[0].is_empty():
+			UnitBodies._entry(f.state, f.enemy).host = "home"
+			f.state.ai_hosts["home"] = {"mode": row[0]}
+		if not row[1].is_empty(): f.state.battles[0].routed_side = row[1]
+		f.code = f.enemy
+		var exit := _withdraw(f, _advance(f, f.state))
+		assert_eq(exit.status, "complete", exit.reason)
+		if exit.candidate == null: continue
+		assert_eq(exit.candidate.day_resolution.journal.battles.back().why, row[2], str(row))
+
+func _assert_departure_refused(f: Dictionary, why: String) -> void:
+	var entry := UnitBodies._entry(f.state, f.code)
+	var contribution := BattleSystem.retreat_intent_candidate(f.repo, f.state, 8, f.code, 1000)
+	assert_eq(contribution.status, "complete", contribution.reason)
+	assert_eq(contribution.path_m, [[50000, 60000]])
+	assert_true(contribution.reason.contains(why), contribution.reason)
+	var boundary := BodyBattleMotion._boundary(f.state)
+	var planned := BodyBattleMotion.plan_candidate(f.repo, f.state, boundary)
+	assert_eq(planned.status, "complete", planned.reason)
+	if planned.plan.is_empty(): return
+	var moved := BodyBattleMotion.commit_candidate(f.repo, f.state, planned.plan, boundary)
+	assert_eq(moved.status, "complete", moved.reason)
+	if moved.candidate == null: return
+	var after := UnitBodies._entry(moved.candidate, f.code)
+	assert_eq(after.x_m, 50000)
+	assert_true(after.withdrawal_reason.contains(why), after.withdrawal_reason)
+	assert_eq(after.morale, entry.morale, "a refused departure abandons nothing")
+	assert_eq(after.supplies, entry.supplies, "a refused departure abandons nothing")
+	assert_false(after.has("battle_retreat"))
+
+func test_destination_inside_an_opponents_reach_is_refused() -> void:
+	var f := _fixture()
+	UnitBodies._entry(f.state, f.code).erase("battle_retreat")
+	UnitBodies._entry(f.state, f.code).erase("disengaging")
+	_put(f, f.enemy, [92000, 60000]) # 2000 m from the 90000 m destination, inside the 5000 m reach.
+	_assert_departure_refused(f, "destination: departure remains inside encounter reach")
+
+func test_destination_inside_an_opponents_occupied_body_is_refused() -> void:
+	var f := _fixture()
+	UnitBodies._entry(f.state, f.code).erase("battle_retreat")
+	UnitBodies._entry(f.state, f.code).erase("disengaging")
+	_put(f, f.enemy, [130000, 60000]) # The anchor is clear of the destination; one forward body is not.
+	f.state.battles[0].groups[f.enemy][0].x_m = 92000
+	_assert_departure_refused(f, "destination: occupied departure remains inside encounter reach")
+
+func test_two_units_withdraw_in_one_slice_and_each_pays_once() -> void:
+	var f := _fixture()
+	var own := UnitBodies._entry(f.state, f.code)
+	own.erase("battle_retreat")
+	own.erase("disengaging")
+	own.erase("withdrawal_cause")
+	_put(f, f.enemy, [30000, 60000])
+	_foe_withdraws(f, [10000, 60000])
+	var foe := UnitBodies._entry(f.state, f.enemy)
+	var boundary := BodyBattleMotion._boundary(f.state)
+	var planned := BodyBattleMotion.plan_candidate(f.repo, f.state, boundary)
+	assert_eq(planned.status, "complete", planned.reason)
+	if planned.plan.is_empty(): return
+	var moved := BodyBattleMotion.commit_candidate(f.repo, f.state, planned.plan, boundary)
+	assert_eq(moved.status, "complete", moved.reason)
+	if moved.candidate == null: return
+	# 10000 m a day over ten slices is 1000 m each, east for one and west for the other.
+	var own_after := UnitBodies._entry(moved.candidate, f.code)
+	var foe_after := UnitBodies._entry(moved.candidate, f.enemy)
+	assert_eq(own_after.x_m, 51000)
+	assert_eq(foe_after.x_m, 29000)
+	assert_eq(own_after.route_m, [[90000, 60000]])
+	assert_eq(foe_after.route_m, [[10000, 60000]])
+	assert_eq(own_after.morale, own.morale - 5)
+	assert_eq(foe_after.morale, foe.morale - 5)
+	assert_eq(own_after.supplies, own.supplies - own.supplies * 100 / 1000)
+	assert_eq(foe_after.supplies, foe.supplies - foe.supplies * 100 / 1000)
+	for code: String in [f.code, f.enemy]:
+		var paid: Array = moved.candidate.battles[0].withdrawal_costs.filter(func(cost: Dictionary) -> bool: return cost.code == code)
+		assert_eq(paid.size(), 1, code)
+		assert_eq(moved.candidate.day_resolution.march_entries[code].route_m, UnitBodies._entry(moved.candidate, code).route_m)
+	assert_eq(moved.candidate.rng.to_dict(), f.state.rng.to_dict())

@@ -1170,7 +1170,8 @@ static func _retreat_route_candidate(repo: DataRepository, source: GameState, ba
 					result.reason = "No reachable safe destination: occupied departure remains inside encounter reach"
 					return result
 	entry.erase("withdrawal_reason")
-	if not entry.has("withdrawal_cause"): entry.withdrawal_cause = "rout" if battle.get("routed_side", "") == side else "retreat"
+	if not entry.has("withdrawal_cause"):
+		entry.withdrawal_cause = "rout" if battle.get("routed_side", "") == side else ("withdrawn" if homeward(state, unit) else "retreat")
 	result.candidate = state
 	result.path_m = path
 	result.reason = "Received withdrawal follows its actual safe route"
