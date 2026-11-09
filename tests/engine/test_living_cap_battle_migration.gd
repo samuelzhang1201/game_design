@@ -1,4 +1,4 @@
-extends "res://tests/engine/test_military_reorganization.gd"
+extends "res://tests/engine/military_reorganization_fixture.gd"
 
 func before_each() -> void:
 	super.before_each()

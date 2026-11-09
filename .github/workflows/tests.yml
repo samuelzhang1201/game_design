@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       include:
-        description: 'Explicit extra categories: simulation,gameplay,balance (comma separated)'
+        description: 'Explicit extra categories: simulation,gameplay (comma separated)'
         type: string
         default: ''
 
@@ -34,7 +34,8 @@ jobs:
           python3 tools/test_select_gut_tests.py
           python3 tools/test_run_tests.py
           python3 tools/test_run_with_timeout.py
-          python3 tools/units3d/soldier_arp/test_pivot_contact_evidence.py
+          python3 -m pip install --quiet numpy pillow
+          for t in $(git ls-files 'tools/imagegen/test_*.py' 'tools/units3d/*test_*.py'); do python3 "$t" || exit 1; done
           sh -n run_tests.sh
           bash -n .codex/hooks/session-start.sh
           python3 - <<'PY'

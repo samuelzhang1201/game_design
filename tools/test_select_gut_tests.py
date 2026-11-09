@@ -42,15 +42,10 @@ class SelectionTests(unittest.TestCase):
                          set(selector.functional_categories()))
 
     def test_expensive_files_require_explicit_opt_in_even_when_changed(self):
-        for category in ['simulation', 'gameplay', 'balance']:
-            paths = self.catalog[category]
-            path = paths[0] if paths else 'tests/balance/test_new.gd'
+        for category in ['simulation', 'gameplay']:
+            path = self.catalog[category][0]
             self.assertEqual(self.select(path)['files'], [])
-            if paths:
-                self.assertIn(category, self.select(path, include=[category])['categories'])
-            else:
-                groups = {**self.catalog, category: [path]}
-                self.assertIn(path, selector.select([], groups, [category])['files'])
+            self.assertIn(category, self.select(path, include=[category])['categories'])
         self.assertNotIn('tests/engine/test_determinism.gd', self.select('scripts/engine/tick_engine.gd')['files'])
 
     def test_campaign_scenarios_are_classified_by_content_not_engine_folder(self):
@@ -103,15 +98,23 @@ class SelectionTests(unittest.TestCase):
             git('commit', '-qm', 'rename and delete')
             self.assertEqual(set(selector.changed_paths(base, tmp)), {'scripts/engine/old.gd', 'scripts/ui/renamed.gd', 'data.csv'})
 
+    def test_tool_python_runs_no_gut_unless_gut_executes_or_a_route_owns_it(self):
+        for path in ['tools/units3d/cavalry_march_phase.py', 'tools/units3d/test_cavalry_march_phase.py',
+                     'tools/imagegen/commander_portrait_pipeline.py', 'tools/data_index.py']:
+            self.assertEqual(self.select(path)['categories'], [], path)
+        self.assertEqual(self.select('tools/units3d/royal_native_arithmetic/prove.py')['categories'], ['map3d'])
+        self.assertEqual(set(self.select('tools/map3d/bake_houses.py')['categories']), {'engine-economy', 'map3d', 'ui'})
+        self.assertEqual(set(self.select('tools/units3d/measure_unit_bodies.gd')['categories']),
+                         set(selector.functional_categories()))
+
     def test_harness_changes_need_only_the_dedicated_self_checks(self):
         for path in ['run_tests.sh', 'tools/select_gut_tests.py', 'tests/categories.json', '.github/workflows/tests.yml']:
             self.assertEqual(self.select(path)['categories'], [])
 
     def test_deleted_tests_select_their_affected_categories_and_mixed_changes_union(self):
-        self.assertEqual(set(self.select('tests/llm/test_openai_client.gd')['categories']), {'engine-core', 'ui'})
         self.assertEqual(set(self.select('tests/ui/test_deleted.gd')['categories']), {'ui'})
-        self.assertEqual(set(self.select('tests/llm/test_deleted.gd', 'tests/engine/test_deleted.gd')['categories']),
-                         {'engine-core', 'ui'})
+        self.assertEqual(set(self.select('tests/ui/test_deleted.gd', 'tests/ledger3d/test_deleted.gd')['categories']),
+                         {'ui', 'ledger3d'})
 
     def test_comment_only_diff_is_detected(self):
         with tempfile.TemporaryDirectory() as tmp:

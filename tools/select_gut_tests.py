@@ -25,12 +25,8 @@ def category_of(path):
 
 def test_categories(path):
     """Return the functional suites affected by a changed test path, even after deletion."""
-    normalized = path.removesuffix('.uid')
-    if normalized.startswith('tests/llm/test_'):
-        # The retired LLM suites exercised the engine client and its UI bridge.
-        return {'engine-core', 'ui'}
     try:
-        category = category_of(normalized)
+        category = category_of(path.removesuffix('.uid'))
     except ValueError:
         return set()
     return {category}
