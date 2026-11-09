@@ -66,6 +66,14 @@ jobs:
             python3 tools/select_gut_tests.py --base "$BASE_SHA" \
               --request-text "$PR_BODY" --github-output "$GITHUB_OUTPUT"
           fi
+      - name: Check a Codex PR declares its product fields
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 .codex/hooks/task-handover.py --check-pr
 
   gut-selected:
     needs: harness-checks

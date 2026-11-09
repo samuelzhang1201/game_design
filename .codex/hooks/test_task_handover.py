@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import tempfile
 import subprocess
 import unittest
@@ -723,6 +724,59 @@ class HandoverHookTests(unittest.TestCase):
         self.assertFalse(hook.registry_path(self.root).exists())
         (self.root / '.superpowers/session-handovers/old.json').write_text('{broken')
         self.assertEqual(hook.respond(dict(self.event, stop_hook_active=True)), {})
+
+    VALID_PR_BODY = 'Summary.\n\nprd_step: Step 5\nplayer_outcome: the petition appears at court\nwired: true\n'
+    def pr_problems(self, body=VALID_PR_BODY, branch='codex/x', number=None, files=('scripts/a.gd',)):
+        return hook.pr_body_problems(body, branch, number or hook.FIRST_CHECKED_PR, list(files))
+
+    def test_pr_body_with_the_three_fields_passes(self):
+        self.assertEqual(self.pr_problems(), [])
+        listed = '- prd_step: CS-5.1\r\n- player_outcome: the petition appears\r\n- wired: false\r\n'
+        self.assertEqual(self.pr_problems(listed), [])
+    def test_pr_body_field_must_appear_exactly_once_on_its_own_line(self):
+        for name in ('prd_step', 'player_outcome', 'wired'):
+            without = '\n'.join(l for l in self.VALID_PR_BODY.split('\n') if not l.startswith(name))
+            self.assertIn(name, ' '.join(self.pr_problems(without)))
+            self.assertIn(name, ' '.join(self.pr_problems(self.VALID_PR_BODY + name + ': false\n')))
+        self.assertEqual(len(self.pr_problems('')), 3)
+        self.assertIn('prd_step', ' '.join(self.pr_problems('Mentions prd_step: Step 5 in prose.\n'
+                                                           'player_outcome: x\nwired: false\n')))
+    def test_pr_body_blank_field_does_not_read_the_next_line(self):
+        body = 'prd_step: Step 5\nplayer_outcome:   \nwired: false\n'
+        self.assertIn('player_outcome', ' '.join(self.pr_problems(body)))
+    def test_pr_body_rejects_unknown_step_and_wired_value(self):
+        self.assertIn('prd_step', ' '.join(self.pr_problems(self.VALID_PR_BODY.replace('Step 5', 'P4'))))
+        self.assertIn('wired', ' '.join(self.pr_problems(self.VALID_PR_BODY.replace('wired: true', 'wired: yes'))))
+    def test_pr_declared_harness_must_only_change_harness_files(self):
+        body = 'prd_step: harness\nplayer_outcome: none: rule maintenance\nwired: false\n'
+        self.assertEqual(self.pr_problems(body, files=['.codex/harness.md', 'AGENTS.md', '.github/workflows/tests.yml']), [])
+        self.assertIn('scripts/a.gd', ' '.join(self.pr_problems(body, files=['.codex/harness.md', 'scripts/a.gd'])))
+        self.assertIn('wired', ' '.join(self.pr_problems(body.replace('wired: false', 'wired: true'),
+                                                         files=['AGENTS.md'])))
+    def test_pr_check_covers_only_new_codex_branches(self):
+        self.assertEqual(self.pr_problems('', branch='claude/x'), [])
+        self.assertEqual(self.pr_problems('', number=hook.FIRST_CHECKED_PR - 1), [])
+        self.assertNotEqual(self.pr_problems('', branch='codex/x'), [])
+    def test_check_pr_command_reads_the_real_diff_and_fails_closed(self):
+        git = ['git', '-C', str(self.root), '-c', 'user.name=Test', '-c', 'user.email=test@example.com']
+        subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
+        subprocess.run(git + ['commit', '--allow-empty', '-qm', 'base'], check=True)
+        (self.root / 'game.gd').write_text('changed')
+        subprocess.run(git + ['add', 'game.gd'], check=True)
+        def run(body, base='HEAD'):
+            return subprocess.run(['python3', hook.__file__, '--check-pr'], cwd=self.root, capture_output=True, text=True,
+                                  timeout=10, env={**os.environ, 'PR_BODY': body, 'PR_BRANCH': 'codex/x',
+                                                   'PR_NUMBER': str(hook.FIRST_CHECKED_PR), 'BASE_SHA': base})
+        self.assertEqual(run(self.VALID_PR_BODY).returncode, 0)
+        refused = run(self.VALID_PR_BODY.replace('prd_step: Step 5', 'prd_step: harness').replace('wired: true', 'wired: false'))
+        self.assertEqual(refused.returncode, 1)
+        self.assertIn('game.gd', refused.stdout)
+        self.assertEqual(run('').returncode, 1)
+        self.assertNotEqual(run(self.VALID_PR_BODY, base='not-a-revision').returncode, 0)
+    def test_ci_runs_the_pr_check_in_the_required_harness_job(self):
+        workflow = Path(__file__).parents[2].joinpath('.github/workflows/tests.yml').read_text()
+        harness_job = workflow.split('  gut-selected:')[0]
+        self.assertIn('task-handover.py --check-pr', harness_job)
 
 if __name__ == '__main__':
     unittest.main()
