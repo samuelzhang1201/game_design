@@ -243,6 +243,20 @@ class Fixture(unittest.TestCase):
         config = dict(CONFIG, hold_phases=[0.0], march_stop_phases='*')
         self.assertEqual(cert.required_boundaries(config)[1], ['MARCH', '*', 'PIVOT_LEFT', 0.0])
 
+    def test_march_hold_at_the_admitted_phase(self):
+        # Stop, start and hold only at MARCH 0: the held pose IS MARCH 0, so every
+        # hold seam is 0 and the pivot seams equal MARCH 0's.
+        config = dict(CONFIG, hold_clip='MARCH', hold_phases=[0.0], boundaries=[])
+        report = cert.measure(fixture(), config, SCALE)
+        held = [b for b in report['seam']['boundaries'] if b['witness']['from'] == ['MARCH', 0.0]
+                and b['witness']['to'] == ['MARCH', 0.0]]
+        self.assertEqual([b['total_um'] for b in held], [0, 0])  # stop into the hold, start from it
+        self.assertEqual(sorted(b['total_um'] for b in report['seam']['boundaries'])[-1],
+                         cert.um(math.sqrt(.2 ** 2 + .006 ** 2 + .2 ** 2)))  # pivot end -> MARCH 0
+        for bad in [dict(config, hold_phases='*'), dict(config, hold_phases=[.5])]:
+            with self.assertRaises(ValueError):
+                cert.required_boundaries(bad)
+
     def test_a_foot_that_never_stands_fails(self):
         self.assertTrue(self.report['stance']['pass'])
         config = copy.deepcopy(CONFIG)
@@ -312,7 +326,8 @@ class Provider(unittest.TestCase):
 class Certificate(unittest.TestCase):
     def test_digest_binding(self):
         report = {'pass': True, 'bounds_um': {'contact': 22769, 'seam': 1898}}
-        config = {'arm': 'infantry', 'turn_q': 400_000, 'radius_m': 927}
+        config = {'arm': 'infantry', 'turn_q': 400_000, 'radius_m': 927, 'hold_clip': 'MARCH',
+                  'march_stop_phases': [0.0], 'march_start_phases': [0.0], 'hold_phases': [0.0]}
         body = cert.certificate(config, report, {}, {}, 'c' * 64, {'godot': {}, 'clips': {}})
         loco = body.pop('locomotion_certificate')
         self.assertEqual(loco, {'digest': body['payload_sha256'], 'turn_q': 400_000, 'contact_um': 22769,
@@ -322,6 +337,8 @@ class Certificate(unittest.TestCase):
         body.pop('digest_rule')
         self.assertEqual(hashlib.sha256(json.dumps(body, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
                          digest)
+        self.assertEqual(body['consumer_requirements'], {'hold_clip': 'MARCH', 'march_stop_phases': [0.0],
+                                                         'march_start_phases': [0.0], 'hold_phases': [0.0]})
         failed = cert.certificate(config, dict(report, **{'pass': False}), {}, {}, 'c' * 64, {'godot': {}, 'clips': {}})
         self.assertIsNone(failed['locomotion_certificate'])
         self.assertEqual(failed['status'], 'FAIL')

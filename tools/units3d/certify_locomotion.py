@@ -27,7 +27,10 @@ the loop seam (its last pose sampled just before the wrap), MARCH -> pivot,
 pivot -> MARCH, stop and start to the `hold_clip`, and the stationary pivot
 from and to it, at the phases the config admits (`march_stop_phases`,
 `march_start_phases`, `hold_phases`: a list, or '*' for any sampled phase,
-i.e. a mid-stance cut). Every foot must stand at least once in every
+i.e. a mid-stance cut). `hold_clip` "MARCH" holds the MARCH pose a unit stopped
+in (owner ruling 2026-11-10: stop, start and hold only at the MARCH phases where
+the pivots enter and leave MARCH); the certificate records these phases as
+`consumer_requirements`. Every foot must stand at least once in every
 locomotion clip, or hover and slide go unmeasured and the run fails. Hover is
 the patch's LOWEST vertex above the seated plane. The ground is flat at the
 seat lift below the origin unless `slope` (rise per run, applied at every yaw)
@@ -286,6 +289,8 @@ def required_boundaries(config):
     stop = phase_list(config['march_stop_phases'], 'march_stop_phases')
     start = phase_list(config['march_start_phases'], 'march_start_phases')
     held = phase_list(config['hold_phases'], 'hold_phases')
+    if hold == 'MARCH' and (held == '*' or stop == '*' or not set(held) <= set(stop)):
+        raise ValueError('a MARCH hold keeps the pose it stopped in: hold_phases must be admitted stop phases')
     if held == '*' and start == '*':
         raise ValueError('hold_phases and march_start_phases cannot both be "*" (declare one side)')
     side = lambda v: ['*'] if v == '*' else v
@@ -627,7 +632,7 @@ def capture(config, godot, work, extra):
         'config_version=5\n[application]\nconfig/name="loco-cert numeric extraction"\n'
         '[rendering]\nrenderer/rendering_method="gl_compatibility"\n')
     (project / 'capture.gd').write_text(CAPTURE)
-    request = {'scene': 'res://' + config['scene'], 'clips': CLIPS + [config['hold_clip']], 'uniform': UNIFORM,
+    request = {'scene': 'res://' + config['scene'], 'clips': CLIPS + [c for c in [config['hold_clip']] if c not in CLIPS], 'uniform': UNIFORM,
                'extra_phases': sorted(set(extra)), 'turns': [g['turn_udeg'] for g in turn_grid()],
                'provider': 'res://' + config['provider'] if config.get('provider') else ''}
     (work / 'request.json').write_text(json.dumps(request))
@@ -676,7 +681,10 @@ def certificate(config, report, scale, inputs, capture_sha, dump):
             'tool_sha256': sha(Path(__file__)), 'config': config, 'scale': scale,
             'input_sha256': inputs, 'capture': {'sha256': capture_sha, 'godot': dump['godot'],
                                                 'clips': dump['clips'], 'uniform': UNIFORM},
-            'report': report, 'visual_review': 'PENDING: R-C requires the real-window review after this numeric pass'}
+            'report': report,
+            'consumer_requirements': {k: config[k] for k in ('hold_clip', 'march_stop_phases', 'march_start_phases',
+                                                            'hold_phases')},
+            'visual_review': 'PENDING: R-C requires the real-window review after this numeric pass'}
     digest = hashlib.sha256(canonical(body)).hexdigest()
     body['payload_sha256'] = digest
     body['digest_rule'] = 'sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate'
