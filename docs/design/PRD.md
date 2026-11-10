@@ -75,7 +75,7 @@ Build strictly in this order; each step is independently playtestable. Steps 1�
 
 **Status (2026-11-10, from `origin/main` at `75aaac46` and the GitHub PRs through #280):** Step 1 built except the scaffolding phases; Step 2 built; the random-events pool built; Steps 3, 5, 6, 7 and 9 not built, and Step 4 only its relationship graph; Step 8 replaced by a full battle system; Step 10 partly. The systems are well ahead of the story: the arcs of §7 cannot yet be played. Build order: PRD order was not followed after the map look route. Since 2026-10-16 almost all merged work is the battle system, so Steps 3–7 are still next.
 
-**MVP completion: about 52%.** The percentages and weights are a judgement from the evidence named in each row, not a measurement; read the total as ±10 points.
+**MVP completion: about 52%.** The percentages and weights are a judgement from the evidence named in each row, not a measurement; read the total as ±10 points. The per-spec and per-plan status behind these rows is in `FEATURE_STATUS.md`.
 
 | Workstream | PRD | Weight | Done | Evidence |
 |---|---|---:|---:|---|
