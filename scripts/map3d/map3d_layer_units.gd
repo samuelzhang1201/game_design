@@ -205,10 +205,17 @@ func _place(code: String, piece: Dictionary) -> void:
 				Map3DUnits.show_piece(piece, false)
 				_rects.erase(code)
 				return
+			var refused := BattleGroupsView._candidate_render_error(piece, sampled)
+			if not refused.is_empty():
+				piece["candidate_error"] = refused
+				Map3DUnits.show_piece(piece, false)
+				_rects.erase(code)
+				return
 			piece["candidate_error"] = ""
 			for i: int in piece["groups"].size():
 				piece["groups"][i]["x_m"] = sampled.rows[i].x_m
 				piece["groups"][i]["y_m"] = sampled.rows[i].y_m
+				if sampled.rows[i].has("yaw_udeg"): piece["groups"][i]["yaw_udeg"] = sampled.rows[i].yaw_udeg
 		var box := BattleGroupsView.place(ctx, piece, _shown_xz[code], figure_footprint_gap, _selected.has(code))
 		_rects.erase(code)
 		if box.has_area(): _rects[code] = box

@@ -4,6 +4,7 @@ extends SceneTree
 ## --case opposing|crossing|detour|turn|arms --fit 1000 --speed 1 --quality high
 ## --resolution WxH --zoom near|mid|far --out DIR [--baseline] [--bench] [--pan]
 ## Use Godot --write-movie FILE.avi --fixed-fps N for continuous real-window evidence.
+## It commits v1 paths: a leg off saved facing is refused and hidden; v2 driving lands with CF04c-VISUAL.
 
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 var _bench_settings: GDScript

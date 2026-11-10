@@ -125,12 +125,16 @@ static func sample_candidate(ctx: Map3DContext, code: String, committed: Diction
 	var saved: Variant = state.military_migration.get("body_motion")
 	var cursor := {}
 	if state.military_migration.has("body_motion"):
-		if not BodyMotion._saved_ok(saved): return _candidate_result("invalid", code, "Invalid saved motion control")
-		cursor = {"version": 1, "abs_day": int(saved.abs_day), "substep": int(saved.substep), "receipt": saved.receipt}
+		# v2 (stop-pivot-move) carries its whole timed plan; v1 carries only paths.
+		var version := 2 if saved is Dictionary and saved.get("version") == "2" else 1
+		if not (BodyMotion._loco_saved_ok(saved) or BodyMotion._loco_saved_ok(saved, true) if version == 2 else BodyMotion._saved_ok(saved)):
+			return _candidate_result("invalid", code, "Invalid saved motion control")
+		cursor = {"version": version, "abs_day": int(saved.abs_day), "substep": int(saved.substep), "receipt": saved.receipt}
 	if state.day_resolution.has("body_march"):
 		var error := DayResolution.body_march_incompatibility_reason(state.day_resolution)
 		if not error.is_empty(): return _candidate_result("invalid", code, error)
 		var outer: Dictionary = state.day_resolution.body_march
+		if not cursor.is_empty() and outer.version != str(cursor.version): return _candidate_result("invalid", code, "Mixed body march protocols")
 		if int(outer.next_substep) == 0:
 			return _candidate_result("bodies", code, "", rows) if committed.is_empty() else _candidate_result("invalid", code, "Uncommitted slice")
 		if cursor.is_empty() or cursor.abs_day != int(outer.abs_day) or cursor.substep != int(outer.next_substep) - 1:
@@ -148,6 +152,7 @@ static func sample_candidate(ctx: Map3DContext, code: String, committed: Diction
 		for row: Dictionary in copied: endpoint.key.append(row.get("path_m", []).duplicate(true))
 		return endpoint
 	if not cursor.is_empty() and cursor.abs_day != state.absolute_day(): return _candidate_result("invalid", code, "Stale playback day")
+	if cursor.get("version") == 2: return _locomotion_rows(code, rows, copied, saved.plan.moves, committed, cursor)
 	var budgets := _candidate_budgets(committed, cursor)
 	if budgets.has("error"): return _candidate_result("invalid", code, budgets.error)
 	var moving := false
@@ -164,6 +169,93 @@ static func sample_candidate(ctx: Map3DContext, code: String, committed: Diction
 		rows[i].budget_m = budget
 		moving = moving or BodyMotion._length(path) > 0
 	return _candidate_result("bodies", code, "", rows, cursor, moving)
+
+## The v2 entrance: the same admitted projection, refusing anything but a v2 receipt.
+static func sample_locomotion_candidate(ctx: Map3DContext, code: String, committed: Dictionary = {}) -> Dictionary:
+	var sampled := sample_candidate(ctx, code, committed)
+	if sampled.mode == "bodies" and sampled.cursor.get("version", 2) != 2: return _candidate_result("invalid", code, "Not a v2 locomotion receipt")
+	return sampled
+
+## Own/DEV v2 rows copy only this unit's committed operations, after the matching
+## successful-commit cursor `{cursor: {version: 2, abs_day, substep, receipt}}`.
+static func _locomotion_rows(code: String, rows: Array, copied: Array, moves: Array, committed: Dictionary, cursor: Dictionary) -> Dictionary:
+	if not BodyMotion._keys(committed, ["cursor"]) or not committed.cursor is Dictionary or committed.cursor != cursor:
+		return _candidate_result("invalid", code, "Missing/mixed commit timing")
+	if not BodyMotion._keys(committed.cursor, ["version", "abs_day", "substep", "receipt"]): return _candidate_result("invalid", code, "Invalid timing cursor")
+	for field: String in ["version", "abs_day", "substep"]:
+		if not BodyMotion._natural(committed.cursor[field]): return _candidate_result("invalid", code, "Invalid timing integer")
+	var own := {}
+	for move: Dictionary in moves:
+		if move.unit == code: own[int(move.slot)] = move
+	if own.size() != rows.size(): return _candidate_result("invalid", code, "Timeline disagrees with bodies")
+	var moving := false
+	for i: int in rows.size():
+		var move: Dictionary = own.get(rows[i].slot, {})
+		if move.is_empty() or move.end != [rows[i].x_m, rows[i].y_m] or int(move.final_facing_deg) != rows[i].facing_deg:
+			return _candidate_result("invalid", code, "Timeline disagrees with bodies")
+		var error := _candidate_path_error(copied[i].get("path_m"), rows[i], int(move.budget_m))
+		if not error.is_empty(): return _candidate_result("invalid", code, error)
+		rows[i].path_m = copied[i].path_m.duplicate(true)
+		rows[i].budget_m = int(move.budget_m)
+		rows[i].move = move.duplicate(true)
+		for op: Dictionary in move.ops: moving = moving or op.kind != "hold"
+	return _candidate_result("bodies", code, "", rows, cursor, moving)
+
+## The operation a v2 timeline runs at time_q: shared boundaries take the next one.
+static func _locomotion_op(move: Dictionary, time_q: int) -> Dictionary:
+	for op: Dictionary in move.ops:
+		if time_q < int(op.t1_q): return op
+	return move.ops.back()
+
+static func _time_q(share: float) -> int:
+	return BodyMotion.LOCOMOTION_Q if share >= 1.0 else int(floor(clampf(share, 0.0, 1.0) * BodyMotion.LOCOMOTION_Q))
+
+## Pure v2 sampling through the engine's sampler: transient float metres and yaw.
+static func along_locomotion_candidate(sampled: Dictionary, time_q: int) -> Dictionary:
+	var unit := String(sampled.get("unit", ""))
+	if sampled.get("mode") != "bodies": return sampled.duplicate(true)
+	var out := sampled.duplicate(true)
+	var moves: Array = []
+	for row: Dictionary in out.rows:
+		row.yaw_udeg = float(row.facing_deg * BodyMotion.LOCOMOTION_Q)
+		row.op = "hold"
+		if row.has("move"): moves.append(row.move)
+	if moves.is_empty():
+		return out if time_q >= 0 and time_q <= BodyMotion.LOCOMOTION_Q else _candidate_result("invalid", unit, "Invalid locomotion time")
+	if moves.size() != out.rows.size(): return _candidate_result("invalid", unit, "Partial locomotion timeline")
+	var drawn := BodyMotion.sample_locomotion_candidate({"version": 2, "moves": moves}, time_q)
+	if drawn.status != "complete": return _candidate_result("invalid", unit, drawn.reason)
+	for i: int in out.rows.size():
+		var row: Dictionary = out.rows[i]
+		row.x_m = drawn.rows[i].x_m
+		row.y_m = drawn.rows[i].y_m
+		row.yaw_udeg = drawn.rows[i].yaw_udeg
+		row.op = drawn.rows[i].kind
+	return out
+
+## What the drawn figures cannot show honestly refuses the whole unit (no partial
+## publication): a v1 leg off the saved facing would walk sideways on forward-only
+## clips, and a v2 pivot needs that arm's PIVOT_LEFT/PIVOT_RIGHT clip.
+static func _candidate_render_error(piece: Dictionary, sampled: Dictionary) -> String:
+	for i: int in sampled.rows.size():
+		var row: Dictionary = sampled.rows[i]
+		if row.has("move"):
+			for op: Dictionary in row.move.ops:
+				if op.kind != "pivot": continue
+				var clip := "PIVOT_RIGHT" if int(op.turn_udeg) > 0 else "PIVOT_LEFT"
+				for anim: AnimationPlayer in piece["groups"][i]["piece"]["anims"]:
+					if Map3DUnits.clip_named(anim, clip).is_empty():
+						return "%s has no %s clip: transverse leg refused" % [piece.get("model", "arm"), clip]
+			continue
+		if int(row.get("budget_m", 0)) == 0: continue
+		var path: Array = row.path_m
+		for j: int in range(1, path.size()):
+			if path[j] == path[j - 1]: continue
+			var heading := BodyMotion._locomotion_heading(int(BodyMotion._difference(path[j][0], path[j - 1][0])),
+				int(BodyMotion._difference(path[j][1], path[j - 1][1])))
+			if heading != int(row.facing_deg) * BodyMotion.LOCOMOTION_Q:
+				return "v1 leg off saved facing needs a v2 stop-pivot-move timeline: transverse leg refused"
+	return ""
 
 static func _candidate_result(mode: String, unit: String, error := "", rows: Array = [], cursor: Dictionary = {}, moving := false) -> Dictionary:
 	return {"mode": mode, "error": error, "unit": unit, "rows": rows, "cursor": cursor,
@@ -244,6 +336,7 @@ static func _candidate_at(ctx: Map3DContext, code: String, sampled: Dictionary, 
 	var endpoints := {}
 	for row: Dictionary in sampled.rows: endpoints[row.slot] = [row.x_m, row.y_m]
 	history[code] = {"receipt": receipt, "share": share, "endpoints": endpoints}
+	if sampled.cursor.get("version") == 2: return along_locomotion_candidate(sampled, _time_q(share))
 	return along_candidate(sampled, share)
 
 
@@ -259,18 +352,39 @@ static func _animate_candidate(ctx: Map3DContext, code: String, piece: Dictionar
 		var child: Dictionary = piece["groups"][i]["piece"]
 		var row: Dictionary = sample.rows[i]
 		var speed := 0.0
-		for segment: Dictionary in BodyMotion._segments(row.path_m, int(row.budget_m)):
-			if share < segment.t0 or share >= segment.t1: continue
-			var dx := BodyMotion._difference(int(segment.b[0]), int(segment.a[0]))
-			var dy := BodyMotion._difference(int(segment.b[1]), int(segment.a[1]))
-			speed = sqrt(dx * dx + dy * dy) / (segment.t1 - segment.t0)
-			break
-		moving = moving or speed > 0.0
-		var action := battle.action_for(code, Map3DUnitRig.action_for(speed > 0.0, order, stance))
+		var pivot := ""
+		var phase := 0.0
+		if row.has("move"):
+			# v2: stop, pivot in place on the arm's PIVOT clip, then walk forward.
+			var time_q := _time_q(share)
+			var op := _locomotion_op(row.move, time_q)
+			var span := float(int(op.t1_q) - int(op.t0_q))
+			phase = clampf(float(time_q - int(op.t0_q)) / span, 0.0, 1.0)
+			if op.kind == "pivot":
+				pivot = "PIVOT_RIGHT" if int(op.turn_udeg) > 0 else "PIVOT_LEFT"
+			elif op.kind == "move":
+				var dx := BodyMotion._difference(int(op.b[0]), int(op.a[0]))
+				var dy := BodyMotion._difference(int(op.b[1]), int(op.a[1]))
+				speed = sqrt(dx * dx + dy * dy) * BodyMotion.LOCOMOTION_Q / span
+		else:
+			for segment: Dictionary in BodyMotion._segments(row.path_m, int(row.budget_m)):
+				if share < segment.t0 or share >= segment.t1: continue
+				var dx := BodyMotion._difference(int(segment.b[0]), int(segment.a[0]))
+				var dy := BodyMotion._difference(int(segment.b[1]), int(segment.a[1]))
+				speed = sqrt(dx * dx + dy * dy) / (segment.t1 - segment.t0)
+				break
+		moving = moving or speed > 0.0 or not pivot.is_empty()
+		var action := pivot if not pivot.is_empty() else battle.action_for(code, Map3DUnitRig.action_for(speed > 0.0, order, stance))
 		var identity := code + ":" + str(row.slot)
 		if child.get("action", "") != action:
 			child["action"] = action
 			Map3DUnitRig.play(child["anims"], action, blend_s, identity)
+		if not pivot.is_empty():
+			# The pivot clip is scrubbed by the committed operation's phase, never by frame delta.
+			for anim: AnimationPlayer in child["anims"]:
+				anim.speed_scale = 0.0
+				if not anim.current_animation.is_empty(): anim.seek(phase * anim.current_animation_length, true)
+			continue
 		var world_speed := speed * float(ctx.meta["m_per_px"]) / float(ArmySystem.metres_per_pack_px(ctx.repo)) \
 			* slices * ctx.clock_speed() / ctx.repo.bal("time_day_seconds")
 		var stature := float(child.get("statures", [1.0])[0])
@@ -356,7 +470,10 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 		var xz := ctx.to_world(pack_px)
 		var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
 			child["reference_height_m"], child["size"])
-		var yaw := Map3DUnits.facing_yaw(WarFront.facing_vector(int(group.get("facing_deg", piece["facing_deg"]))), child["stand_deg"])
+		# A v2 sample carries the committed fractional yaw (pack microdegrees); else the saved facing.
+		var heading := Vector2.from_angle(deg_to_rad(float(group.yaw_udeg) / BodyMotion.LOCOMOTION_Q)) if group.has("yaw_udeg") \
+			else WarFront.facing_vector(int(group.get("facing_deg", piece["facing_deg"])))
+		var yaw := Map3DUnits.facing_yaw(heading, child["stand_deg"])
 		var y := ctx.height_at(xz)
 		for offset: Vector2 in Map3DUnits.footprint(child["extent"], yaw, k, int(repo.bal("map3d_unit_seat_ring"))):
 			y = maxf(y, ctx.height_at(xz + offset))

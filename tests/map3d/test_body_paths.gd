@@ -5,6 +5,8 @@ var view: GDScript = load("res://scripts/map3d/map3d_battle_groups.gd")
 func test_candidate_api_is_explicit_and_default_off() -> void:
 	assert_true(view.has_method("sample_candidate"))
 	assert_true(view.has_method("along_candidate"))
+	assert_true(view.has_method("sample_locomotion_candidate"))
+	assert_true(view.has_method("along_locomotion_candidate"))
 	var layer := Map3DLayerUnits.new()
 	autofree(layer)
 	assert_true(layer.has_method("set_candidate_bodies"))
@@ -37,6 +39,7 @@ func after_each() -> void:
 		ctx.day_fn = Callable()
 		ctx.clock_fn = Callable()
 	_contexts.clear()
+	MarchPath.forget()
 
 const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
@@ -308,7 +311,7 @@ func test_admission_and_hostile_path_access_instrumented() -> void:
 
 func test_repeated_receipt_refresh_pause_fps_and_camera_are_readonly() -> void:
 	var f := _fixture()
-	var envelope := _commit(f, [[[0, 0], [3000, 0], [3000, 4000]]], [10000])
+	var envelope := _commit(f, [[[0, 0], [0, 3000], [0, 7000]]], [10000])
 	var clock := {"share": 0.0, "speed": 1}
 	f.ctx.day_fn = func() -> float: return clock.share
 	f.ctx.clock_fn = func() -> int: return clock.speed
@@ -343,7 +346,8 @@ func test_no_ordinary_candidate_callers_or_query_writers() -> void:
 	for file: String in _script_files("res://scripts"):
 		if file in ["res://scripts/map3d/map3d_battle_groups.gd", "res://scripts/map3d/map3d_layer_units.gd"]: continue
 		var source := FileAccess.get_file_as_string(file)
-		for token: String in ["sample_candidate(", "along_candidate(", "set_candidate_bodies("]:
+		for token: String in ["sample_candidate(", "along_candidate(", "set_candidate_bodies(", "along_locomotion_candidate(",
+				"Map3DBattleGroups.sample_locomotion_candidate(", "BattleGroupsView.sample_locomotion_candidate("]:
 			if token in source: callers.append(file + ":" + token)
 	assert_eq(callers, [])
 	var source := FileAccess.get_file_as_string("res://scripts/map3d/map3d_battle_groups.gd")
@@ -400,7 +404,7 @@ func test_real_march_slices_use_matching_inner_receipt_and_outer_boundary() -> v
 
 func test_new_receipt_continuity_and_rejected_transfer_keep_current_view() -> void:
 	var f := _fixture()
-	var envelope := _commit(f, [[[0, 0], [100, 0]]], [100])
+	var envelope := _commit(f, [[[0, 0], [0, 100]]], [100])
 	var clock := {"share": 1.0}
 	f.ctx.day_fn = func() -> float: return clock.share
 	var layer := _layer(f, envelope)
@@ -414,15 +418,15 @@ func test_new_receipt_continuity_and_rejected_transfer_keep_current_view() -> vo
 	assert_same(layer.built_piece(f.code).groups[0].piece.node, node)
 	assert_eq(node.global_transform, transform)
 	assert_eq(f.state.to_dict(), before)
-	envelope = _commit(f, [[[100, 0], [200, 0]]], [100], 1)
+	envelope = _commit(f, [[[0, 100], [0, 200]]], [100], 1)
 	clock.share = 0.0
 	layer.set_candidate_bodies(true, envelope)
 	assert_eq(node.global_transform, transform, "new slice begins at prior endpoint")
 	assert_same(layer.built_piece(f.code).groups[0].piece.node, node)
 	clock.share = 1.0
 	layer.step(0.0)
-	f.state.regiments[f.code].body_groups[0].x_m = 300
-	envelope = _commit(f, [[[300, 0], [400, 0]]], [100], 2)
+	f.state.regiments[f.code].body_groups[0].y_m = 300
+	envelope = _commit(f, [[[0, 300], [0, 400]]], [100], 2)
 	clock.share = 0.0
 	layer.set_candidate_bodies(true, envelope)
 	assert_false(node.is_visible_in_tree(), "discontinuous input never gets a fabricated bridge")
@@ -439,11 +443,11 @@ func test_candidate_legacy_fallback_never_enters_whole_state_prediction() -> voi
 
 func test_first_explicit_clock_plays_but_late_timing_cannot_replay_loaded_endpoint() -> void:
 	var f := _fixture()
-	var envelope := _commit(f, [[[0, 0], [3000, 0], [3000, 4000]]], [10000])
+	var envelope := _commit(f, [[[0, 0], [0, 4000]]], [4000])
 	f.ctx.day_fn = func() -> float: return 0.5
 	var layer := _layer(f, envelope)
 	var node: Node3D = layer.built_piece(f.code).groups[0].piece.node
-	var expected: Vector2 = f.ctx.to_world(Vector2(3000, 2000) / float(ArmySystem.metres_per_pack_px(f.repo)))
+	var expected: Vector2 = f.ctx.to_world(Vector2(0, 2000) / float(ArmySystem.metres_per_pack_px(f.repo)))
 	assert_almost_eq(node.global_position.z, expected.y, 0.0001, "explicit first bind actually renders the in-slice pose")
 	var loaded := _layer(f)
 	var endpoint: Transform3D = loaded.built_piece(f.code).groups[0].piece.node.global_transform
@@ -517,3 +521,127 @@ func test_hostile_animation_never_reopens_hidden_intent() -> void:
 	ctx.dev = true
 	spy.call("_animate_candidate", ctx, f.code, piece, observed, 1.0, 0.3, Map3DBattleSignals.new())
 	assert_eq(spy.get("intent_reads"), 2, "DEV retains its explicit intent access")
+
+## v2 stop-pivot-move: an explicit test certificate, not installed arm support.
+func _loco_policy(f: Dictionary) -> void:
+	var piece := MapObjects.army_piece(f.repo, f.state.army_roster[f.code])
+	f.repo.unit_footprints[piece].locomotion_certificate = {"digest": "a".repeat(64),
+		"turn_q": 400000, "contact_um": 100, "radius_m": int(f.repo.unit_footprints[piece].radius_m),
+		"clips": ["PIVOT_LEFT", "PIVOT_RIGHT", "MARCH"], "all_turns": true}
+	f.repo.balance["body_locomotion_" + piece + "_turn_q"] = 400000
+	f.repo.balance["body_locomotion_" + piece + "_contact_um"] = 100
+
+const O := 50000  ## v2 cases run at (O, O) + offset on an open test grid
+
+func _commit_v2(f: Dictionary, path: Array, budget: int) -> Dictionary:
+	_loco_policy(f)
+	f.repo.balance.army_march_grid_px = 1
+	var slopes := PackedByteArray()
+	slopes.resize(200 * 200)
+	MarchPath.use(f.repo, MarchPath.build(f.repo, 200, 200, 1000, slopes))
+	var row: Dictionary = f.state.regiments[f.code].body_groups[0]
+	row.x_m = O + int(path[0][0])
+	row.y_m = O + int(path[0][1])
+	row.facing_deg = 0
+	var absolute: Array = path.map(func(p: Array) -> Array: return [O + int(p[0]), O + int(p[1])])
+	var intents := [{"unit": f.code, "slot": 0, "path_m": absolute, "budget_m": budget, "hostile": false}]
+	var plan := BodyMotion.plan_locomotion_candidate(f.repo, f.state, intents, f.state.absolute_day(), 0)
+	assert_eq(plan.get("version"), 2, str(plan))
+	var result := BodyMotion.commit_locomotion_candidate(f.repo, f.state, plan)
+	assert_eq(result.status, "complete", result.reason)
+	var state: GameState = result.candidate
+	f.state = state
+	f.ctx.state_fn = func() -> GameState: return state
+	return {"cursor": {"version": 2, "abs_day": plan.cursor.abs_day, "substep": plan.cursor.substep, "receipt": BodyMotion._hash(plan)}}
+
+func test_v1_leg_off_saved_facing_is_refused_not_walked_sideways() -> void:
+	var f := _fixture()
+	var envelope := _commit(f, [[[0, 0], [3, 0], [3, 4]]], [10])
+	f.ctx.day_fn = func() -> float: return 0.5
+	var layer := _layer(f, envelope)
+	var piece: Dictionary = layer.built_piece(f.code)
+	assert_false(piece.groups[0].piece.node.is_visible_in_tree(), "facing 90 cannot walk the +X leg on forward clips")
+	assert_string_contains(String(piece.candidate_error), "transverse leg refused")
+	assert_false(layer.screen_rects().has(f.code))
+
+func test_v2_stop_pivot_move_hand_computed_l() -> void:
+	var f := _fixture()
+	var envelope := _commit_v2(f, [[0, 0], [3, 0], [3, 4]], 10)
+	var endpoint := view.call("sample_locomotion_candidate", f.ctx, f.code) as Dictionary
+	assert_eq(endpoint.mode, "bodies", endpoint.error)
+	assert_false(endpoint.moving, "a saved v2 receipt alone draws its endpoint")
+	assert_false(endpoint.rows[0].has("move"))
+	var still: Dictionary = view.call("along_locomotion_candidate", endpoint, 500000)
+	assert_eq([still.rows[0].x_m - O, still.rows[0].y_m - O, still.rows[0].yaw_udeg], [3, 4, 0.0])
+	var sampled: Dictionary = view.call("sample_locomotion_candidate", f.ctx, f.code, envelope)
+	assert_eq(sampled.mode, "bodies", sampled.error)
+	assert_true(sampled.moving)
+	assert_eq(sampled.rows[0].move.ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "pivot", "hold"])
+	var before := sampled.duplicate(true)
+	for example: Array in [[150000, 1.5, 0.0, 0.0, "move"], [350000, 3.0, 0.0, 45000000.0, "pivot"],
+			[500000, 3.0, 1.0, 90000000.0, "move"], [850000, 3.0, 4.0, 45000000.0, "pivot"], [1000000, 3.0, 4.0, 0.0, "hold"]]:
+		var at: Dictionary = view.call("along_locomotion_candidate", sampled, example[0])
+		assert_eq([at.rows[0].x_m - O, at.rows[0].y_m - O, at.rows[0].yaw_udeg, at.rows[0].op], example.slice(1), str(example[0]))
+	assert_eq(sampled, before, "sampling leaves the copied projection intact")
+	for bad: int in [-1, 1000001]:
+		assert_eq(view.call("along_locomotion_candidate", sampled, bad).mode, "invalid")
+	var mixed := envelope.duplicate(true)
+	mixed.moves = []
+	assert_eq(view.call("sample_candidate", f.ctx, f.code, mixed).mode, "invalid", "v1 budget envelope cannot time a v2 receipt")
+	var forged := envelope.duplicate(true)
+	forged.cursor.receipt = "b".repeat(64)
+	assert_eq(view.call("sample_candidate", f.ctx, f.code, forged).mode, "invalid")
+	var v1 := _fixture()
+	var v1_envelope := _commit(v1, [[[0, 0], [0, 4]]], [10])
+	assert_eq(view.call("sample_locomotion_candidate", v1.ctx, v1.code, v1_envelope).mode, "invalid", "v1 receipt is not a v2 timeline")
+	assert_eq(view.call("sample_candidate", v1.ctx, v1.code, v1_envelope).mode, "bodies")
+
+func test_v2_pivot_needs_the_arms_clip_else_refuses_the_unit() -> void:
+	var f := _fixture()
+	f.state.army_roster[f.code].organization_arm = "infantry"
+	assert_eq(MapObjects.army_piece(f.repo, f.state.army_roster[f.code]), "infantry", "this arm has MARCH only")
+	var envelope := _commit_v2(f, [[0, 0], [3, 0], [3, 4]], 10)
+	f.ctx.day_fn = func() -> float: return 0.35
+	var layer := _layer(f, envelope)
+	var piece: Dictionary = layer.built_piece(f.code)
+	assert_false(piece.groups[0].piece.node.is_visible_in_tree())
+	assert_string_contains(String(piece.candidate_error), "no PIVOT_RIGHT clip")
+	assert_false(layer.screen_rects().has(f.code))
+	# A straight v2 leg along the facing needs no pivot and plays on MARCH alone.
+	var straight := _fixture()
+	straight.state.army_roster[straight.code].organization_arm = "infantry"
+	var ahead := _commit_v2(straight, [[0, 0], [4, 0]], 8)
+	straight.ctx.day_fn = func() -> float: return 0.25
+	var walking := _layer(straight, ahead)
+	var shown: Dictionary = walking.built_piece(straight.code)
+	assert_true(shown.groups[0].piece.node.is_visible_in_tree(), String(shown.get("candidate_error", "")))
+	assert_eq(shown.groups[0].piece.action, "MARCH")
+
+func test_v2_arm_with_pivot_clips_stops_turns_then_walks() -> void:
+	var f := _fixture()
+	f.state.army_roster[f.code].organization_arm = "archers"
+	assert_eq(MapObjects.army_piece(f.repo, f.state.army_roster[f.code]), "archers")
+	var envelope := _commit_v2(f, [[0, 0], [3, 0], [3, 4]], 10)
+	var clock := {"share": 0.3 + 0.1 * 0.25, "speed": 1}
+	f.ctx.day_fn = func() -> float: return clock.share
+	f.ctx.clock_fn = func() -> int: return clock.speed
+	var layer := _layer(f, envelope)
+	var child: Dictionary = layer.built_piece(f.code).groups[0].piece
+	assert_true(child.node.is_visible_in_tree(), String(layer.built_piece(f.code).get("candidate_error", "")))
+	var anim: AnimationPlayer = child.anims[0]
+	layer.step(0.0)
+	assert_eq(child.action, "PIVOT_RIGHT")
+	assert_eq(anim.speed_scale, 0.0, "pivot is scrubbed by operation phase, not frame delta")
+	assert_almost_eq(anim.current_animation_position, 0.25 * anim.current_animation_length, 0.001)
+	var expected := [["PIVOT_RIGHT", 45.0, Vector2(3, 0)], ["MARCH", 90.0, Vector2(3, 1)], ["PIVOT_LEFT", 45.0, Vector2(3, 4)]]
+	var i := 0
+	for share: float in [0.35, 0.5, 0.85]:
+		clock.share = share
+		layer.step(0.0)
+		assert_eq(child.action, expected[i][0], str(share))
+		var yaw := Map3DUnits.facing_yaw(Vector2.from_angle(deg_to_rad(expected[i][1])), child.stand_deg)
+		assert_almost_eq(wrapf((child.node as Node3D).global_rotation.y - yaw, -PI, PI), 0.0, 0.0001, str(share))
+		var xz: Vector2 = f.ctx.to_world((expected[i][2] + Vector2(O, O)) / float(ArmySystem.metres_per_pack_px(f.repo)))
+		assert_almost_eq((child.node as Node3D).global_position.x, xz.x, 0.0001)
+		assert_almost_eq((child.node as Node3D).global_position.z, xz.y, 0.0001)
+		i += 1
