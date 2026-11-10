@@ -1,5 +1,7 @@
 # CF04c locomotion prerequisite contract
 
+> **Superseded in part (2026-11-10):** the owner rulings in `owner-rulings-2026-11-10.md` win where this document differs (contact bounds, skin diagnostic, certification method, Gram predicate, ownership).
+
 Date: 2026-11-01. Step: `CF04c-locomotion-contract`. Scope: this new document
 only. Dispatcher: `01a17398-42c1-7583-8d3f-7b15e877586c`. Implementation:
 `01a195ee-2805-7270-a65c-cd6431c9c85d`; its unique document Review is recorded

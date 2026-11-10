@@ -1,5 +1,7 @@
 # Passive unit bodies
 
+The route to switching this feature on, and the owner rulings that override earlier contracts (contact bounds, skin diagnostic, sampled certification, Gram predicate, ownership), are `docs/superpowers/plans/2026-11-10-cluster-activation.md` and `docs/reviews/cluster-formations/owner-rulings-2026-11-10.md`.
+
 `UnitBodies` is an engine-pure, opt-in candidate API. Its authoritative contract
 is `docs/reviews/cluster-formations/cf02-foundation-contract.md`. It has no
 production lifecycle, load, march, damage or render callers.

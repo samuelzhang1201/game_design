@@ -1,5 +1,7 @@
 # CF04c candidate render consumer contract
 
+> **Superseded in part (2026-11-10):** the owner rulings in `owner-rulings-2026-11-10.md` win where this document differs (contact bounds, skin diagnostic, certification method, Gram predicate, ownership).
+
 Date: 2026-11-01. This is the bounded `CF04c-contract` documentation step,
 not a renderer implementation or production activation. The sole dispatcher is
 `01a17398-42c1-7583-8d3f-7b15e877586c`; implementation and its unique Review

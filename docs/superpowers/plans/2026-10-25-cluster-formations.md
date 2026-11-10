@@ -1,5 +1,7 @@
 # 多单位集群阵型 Implementation Plan
 
+> **2026-11-10:** the route to switching this feature on is `2026-11-10-cluster-activation.md`, under the owner rulings in `docs/reviews/cluster-formations/owner-rulings-2026-11-10.md`.
+
 > **DRAFT / CF02-rollout-plan：待人类明确批准。** 下文原批准任务及 acceptance 保留有效；新增“提议的有限分阶段接入”仅供审阅，不是执行或登记授权。原 CF02 仍 incomplete / boundary-blocked，唯一实施者 `01a17401-321b-71a2-9908-32857c8ef4f8` 不变；不能以被动基础宣告原 CF02 完成。即使本草案 CI 与文档 Review 通过，也必须等待人类明确批准 staging、验收和 ownership 处理后才能合并。证据、逐步文件和待决项见 `docs/reviews/cluster-formations/cf02-rollout-boundary.md`。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 仓库固定实施／唯一 Review 两人规则优先；不得采用另加实现、架构或嵌套 reviewer 的执行方式。

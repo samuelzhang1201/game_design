@@ -1,5 +1,7 @@
 # Infantry pivot metric adapter
 
+> **Superseded in part (2026-11-10):** the owner rulings in `owner-rulings-2026-11-10.md` win where this document differs (contact bounds, skin diagnostic, certification method, Gram predicate, ownership).
+
 `LOCO-INFANTRY-METRICS`, implementation `01a198dd-e9d0-7df2-852a-5eea882e2ce6`,
 dispatcher `01a17398-42c1-7583-8d3f-7b15e877586c`; unique Review `01a198e8-c627-7092-b559-b935496d8a5e`
 registered by that dispatcher for this PR. Scope is exactly this file,
