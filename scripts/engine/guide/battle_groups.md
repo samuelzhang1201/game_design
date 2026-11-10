@@ -112,7 +112,7 @@ entry does not discover/merge battles or replace production melee damage.
 ## Candidate contact enrollment
 
 `BodyBattle.plan_candidate` / `commit_candidate` accept the closed
-`contacts`, `enter` and advance-stage `withdraw` requests from the CF05 contract at an admitted contact
+`contacts`, `enter`, `merge` and advance-stage `withdraw` requests from the CF05 contract at an admitted contact
 boundary. Planning leaves the source unchanged; commit independently replans
 and compares the entire canonical plan before publishing one detached state.
 Unsupported requests error; valid other stages and frozen rounds/decisions
@@ -125,9 +125,9 @@ doctrine, town/siege exclusions and enrollment reports. Reinforcement validates
 canonical membership, side capacity and every allegiance pair, freezes old
 parties before appending the newcomer, and requires lawful contact in either
 direction. Friendly frames and anchor proximity cannot start an encounter.
-Distinct contacting fields defer for the unimplemented merge provider. An
-attacking ranged-equipped cross-field evaluation returns
-`deferred: direct_fire_dependency` until the accepted CF06 firing query exists.
+Distinct contacting fields merge through the candidate field union
+(`guide/battle_merge.md`). The `contacts`, `enter` and `merge` requests run at
+the contact stage, `withdraw` at advance.
 
 Existing row identities, homes, counts, points, facing, paths, slot counters and
 owner anchor/facing snapshots transfer without refresh, seeding or movement.

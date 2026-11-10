@@ -7,6 +7,10 @@ static func _result(status: String, reason: String, candidate: GameState = null,
 
 static func _request_ok(request: Dictionary) -> bool:
 	if request.get("kind") == "contacts": return BodyMotion._keys(request, ["kind"])
+	if request.get("kind") == "merge":
+		return BodyMotion._keys(request, ["kind", "first_id", "second_id"]) \
+			and DayResolution._body_decimal(request.first_id) and request.first_id != "0" \
+			and DayResolution._body_decimal(request.second_id) and int(request.first_id) < int(request.second_id)
 	if request.get("kind") == "withdraw":
 		return BodyMotion._keys(request, ["kind", "unit", "battle_id", "reason"]) \
 			and request.unit is String and not request.unit.is_empty() \
@@ -51,7 +55,7 @@ static func _plan_ok(plan: Dictionary) -> bool:
 		and plan.basis is Dictionary and BodyMotion._keys(plan.basis, ["source"]) \
 		and plan.basis.source is String and BodyMotion._digest(plan.basis.source) \
 		and plan.motion is Dictionary and plan.motion.is_empty() and plan.contacts is Array and _contacts_ok(plan.contacts) \
-		and (plan.request.kind == "contacts" or plan.contacts.is_empty())
+		and (plan.request.kind in ["contacts", "merge"] or plan.contacts.is_empty())
 
 # Private stages retain the consumed receipt/cursor; only the final publisher consumes an operation.
 static func _seal_private(repo: DataRepository, state: GameState) -> void:
@@ -162,6 +166,66 @@ static func _start(repo: DataRepository, source: GameState, player: String, enem
 		"place_x_m": battle.place_x_m, "place_y_m": battle.place_y_m})
 	return _result("complete", "Staged exact founders", staged, {"contacts": contacts, "new_id": battle_id})
 
+## Lawful physical cross-field contact, both directions, on private staging.
+static func _cross_pairs(repo: DataRepository, state: GameState, a: Dictionary, b: Dictionary,
+		boundary: Dictionary) -> Dictionary:
+	var contacts: Array = []
+	for pair: Array in [[a, b], [b, a]]:
+		for unit: String in BattleMerge._units(pair[0]):
+			var enemies: Array = BattleMerge._units(pair[1]).filter(func(code: String) -> bool:
+				return ArmySystem._body_enemies(repo, state, unit, code))
+			if enemies.is_empty(): continue
+			var query := _pairs(repo, state, pair[0], unit, enemies, boundary)
+			if query.status != "complete": return _result("error", query.reason)
+			contacts.append_array(query.pairs)
+	return _result("complete", "Cross-field contacts", null, {"contacts": contacts})
+
+## Field union: every absorbed store transfers by allegiance before the absorbed field is deleted.
+static func _merge(repo: DataRepository, source: GameState, first_id: int, second_id: int,
+		boundary: Dictionary) -> Dictionary:
+	var a := UnitBodies._battle(source, first_id)
+	var b := UnitBodies._battle(source, second_id)
+	if a.is_empty() or b.is_empty() or first_id == second_id or BattleSystem.canonical(source, first_id) != first_id \
+		or BattleSystem.canonical(source, second_id) != second_id: return _result("error", "Merge requires two canonical live fields")
+	if String(a.get("town", "")) != "" and String(b.get("town", "")) != "": return _result("deferred", "Two town battles never merge")
+	for battle: Dictionary in [a, b]:
+		if not battle.get("pending_round", {}).is_empty() or battle.has("body_round"): return _result("deferred", "A pending round cannot merge")
+		for side: String in BattleSystem.SIDES:
+			if battle[side].is_empty(): return _result("deferred", "A field with an empty side cannot merge")
+	if not BattleMerge._compatible(repo, source, a, b): return _result("deferred", "Incompatible allegiance union")
+	var probe := UnitBodies._copy(source)
+	var cross := _cross_pairs(repo, probe, UnitBodies._battle(probe, first_id), UnitBodies._battle(probe, second_id), boundary)
+	if cross.status != "complete": return cross
+	if cross.plan.contacts.is_empty():
+		for battle: Dictionary in [a, b]:
+			for unit: String in BattleMerge._units(battle):
+				if BattleRanged.share(repo, source, unit) > 0 and BattleOrders.kind(battle, BattleRules.side_of(battle, unit)) == "attack":
+					return _result("deferred", "direct_fire_dependency")
+		return _result("deferred", "No lawful physical cross-field contact")
+	var staged := UnitBodies._copy(source)
+	var sid := int(BattleMerge.survivor_of(a, b).id)
+	var gid := first_id if sid == second_id else second_id
+	var survivor := UnitBodies._battle(staged, sid)
+	var gone := UnitBodies._battle(staged, gid)
+	# Parties freeze from the members before any membership moves.
+	BattleRules.ensure_parties(survivor)
+	BattleRules.ensure_parties(gone)
+	var side_map := BattleMerge.side_map_of(staged, survivor, gone)
+	var moved := {}
+	for side: String in BattleSystem.SIDES:
+		for code: String in gone[side].duplicate():
+			_seal_private(repo, staged)
+			var transferred := UnitBodies.transfer_battle_candidate(repo, staged, code, gid, sid, side_map.get(side, ""), boundary)
+			if transferred.status != "complete": return _result("error", transferred.reason)
+			staged = transferred.candidate
+			moved[code] = side
+	survivor = UnitBodies._battle(staged, sid)
+	gone = UnitBodies._battle(staged, gid)
+	var event := BattleMerge.absorb(repo, staged, survivor, gone, side_map, moved)
+	BattleReport.note(survivor, [event])
+	staged.day_resolution.journal.battles.append(event.duplicate(true))
+	return _result("complete", "Staged exact field union", staged, cross.plan)
+
 static func _metadata_error(source: GameState) -> String:
 	for code: String in source.regiments.keys() + source.foes.keys():
 		if UnitBodies._naval(source, code): continue
@@ -225,6 +289,11 @@ static func _stage(repo: DataRepository, source: GameState, request: Dictionary,
 		var exited := _withdraw(repo, candidate, request, boundary)
 		if exited.status != "complete": return exited
 		candidate = exited.candidate
+	elif request.kind == "merge":
+		var merged := _merge(repo, candidate, int(request.first_id), int(request.second_id), boundary)
+		if merged.status != "complete": return merged
+		candidate = merged.candidate
+		contacts = merged.plan.contacts
 	elif request.kind == "enter":
 		var joined := _join(repo, candidate, request.unit, int(request.battle_id), request.side, boundary)
 		if joined.status != "complete": return joined
@@ -248,16 +317,10 @@ static func _stage(repo: DataRepository, source: GameState, request: Dictionary,
 					var field: Dictionary = other if own.is_empty() else own
 					var unit := player if own.is_empty() else enemy
 					result = _join(repo, candidate, unit, int(field.id), BattleSystem._side_for(candidate, field, unit), boundary)
-				else:
-					if own.id != other.id:
-						for pair: Array in [[player, enemy, own], [enemy, player, other]]:
-							var query := _pairs(repo, candidate, pair[2], pair[0], [pair[1]], boundary)
-							if query.status != "complete": return _result("error", query.reason)
-							if not query.pairs.is_empty(): return _result("deferred", "Cross-field discovery requires the merge provider")
-						for pair: Array in [[player, own], [enemy, other]]:
-							if BattleRanged.share(repo, candidate, pair[0]) > 0 and BattleOrders.kind(pair[1], BattleRules.side_of(pair[1], pair[0])) == "attack":
-								return _result("deferred", "direct_fire_dependency")
-					continue
+				elif own.id != other.id:
+					result = _merge(repo, candidate, mini(int(own.id), int(other.id)), maxi(int(own.id), int(other.id)), boundary)
+					if result.status == "deferred" and result.reason == "direct_fire_dependency": return result
+				else: continue
 				if result.status == "error": return result
 				if result.status != "complete": continue
 				if result.plan.has("new_id"): starts.append(result.plan.new_id)
