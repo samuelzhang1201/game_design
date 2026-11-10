@@ -2,6 +2,12 @@
 
 exec() in the owner's Blender with soldier_knight_arp.blend open, then install(ROOT) with ROOT the
 checkout to write into. Works on copies; reopen the saved blend afterwards (nothing is saved).
+For a complete pivot build, pass the solved sample JSON and its reference seconds (4.0) as
+install(ROOT, pivot_samples=PATH, pivot_seconds=SECONDS). The samples come from the coupled author
+mapping: pivot_native.gd captures MARCH, pivot_mapping.py builds the cases, pivot_solve.gd solves
+them (the committed solve is in tests/fixtures/infantry_pivot_mapping.json; test_pivot_mapping.py
+re-bakes it onto the installed GLB byte for byte, so no Blender is needed for a pivot-only change).
+The pivot bake never changes the original five clips or binds.
 
 What the map needs of the knight's GLB (a plain export of the rig does not give it):
 - the node names infantry.tscn overrides: armature `inf_rig`, one skinned mesh `infantry`;
@@ -278,7 +284,10 @@ def _march_measure(src, poses, keep):
             "frames": n}
 
 
-def install(root):
+def install(root, pivot_samples=None, pivot_seconds=None):
+    assert (pivot_samples is None) == (pivot_seconds is None), "pivot samples and seconds are a pair"
+    if pivot_samples is not None:
+        assert type(pivot_seconds) in (int, float) and math.isfinite(pivot_seconds) and pivot_seconds > 0
     root = Path(root)
     out = root / "assets/3D/units/infantry"
     scn = bpy.context.scene
@@ -306,11 +315,24 @@ def install(root):
         o.select_set(False)
     rig.select_set(True); body.select_set(True)
     bpy.context.view_layer.objects.active = rig
-    bpy.ops.export_scene.gltf(filepath=str(out / "infantry.glb"), export_format="GLB", use_selection=True,
+    target = out / "infantry.glb"
+    if pivot_samples is not None:
+        target = out / "model_wip/pivot_export/source.glb"
+        target.parent.mkdir(parents=True, exist_ok=True)
+    bpy.ops.export_scene.gltf(filepath=str(target), export_format="GLB", use_selection=True,
                               export_yup=True, export_skins=True, export_animations=True,
                               export_animation_mode="NLA_TRACKS", export_force_sampling=True,
                               export_def_bones=False, export_optimize_animation_size=False,
                               export_image_format="JPEG", export_jpeg_quality=92)
+    if pivot_samples is not None:
+        import importlib.util
+        try:
+            spec = importlib.util.spec_from_file_location("infantry_pivot", root / "tools/units3d/soldier_arp/pivot.py")
+            pivot = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(pivot)
+            info["pivots"] = pivot.bake(target, pivot_samples, out / "infantry.glb", pivot_seconds)
+        finally:
+            target.unlink(missing_ok=True)
     me = body.data
     me.calc_loop_triangles()
     lo = min(v.co.z for v in me.vertices); hi = max(v.co.z for v in me.vertices)
