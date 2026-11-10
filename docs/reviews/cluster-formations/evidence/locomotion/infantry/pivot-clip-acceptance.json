@@ -3,24 +3,25 @@
  "date": "2026-11-10",
  "rulings": "docs/reviews/cluster-formations/owner-rulings-2026-11-10.md R-A (contact_um 22769, seam 1898 model um), R-B (introduced flags fail; same-phase native flags inherited), R-C (dense native sampling + real-window review)",
  "files": {
-  "assets/3D/units/infantry/infantry.glb": "92c044c0c632e08ba6a2d10db488655d30a603e8eb95c2b2c2d1c473df4b17a8",
+  "assets/3D/units/infantry/infantry.glb": "1d3bcb4214ace7721d912e52ace904336b48449129334a3b7ac7238ce3cba758",
   "assets/3D/units/infantry/infantry.glb.import": "30053b147d2096e1a8e72b6927e7d1ec74ec8e3c7c894975991ac2b4af7a1341",
-  "tools/units3d/soldier_arp/pivot_mapping.py": "19e7ee91c234555b402bad25fb6718429a27caa6f7d4cce54e60ff68aa9564e2",
+  "tools/units3d/soldier_arp/pivot_mapping.py": "20f07f94ae3bfe70516b0d21012711b1917e3cf4fd1f5554f29bb646d167b5e9",
   "tools/units3d/soldier_arp/pivot.py": "199b883ea6e5b121f124288b242e29159d835f5e9aa1ed12d5a4be582f55a1b6",
   "tools/units3d/soldier_arp/pivot_solve.gd": "6cdb89773c1d91879fa3cda4b011d00c705f3193322babc8fffe2a975fe17cc6",
   "tools/units3d/soldier_arp/pivot_native.gd": "ca70ab628690cd05574b64bcb692ed0ff1dea4b5260f8c0113d60e6c0a7f5a5b",
   "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
-  "tests/fixtures/infantry_pivot_mapping.json": "3e170935f2a262f67374b6f6fcbf253b876ebfc020c86e1768334a7e9509c82b",
+  "tests/fixtures/infantry_pivot_mapping.json": "d68b42db94db7ddeb93206c32b19ff27226a2c323c2a044bdcbc43cd0858a5bd",
   "tests/fixtures/infantry_pivot_feasibility.json": "e1f2a783bff16aa3371823d5844c195634ac7ae0d9be21fd0692a9e1aceb10c5"
  },
  "mapping": {
   "coupled_neutral_phase": 0.6103399999999999,
   "foot_phases": [
-   0.2857142857142857,
+   0.08213998749999996,
    0.0
   ],
+  "seated_plane_model_y": 0.0,
   "last_step": 0.88,
-  "meaning": "both thighs leave for and hold one native MARCH frame; each held foot lands flat (its own midstance sole) under that frame's hip; the last step starts at .88"
+  "meaning": "both thighs leave for and hold one native MARCH frame; each held foot lands under that frame's hip, its sole posed flat (a native frame whose lowest sole-patch vertex is the boot minimum) on the seated plane y = 0; the last step starts at .88"
  },
  "witness_cases_frozen_vs_coupled": {
   "frozen_uncoupled": {
@@ -47,8 +48,8 @@
      "worst_non_native_gate_ratio": 0.809803
     },
     "contact_um": {
-     "penetration": 6360,
-     "hover": 18991,
+     "penetration": 1,
+     "hover": 17209,
      "slide": 1,
      "seam": 1
     },
@@ -60,16 +61,16 @@
     "march_exit_phase": 0.213579,
     "frames": 260,
     "skin": {
-     "flags": 178,
-     "inherited_native": 178,
+     "flags": 175,
+     "inherited_native": 175,
      "introduced": 0,
      "mapping_only": 0,
      "first_introduced": [],
-     "worst_non_native_gate_ratio": 0.976009
+     "worst_non_native_gate_ratio": 0.985882
     },
     "contact_um": {
      "penetration": 1,
-     "hover": 18991,
+     "hover": 15197,
      "slide": 1,
      "seam": 1
     },
@@ -86,11 +87,11 @@
      "introduced": 0,
      "mapping_only": 0,
      "first_introduced": [],
-     "worst_non_native_gate_ratio": 0.539512
+     "worst_non_native_gate_ratio": 0.530364
     },
     "contact_um": {
      "penetration": 1,
-     "hover": 18991,
+     "hover": 2210,
      "slide": 1,
      "seam": 1
     },
@@ -107,11 +108,11 @@
      "introduced": 0,
      "mapping_only": 0,
      "first_introduced": [],
-     "worst_non_native_gate_ratio": 0.54738
+     "worst_non_native_gate_ratio": 0.537734
     },
     "contact_um": {
      "penetration": 1,
-     "hover": 18991,
+     "hover": 2210,
      "slide": 1,
      "seam": 1
     },
@@ -128,11 +129,11 @@
      "introduced": 0,
      "mapping_only": 0,
      "first_introduced": [],
-     "worst_non_native_gate_ratio": 0.965248
+     "worst_non_native_gate_ratio": 0.951292
     },
     "contact_um": {
-     "penetration": 1,
-     "hover": 18991,
+     "penetration": 1062,
+     "hover": 10624,
      "slide": 1,
      "seam": 1
     },
@@ -152,11 +153,11 @@
     "introduced": 0,
     "mapping_only": 0,
     "first_introduced": [],
-    "worst_non_native_gate_ratio": 0.640813
+    "worst_non_native_gate_ratio": 0.648149
    },
    "contact_um": {
     "penetration": 1,
-    "hover": 18991,
+    "hover": 6620,
     "slide": 1,
     "seam": 1
    },
@@ -173,11 +174,11 @@
     "introduced": 0,
     "mapping_only": 0,
     "first_introduced": [],
-    "worst_non_native_gate_ratio": 0.644244
+    "worst_non_native_gate_ratio": 0.65165
    },
    "contact_um": {
     "penetration": 1,
-    "hover": 18991,
+    "hover": 6620,
     "slide": 1,
     "seam": 1
    },
@@ -185,52 +186,59 @@
   }
  ],
  "canonical_pair_imported_playback": {
-  "march_vs_frozen_max_matrix": 0.0,
   "PIVOT_RIGHT": {
    "length_s": 4.0,
-   "loop_mode": 0,
    "samples": 289,
    "solve_vs_imported_max_vertex_m": 3.612746339714347e-07,
    "seam_into_pivot_m": 2.549195438827562e-07,
    "seam_back_to_march_m": 2.5589062014506934e-07,
    "absolute_skin_flags_dense": 0,
-   "penetration_m": 1.3587594788373736e-06,
-   "stance_hover_m": 0.01899773512862031,
-   "stance_slide_m": 9.462505713297158e-06,
-   "max_vertex_speed_m_per_phase": 6.121364221431117,
+   "penetration_m_from_seated_plane": 9.573643914935395e-07,
+   "stance_hover_m": 0.006623926369065263,
+   "stance_slide_m": 9.247347121365594e-06,
+   "max_vertex_speed_m_per_phase": 5.7506194623319145,
    "max_phase_gap": 0.003750000000000031,
-   "sampling_margin_m(speed*gap/2)": 0.011477557915183439
+   "sampling_margin_m": 0.010782411491872429
   },
   "PIVOT_LEFT": {
    "length_s": 4.0,
-   "loop_mode": 0,
    "samples": 289,
-   "solve_vs_imported_max_vertex_m": 3.653326077622345e-07,
+   "solve_vs_imported_max_vertex_m": 3.612746339714347e-07,
    "seam_into_pivot_m": 2.549195438827562e-07,
    "seam_back_to_march_m": 2.495792349236822e-07,
    "absolute_skin_flags_dense": 0,
-   "penetration_m": 1.4318116445775908e-06,
-   "stance_hover_m": 0.01899617852806771,
-   "stance_slide_m": 7.7811682998332e-06,
-   "max_vertex_speed_m_per_phase": 6.523888371017112,
+   "penetration_m_from_seated_plane": 1.2571880197952134e-06,
+   "stance_hover_m": 0.006621851657707557,
+   "stance_slide_m": 7.656202640547528e-06,
+   "max_vertex_speed_m_per_phase": 6.473723754013069,
    "max_phase_gap": 0.003750000000000031,
-   "sampling_margin_m(speed*gap/2)": 0.012232290695657186
+   "sampling_margin_m": 0.012138232038774606
   }
  },
  "notes": [
-  "Contact is measured in model metres against the entry floor plane, stricter than the rendered ground (the protected seat lift is above it).",
-  "Stance hover 18991 um is the held left foot posed as native MARCH 10/35 (FOOT_PHASES), whose sole patch sits 18990 um above its own boot minimum in native MARCH itself.",
-  "Witness penetration 6360 um is the frozen native .137->.823 endpoint floor difference (feasibility contract), not introduced by the mapping.",
+  "Heights are from the seated plane, model y = 0: Map3DUnitRig seats the figure origin there. The rendered ground is the seat lift below it, so penetration from y = 0 is the stricter reading.",
+  "Hover is the LOWEST vertex of the planted sole patch (bind-mesh boot vertices within 5 mm of that boot's lowest bind vertex): whether the sole touches. Slide is the ground-projected drift of that patch from touchdown, in the entry (world) frame of the helper's yaw convention.",
+  "Canonical hover 6620 um is native MARCH 25/28's own entry boot floor (the endpoint stance is the protected native pose). Witness hover <= 17209 um and penetration <= 1062 um are the frozen native endpoint boot minima (feasibility contract), not the mapping.",
   "Imported playback: 289 Godot AnimationPlayer samples per clip (every key and every midpoint); sampling margin = max vertex speed x max gap / 2.",
+  "The witness solve is not committed (it is about 4x the canonical one); test_pivot_mapping.py re-audits the committed canonical solve. Rebuild the witness rows with pivot_mapping.py build --witness, pivot_solve.gd and audit.",
   "This is clip acceptance, not LOCO-CERT-INF: the full turn/phase grid certificate stays with that step."
  ],
  "visual_review": {
-  "method": "visual-review skill; real Forward+/Metal window 2560x1600, shipped scenes/models/units/infantry.tscn, figure ~800 px tall (the closest-zoom figure size), PIVOT_RIGHT vs #221 vs native MARCH at u=0..0.95, front and side, body + feet crops; independent critic subagent",
-  "verdict": "no defect breaking a taste principle; this PR equal to or slightly better than #221 and no worse than shipped MARCH at closest zoom (feet hold the ground, no crotch/mail stretch, no limb through the shield)",
+  "method": "visual-review skill; real Forward+/Metal window 2560x1600, shipped scenes/models/units/infantry.tscn on a ground plane at the seated plane y = 0, figure ~800 px tall (the closest-zoom figure size), PIVOT_RIGHT (this PR) vs #221 vs native MARCH at u=0..0.95, front and side, body + feet crops; independent critic subagent per round",
+  "rounds": [
+   {
+    "mapping": "first push (feet on the entry floor, left foot 10/35)",
+    "verdict": "no taste-principle defect; equal to or slightly better than #221"
+   },
+   {
+    "mapping": "final (feet on y = 0, left sole 0.08214)",
+    "verdict": "no taste-principle defect; better than #221 (held soles flat where #221 rolls onto the boot edge, front u=0.42 toe stays planted) and no worse than shipped MARCH; no stretch between the legs, no floating or sinking feet"
+   }
+  ],
   "noted": [
-   "sword tip overlaps the front boot at u 0.87-0.95 front view, shared with #221, only at closest zoom",
+   "sword tip touches the front boot toe at u 0.78-0.95 (front view), identical in #221, readable only at the closest zoom",
    "PIVOT is not playable through snapshot_screen until CF04c-CONSUMER; in-map playback review belongs to CF04c-VISUAL"
   ],
-  "sheets": "side-session notes folder loco-inf-clip/ (sheet_front_body, sheet_front_feet, sheet_side_body, sheet_side_feet)"
+  "sheets": "side-session notes folder loco-inf-clip/v2/"
  }
 }
