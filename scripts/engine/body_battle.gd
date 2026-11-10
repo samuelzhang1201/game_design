@@ -199,7 +199,7 @@ static func _merge(repo: DataRepository, source: GameState, first_id: int, secon
 	if cross.plan.contacts.is_empty():
 		for battle: Dictionary in [a, b]:
 			for unit: String in BattleMerge._units(battle):
-				if BattleRanged.share(repo, source, unit) > 0 and BattleOrders.kind(battle, BattleRules.side_of(battle, unit)) == "attack":
+				if BattleRanged.share(repo, source, unit) > 0 and BattleSystem.unit_action(repo, source, battle, unit).kind == "attack":
 					return _result("deferred", "direct_fire_dependency")
 		return _result("deferred", "No lawful physical cross-field contact")
 	var staged := UnitBodies._copy(source)
@@ -216,7 +216,7 @@ static func _merge(repo: DataRepository, source: GameState, first_id: int, secon
 		for code: String in gone[side].duplicate():
 			_seal_private(repo, staged)
 			var transferred := UnitBodies.transfer_battle_candidate(repo, staged, code, gid, sid, side_map.get(side, ""), boundary)
-			if transferred.status != "complete": return _result("error", transferred.reason)
+			if transferred.status != "complete": return _result(transferred.status, transferred.reason)
 			staged = transferred.candidate
 			moved[code] = side
 	survivor = UnitBodies._battle(staged, sid)

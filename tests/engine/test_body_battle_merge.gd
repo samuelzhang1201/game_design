@@ -239,7 +239,12 @@ func test_pending_round_two_towns_friendly_contact_and_incompatible_union_do_not
 	_assert_unmerged(f, _merge_request(), "Two town battles never merge")
 	_assert_unmerged(_fixture("friendly"), _merge_request(), "No lawful physical cross-field contact")
 	f = _fixture("friendly")
-	assert_eq(_run(f, {"kind": "contacts"}).status, "complete", "no enemy cross contact leaves the fields apart")
+	var apart := _run(f, {"kind": "contacts"})
+	assert_eq(apart.status, "complete", apart.reason)
+	if apart.candidate != null:
+		assert_eq(apart.candidate.battles.size(), 2, "no enemy cross contact leaves the fields apart")
+		assert_true(apart.candidate.battle_aliases.is_empty())
+		assert_false(apart.candidate.day_resolution.journal.battles.any(func(e: Dictionary) -> bool: return e.kind == "merge"))
 	f = _fixture()
 	f.state.army_roster[f.c].kingdom_code = f.repo.resolve_realm("player_realm")
 	_assert_unmerged(f, _merge_request(), "Incompatible allegiance union")
@@ -255,6 +260,20 @@ func test_ranged_query_unavailable_returns_explicit_dependency() -> void:
 		assert_eq(result.reason, "direct_fire_dependency")
 		assert_null(result.candidate)
 		assert_eq(BodyMotion._hash(f.state.to_dict()), before)
+
+func test_received_unit_task_attack_alone_still_reports_the_dependency() -> void:
+	var f := _fixture("friendly", true)
+	assert_eq(f.state.battles[1].actions.att.kind, "hold", "the side action holds")
+	f.state.foes[f.c].supplies = 1000000
+	f.state.unit_tasks = {f.c: {"current_id": "adv9", "received_sequence": 1, "orders": {"adv9": {
+		"sequence": 1, "status": "received", "reason": "Received", "history": [],
+		"request": {"id": "adv9", "unit": f.c, "battle_id": 9, "task": "advance", "formation": "",
+			"target_unit": f.d, "source": "ai", "issuer": "", "max_route_m": 0, "region": ""}}}}}
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.state.battles[1], f.c).kind, "attack")
+	for request: Dictionary in [_merge_request(), {"kind": "contacts"}]:
+		var result := _run(f, request)
+		assert_eq(result.status, "deferred", str(request))
+		assert_eq(result.reason, "direct_fire_dependency")
 
 func test_merge_requests_are_closed_and_forged_plans_reject() -> void:
 	var f := _fixture()
