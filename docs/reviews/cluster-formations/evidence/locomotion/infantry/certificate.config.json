@@ -1,0 +1,123 @@
+{
+ "arm": "infantry",
+ "note": "LOCO-CERT-INF. Provider Map3DInfantryLocomotion: the coupled pivot plan expanded for each grid turn and re-solved by Map3DInfantryPivot (the shipped clips are its +/-90 solve). Pivots enter and leave MARCH at 25/28 only; the hold is MARCH frozen at 25/28 (the consumer's admitted phases, recorded here as a consumer requirement). Pivot stance = the plan's authored stance intervals; MARCH stance = the lower sole patch. turn_q 400000 is the contract's example value (contact does not depend on duration); LOCO-POLICY installs the real row.",
+ "scene": "scenes/models/units/infantry.tscn",
+ "provider": "scripts/map3d/map3d_infantry_locomotion.gd",
+ "feet": {
+  "l": [
+   "foot.l",
+   "toes_01.l"
+  ],
+  "r": [
+   "foot.r",
+   "toes_01.r"
+  ]
+ },
+ "patch_band_m": 0.005,
+ "forward": [
+  0,
+  0,
+  -1
+ ],
+ "stride_m": 1.765,
+ "turn_q": 400000,
+ "radius_m": 927,
+ "entry_phase": 0.8928571428571429,
+ "stance": {
+  "MARCH": "lowest:1",
+  "PIVOT_LEFT": {
+   "l": [
+    [
+     0.12,
+     0.24
+    ],
+    [
+     0.36,
+     0.48
+    ],
+    [
+     0.6,
+     0.72
+    ],
+    [
+     0.84,
+     0.9
+    ]
+   ],
+   "r": [
+    [
+     0.0,
+     0.12
+    ],
+    [
+     0.24,
+     0.36
+    ],
+    [
+     0.48,
+     0.6
+    ],
+    [
+     0.72,
+     0.84
+    ],
+    [
+     0.9,
+     1.0
+    ]
+   ]
+  },
+  "PIVOT_RIGHT": {
+   "l": [
+    [
+     0.12,
+     0.24
+    ],
+    [
+     0.36,
+     0.48
+    ],
+    [
+     0.6,
+     0.72
+    ],
+    [
+     0.84,
+     0.9
+    ]
+   ],
+   "r": [
+    [
+     0.0,
+     0.12
+    ],
+    [
+     0.24,
+     0.36
+    ],
+    [
+     0.48,
+     0.6
+    ],
+    [
+     0.72,
+     0.84
+    ],
+    [
+     0.9,
+     1.0
+    ]
+   ]
+  }
+ },
+ "hold_clip": "MARCH",
+ "march_stop_phases": [
+  0.8928571428571429
+ ],
+ "march_start_phases": [
+  0.8928571428571429
+ ],
+ "hold_phases": [
+  0.8928571428571429
+ ]
+}

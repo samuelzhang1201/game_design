@@ -238,35 +238,58 @@ def build_case(model, template, op, phases, neutral, last_step, foot, plane):
     f['reference_poses'] = frames
     f['pose'] = frames[0]
     f['transition'] = {'entry_pose': frames[0], 'exit_pose': frames[-1]}
-    turn = op['turn_udeg'] / 1e6
-    lift = .05*min(1., abs(turn)/90)
-    contacts = {}
+    plan = []
     for li, leg in enumerate(legs):
         binds = template['contacts']['legs'][leg['hip']]
         sb, tb = np.array(binds['sole_bind']), np.array(binds['toe_bind'])
         se, sx = ge[leg['ankle']] @ sb, gx[leg['ankle']] @ sb
         te, tx = ge[leg['toe']] @ tb, gx[leg['toe']] @ tb
-        point, sr, tr, cursor, iv = se[:3, 3].copy(), proper(se), proper(te), 0., []
-
-        def add(a, z, kind, p0, p1, s0, s1, t0, t1):
-            iv.append({'t0': a, 't1': z, 'kind': kind, 'point_from': p0, 'point_to': p1,
-                       'sole_from': s0, 'sole_to': s1, 'toe_from': t0, 'toe_to': t1})
-        swings = [(a, z) for side, a, z in ev if side == li]
-        for si, (a, z) in enumerate(swings):
-            if cursor < a:
-                add(cursor, a, 'stance', point, point, sr, sr, tr, tr)
-            last = si == len(swings) - 1
+        swings = []
+        for si, (a, z) in enumerate([(a, z) for side, a, z in ev if side == li]):
+            last = si == len(swings_of(ev, li)) - 1
             mid = flat[li]
             sm, tm = mid[leg['ankle']] @ sb, mid[leg['toe']] @ tb
-            r = rotate(-turn*(1. if last else min(1., z+.06)))
             gs, gt = (sx, tx) if last else (sm, tm)
             place = gs[:3, 3].copy()
             if not last:  # under the coupled frame's hip, flat on its own midstance sole
                 offset = mid[leg['ankle']][:3, :3] @ sb[:3, 3]
                 place[[0, 2]] = pose[li][leg['hip']][:3, 3][[0, 2]] + offset[[0, 2]]
-            target = r @ place
-            target[1] = sx[1, 3] if last else ground + sm[1, 3] - low[li]
-            rs, rt = r @ proper(gs), r @ proper(gt)
+            place[1] = sx[1, 3] if last else ground + sm[1, 3] - low[li]
+            swings.append({'t0': a, 't1': z, 'future': 1. if last else min(1., z+.06), 'place': place,
+                           'sole': proper(gs), 'toe': proper(gt)})
+        plan.append({'hip': leg['hip'], 'sole_bind': binds['sole_bind'], 'toe_bind': binds['toe_bind'],
+                     'point': se[:3, 3].copy(), 'sole': proper(se), 'toe': proper(te), 'swings': swings})
+    contacts = expand(plan, op['turn_udeg'])
+    f['contacts'] = {'march_entry_phase': entry, 'march_exit_phase': exit_, 'legs': contacts}
+    f['plan'] = plan
+    f['author_mapping'] = {'neutral_phases': list(neutral), 'foot_phases': list(foot), 'plane_y': plane, 'last_step': last_step, 'first_free_leg': legs[first]['hip'],
+                           'final_support_leg': legs[final_support]['hip'], 'floor_model_y': ground}
+    return f
+
+
+def swings_of(ev, li):
+    return [(a, z) for side, a, z in ev if side == li]
+
+
+def expand(plan, turn_udeg):
+    """The contact intervals of a turn: the turn-free plan's held targets rotated by
+    -turn x (the swing's end + .06), swung on a smoothstep with a lift. Mirrored by
+    Map3DInfantryLocomotion (GDScript) for any turn at runtime."""
+    turn = turn_udeg / 1e6
+    lift = .05*min(1., abs(turn)/90)
+    out = {}
+    for leg in plan:
+        point, sr, tr, cursor, iv = leg['point'], leg['sole'], leg['toe'], 0., []
+
+        def add(a, z, kind, p0, p1, s0, s1, t0, t1):
+            iv.append({'t0': a, 't1': z, 'kind': kind, 'point_from': p0, 'point_to': p1,
+                       'sole_from': s0, 'sole_to': s1, 'toe_from': t0, 'toe_to': t1})
+        for sw in leg['swings']:
+            a, z = sw['t0'], sw['t1']
+            if cursor < a:
+                add(cursor, a, 'stance', point, point, sr, sr, tr, tr)
+            r = rotate(-turn*sw['future'])
+            target, rs, rt = r @ sw['place'], r @ sw['sole'], r @ sw['toe']
             pp, ps, pt = point, sr, tr
             for k in range(1, 17):
                 s = k/16
@@ -279,11 +302,8 @@ def build_case(model, template, op, phases, neutral, last_step, foot, plane):
             point, sr, tr, cursor = target, rs, rt, z
         if cursor < 1:
             add(cursor, 1., 'stance', point, point, sr, sr, tr, tr)
-        contacts[leg['hip']] = {'sole_bind': binds['sole_bind'], 'toe_bind': binds['toe_bind'], 'intervals': iv}
-    f['contacts'] = {'march_entry_phase': entry, 'march_exit_phase': exit_, 'legs': contacts}
-    f['author_mapping'] = {'neutral_phases': list(neutral), 'foot_phases': list(foot), 'plane_y': plane, 'last_step': last_step, 'first_free_leg': legs[first]['hip'],
-                           'final_support_leg': legs[final_support]['hip'], 'floor_model_y': ground}
-    return f
+        out[leg['hip']] = {'sole_bind': leg['sole_bind'], 'toe_bind': leg['toe_bind'], 'intervals': iv}
+    return out
 
 
 def canonical_ops():
@@ -427,6 +447,9 @@ def main():
     b.add_argument('native', type=Path)
     b.add_argument('out', type=Path)
     b.add_argument('--witness', action='store_true')
+    pl = sub.add_parser('plan')
+    pl.add_argument('native', type=Path)
+    pl.add_argument('out', type=Path)
     a = sub.add_parser('audit')
     a.add_argument('native', type=Path)
     a.add_argument('inputs', type=Path)
@@ -447,6 +470,14 @@ def main():
         args.out.write_text(text)
         print('cases', len(cases), 'frames', sum(len(c['phases']) for c in cases),
               'sha256', hashlib.sha256(text.encode()).hexdigest())
+    elif args.command == 'plan':
+        case = build(model)[0]
+        legs = [{'hip': g['hip'], 'sole_bind': g['sole_bind'], 'toe_bind': g['toe_bind'], 'point': g['point'],
+                 'sole': g['sole'][:3, :3], 'toe': g['toe'][:3, :3], 'swings': g['swings']} for g in case['plan']]
+        payload = {'note': 'generated by tools/units3d/soldier_arp/pivot_mapping.py plan; do not edit',
+                   'march_phase': CANONICAL_PHASE, 'rest': case['rest'], 'legs': legs}
+        args.out.write_text(json.dumps(encode(payload), separators=(',', ':')) + '\n')
+        print('plan', args.out)
     elif args.command == 'audit':
         cases = json.loads(args.inputs.read_text())['cases']
         report = audit(model, cases, json.loads(args.results.read_text()))
