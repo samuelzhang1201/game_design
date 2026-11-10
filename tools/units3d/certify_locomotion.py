@@ -22,6 +22,17 @@ An arm's provider script (config "provider": `static func pose(player,
 skeleton, request)`) replaces that seek; it is then sampled per grid turn and
 the native seek is kept beside it for the skin diagnostic (R-B).
 
+The seams are R-A row 4's whole list, built by the tool (`required_boundaries`):
+the loop seam (its last pose sampled just before the wrap), MARCH -> pivot,
+pivot -> MARCH, stop and start to the `hold_clip`, and the stationary pivot
+from and to it, at the phases the config admits (`march_stop_phases`,
+`march_start_phases`, `hold_phases`: a list, or '*' for any sampled phase,
+i.e. a mid-stance cut). Every foot must stand at least once in every
+locomotion clip, or hover and slide go unmeasured and the run fails. Hover is
+the patch's LOWEST vertex above the seated plane. The ground is flat at the
+seat lift below the origin unless `slope` (rise per run, applied at every yaw)
+is set.
+
 Writes a digest-bound certificate JSON; exit 0 PASS, 1 FAIL, 2 error. A PASS is
 the numeric half of R-C only: the real-window review is still required.
 
@@ -49,6 +60,7 @@ SKIN_RATIO, SKIN_MIN_M = 4.0, 0.03  # R-B, unchanged thresholds
 TURN = 360_000_000
 LOCO_Q = 1_000_000  # BodyMotion.LOCOMOTION_Q
 UNIFORM = 512
+LOOP_END = 1 - 1e-6  # last pose of a looping clip: seek(length) would wrap to phase 0
 
 
 def sha(path):
@@ -141,6 +153,8 @@ class Model:
                 j = b64(s['bones_i32'], '<i4', 1).reshape(len(v), -1)
                 w = b64(s['weights_f32'], '<f4', 1).reshape(len(v), -1).astype(float)
                 tri = b64(s['indices_i32'], '<i4', 3)
+                if not len(tri):
+                    raise ValueError(f"{mesh['name']} surface {index} has no index array: no edges for R-B")
                 edges = np.sort(np.concatenate([tri[:, [0, 1]], tri[:, [1, 2]], tri[:, [2, 0]]]), axis=1)
                 self.meshes.append({'mesh': mesh['name'], 'surface': index, 'v': v, 'j': j, 'w': w,
                                     'binds': binds, 'edges': np.unique(edges, axis=0)})
@@ -254,6 +268,36 @@ class Worst:
                 'bound_um': bound_um, 'pass': total <= bound_um, 'witness': self.witness}
 
 
+def phase_list(value, key):
+    if value == '*':
+        return '*'
+    if not isinstance(value, list) or not value or not all(isinstance(p, (int, float)) and 0 <= p <= 1 for p in value):
+        raise ValueError(f'{key} must be "*" or a non-empty list of phases')
+    return [float(p) for p in value]
+
+
+def required_boundaries(config):
+    """R-A row 4's boundaries, built here so a config cannot leave one out: the
+    loop seam, MARCH -> pivot (stop) and pivot -> MARCH (start), stop/start to
+    the hold clip, and the stationary pivot from and to it. The config declares
+    the phases its consumer admits ('*' = any sampled phase, i.e. mid-stance cuts);
+    `boundaries` may only add more."""
+    hold = config['hold_clip']
+    stop = phase_list(config['march_stop_phases'], 'march_stop_phases')
+    start = phase_list(config['march_start_phases'], 'march_start_phases')
+    held = phase_list(config['hold_phases'], 'hold_phases')
+    if held == '*' and start == '*':
+        raise ValueError('hold_phases and march_start_phases cannot both be "*" (declare one side)')
+    side = lambda v: ['*'] if v == '*' else v
+    out = [['MARCH', LOOP_END, 'MARCH', 0.0]]
+    for pivot in ('PIVOT_LEFT', 'PIVOT_RIGHT'):
+        out += [['MARCH', p, pivot, 0.0] for p in side(stop)] + [[pivot, 1.0, 'MARCH', p] for p in side(start)]
+        out += [[hold, p, pivot, 0.0] for p in side(held)] + [[pivot, 1.0, hold, 0.0]]
+    out += [['MARCH', p, hold, 0.0] for p in side(stop)]
+    out += [[hold, a, 'MARCH', b] for a in side(held) for b in side(start)]
+    return out + [b for b in config.get('boundaries', []) if b not in out]
+
+
 def measure(dump, config, scale):
     """Pure measurement of a decoded capture against R-A / R-B. `scale` =
     {k, simulation_scale, lift_model_m}."""
@@ -267,17 +311,28 @@ def measure(dump, config, scale):
     by = streams(model.samples)
     provider = bool(config.get('provider'))
     grid = turn_grid()
+    boundaries = required_boundaries(config)
+
+    def prov_of(clip):  # a provider poses the locomotion clips only; the hold clip is native
+        return provider and clip in CLIPS
+
+    if provider:
+        for g in grid:
+            if not by.get((clip_for(g['turn_udeg']), g['turn_udeg'], True)):
+                raise ValueError(f"no provider stream for turn {g['turn_udeg']}")
     pen, hov, sld, env = Worst(), Worst(), Worst(), Worst()
+    missing = []  # a foot with no stance in a locomotion clip leaves hover and slide unmeasured
 
     def world(clip, phase, points, turn, cycle=0):
         if clip == 'MARCH':
             return points + forward * stride * (phase + cycle)
         return rot_y(points, -math.radians(turn / 1e6) * phase)
 
-    def stream(clip, turn, prov=provider):
+    def stream(clip, turn, prov=None):
+        prov = prov_of(clip) if prov is None else prov
         return by.get((clip, turn if prov and clip != 'MARCH' else None, prov), [])
 
-    def at(clip, phase, turn, prov=provider):
+    def at(clip, phase, turn, prov=None):
         for s in stream(clip, turn, prov):
             if abs(s['phase'] - phase) <= 1e-12:
                 return s
@@ -285,7 +340,7 @@ def measure(dump, config, scale):
 
     # Penetration and envelope (every sample), hover and slide (stance), with margins.
     for (clip, turn, prov), rows in by.items():
-        if prov != provider:
+        if prov != prov_of(clip):
             continue  # native twin of a provider stream: skin diagnostic only
         loop = clip == 'MARCH' and dump['clips']['MARCH']['loop_mode'] != 0
         phases = [s['phase'] for s in rows]
@@ -308,11 +363,16 @@ def measure(dump, config, scale):
             for f, ids in feet.items():
                 heights[f].append(p[ids, 1].min())
                 patch_pts[f].append(p[ids])
+        if clip not in CLIPS:
+            continue  # the hold clip: penetration and envelope only
         rule = config['stance'][clip]
         turns = [turn] if clip == 'MARCH' or turn is not None else \
             [g['turn_udeg'] for g in grid if clip_for(g['turn_udeg']) == clip]
         for f in feet:
-            for run in stance_runs(heights, phases, rule, f, loop):
+            runs = stance_runs(heights, phases, rule, f, loop)
+            if not runs:
+                missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f})
+            for run in runs:
                 cycles = np.cumsum([0] + [1 if b < a else 0 for a, b in zip(run, run[1:])])
                 for k, i in enumerate(run):
                     hov.offer(heights[f][i], {'clip': clip, 'foot': f, 'phase': phases[i], 'turn_udeg': turn})
@@ -330,32 +390,30 @@ def measure(dump, config, scale):
                             sld.widen(np.linalg.norm(w - last, axis=1).max())
                         last = w
 
-    # Seams: both one-sided values at every configured boundary, compared in the
-    # receiving clip's model frame (the consumer's yaw and position are continuous
-    # there). A '*' phase sweeps every sample of that side: a cut from any phase.
+    # Seams: both one-sided values at every boundary, compared in the receiving
+    # clip's model frame (the consumer's yaw and position are continuous there).
+    # A '*' side sweeps every sample of that clip, with that side's chord as margin.
     seams, seam_worst = [], None
-    for a_clip, a_ph, b_clip, b_ph in config['boundaries']:
-        pivot = next((c for c in (a_clip, b_clip) if c != 'MARCH'), None)
+    for a_clip, a_ph, b_clip, b_ph in boundaries:
+        if a_ph == '*' and b_ph == '*':
+            raise ValueError('a boundary may sweep one side only')
+        pivot = next((c for c in (a_clip, b_clip) if c in ('PIVOT_LEFT', 'PIVOT_RIGHT')), None)
         turns = [g['turn_udeg'] for g in grid if clip_for(g['turn_udeg']) == pivot] if provider and pivot else [None]
         for t in turns:
-            if a_ph == '*':
-                pairs = [(s['phase'], b_ph) for s in stream(a_clip, t)]
-            elif b_ph == '*':
-                pairs = [(a_ph, s['phase']) for s in stream(b_clip, t)]
-            else:
-                pairs = [(a_ph, b_ph)]
-            fixed = {}
+            star, fixed_clip, fixed_ph = (a_clip, b_clip, b_ph) if a_ph == '*' else (b_clip, a_clip, a_ph)
+            fixed = model.points(at(fixed_clip, fixed_ph, t)['_g'])
+            swept = stream(star, t) if '*' in (a_ph, b_ph) else [at(b_clip, b_ph, t)]
+            if not swept:
+                raise ValueError(f'no samples of {star} for a seam sweep')
             best, prev = Worst(), None
-            for pa_ph, pb_ph in pairs:
-                pa = fixed.setdefault('a', model.points(at(a_clip, pa_ph, t)['_g'])) if a_ph != '*' \
-                    else model.points(at(a_clip, pa_ph, t)['_g'])
-                pb = fixed.setdefault('b', model.points(at(b_clip, pb_ph, t)['_g'])) if b_ph != '*' \
-                    else model.points(at(b_clip, pb_ph, t)['_g'])
-                d = np.linalg.norm(pa - pb, axis=1)
+            for s in swept:
+                moving = model.points(s['_g'])
+                d = np.linalg.norm(moving - fixed, axis=1)
                 i = int(np.argmax(d))
-                best.offer(d[i], {'from': [a_clip, pa_ph], 'to': [b_clip, pb_ph], 'turn_udeg': t, **model.where(i)})
-                moving = pa if a_ph == '*' else pb
-                if prev is not None:
+                best.offer(d[i], {'from': [a_clip, s['phase'] if a_ph == '*' else a_ph],
+                                  'to': [b_clip, s['phase'] if b_ph == '*' else b_ph], 'turn_udeg': t,
+                                  **model.where(i)})
+                if '*' in (a_ph, b_ph) and prev is not None:
                     best.widen(np.linalg.norm(moving - prev, axis=1).max())
                 prev = moving
             seams.append(best.report(bounds['seam']))
@@ -380,10 +438,10 @@ def measure(dump, config, scale):
     natives = {(s['clip'], s['phase']): flags(s) for s in model.samples if not s.get('provider')}
     inherited, introduced, witnesses = 0, 0, []
     for s in model.samples:
-        if bool(s.get('provider')) != provider:
+        if bool(s.get('provider')) != prov_of(s['clip']):
             continue
         base = natives[(s['clip'], s['phase'])]
-        own = flags(s) if provider else base
+        own = flags(s) if s.get('provider') else base
         new = own - base
         inherited += len(own & base)
         introduced += len(new)
@@ -405,13 +463,14 @@ def measure(dump, config, scale):
         'skin': {'flagged_pairs_inherited': inherited, 'flagged_pairs_introduced': introduced,
                  'pass': introduced == 0, 'introduced_witnesses': witnesses,
                  'rule': 'length > 4 x native-entry AND > 0.03 model m; fails unless the native seek at the same phase is flagged'},
+        'stance': {'pass': not missing, 'missing': missing},
         'patches': {f: {'vertices': int(len(ids)), 'first': [model.where(int(i)) for i in ids[:4]]}
                     for f, ids in feet.items()},
         'turn_grid': [{**g, 'clip': clip_for(g['turn_udeg']), 'duration_q': duration_q(g['turn_udeg'], config['turn_q'])}
                       for g in grid],
         'sample_count': len(model.samples),
     }
-    report['pass'] = all(report[q]['pass'] for q in ('penetration', 'hover', 'slide', 'seam', 'envelope', 'skin')) \
+    report['pass'] = all(report[q]['pass'] for q in ('penetration', 'hover', 'slide', 'seam', 'envelope', 'skin', 'stance')) \
         and all(0 < g['duration_q'] <= LOCO_Q for g in report['turn_grid'])
     return report
 
@@ -493,7 +552,7 @@ func run() -> void:
 		var variants: Array = [[null, false]]
 		if provider != null and clip == "MARCH":
 			variants.append([null, true])
-		elif provider != null:
+		elif provider != null and clip.begins_with("PIVOT_"):
 			for value: float in req.turns:
 				var turn := int(value)
 				if (turn > 0) == (clip == "PIVOT_RIGHT"): variants.append([turn, true])
@@ -568,7 +627,7 @@ def capture(config, godot, work, extra):
         'config_version=5\n[application]\nconfig/name="loco-cert numeric extraction"\n'
         '[rendering]\nrenderer/rendering_method="gl_compatibility"\n')
     (project / 'capture.gd').write_text(CAPTURE)
-    request = {'scene': 'res://' + config['scene'], 'clips': CLIPS, 'uniform': UNIFORM,
+    request = {'scene': 'res://' + config['scene'], 'clips': CLIPS + [config['hold_clip']], 'uniform': UNIFORM,
                'extra_phases': sorted(set(extra)), 'turns': [g['turn_udeg'] for g in turn_grid()],
                'provider': 'res://' + config['provider'] if config.get('provider') else ''}
     (work / 'request.json').write_text(json.dumps(request))
@@ -635,13 +694,16 @@ def main(argv=None):
     parser.add_argument('--work', type=Path, help='scratch folder (default .superpowers/loco-cert/<arm>)')
     args = parser.parse_args(argv)
     config = json.loads(args.config.read_text())
-    for key in ('arm', 'scene', 'feet', 'forward', 'stride_m', 'stance', 'boundaries', 'turn_q'):
+    for key in ('arm', 'scene', 'feet', 'forward', 'stride_m', 'stance', 'turn_q', 'hold_clip',
+                'march_stop_phases', 'march_start_phases', 'hold_phases'):
         if key not in config:
             raise SystemExit(f'config is missing {key}')
-    config.setdefault('radius_m', footprint_radius(config['arm']))
+    radius = footprint_radius(config['arm'])
+    if config.setdefault('radius_m', radius) != radius:
+        raise SystemExit(f"config radius_m {config['radius_m']} is not unit_footprints.csv's {radius}")
     work = args.work or ROOT / '.superpowers/loco-cert' / config['arm']
     work.mkdir(parents=True, exist_ok=True)
-    extra = [config.get('entry_phase', 0.0)] + [p for b in config['boundaries'] for p in (b[1], b[3]) if p != '*']
+    extra = [config.get('entry_phase', 0.0)] + [p for b in required_boundaries(config) for p in (b[1], b[3]) if p != '*']
     dump, inputs, capture_sha = capture(config, args.godot, work, extra)
     missing = check_coverage(dump, extra)
     if missing:
