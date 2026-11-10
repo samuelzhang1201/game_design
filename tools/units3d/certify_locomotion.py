@@ -6,7 +6,10 @@ every equipped mesh with the native imported arrays and bone poses, and checks:
 
   1. penetration  any vertex below the rendered ground, every sample;
   2. hover        the planted material patch above the seated plane, stance only;
-  3. slide        the planted patch's ground-projected drift from touchdown, per stance;
+  3. slide        per sole vertex: while it lies within STANCE_BAND_M of the seated
+                  plane it is planted, and its slide is its ground-projected
+                  displacement from where it touched down (ruling 2026-11-11: the
+                  planted part of the sole; heel-to-toe roll is not slide, skating is);
   4. seam         any vertex jump at a clip boundary;
   plus the envelope against the arm's footprint radius and the skin diagnostic.
 
@@ -60,6 +63,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CLIPS = ['PIVOT_LEFT', 'PIVOT_RIGHT', 'MARCH']  # BodyMotion._loco_policy's list
 BOUND_WORLD_M = {'contact': 0.60, 'seam': 0.05}  # R-A
 SKIN_RATIO, SKIN_MIN_M = 4.0, 0.03  # R-B, unchanged thresholds
+STANCE_BAND_M = 0.0005  # a sole vertex is planted while within this of the seated plane (ruling 2026-11-11)
 TURN = 360_000_000
 LOCO_Q = 1_000_000  # BodyMotion.LOCOMOTION_Q
 UNIFORM = 512
@@ -254,6 +258,31 @@ def stance_runs(heights, phases, rule, foot, loop):
     return [r for r in runs if r]
 
 
+def vertex_slide(heights, xz, band=STANCE_BAND_M):
+    """heights (N, V) above the seated plane and world xz (N, V, 2), in time order.
+    Each vertex is planted while its height <= band, anchored where it entered the
+    band; returns (worst displacement from its anchor, margin = largest one-step
+    move of a vertex planted at both ends, (sample, vertex, touchdown sample))."""
+    anchor = np.zeros(xz.shape[1:])
+    touch = np.full(heights.shape[1], -1)
+    before = np.zeros(heights.shape[1], dtype=bool)
+    value, margin, witness = 0.0, 0.0, None
+    for i in range(len(heights)):
+        planted = heights[i] <= band
+        new = planted & ~before
+        anchor[new], touch[new] = xz[i][new], i
+        if planted.any():
+            d = np.where(planted, np.linalg.norm(xz[i] - anchor, axis=1), -1.0)
+            v = int(np.argmax(d))
+            if witness is None or d[v] > value:
+                value, witness = float(d[v]), (i, v, int(touch[v]))
+            both = planted & before
+            if both.any():
+                margin = max(margin, float(np.linalg.norm(xz[i] - xz[i - 1], axis=1)[both].max()))
+        before = planted
+    return value, margin, witness
+
+
 class Worst:
     def __init__(self):
         self.value, self.margin, self.witness = 0.0, 0.0, None
@@ -309,6 +338,7 @@ def measure(dump, config, scale):
     model = Model(dump)
     bounds = bounds_um(scale['k'])
     feet = patches(model, config['feet'], config.get('patch_band_m', .005))
+    sole = np.concatenate(list(patches(model, config['feet'], math.inf).values()))  # every foot-bound vertex
     forward = np.array(config['forward'], dtype=float)
     stride = float(config['stride_m'])
     slope = float(config.get('slope', 0.0))
@@ -326,6 +356,7 @@ def measure(dump, config, scale):
             if not by.get((clip_for(g['turn_udeg']), g['turn_udeg'], True)):
                 raise ValueError(f"no provider stream for turn {g['turn_udeg']}")
     pen, hov, sld, env = Worst(), Worst(), Worst(), Worst()
+    slide_by_clip = {}
     missing = []  # a foot with no stance in a locomotion clip leaves hover and slide unmeasured
 
     def world(clip, phase, points, turn, cycle=0):
@@ -350,7 +381,7 @@ def measure(dump, config, scale):
         loop = clip == 'MARCH' and dump['clips']['MARCH']['loop_mode'] != 0
         phases = [s['phase'] for s in rows]
         heights = {f: [] for f in feet}
-        patch_pts = {f: [] for f in feet}
+        sole_pts = []
         prev = None
         for s in rows:
             p = model.points(s['_g'])
@@ -367,7 +398,7 @@ def measure(dump, config, scale):
             prev = p
             for f, ids in feet.items():
                 heights[f].append(p[ids, 1].min())
-                patch_pts[f].append(p[ids])
+            sole_pts.append(p[sole])
         if clip not in CLIPS:
             continue  # the hold clip: penetration and envelope only
         rule = config['stance'][clip]
@@ -378,22 +409,26 @@ def measure(dump, config, scale):
             if not runs:
                 missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f})
             for run in runs:
-                cycles = np.cumsum([0] + [1 if b < a else 0 for a, b in zip(run, run[1:])])
                 for k, i in enumerate(run):
                     hov.offer(heights[f][i], {'clip': clip, 'foot': f, 'phase': phases[i], 'turn_udeg': turn})
                     if k:
-                        hov.widen(np.abs(patch_pts[f][i][:, 1] - patch_pts[f][run[k - 1]][:, 1]).max())
-                for t in turns:
-                    anchor = world(clip, phases[run[0]], patch_pts[f][run[0]], t)[:, [0, 2]]
-                    last = None
-                    for k, i in enumerate(run):
-                        w = world(clip, phases[i], patch_pts[f][i], t, cycles[k])[:, [0, 2]]
-                        sld.offer(np.linalg.norm(w - anchor, axis=1).max(),
-                                  {'clip': clip, 'foot': f, 'turn_udeg': t, 'touchdown_phase': phases[run[0]],
-                                   'phase': phases[i]})
-                        if last is not None:
-                            sld.widen(np.linalg.norm(w - last, axis=1).max())
-                        last = w
+                        hov.widen(abs(heights[f][i] - heights[f][run[k - 1]]))
+        # Slide, per sole vertex. Heights are yaw-invariant; keep only vertices that
+        # ever reach the band. A looping MARCH runs twice so a stance can cross the seam.
+        pts = np.array(sole_pts)
+        reach = (pts[:, :, 1] <= STANCE_BAND_M).any(axis=0)
+        pts, ids = pts[:, reach], sole[reach]
+        per_clip = slide_by_clip.setdefault(clip, Worst())
+        frames = [(i, c) for c in range(2 if loop else 1) for i in range(len(rows))]
+        for t in turns:
+            w = np.array([world(clip, phases[i], pts[i], t, c)[:, [0, 2]] for i, c in frames])
+            value, margin, hit = vertex_slide(pts[[i for i, _ in frames], :, 1], w) if pts.shape[1] else (0.0, 0.0, None)
+            if hit is not None:
+                for worst in (sld, per_clip):
+                    worst.offer(value, {'clip': clip, 'turn_udeg': t, 'touchdown_phase': phases[frames[hit[2]][0]],
+                                        'phase': phases[frames[hit[0]][0]], **model.where(int(ids[hit[1]]))})
+            sld.widen(margin)
+            per_clip.widen(margin)
 
     # Seams: both one-sided values at every boundary, compared in the receiving
     # clip's model frame (the consumer's yaw and position are continuous there).
@@ -458,7 +493,8 @@ def measure(dump, config, scale):
         'bounds_um': bounds,
         'penetration': pen.report(bounds['contact']),
         'hover': hov.report(bounds['contact']),
-        'slide': sld.report(bounds['contact']),
+        'slide': {**sld.report(bounds['contact']), 'band_m': STANCE_BAND_M,
+                  'by_clip': {c: w.report(bounds['contact']) for c, w in sorted(slide_by_clip.items())}},
         # No boundary configured is a failure: every arm has at least its loop seam.
         'seam': {**(seam_worst or Worst().report(bounds['seam'])), 'pass': bool(seams) and all(s['pass'] for s in seams),
                  'boundaries': seams},

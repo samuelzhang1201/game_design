@@ -191,16 +191,23 @@ class Fixture(unittest.TestCase):
         self.assertEqual(sld['witness']['phase'], 1.0)
         self.assertFalse(sld['pass'])
 
-    def test_march_stance_crosses_the_loop_seam(self):
-        # Left stance [LOOP_END, 1.0, 0, .25, .5] as ONE stance: world z = zl + stride *
-        # (phase + cycle) = 0.999999, 1.00, 1.00, 1.01, 1.02 -> 20.001 mm from touchdown;
-        # the largest step is 10 mm.
-        config = copy.deepcopy(CONFIG)
-        config['stance'].update({'PIVOT_LEFT': {}, 'PIVOT_RIGHT': {}})
-        sld = cert.measure(fixture(), config, SCALE)['slide']
+    def test_march_slide_crosses_the_loop_seam(self):
+        # With the left sole lowered into the band (0.3 mm), its stance runs LOOP_END,
+        # 1.0, 0, .25, .5 as ONE stance: world z = zl + stride * (phase + cycle) =
+        # 0.999999, 1.00, 1.00, 1.01, 1.02 -> 20.001 mm; the largest step is 10 mm.
+        global MARCH
+        saved = dict(MARCH)
+        try:
+            for phase in MARCH:
+                if MARCH[phase][1] == .002:
+                    MARCH[phase] = (0, .0003) + MARCH[phase][2:]
+            sld = cert.measure(fixture(), CONFIG, SCALE)['slide']['by_clip']['MARCH']
+        finally:
+            MARCH.clear()
+            MARCH.update(saved)
         self.assertEqual((sld['sampled_um'], sld['margin_um'], sld['total_um']), (20001, 10000, 30001))
         self.assertEqual((sld['witness']['touchdown_phase'], sld['witness']['phase']), (cert.LOOP_END, .5))
-        self.assertFalse(sld['pass'])  # 30000 > contact_um 24000
+        self.assertFalse(sld['pass'])  # 30001 > contact_um 24000
 
     def test_seams_are_the_full_required_list(self):
         seams = {(tuple(x['witness']['from'][:1]), tuple(x['witness']['to'][:1])): [] for x in
@@ -286,15 +293,37 @@ class Fixture(unittest.TestCase):
         self.assertEqual(grid['180 tie']['clip'], 'PIVOT_RIGHT')
         self.assertFalse(self.report['pass'])
 
-    def test_contact_bound_reached_exactly(self):
-        # One-sample pivot stances slide 0, so the MARCH stance (30001) is the worst
-        # slide; a bound of exactly 30001 passes it.
-        config = copy.deepcopy(CONFIG)
-        config['stance']['PIVOT_LEFT'] = config['stance']['PIVOT_RIGHT'] = {'l': [[0, 0]], 'r': [[.5, .5]]}
-        report = cert.measure(fixture(), config, {**SCALE, 'k': .6e6 / 30001})  # contact_um 30001
-        self.assertEqual(report['bounds_um']['contact'], 30001)
-        self.assertEqual(report['slide']['total_um'], 30001)
-        self.assertTrue(report['slide']['pass'])
+    def test_slide_is_reported_per_clip(self):
+        by = self.report['slide']['by_clip']
+        self.assertEqual(by['MARCH']['total_um'], 0)  # MARCH soles stay 1-2 mm up, never in the band
+        self.assertEqual(by['PIVOT_RIGHT']['total_um'], self.report['slide']['total_um'])
+        self.assertEqual(self.report['slide']['band_m'], .0005)
+
+
+class VertexSlide(unittest.TestCase):
+    """The per-vertex rule (ruling 2026-11-11), by hand: three vertices, five samples."""
+
+    def test_roll_is_not_slide_and_skating_is(self):
+        band = cert.STANCE_BAND_M
+        up = .01
+        # heel h: down at 0..1, then lifts and travels (not planted, not counted).
+        # toe t: touches down at sample 2 at x = .05 and stays put (roll: 0).
+        # skate s: down 0..3 while drifting 0, 1, 2 mm, then lifts: slide 2 mm, margin 1 mm.
+        heights = np.array([[0, up, 0], [0, up, 0], [up, 0, 0], [up, 0, 0], [up, 0, up]], dtype=float)
+        x = np.array([[0, .05, .2], [0, .05, .2], [.03, .05, .201], [.06, .05, .202], [.09, .05, .3]])
+        xz = np.stack([x, np.zeros_like(x)], axis=2)
+        value, margin, witness = cert.vertex_slide(heights, xz, band)
+        self.assertAlmostEqual(value, .002, places=12)
+        self.assertAlmostEqual(margin, .001, places=12)
+        self.assertEqual(witness, (3, 2, 0))  # sample 3, vertex s, touched down at 0
+        # a vertex that leaves and re-enters the band is anchored afresh
+        heights = np.array([[0], [up], [0]], dtype=float)
+        xz = np.array([[[0, 0]], [[.5, 0]], [[.007, 0]]], dtype=float)
+        self.assertEqual(cert.vertex_slide(heights, xz, band)[:2], (0.0, 0.0))
+        # exactly at the band edge is planted
+        heights = np.array([[band], [band]])
+        xz = np.array([[[0, 0]], [[0, .003]]], dtype=float)
+        self.assertAlmostEqual(cert.vertex_slide(heights, xz, band)[0], .003, places=12)
 
 
 class Provider(unittest.TestCase):
