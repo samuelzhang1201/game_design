@@ -181,6 +181,7 @@ func test_pending_round_wrong_stage_no_repo_and_malformed_requests_publish_nothi
 	BodyBattle._seal_private(contact.repo, contact.state)
 	var waited := _run(contact, _request())
 	assert_eq(waited.status, "deferred", waited.reason)
+	assert_eq(waited.reason, "Operation waits for its lifecycle stage")
 	# A frozen round defers the release unchanged.
 	f = _fixture()
 	var b: Dictionary = f.state.battles[0]
@@ -197,6 +198,7 @@ func test_pending_round_wrong_stage_no_repo_and_malformed_requests_publish_nothi
 	before = BodyMotion._hash(f.state.to_dict())
 	var frozen := _run(f, _request())
 	assert_eq(frozen.status, "deferred", frozen.reason)
+	assert_eq(frozen.reason, "Frozen round requires its own settlement consumer")
 	assert_null(frozen.candidate)
 	assert_eq(BodyMotion._hash(f.state.to_dict()), before)
 	assert_eq(f.state.battles.size(), 1)

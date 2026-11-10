@@ -217,7 +217,8 @@ released, the end event and outcome are noted and the immutable report is
 snapshotted. Only then is the field deleted and dropped from the exhausted
 advance queue (its index shifts; `processed_battle_ids` keep it). The event is
 journaled with the request's reason. No personnel, death, capture or cost is
-invented; RNG is untouched. A frozen round or decision, another stage or a safe
-boundary defers; a missing repo, unknown or non-canonical field and malformed
+invented; RNG is untouched. A frozen round or decision or another stage defers; a
+safe-boundary release (allowed by the contract) is not implemented yet and also
+defers; a missing repo, unknown or non-canonical field and malformed
 request error. Any failure discards the whole staged world. Ordinary `call_off`
 and `step_battle` are unchanged.
