@@ -97,12 +97,51 @@ static func _units(battle: Dictionary) -> Array:
 
 ## Folds the later battle into the survivor (see the header) and returns the event.
 static func _merge(repo: DataRepository, state: GameState, a: Dictionary, b: Dictionary) -> Dictionary:
-	var survivor := b if String(b.get("town", "")) != "" and String(a.get("town", "")) == "" else a
+	var survivor := survivor_of(a, b)
 	var gone := a if survivor == b else b
-	var sid := int(survivor["id"])
-	var gid := int(gone["id"])
 	BattleRules.ensure_parties(survivor)   # P4.4e3: each agreement keeps its own parties
 	BattleRules.ensure_parties(gone)
+	var side_map := side_map_of(state, survivor, gone)
+	# union by allegiance: survivor members first, then the absorbed in their old order
+	var moved := {}   # absorbed unit -> the side it stood on there
+	for side: String in BattleSystem.SIDES:
+		for code: String in gone[side]:
+			var into := BattleSystem._side_for(state, survivor, code)
+			if into != "" and not code in survivor[into]:
+				survivor[into].append(code)
+				moved[code] = side
+	var event := absorb(repo, state, survivor, gone, side_map, moved)
+	var facings: Dictionary = survivor.get("group_facing", {}).duplicate()
+	BattleGroups.refresh(repo, state, survivor)
+	survivor["group_facing"].merge(facings, true)
+	BattleReport.note(survivor, [event])
+	return event
+
+
+## The lower id survives unless only the other holds a town.
+static func survivor_of(a: Dictionary, b: Dictionary) -> Dictionary:
+	return b if String(b.get("town", "")) != "" and String(a.get("town", "")) == "" else a
+
+
+## Absorbed side -> the survivor side its units fall on, by allegiance.
+static func side_map_of(state: GameState, survivor: Dictionary, gone: Dictionary) -> Dictionary:
+	var side_map := {}
+	for side: String in BattleSystem.SIDES:
+		for code: String in gone[side]:
+			var into := BattleSystem._side_for(state, survivor, code)
+			if into != "":
+				side_map[side] = into
+				break
+	return side_map
+
+
+## Everything but membership and bodies: `moved` (absorbed unit -> its old side) already
+## stands in the survivor. Folds records, remaps warrants, aliases and offers, deletes the
+## absorbed battle and unifies command. Returns the merge event (not yet noted).
+static func absorb(repo: DataRepository, state: GameState, survivor: Dictionary, gone: Dictionary,
+		side_map: Dictionary, moved: Dictionary) -> Dictionary:
+	var sid := int(survivor["id"])
+	var gid := int(gone["id"])
 	# the absorbed side-level state, verbatim, plus whatever it had already absorbed
 	if not survivor.has("sources"):
 		survivor["sources"] = {}
@@ -114,23 +153,8 @@ static func _merge(repo: DataRepository, state: GameState, a: Dictionary, b: Dic
 	for key: String in gone.get("sources", {}):
 		if not survivor.sources.has(key):
 			survivor.sources[key] = _copy(gone.sources[key])
-	var side_map := {}   # absorbed side -> the survivor side its units fall on, by allegiance
-	for side: String in BattleSystem.SIDES:
-		for code: String in gone[side]:
-			var into := BattleSystem._side_for(state, survivor, code)
-			if into != "":
-				side_map[side] = into
-				break
-	# union by allegiance: survivor members first, then the absorbed in their old order
-	var moved: Array = []
-	for side: String in BattleSystem.SIDES:
-		for code: String in gone[side]:
-			var into := BattleSystem._side_for(state, survivor, code)
-			if into != "" and not code in survivor[into]:
-				survivor[into].append(code)
-				moved.append(code)
 	for code: String in moved:   # an absorbed unit keeps the formation it stood in
-		var side_old := BattleRules.side_of(gone, code)
+		var side_old: String = moved[code]
 		if not (gone.get("unit_formations", {}) as Dictionary).has(code) and gone.get("formations", {}).has(side_old):
 			if not survivor.has("unit_formations"):
 				survivor["unit_formations"] = {}
@@ -175,12 +199,8 @@ static func _merge(repo: DataRepository, state: GameState, a: Dictionary, b: Dic
 		if int(saved.get("battle_id", -1)) == gid:
 			saved["battle_id"] = sid
 	BattleCommand.unify(repo, state, survivor, source, side_map)
-	var facings: Dictionary = survivor.get("group_facing", {}).duplicate()
-	BattleGroups.refresh(repo, state, survivor)
-	survivor["group_facing"].merge(facings, true)
 	var event := {"kind": "merge", "battle_id": sid, "absorbed": gid,
 		"reason": "Fronts touched: battle %d joined battle %d on the same field." % [gid, sid]}
-	BattleReport.note(survivor, [event])
 	return event
 
 
