@@ -645,3 +645,35 @@ func test_v2_arm_with_pivot_clips_stops_turns_then_walks() -> void:
 		assert_almost_eq((child.node as Node3D).global_position.x, xz.x, 0.0001)
 		assert_almost_eq((child.node as Node3D).global_position.z, xz.y, 0.0001)
 		i += 1
+
+func test_v2_saved_path_must_match_the_committed_operations() -> void:
+	var f := _fixture()
+	f.state.army_roster[f.code].organization_arm = "archers"
+	var envelope := _commit_v2(f, [[0, 0], [3, 0], [3, 4]], 10)
+	assert_eq(_sample(f, envelope).mode, "bodies")
+	f.state.regiments[f.code].body_groups[0].path_m = [[O - 1, O], [O + 3, O + 4]]
+	assert_eq(_sample(f, envelope).mode, "invalid", "a continuity anchor that disagrees with the ops is never trusted")
+
+func test_earlier_v1_receipt_does_not_hide_a_fresh_v2_day() -> void:
+	var f := _fixture(100, [[50000, 50000]])
+	var entry: Dictionary = f.state.regiments[f.code]
+	entry.x_m = 50000
+	entry.y_m = 50000
+	entry.erase("departure")
+	entry.erase("camp_state")
+	f.repo.balance.army_march_grid_px = 1
+	var slopes := PackedByteArray()
+	slopes.resize(200 * 200)
+	MarchPath.use(f.repo, MarchPath.build(f.repo, 200, 200, 1000, slopes))
+	_loco_policy(f)
+	_commit(f, [[[50000, 50000]]], [0])
+	assert_eq(f.state.military_migration.body_motion.version, "1")
+	f.state.day += 1  # the v1 receipt now belongs to an earlier, closed day
+	var begin := TickEngine.new(f.repo).begin_locomotion_march_candidate(f.state)
+	assert_eq(begin.status, "complete", begin.reason)
+	if begin.candidate == null: return
+	var state: GameState = begin.candidate
+	f.ctx.state_fn = func() -> GameState: return state
+	assert_eq(state.day_resolution.body_march.version, "2")
+	var sampled := _sample(f)
+	assert_eq(sampled.mode, "bodies", sampled.error)

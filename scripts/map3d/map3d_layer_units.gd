@@ -216,6 +216,7 @@ func _place(code: String, piece: Dictionary) -> void:
 				piece["groups"][i]["x_m"] = sampled.rows[i].x_m
 				piece["groups"][i]["y_m"] = sampled.rows[i].y_m
 				if sampled.rows[i].has("yaw_udeg"): piece["groups"][i]["yaw_udeg"] = sampled.rows[i].yaw_udeg
+				else: piece["groups"][i].erase("yaw_udeg")
 		var box := BattleGroupsView.place(ctx, piece, _shown_xz[code], figure_footprint_gap, _selected.has(code))
 		_rects.erase(code)
 		if box.has_area(): _rects[code] = box
