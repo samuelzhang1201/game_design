@@ -11,6 +11,10 @@ static func _request_ok(request: Dictionary) -> bool:
 		return BodyMotion._keys(request, ["kind", "first_id", "second_id"]) \
 			and DayResolution._body_decimal(request.first_id) and request.first_id != "0" \
 			and DayResolution._body_decimal(request.second_id) and int(request.first_id) < int(request.second_id)
+	if request.get("kind") in ["end", "cancel"]:
+		return BodyMotion._keys(request, ["kind", "battle_id", "reason"]) \
+			and DayResolution._body_decimal(request.battle_id) and request.battle_id != "0" \
+			and request.reason is String and not request.reason.strip_edges().is_empty()
 	if request.get("kind") == "withdraw":
 		return BodyMotion._keys(request, ["kind", "unit", "battle_id", "reason"]) \
 			and request.unit is String and not request.unit.is_empty() \
@@ -28,7 +32,7 @@ static func _contact_boundary_ok(boundary: Dictionary) -> bool:
 	return BodyMotion._battle_boundary_ok(move)
 
 static func _operation_boundary_ok(request: Dictionary, boundary: Dictionary) -> bool:
-	if request.get("kind") != "withdraw": return _contact_boundary_ok(boundary)
+	if request.get("kind") not in ["withdraw", "end", "cancel"]: return _contact_boundary_ok(boundary)
 	if boundary.get("stage") != "advance": return false
 	var move := boundary.duplicate(true)
 	move.stage = "move"
@@ -266,6 +270,43 @@ static func _withdraw(repo: DataRepository, source: GameState, request: Dictiona
 		"code": request.unit, "side": side, "why": cause, "reason": request.reason})
 	return _result("complete", "Staged exact separated withdrawal", candidate)
 
+## Terminal release: every extant store transfers to owner zero before the report and deletion.
+static func _terminate(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
+	var id := int(request.battle_id)
+	var battle := UnitBodies._battle(source, id)
+	if battle.is_empty() or BattleSystem.canonical(source, id) != id: return _result("error", "Terminal release requires a canonical live field")
+	var why := "called_off"
+	if request.kind == "end":
+		if not battle.att.is_empty() and not battle.def.is_empty(): return _result("deferred", "The battle has not ended")
+		why = ("rout_" + ("attacker" if battle.routed_side == "att" else "defender")) if battle.has("routed_side") else "emptied"
+	var staged := UnitBodies._copy(source)
+	var members := {"att": battle.att.duplicate(), "def": battle.def.duplicate()}
+	for side: String in BattleSystem.SIDES:
+		for code: String in members[side]:
+			_seal_private(repo, staged)
+			var released := UnitBodies.transfer_battle_candidate(repo, staged, code, id, 0, "", boundary)
+			if released.status != "complete": return _result(released.status, released.reason)
+			staged = released.candidate
+	var events: Array = []
+	BattleSystem._end(repo, staged, UnitBodies._battle(staged, id), why, events, [], "", members)
+	staged.battles = staged.battles.filter(func(b: Dictionary) -> bool: return int(b.id) != id)
+	_unqueue(staged, id)
+	var event: Dictionary = events[0].duplicate(true)
+	event.reason = request.reason
+	staged.day_resolution.journal.battles.append(event)
+	return _result("complete", "Staged exact terminal release", staged)
+
+## A deleted field leaves the exhausted advance queue; processed IDs stay as day history.
+static func _unqueue(state: GameState, id: int) -> void:
+	var tx := state.day_resolution
+	var at: int = tx.battle_ids.find(id)
+	if at < 0: return
+	tx.battle_ids.remove_at(at)
+	tx.body_battle.battle_ids.remove_at(at)
+	tx.substep_battle_ids.erase(id)
+	if at < tx.battle_index: tx.battle_index -= 1
+	tx.body_battle.battle_index = str(tx.battle_index)
+
 static func _stage(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
 	if repo == null or source == null or not _request_ok(request): return _result("error", "Unsupported or malformed enrollment request")
 	var checked := UnitBodies.validate_battle_candidate(repo, source, boundary)
@@ -285,7 +326,11 @@ static func _stage(repo: DataRepository, source: GameState, request: Dictionary,
 		candidate = closed.candidate
 	var contacts: Array = []
 	var starts: Array = []
-	if request.kind == "withdraw":
+	if request.kind in ["end", "cancel"]:
+		var ended := _terminate(repo, candidate, request, boundary)
+		if ended.status != "complete": return ended
+		candidate = ended.candidate
+	elif request.kind == "withdraw":
 		var exited := _withdraw(repo, candidate, request, boundary)
 		if exited.status != "complete": return exited
 		candidate = exited.candidate
@@ -379,7 +424,7 @@ static func commit_candidate(repo: DataRepository, source: GameState, proposed: 
 		if checked.status != "complete" or not _metadata_error(source).is_empty() or outer.receipt != receipt \
 			or boundary.abs_day != str(source.absolute_day()) \
 			or boundary.substep != source.day_resolution.body_battle.next_substep \
-			or source.day_resolution.body_battle.stage not in (["round", "advance"] if proposed.request.kind == "contacts" else (["advance"] if proposed.request.kind == "withdraw" else ["contact"])):
+			or source.day_resolution.body_battle.stage not in (["round", "advance"] if proposed.request.kind == "contacts" else (["advance"] if proposed.request.kind in ["withdraw", "end", "cancel"] else ["contact"])):
 			return _result("error", "Invalid/stale enrollment replay")
 		return _result("complete", "Already committed enrollment", checked.candidate, BodyMotion._canonical(proposed))
 	var staged := _stage(repo, source, proposed.request, boundary)
