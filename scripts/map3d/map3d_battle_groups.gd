@@ -243,13 +243,14 @@ static func along_locomotion_candidate(sampled: Dictionary, time_q: int) -> Dict
 static func _candidate_render_error(piece: Dictionary, sampled: Dictionary) -> String:
 	if piece["groups"].size() != sampled.rows.size(): return "Figures disagree with bodies"
 	for i: int in sampled.rows.size():
-		if piece["groups"][i]["slot"] != sampled.rows[i].slot or piece["groups"][i]["piece"]["anims"].is_empty(): return "Figures disagree with bodies"
+		if piece["groups"][i]["slot"] != sampled.rows[i].slot: return "Figures disagree with bodies"
 	for i: int in sampled.rows.size():
 		var row: Dictionary = sampled.rows[i]
 		if row.has("move"):
 			for op: Dictionary in row.move.ops:
 				if op.kind != "pivot": continue
 				var clip := "PIVOT_RIGHT" if int(op.turn_udeg) > 0 else "PIVOT_LEFT"
+				if piece["groups"][i]["piece"]["anims"].is_empty(): return "%s has no %s clip: transverse leg refused" % [piece.get("model", "arm"), clip]
 				for anim: AnimationPlayer in piece["groups"][i]["piece"]["anims"]:
 					if Map3DUnits.clip_named(anim, clip).is_empty():
 						return "%s has no %s clip: transverse leg refused" % [piece.get("model", "arm"), clip]
