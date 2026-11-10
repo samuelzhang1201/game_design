@@ -1,6 +1,6 @@
 extends GutTest
 
-var view: GDScript = load("res://scripts/map3d/map3d_battle_groups.gd")
+var view: GDScript = load("res://scripts/map3d/map3d_candidate_bodies.gd")
 
 func test_candidate_api_is_explicit_and_default_off() -> void:
 	assert_true(view.has_method("sample_candidate"))
@@ -270,8 +270,8 @@ class SightContext extends Map3DContext:
 
 func test_admission_and_hostile_path_access_instrumented() -> void:
 	# Instrument the actual consumer source, without adding a production tracing seam.
-	var source := FileAccess.get_file_as_string("res://scripts/map3d/map3d_battle_groups.gd")
-	source = source.replace("class_name Map3DBattleGroups\n", "")
+	var source := FileAccess.get_file_as_string("res://scripts/map3d/map3d_candidate_bodies.gd")
+	source = source.replace("class_name Map3DCandidateBodies\n", "")
 	source = source.replace("extends RefCounted", "extends RefCounted\nstatic var reads := {\"owner\": 0, \"copy\": 0, \"control\": 0, \"path\": 0}")
 	for mark: String in ["var index := UnitBodies._owners(state)", "var copied := UnitBodies.rows(ctx.repo, state, code)",
 		"var saved: Variant = state.military_migration.get(\"body_motion\")", "var path: Variant = copied[i].get(\"path_m\")"]:
@@ -344,13 +344,13 @@ func _script_files(path: String) -> Array[String]:
 func test_no_ordinary_candidate_callers_or_query_writers() -> void:
 	var callers: Array[String] = []
 	for file: String in _script_files("res://scripts"):
-		if file in ["res://scripts/map3d/map3d_battle_groups.gd", "res://scripts/map3d/map3d_layer_units.gd"]: continue
+		if file in ["res://scripts/map3d/map3d_candidate_bodies.gd", "res://scripts/map3d/map3d_layer_units.gd"]: continue
 		var source := FileAccess.get_file_as_string(file)
 		for token: String in ["sample_candidate(", "along_candidate(", "set_candidate_bodies(", "along_locomotion_candidate(",
-				"Map3DBattleGroups.sample_locomotion_candidate(", "BattleGroupsView.sample_locomotion_candidate("]:
+				"Map3DCandidateBodies.sample_locomotion_candidate(", "CandidateView.sample_locomotion_candidate("]:
 			if token in source: callers.append(file + ":" + token)
 	assert_eq(callers, [])
-	var source := FileAccess.get_file_as_string("res://scripts/map3d/map3d_battle_groups.gd")
+	var source := FileAccess.get_file_as_string("res://scripts/map3d/map3d_candidate_bodies.gd")
 	for token: String in ["migrate_candidate(", "reconcile_candidate(", "BodyMotion.plan(", "BodyMotion.commit(", "initialize_bodies_candidate("]:
 		assert_false(token in source, "render query cannot invoke " + token)
 	var layer := Map3DLayerUnits.new()
@@ -495,7 +495,7 @@ func test_hostile_animation_never_reopens_hidden_intent() -> void:
 	ctx.state_fn = func() -> GameState: return f.state
 	_contexts.append(ctx)
 	f.ctx = ctx
-	var source := FileAccess.get_file_as_string("res://scripts/map3d/map3d_battle_groups.gd").replace("class_name Map3DBattleGroups\n", "")
+	var source := FileAccess.get_file_as_string("res://scripts/map3d/map3d_candidate_bodies.gd").replace("class_name Map3DCandidateBodies\n", "")
 	source = source.replace("extends RefCounted", "extends RefCounted\nstatic var intent_reads := 0")
 	source = source.replace("ArmySystem.order_of(ctx.repo, state, code)", "_order_read(ctx, code)")
 	source = source.replace("BattleSystem.stance_of(state, code)", "_stance_read(ctx, code)")

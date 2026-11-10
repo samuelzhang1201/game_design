@@ -348,7 +348,7 @@ func _write_manifest() -> void:
 	var revision: Array = []
 	OS.execute("git", ["rev-parse", "HEAD"], revision)
 	var inputs := {}
-	for path: String in ["res://scripts/map3d/map3d_battle_groups.gd", "res://scripts/map3d/map3d_layer_units.gd",
+	for path: String in ["res://scripts/map3d/map3d_battle_groups.gd", "res://scripts/map3d/map3d_candidate_bodies.gd", "res://scripts/map3d/map3d_layer_units.gd",
 		"res://scripts/map3d/map3d_formation.gd", "res://tools/map3d/body_paths_fixture.gd", "res://data/army/unit_footprints.csv",
 		_repo.map3d_dir().path_join("manifest.json")]: inputs[path] = FileAccess.get_sha256(path)
 	FileAccess.open(_out.path_join("manifest.json"), FileAccess.WRITE).store_string(JSON.stringify({

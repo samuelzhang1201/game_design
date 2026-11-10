@@ -42,6 +42,7 @@ const MARCH := "MARCH"
 @export var battle_signal_height_ratio := 1.0
 @export var battle_signal_gap := 1.5
 const BattleGroupsView := preload("res://scripts/map3d/map3d_battle_groups.gd")
+const CandidateView := preload("res://scripts/map3d/map3d_candidate_bodies.gd")
 var _battle := Map3DBattleSignals.new()
 var _scouts := Map3DUnitScout.new()  ## the fans of the marching crown units
 var _camps := Map3DUnitCamps.new()  ## the camps pitched behind held lines
@@ -154,7 +155,7 @@ func refresh() -> void:
 ## What the drawn set reads: the state, its day, its regiments (orders, stances, fronts), foes, sightings, DEV MODE.
 func _roster_key() -> Array:
 	var st := ctx.state()
-	if _candidate_bodies: return BattleGroupsView._candidate_key(ctx, _candidate_samples, _candidate_committed)
+	if _candidate_bodies: return CandidateView._candidate_key(ctx, _candidate_samples, _candidate_committed)
 	# Native hashes detect same-day edits without repeating public admission once per unit per frame.
 	return [st, st.absolute_day(), st.regiments.hash(), st.foes.hash(), st.sightings.hash(),
 		st.army_roster.hash(), st.military_rosters.hash(), st.military_cohorts.hash(), st.battles.hash(),
@@ -199,24 +200,11 @@ func _target_xz(reg: Dictionary) -> Vector2:
 func _place(code: String, piece: Dictionary) -> void:
 	if piece.get("layout", "") == "physical_groups":
 		if piece.get("candidate_bodies", false):
-			var sampled := BattleGroupsView._candidate_at(ctx, code, _candidate_samples.get(code, piece["candidate_sample"]), _candidate_history)
-			if sampled.mode == "invalid":
-				piece["candidate_error"] = sampled.error
+			piece["candidate_error"] = CandidateView._pose(ctx, code, piece, _candidate_samples.get(code, piece["candidate_sample"]), _candidate_history)
+			if not String(piece["candidate_error"]).is_empty():
 				Map3DUnits.show_piece(piece, false)
 				_rects.erase(code)
 				return
-			var refused := BattleGroupsView._candidate_render_error(piece, sampled)
-			if not refused.is_empty():
-				piece["candidate_error"] = refused
-				Map3DUnits.show_piece(piece, false)
-				_rects.erase(code)
-				return
-			piece["candidate_error"] = ""
-			for i: int in piece["groups"].size():
-				piece["groups"][i]["x_m"] = sampled.rows[i].x_m
-				piece["groups"][i]["y_m"] = sampled.rows[i].y_m
-				if sampled.rows[i].has("yaw_udeg"): piece["groups"][i]["yaw_udeg"] = sampled.rows[i].yaw_udeg
-				else: piece["groups"][i].erase("yaw_udeg")
 		var box := BattleGroupsView.place(ctx, piece, _shown_xz[code], figure_footprint_gap, _selected.has(code))
 		_rects.erase(code)
 		if box.has_area(): _rects[code] = box
@@ -367,7 +355,7 @@ func _piece_of(code: String) -> Dictionary:
 	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 		return {}
 	var sampled: Dictionary = _candidate_samples.get(code, {}) if _candidate_bodies else BattleGroupsView.sample(ctx, code)
-	if sampled.is_empty(): sampled = BattleGroupsView.sample_candidate(ctx, code, _candidate_committed)
+	if sampled.is_empty(): sampled = CandidateView.sample_candidate(ctx, code, _candidate_committed)
 	if sampled["mode"] == "invalid":
 		if _pieces.has(code): _drop(code)
 		return {}
@@ -455,7 +443,7 @@ func _sync_action(code: String) -> void:
 
 func _sync_candidate_action(code: String) -> void:
 	var piece: Dictionary = _pieces[code]
-	BattleGroupsView._animate_candidate(ctx, code, piece, _candidate_samples.get(code, piece["candidate_sample"]),
+	CandidateView._animate_candidate(ctx, code, piece, _candidate_samples.get(code, piece["candidate_sample"]),
 		float(_candidate_history.get(code, {}).get("share", 1.0)), blend_s, _battle)
 
 
@@ -504,4 +492,4 @@ func _sync_battle_signals() -> void:
 
 
 ## Actual instantiated group nodes for the developer capture, visible real units only.
-func group_geometry() -> Dictionary: return BattleGroupsView._geometry(ctx, _pieces, _candidate_bodies, _candidate_committed)
+func group_geometry() -> Dictionary: return CandidateView._geometry(ctx, _pieces, _candidate_bodies, _candidate_committed)
