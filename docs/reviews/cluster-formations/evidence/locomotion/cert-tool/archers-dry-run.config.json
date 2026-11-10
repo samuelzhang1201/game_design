@@ -1,0 +1,49 @@
+{
+ "arm": "archers",
+ "note": "DRY RUN of LOCO-CERT-TOOL on the merged archer assets: plain native clip playback, no provider, no policy. turn_q 400000 is a placeholder (no turn_q is approved); stance = the lower sole patch. Stops are admitted from any MARCH phase, starts at MARCH 0, the hold (STANDBY) at any phase; the two extra boundaries also sweep a pivot exit into any MARCH phase.",
+ "scene": "scenes/models/units/archers.tscn",
+ "feet": {
+  "l": [
+   "foot.l",
+   "toes_01.l"
+  ],
+  "r": [
+   "foot.r",
+   "toes_01.r"
+  ]
+ },
+ "patch_band_m": 0.005,
+ "forward": [
+  0,
+  0,
+  -1
+ ],
+ "stride_m": 1.5283,
+ "turn_q": 400000,
+ "entry_phase": 0.0,
+ "stance": {
+  "MARCH": "lowest:1",
+  "PIVOT_LEFT": "lowest:1",
+  "PIVOT_RIGHT": "lowest:1"
+ },
+ "boundaries": [
+  [
+   "PIVOT_RIGHT",
+   1.0,
+   "MARCH",
+   "*"
+  ],
+  [
+   "PIVOT_LEFT",
+   1.0,
+   "MARCH",
+   "*"
+  ]
+ ],
+ "hold_clip": "STANDBY",
+ "march_stop_phases": "*",
+ "march_start_phases": [
+  0.0
+ ],
+ "hold_phases": "*"
+}
