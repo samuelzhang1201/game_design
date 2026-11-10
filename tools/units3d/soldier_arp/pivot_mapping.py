@@ -5,6 +5,7 @@ The mapping writes Map3DInfantryPivot.sample_transition inputs; pivot_solve.gd s
 pivot.py bakes the canonical pair. Coupling: both legs leave for, and hold, ONE native MARCH frame
 (NEUTRAL_PHASE), so the crotch skin weighted to both thighs only ever sees a native left/right
 thigh pair; independent per-leg templates tore it (feasibility contract: 45 introduced pairs).
+A held foot lands under that frame's hip, its sole posed flat (FOOT_PHASES) on the seated plane.
 The last step starts at LAST_STEP so its blend toward the exit never leads native MARCH there.
 Native poses are exact Godot AnimationPlayer captures (pivot_native.gd), never interpolated here.
 
@@ -15,8 +16,10 @@ Native poses are exact Godot AnimationPlayer captures (pivot_native.gd), never i
 
 Gates (owner rulings 2026-11-10): an edge flags when length > 4 x native-entry AND > .03 m; a
 flag fails unless native MARCH at the same body phase is flagged (R-B). Penetration, stance hover
-and slide <= CONTACT_UM, seam <= SEAM_UM model micrometres (R-A, infantry). Measured in model
-space against the entry floor plane: stricter than the rendered ground (the seat lift is above).
+and slide <= CONTACT_UM, seam <= SEAM_UM model micrometres (R-A, infantry). Heights are from the
+seated plane, model y = 0 (Map3DUnitRig seats the origin there); the rendered ground is the seat
+lift below it, so penetration from y = 0 is the stricter reading. Hover is the LOWEST vertex of the
+planted sole patch (does the sole touch), slide is that patch's ground-projected drift.
 """
 import argparse
 import copy
@@ -33,9 +36,12 @@ import test_pivot_feasibility as frozen  # noqa: E402
 
 NEUTRAL_PHASE = float.fromhex('0x1.387e7c06e19b8p-1')  # 0.61034, a captured native MARCH phase
 LAST_STEP = .88
-FOOT_PHASES = (10 / 35, 0.0)  # each foot's own flat midstance frame: where a held foot lands
-UNCOUPLED = {'neutral': FOOT_PHASES, 'last_step': .84}
-COUPLED = {'neutral': (NEUTRAL_PHASE, NEUTRAL_PHASE), 'last_step': LAST_STEP}
+# Native frames whose sole patch is flat (lowest patch vertex == boot minimum): a held foot's pose.
+FOOT_PHASES = (float.fromhex('0x1.507205001a010p-4'), 0.0)  # 0.08214 (left), 0 (right)
+SEATED_PLANE_Y = 0.0
+UNCOUPLED = {'neutral': (10 / 35, 0.0), 'foot': (10 / 35, 0.0), 'plane': None, 'last_step': .84}
+COUPLED = {'neutral': (NEUTRAL_PHASE, NEUTRAL_PHASE), 'foot': FOOT_PHASES, 'plane': SEATED_PLANE_Y,
+           'last_step': LAST_STEP}
 CANONICAL_PHASE = 0.8928571428571428  # 25/28, entry == exit of both shipped clips
 CONTACT_UM = 22769
 SEAM_UM = 1898
@@ -173,7 +179,7 @@ def native_locals(model, phase, template):
             for b in template['rest']['bones']}
 
 
-def build_case(model, template, op, phases, neutral, last_step, foot=FOOT_PHASES):
+def build_case(model, template, op, phases, neutral, last_step, foot, plane):
     """One sample_transition case: references in native parent locals plus a contact plan."""
     f = {'rest': copy.deepcopy(template['rest']), 'op': dict(op), 'source_glb_sha256': template['source_glb_sha256']}
     entry, exit_ = op['march_entry_phase'], op['march_exit_phase']
@@ -182,7 +188,7 @@ def build_case(model, template, op, phases, neutral, last_step, foot=FOOT_PHASES
     lowe, lowx = model.minima(ge, legs), model.minima(gx, legs)
     first, final_support, ev = events(lowe, lowx, last_step)
     f['phases'] = knots(ev) if phases is None else list(phases)
-    ground = min(lowe)
+    ground = min(lowe) if plane is None else plane  # where a held boot minimum lands
     pose = {li: model.native(neutral[li]) for li in (0, 1)}
     flat = {li: model.native(foot[li]) for li in (0, 1)}
     low = {li: model.minima(flat[li], legs)[li] for li in (0, 1)}
@@ -275,7 +281,7 @@ def build_case(model, template, op, phases, neutral, last_step, foot=FOOT_PHASES
             add(cursor, 1., 'stance', point, point, sr, sr, tr, tr)
         contacts[leg['hip']] = {'sole_bind': binds['sole_bind'], 'toe_bind': binds['toe_bind'], 'intervals': iv}
     f['contacts'] = {'march_entry_phase': entry, 'march_exit_phase': exit_, 'legs': contacts}
-    f['author_mapping'] = {'neutral_phases': list(neutral), 'foot_phases': list(foot), 'last_step': last_step, 'first_free_leg': legs[first]['hip'],
+    f['author_mapping'] = {'neutral_phases': list(neutral), 'foot_phases': list(foot), 'plane_y': plane, 'last_step': last_step, 'first_free_leg': legs[first]['hip'],
                            'final_support_leg': legs[final_support]['hip'], 'floor_model_y': ground}
     return f
 
@@ -288,10 +294,10 @@ def canonical_ops():
 
 def build(model, witness=False, params=COUPLED):
     if witness:
-        return [build_case(model, t, t['op'], t['phases'], params['neutral'], params['last_step'])
-                for t in model.templates]
-    return [build_case(model, model.templates[0], op, None, params['neutral'], params['last_step'])
-            for op in canonical_ops()]
+        return [build_case(model, t, t['op'], t['phases'], params['neutral'], params['last_step'],
+                           params['foot'], params['plane']) for t in model.templates]
+    return [build_case(model, model.templates[0], op, None, params['neutral'], params['last_step'],
+                       params['foot'], params['plane']) for op in canonical_ops()]
 
 
 def requested_phases(model):
@@ -302,7 +308,7 @@ def requested_phases(model):
         legs = model.templates[0]['rest']['legs']
         _, _, ev = events(model.minima(ge, legs), model.minima(ge, legs), LAST_STEP)
         need.update(body_phase(op['march_entry_phase'], op['march_exit_phase'], u) for u in knots(ev))
-    need.add(NEUTRAL_PHASE)
+    need.update([NEUTRAL_PHASE, *FOOT_PHASES])
     return sorted(p for p in need if float(p).hex() not in model.samples)
 
 
@@ -347,7 +353,7 @@ def audit(model, cases, results):
         turn = case['op']['turn_udeg'] / 1e6
         pe, px = model.points(model.native(entry)), model.points(model.native(exit_))
         l0 = model.lengths(pe)
-        floor = min(model.minima(model.native(entry), legs))
+        floor = SEATED_PLANE_Y
         bind_y = model.v[:, 1]
         patch = []
         for leg in legs:
@@ -401,12 +407,13 @@ def self_check(model):
     """The uncoupled parameters must rebuild the frozen witness references and contacts exactly."""
     for template, case in zip(model.templates, build(model, witness=True, params=UNCOUPLED)):
         for ref, mine in zip(template['reference_poses'], case['reference_poses']):
-            assert max(float(np.abs(np.array(ref[n]) - mine[n]).max()) for n in ref) == 0.0, 'reference port'
+            # Exact on one BLAS; another platform's SVD/eigh/matmul may differ in the last bits.
+            assert max(float(np.abs(np.array(ref[n]) - mine[n]).max()) for n in ref) < 1e-12, 'reference port'
         for hip, c in template['contacts']['legs'].items():
             assert len(c['intervals']) == len(case['contacts']['legs'][hip]['intervals'])
             for a, b in zip(c['intervals'], case['contacts']['legs'][hip]['intervals']):
                 for k in ['point_from', 'point_to', 'sole_from', 'sole_to', 'toe_from', 'toe_to']:
-                    assert float(np.abs(np.array(a[k]) - b[k]).max()) < 1e-15, 'contact port'
+                    assert float(np.abs(np.array(a[k]) - b[k]).max()) < 1e-12, 'contact port'
     assert events([0, 1], [1, 0], .88)[2][-1] == (0, .88, 1.)
     assert not flagged(np.array([.03]), np.array([.001]))[0] and flagged(np.array([.040001]), np.array([.01]))[0]
 

@@ -13,6 +13,8 @@ import sys
 import tempfile
 import zlib
 
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).parent))
 import pivot  # noqa: E402
 import pivot_mapping as pm  # noqa: E402
@@ -21,7 +23,8 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/infantry_pivot_mapping.json'
 GLB = ROOT / 'assets/3D/units/infantry/infantry.glb'
 HASHES = {'native-march.json': '2c04d2b90d5dfe28ed23b316f7a46762bd0daa3a08d89033bce846fa8c640b98',
-          'canonical-samples.json': '1e1ac9d5f58c3e9705bde79ddcc0a8289175c2f9c1a0df29b036f24071778020'}
+          'canonical-samples.json': 'b0d8c7b5104e158ad95795e3ff8bb9636c3acd9e1b478c43ef68109b512b8cfe'}
+MAIN_GLB_SHA256 = 'bb1d80b916be406f91390883034e07d0cf2d7690666951c3216b202393548085'  # five clips
 OLD = {'animations': 5, 'accessors': 1047, 'bufferViews': 1050, 'binary': 3837556}
 
 
@@ -65,9 +68,15 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         bare_source(GLB, tmp / 'source.glb')
+        assert hashlib.sha256((tmp / 'source.glb').read_bytes()).hexdigest() == MAIN_GLB_SHA256, 'old five changed'
         (tmp / 'samples.json').write_text(json.dumps(data['canonical-samples.json']))
         pivot.bake(tmp / 'source.glb', tmp / 'samples.json', tmp / 'out.glb', 4.0)
-        assert (tmp / 'out.glb').read_bytes() == GLB.read_bytes(), 'installed GLB is not the committed bake'
+        mine, theirs = (tmp / 'out.glb').read_bytes(), GLB.read_bytes()
+        if mine != theirs:  # another BLAS may round a float32 key differently: compare values
+            (a, ab), (b, bb) = pivot._read(tmp / 'out.glb'), pivot._read(GLB)
+            assert a == b and ab[:OLD['binary']] == bb[:OLD['binary']], 'installed GLB is not the committed bake'
+            x, y = (np.frombuffer(v[OLD['binary']:], '<f4') for v in (ab, bb))
+            assert len(x) == len(y) and float(np.abs(x - y).max()) < 2e-6, 'installed GLB is not the committed bake'
     print('PIVOT_MAPPING_MATCH', json.dumps([{k: r[k] for k in ('turn_udeg', 'skin', 'contact_um')} for r in report]))
 
 
