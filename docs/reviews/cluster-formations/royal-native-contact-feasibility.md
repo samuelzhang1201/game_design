@@ -1,5 +1,7 @@
 # Royal native contact feasibility and parameter-provider boundary
 
+> **Superseded in part (2026-11-10):** the owner rulings in `owner-rulings-2026-11-10.md` win where this document differs (contact bounds, skin diagnostic, certification method, Gram predicate, ownership).
+
 Step `LOCO-ROYAL-CONTACT-FEASIBILITY`, 2026-11-02. Implementation:
 `01a19c47-d970-7621-8597-e6b2603fc752`; sole dispatcher:
 `01a17398-42c1-7583-8d3f-7b15e877586c`. Unique Review is assigned by the

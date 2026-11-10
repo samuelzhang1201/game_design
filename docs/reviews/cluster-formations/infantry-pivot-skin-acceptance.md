@@ -1,5 +1,7 @@
 # Infantry pivot skin diagnostic applicability and physical disposition
 
+> **Superseded in part (2026-11-10):** the owner rulings in `owner-rulings-2026-11-10.md` win where this document differs (contact bounds, skin diagnostic, certification method, Gram predicate, ownership).
+
 Step `LOCO-INFANTRY-SKIN-ACCEPTANCE`, 2026-11-02. Sole dispatcher:
 `01a17398-42c1-7583-8d3f-7b15e877586c`; implementation:
 `01a19930-a43c-7420-9403-335b15424f4a`. Unique Review is assigned by that

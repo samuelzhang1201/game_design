@@ -1,5 +1,7 @@
 # Royal boundary phase and two-sided kinematics
 
+> **Superseded in part (2026-11-10):** the owner rulings in `owner-rulings-2026-11-10.md` win where this document differs (contact bounds, skin diagnostic, certification method, Gram predicate, ownership).
+
 Step `ROYAL-BOUNDARY-PHASE-AUTHORITY`, 2026-11-02. Implementation
 `01a19cc7-f721-7292-b8eb-a82b9983b85a`; unique Review
 `01a19cc8-4061-7b41-a307-89834632160a`; sole dispatcher

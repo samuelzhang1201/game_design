@@ -1,5 +1,7 @@
 # Infantry pivot feasibility contract and frozen counterexamples
 
+> **Superseded in part (2026-11-10):** the owner rulings in `owner-rulings-2026-11-10.md` win where this document differs (contact bounds, skin diagnostic, certification method, Gram predicate, ownership).
+
 Step: `LOCO-INFANTRY-FEASIBILITY-CONTRACT`, 2026-11-02. Implementation:
 `01a198a5-f257-7593-bf83-38c72990c7d2`. Sole dispatcher:
 `01a17398-42c1-7583-8d3f-7b15e877586c`. Unique Review: pending assignment by
