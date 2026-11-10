@@ -2,10 +2,12 @@
 
 exec() in the owner's Blender with soldier_knight_arp.blend open, then install(ROOT) with ROOT the
 checkout to write into. Works on copies; reopen the saved blend afterwards (nothing is saved).
-For a complete pivot build, pass the frozen native sample JSON and its authored reference seconds
-as install(ROOT, pivot_samples=PATH, pivot_seconds=SECONDS). Stage in an ignored checkout containing
-this tool and pivot.py before replacing the installed GLB; the bare build remains available for
-source-chain preservation checks. The pivot bake never changes the original five clips or binds.
+For a complete pivot build, pass the solved sample JSON and its reference seconds (4.0) as
+install(ROOT, pivot_samples=PATH, pivot_seconds=SECONDS). The samples come from the coupled author
+mapping: pivot_native.gd captures MARCH, pivot_mapping.py builds the cases, pivot_solve.gd solves
+them (the committed solve is in tests/fixtures/infantry_pivot_mapping.json; test_pivot_mapping.py
+re-bakes it onto the installed GLB byte for byte, so no Blender is needed for a pivot-only change).
+The pivot bake never changes the original five clips or binds.
 
 What the map needs of the knight's GLB (a plain export of the rig does not give it):
 - the node names infantry.tscn overrides: armature `inf_rig`, one skinned mesh `infantry`;

@@ -83,3 +83,18 @@ Previews: `preview.py` (EEVEE, fixed three-quarter camera) → `preview/<CLIP>/`
 Open: ATTACK_VAR1 swings the shield flat at frame 9 (as the source clip does); game export
 (constraint-free skeleton like `archer_arp/export.py`, the `cc_weapon.*` sockets kept); whether
 the lunging clip keeps its travel.
+
+## Pivot clips (PIVOT_RIGHT / PIVOT_LEFT)
+
+Two one-shot 90° reference turns appended to the installed `infantry.glb` (MARCH phase 25/28 in and
+out, 4 s, positive pack turn = RIGHT; body yaw stays in the engine). Built without Blender:
+
+1. `pivot_native.gd` samples the imported MARCH at the phases `pivot_mapping.py request` lists.
+2. `pivot_mapping.py build` writes the coupled author mapping (one shared native thigh frame, each
+   held foot flat under it, last step from .88) as `Map3DInfantryPivot.sample_transition` cases.
+3. `pivot_solve.gd` solves them; `pivot_mapping.py audit` applies the 2026-11-10 skin (R-B) and
+   contact (R-A) gates; `pivot.bake` appends the pair. `--witness` rebuilds the five frozen
+   feasibility cases (the uncoupled mapping had 45 introduced skin flags there; this one has none).
+
+`test_pivot_mapping.py` re-audits the committed solve and re-bakes the installed GLB byte for byte.
+Evidence: `docs/reviews/cluster-formations/evidence/locomotion/infantry/pivot-clip-acceptance.json`.
