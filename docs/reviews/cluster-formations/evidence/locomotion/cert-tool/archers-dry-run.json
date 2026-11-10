@@ -316,6 +316,167 @@
     "length_s": 2.0,
     "loop_mode": 0,
     "tracks": 219
+   },
+   "STANDBY": {
+    "key_times": [
+     0.0,
+     0.0333333350718021,
+     0.0666666701436043,
+     0.100000001490116,
+     0.133333340287209,
+     0.16666667163372,
+     0.200000002980232,
+     0.233333334326744,
+     0.266666680574417,
+     0.300000011920929,
+     0.333333343267441,
+     0.366666674613953,
+     0.400000005960464,
+     0.433333337306976,
+     0.466666668653488,
+     0.5,
+     0.533333361148834,
+     0.566666662693024,
+     0.600000023841858,
+     0.633333325386047,
+     0.666666686534882,
+     0.699999988079071,
+     0.733333349227905,
+     0.766666650772095,
+     0.800000011920929,
+     0.833333313465118,
+     0.866666674613953,
+     0.899999976158142,
+     0.933333337306976,
+     0.966666638851166,
+     1.0,
+     1.03333330154419,
+     1.06666672229767,
+     1.10000002384186,
+     1.13333332538605,
+     1.16666662693024,
+     1.20000004768372,
+     1.23333334922791,
+     1.26666665077209,
+     1.29999995231628,
+     1.33333337306976,
+     1.36666667461395,
+     1.39999997615814,
+     1.43333327770233,
+     1.46666669845581,
+     1.5,
+     1.53333330154419,
+     1.56666672229767,
+     1.60000002384186,
+     1.63333332538605,
+     1.66666662693024,
+     1.70000004768372,
+     1.73333334922791,
+     1.76666665077209,
+     1.79999995231628,
+     1.83333337306976,
+     1.86666667461395,
+     1.89999997615814,
+     1.93333327770233,
+     1.96666669845581,
+     2.0,
+     2.03333330154419,
+     2.06666660308838,
+     2.09999990463257,
+     2.13333344459534,
+     2.16666674613953,
+     2.20000004768372,
+     2.23333334922791,
+     2.26666665077209,
+     2.29999995231628,
+     2.33333325386047,
+     2.36666655540466,
+     2.40000009536743,
+     2.43333339691162,
+     2.46666669845581,
+     2.5,
+     2.53333330154419,
+     2.56666660308838,
+     2.59999990463257,
+     2.63333344459534,
+     2.66666674613953,
+     2.70000004768372,
+     2.73333334922791,
+     2.76666665077209,
+     2.79999995231628,
+     2.83333325386047,
+     2.86666655540466,
+     2.90000009536743,
+     2.93333339691162,
+     2.96666669845581,
+     3.0,
+     3.03333330154419,
+     3.06666660308838,
+     3.09999990463257,
+     3.13333344459534,
+     3.16666674613953,
+     3.20000004768372,
+     3.23333334922791,
+     3.26666665077209,
+     3.29999995231628,
+     3.33333325386047,
+     3.36666655540466,
+     3.40000009536743,
+     3.43333339691162,
+     3.46666669845581,
+     3.5,
+     3.53333330154419,
+     3.56666660308838,
+     3.59999990463257,
+     3.63333344459534,
+     3.66666674613953,
+     3.70000004768372,
+     3.73333334922791,
+     3.76666665077209,
+     3.79999995231628,
+     3.83333325386047,
+     3.86666655540466,
+     3.90000009536743,
+     3.93333339691162,
+     3.96666669845581,
+     4.0,
+     4.03333330154419,
+     4.06666660308838,
+     4.09999990463257,
+     4.13333320617676,
+     4.16666650772095,
+     4.19999980926514,
+     4.23333311080933,
+     4.26666688919067,
+     4.30000019073486,
+     4.33333349227905,
+     4.36666679382324,
+     4.40000009536743,
+     4.43333339691162,
+     4.46666669845581,
+     4.5,
+     4.53333330154419,
+     4.56666660308838,
+     4.59999990463257,
+     4.63333320617676,
+     4.66666650772095,
+     4.69999980926514,
+     4.73333311080933,
+     4.76666688919067,
+     4.80000019073486,
+     4.83333349227905,
+     4.86666679382324,
+     4.90000009536743,
+     4.93333339691162,
+     4.96666669845581,
+     5.0,
+     5.03333330154419,
+     5.06666660308838,
+     5.09999990463257
+    ],
+    "length_s": 5.09999990463257,
+    "loop_mode": 1,
+    "tracks": 89
    }
   },
   "godot": {
@@ -329,59 +490,17 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "3f5ff5d30aca6e544ba5114263bc191c3a3fce0cef196c287d412b2c136e09c0",
+  "sha256": "38531738e627b71a8676d29e58abdafde73ff04ba7cd5fe0d89d98f41e7213c2",
   "uniform": 512
  },
  "config": {
   "arm": "archers",
   "boundaries": [
    [
-    "MARCH",
-    1.0,
-    "MARCH",
-    0.0
-   ],
-   [
-    "MARCH",
-    0.0,
-    "PIVOT_RIGHT",
-    0.0
-   ],
-   [
-    "PIVOT_RIGHT",
-    1.0,
-    "MARCH",
-    0.0
-   ],
-   [
-    "MARCH",
-    0.0,
-    "PIVOT_LEFT",
-    0.0
-   ],
-   [
-    "PIVOT_LEFT",
-    1.0,
-    "MARCH",
-    0.0
-   ],
-   [
-    "MARCH",
-    "*",
-    "PIVOT_RIGHT",
-    0.0
-   ],
-   [
     "PIVOT_RIGHT",
     1.0,
     "MARCH",
     "*"
-   ],
-   [
-    "MARCH",
-    "*",
-    "PIVOT_LEFT",
-    0.0
    ],
    [
     "PIVOT_LEFT",
@@ -406,7 +525,13 @@
    0,
    -1
   ],
-  "note": "DRY RUN of LOCO-CERT-TOOL on the merged archer assets: plain native clip playback, no provider, no policy. turn_q 400000 is a placeholder (no turn_q is approved); stance = the lower sole patch.",
+  "hold_clip": "STANDBY",
+  "hold_phases": "*",
+  "march_start_phases": [
+   0.0
+  ],
+  "march_stop_phases": "*",
+  "note": "DRY RUN of LOCO-CERT-TOOL on the merged archer assets: plain native clip playback, no provider, no policy. turn_q 400000 is a placeholder (no turn_q is approved); stance = the lower sole patch. Stops are admitted from any MARCH phase, starts at MARCH 0, the hold (STANDBY) at any phase; the two extra boundaries also sweep a pivot exit into any MARCH phase.",
   "patch_band_m": 0.005,
   "radius_m": 932,
   "scene": "scenes/models/units/archers.tscn",
@@ -455,7 +580,7 @@
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
  "locomotion_certificate": null,
- "payload_sha256": "be5334370c854f44174815b1dcda016b5cef88087143b0c3e52398777cfe8a38",
+ "payload_sha256": "53e15b70f37e726de7fc8af43f098526369b61ecc8f4a9647e0d5c3f456fca57",
  "report": {
   "bounds_um": {
    "contact": 28474,
@@ -463,17 +588,17 @@
   },
   "envelope": {
    "footprint_radius_m": 932,
-   "margin_um": 8945,
+   "margin_um": 23191,
    "pass": true,
-   "radius_model_um": 876794,
-   "radius_simulation_m": 374,
+   "radius_model_um": 1170842,
+   "radius_simulation_m": 504,
    "witness": {
-    "clip": "MARCH",
+    "clip": "STANDBY",
     "mesh": "archers_bow",
-    "phase": 0.200000007663455,
+    "phase": 0.699346405839853,
     "surface": 0,
     "turn_udeg": null,
-    "vertex": 563
+    "vertex": 293
    }
   },
   "hover": {
@@ -544,10 +669,10 @@
   },
   "penetration": {
    "bound_um": 28474,
-   "margin_um": 5589,
+   "margin_um": 24142,
    "pass": true,
    "sampled_um": 0,
-   "total_um": 5589,
+   "total_um": 24142,
    "witness": {
     "clip": "PIVOT_LEFT",
     "mesh": "archers",
@@ -557,7 +682,7 @@
     "vertex": 31272
    }
   },
-  "sample_count": 2498,
+  "sample_count": 3623,
   "seam": {
    "bound_um": 2373,
    "boundaries": [
@@ -565,12 +690,12 @@
      "bound_um": 2373,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 0,
-     "total_um": 0,
+     "sampled_um": 1,
+     "total_um": 1,
      "witness": {
       "from": [
        "MARCH",
-       1.0
+       0.999999
       ],
       "mesh": "archers",
       "surface": 0,
@@ -579,61 +704,19 @@
        0.0
       ],
       "turn_udeg": null,
-      "vertex": 0
+      "vertex": 7853
      }
     },
     {
      "bound_um": 2373,
-     "margin_um": 0,
-     "pass": true,
-     "sampled_um": 842,
-     "total_um": 842,
+     "margin_um": 8982,
+     "pass": false,
+     "sampled_um": 570285,
+     "total_um": 579267,
      "witness": {
       "from": [
        "MARCH",
-       0.0
-      ],
-      "mesh": "archers",
-      "surface": 0,
-      "to": [
-       "PIVOT_RIGHT",
-       0.0
-      ],
-      "turn_udeg": null,
-      "vertex": 35966
-     }
-    },
-    {
-     "bound_um": 2373,
-     "margin_um": 0,
-     "pass": true,
-     "sampled_um": 842,
-     "total_um": 842,
-     "witness": {
-      "from": [
-       "PIVOT_RIGHT",
-       1.0
-      ],
-      "mesh": "archers",
-      "surface": 0,
-      "to": [
-       "MARCH",
-       0.0
-      ],
-      "turn_udeg": null,
-      "vertex": 35966
-     }
-    },
-    {
-     "bound_um": 2373,
-     "margin_um": 0,
-     "pass": true,
-     "sampled_um": 842,
-     "total_um": 842,
-     "witness": {
-      "from": [
-       "MARCH",
-       0.0
+       0.171428579821879
       ],
       "mesh": "archers",
       "surface": 0,
@@ -642,7 +725,7 @@
        0.0
       ],
       "turn_udeg": null,
-      "vertex": 35966
+      "vertex": 26481
      }
     },
     {
@@ -664,6 +747,48 @@
       ],
       "turn_udeg": null,
       "vertex": 35966
+     }
+    },
+    {
+     "bound_um": 2373,
+     "margin_um": 28762,
+     "pass": false,
+     "sampled_um": 2167872,
+     "total_um": 2196634,
+     "witness": {
+      "from": [
+       "STANDBY",
+       0.372549021899448
+      ],
+      "mesh": "archers_bow",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 65
+     }
+    },
+    {
+     "bound_um": 2373,
+     "margin_um": 0,
+     "pass": false,
+     "sampled_um": 1178038,
+     "total_um": 1178038,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "archers_bow",
+      "surface": 0,
+      "to": [
+       "STANDBY",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 9024
      }
     },
     {
@@ -689,6 +814,111 @@
     },
     {
      "bound_um": 2373,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 842,
+     "total_um": 842,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "archers",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 35966
+     }
+    },
+    {
+     "bound_um": 2373,
+     "margin_um": 28762,
+     "pass": false,
+     "sampled_um": 2167872,
+     "total_um": 2196634,
+     "witness": {
+      "from": [
+       "STANDBY",
+       0.372549021899448
+      ],
+      "mesh": "archers_bow",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 65
+     }
+    },
+    {
+     "bound_um": 2373,
+     "margin_um": 0,
+     "pass": false,
+     "sampled_um": 1178038,
+     "total_um": 1178038,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "archers_bow",
+      "surface": 0,
+      "to": [
+       "STANDBY",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 9024
+     }
+    },
+    {
+     "bound_um": 2373,
+     "margin_um": 8982,
+     "pass": false,
+     "sampled_um": 1316419,
+     "total_um": 1325401,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.200000007663455
+      ],
+      "mesh": "archers_bow",
+      "surface": 0,
+      "to": [
+       "STANDBY",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 5840
+     }
+    },
+    {
+     "bound_um": 2373,
+     "margin_um": 28762,
+     "pass": false,
+     "sampled_um": 2167872,
+     "total_um": 2196634,
+     "witness": {
+      "from": [
+       "STANDBY",
+       0.372549021899448
+      ],
+      "mesh": "archers_bow",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 65
+     }
+    },
+    {
+     "bound_um": 2373,
      "margin_um": 8982,
      "pass": false,
      "sampled_um": 570285,
@@ -703,27 +933,6 @@
       "to": [
        "MARCH",
        0.171428579821879
-      ],
-      "turn_udeg": null,
-      "vertex": 26481
-     }
-    },
-    {
-     "bound_um": 2373,
-     "margin_um": 8982,
-     "pass": false,
-     "sampled_um": 570285,
-     "total_um": 579267,
-     "witness": {
-      "from": [
-       "MARCH",
-       0.171428579821879
-      ],
-      "mesh": "archers",
-      "surface": 0,
-      "to": [
-       "PIVOT_LEFT",
-       0.0
       ],
       "turn_udeg": null,
       "vertex": 26481
@@ -751,23 +960,23 @@
      }
     }
    ],
-   "margin_um": 8982,
+   "margin_um": 28762,
    "pass": false,
-   "sampled_um": 570285,
-   "total_um": 579267,
+   "sampled_um": 2167872,
+   "total_um": 2196634,
    "witness": {
     "from": [
-     "PIVOT_LEFT",
-     1.0
+     "STANDBY",
+     0.372549021899448
     ],
-    "mesh": "archers",
+    "mesh": "archers_bow",
     "surface": 0,
     "to": [
      "MARCH",
-     0.171428579821879
+     0.0
     ],
     "turn_udeg": null,
-    "vertex": 26481
+    "vertex": 65
    }
   },
   "skin": {
@@ -790,6 +999,10 @@
     "touchdown_phase": 0.625,
     "turn_udeg": 1
    }
+  },
+  "stance": {
+   "missing": [],
+   "pass": true
   },
   "turn_grid": [
    {
@@ -901,6 +1114,6 @@
  },
  "schema": 1,
  "status": "FAIL",
- "tool_sha256": "3168bb84e4f44562fa058219ffbe0f304b8df75f9ea2e4ac64e0af9596ca361a",
+ "tool_sha256": "5162cadfec26353e3188aa703a35c57ca5426a685ec4e8c841e16e738ecd8aae",
  "visual_review": "PENDING: R-C requires the real-window review after this numeric pass"
 }
