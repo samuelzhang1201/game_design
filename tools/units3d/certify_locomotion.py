@@ -6,10 +6,13 @@ every equipped mesh with the native imported arrays and bone poses, and checks:
 
   1. penetration  any vertex below the rendered ground, every sample;
   2. hover        the planted material patch above the seated plane, stance only;
-  3. slide        per sole vertex: while it lies within STANCE_BAND_M of the seated
-                  plane it is planted, and its slide is its ground-projected
-                  displacement from where it touched down (ruling 2026-11-11: the
-                  planted part of the sole; heel-to-toe roll is not slide, skating is);
+  3. slide        per vertex: while it lies within the arm's planting band b of
+                  the seated plane it is planted, and its slide is its ground-
+                  projected displacement from where it touched down (ruling
+                  2026-11-11: the planted part of the sole; heel-to-toe roll is not
+                  slide, skating is). b = max(0.5 mm, H + 0.5 mm), H inherited from
+                  the shipped native MARCH (`planting_band`); a stance is where a
+                  foot's lowest sole vertex is within b, and hover is read there;
   4. seam         any vertex jump at a clip boundary;
   plus the envelope against the arm's footprint radius and the skin diagnostic.
 
@@ -63,7 +66,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CLIPS = ['PIVOT_LEFT', 'PIVOT_RIGHT', 'MARCH']  # BodyMotion._loco_policy's list
 BOUND_WORLD_M = {'contact': 0.60, 'seam': 0.05}  # R-A
 SKIN_RATIO, SKIN_MIN_M = 4.0, 0.03  # R-B, unchanged thresholds
-STANCE_BAND_M = 0.0005  # a sole vertex is planted while within this of the seated plane (ruling 2026-11-11)
+STANCE_BAND_M = 0.0005  # the planting band's floor and its allowance over native MARCH (ruling 2026-11-11)
 TURN = 360_000_000
 LOCO_Q = 1_000_000  # BodyMotion.LOCOMOTION_Q
 UNIFORM = 512
@@ -236,14 +239,16 @@ def check_coverage(dump, extra):
 
 
 def stance_runs(heights, phases, rule, foot, loop):
-    """Index runs where `foot` stands. rule 'lowest:N' = among the N lowest
-    patches at that sample; {foot: [[p0, p1], ...]} = authored intervals."""
-    if isinstance(rule, dict):
-        return [[i for i, p in enumerate(phases) if a <= p <= b] for a, b in rule.get(foot, [])]
-    n = int(rule.split(':')[1])
-    names = sorted(heights)
-    order = np.argsort(np.array([heights[f] for f in names]), axis=0, kind='stable')
-    down = (order[:n] == names.index(foot)).any(axis=0)
+    """Index runs where `foot` stands: rule ('lowest', N) = among the N lowest
+    feet at that sample; ('band', b) = its lowest sole vertex within b of the
+    seated plane. A run crossing a looping clip's seam is ONE stance."""
+    kind, value = rule
+    if kind == 'lowest':
+        names = sorted(heights)
+        order = np.argsort(np.array([heights[f] for f in names]), axis=0, kind='stable')
+        down = (order[:value] == names.index(foot)).any(axis=0)
+    else:
+        down = np.array(heights[foot]) <= value
     runs, current = [], []
     for i, d in enumerate(down):
         if d:
@@ -254,17 +259,32 @@ def stance_runs(heights, phases, rule, foot, loop):
     if current:
         runs.append(current)
     if loop and len(runs) > 1 and runs[0][0] == 0 and runs[-1][-1] == len(phases) - 1:
-        runs[0] = runs.pop() + runs[0]  # the stance crossing the loop seam is ONE stance
+        runs[0] = runs.pop() + runs[0]
     return [r for r in runs if r]
 
 
-def vertex_slide(heights, xz, band=STANCE_BAND_M):
+def planting_band(heights, phases, loop):
+    """Ruling 2026-11-11, inherited from the shipped native MARCH: a foot's
+    stances there are its maximal runs among the lower half of the feet; H is
+    the highest of the stances' minimum sole heights above the seated plane and
+    the arm's planting band is max(STANCE_BAND_M, H + STANCE_BAND_M)."""
+    n = max(1, len(heights) // 2)
+    lows = [min(heights[f][i] for i in run) for f in sorted(heights)
+            for run in stance_runs(heights, phases, ('lowest', n), f, loop)]
+    if not lows:
+        raise ValueError('native MARCH has no stance to derive the planting band from')
+    high = float(max(lows))
+    return high, max(STANCE_BAND_M, high + STANCE_BAND_M)
+
+
+def vertex_slide(heights, xz, band):
     """heights (N, V) above the seated plane and world xz (N, V, 2), in time order.
     Each vertex is planted while its height <= band, anchored where it entered the
-    band; returns (worst displacement from its anchor, margin = largest one-step
-    move of a vertex planted at EITHER end of the step (a vertex entering or leaving
-    between samples is anchored late or measured early by at most that step),
-    (sample, vertex, touchdown sample))."""
+    band; returns (worst displacement from its anchor, margin, (sample, vertex,
+    touchdown sample)). The margin is TWICE the largest one-step move of a vertex
+    planted at either end of a step: a vertex entering between samples is
+    anchored up to one step late and one leaving is measured up to one step early,
+    and one slide can lose both."""
     anchor = np.zeros(xz.shape[1:])
     touch = np.full(heights.shape[1], -1)
     before = np.zeros(heights.shape[1], dtype=bool)
@@ -282,7 +302,7 @@ def vertex_slide(heights, xz, band=STANCE_BAND_M):
         if i and either.any():
             margin = max(margin, float(np.linalg.norm(xz[i] - xz[i - 1], axis=1)[either].max()))
         before = planted
-    return value, margin, witness
+    return value, 2 * margin, witness
 
 
 class Worst:
@@ -348,7 +368,7 @@ def measure(dump, config, scale):
     {k, simulation_scale, lift_model_m}."""
     model = Model(dump)
     bounds = bounds_um(scale['k'])
-    feet = patches(model, config['feet'], config.get('patch_band_m', .005))
+    feet = patches(model, config['feet'], math.inf)  # every vertex bound to a foot's bones
     forward = np.array(config['forward'], dtype=float)
     stride = float(config['stride_m'])
     slope = float(config.get('slope', 0.0))
@@ -367,6 +387,15 @@ def measure(dump, config, scale):
             if not by.get((clip_for(g['turn_udeg']), g['turn_udeg'], True)):
                 raise ValueError(f"no provider stream for turn {g['turn_udeg']}")
     pen, hov, sld, env = Worst(), Worst(), Worst(), Worst()
+    # The planting band, from the native MARCH stream (never a provider's).
+    native = by[('MARCH', None, False)]
+    native_heights = {f: [] for f in feet}
+    for s in native:
+        p = model.points(s['_g'])
+        for f, ids in feet.items():
+            native_heights[f].append(float(p[ids, 1].min()))
+    high, band = planting_band(native_heights, [s['phase'] for s in native],
+                               dump['clips']['MARCH']['loop_mode'] != 0)
     slide_by_clip = {}
     missing = []  # a foot with no stance in a locomotion clip leaves hover and slide unmeasured
 
@@ -411,21 +440,16 @@ def measure(dump, config, scale):
             for f, ids in feet.items():
                 heights[f].append(p[ids, 1].min())
                 patch_y[f].append(p[ids, 1])
-            reach |= p[:, 1] <= STANCE_BAND_M
+            reach |= p[:, 1] <= band
         if clip not in CLIPS:
             continue  # the hold clip: penetration and envelope only
-        rule = config['stance'][clip]
+        rule = ('band', band)
         turns = [turn] if clip == 'MARCH' or turn is not None else \
             [g['turn_udeg'] for g in grid if clip_for(g['turn_udeg']) == clip]
         for f in feet:
             runs = stance_runs(heights, phases, rule, f, loop)
             if not runs:
                 missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f, 'reason': 'no stance'})
-            for run in runs:
-                if not any((patch_y[f][i] <= STANCE_BAND_M).any() for i in run):
-                    # a stance that never touches: slide (per vertex in the band) would not see it
-                    missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f, 'reason': 'stance above the band',
-                                    'phases': [phases[run[0]], phases[run[-1]]]})
             for run in runs:
                 for k, i in enumerate(run):
                     hov.offer(heights[f][i], {'clip': clip, 'foot': f, 'phase': phases[i], 'turn_udeg': turn})
@@ -440,7 +464,8 @@ def measure(dump, config, scale):
         frames = [(i, c) for c in range(2 if loop else 1) for i in range(len(rows))]
         for t in turns:
             w = np.array([world(clip, phases[i], pts[i], t, c)[:, [0, 2]] for i, c in frames])
-            value, margin, hit = vertex_slide(pts[[i for i, _ in frames], :, 1], w) if pts.shape[1] else (0.0, 0.0, None)
+            value, margin, hit = vertex_slide(pts[[i for i, _ in frames], :, 1], w, band) if pts.shape[1] \
+                else (0.0, 0.0, None)
             if hit is not None:
                 for worst in (sld, per_clip):
                     worst.offer(value, {'clip': clip, 'turn_udeg': t, 'touchdown_phase': phases[frames[hit[2]][0]],
@@ -511,7 +536,10 @@ def measure(dump, config, scale):
         'bounds_um': bounds,
         'penetration': pen.report(bounds['contact']),
         'hover': hov.report(bounds['contact']),
-        'slide': {**sld.report(bounds['contact']), 'band_m': STANCE_BAND_M,
+        'planting_band': {'band_m': band, 'H_m': high, 'inherited_from': 'shipped native MARCH',
+                          'rule': 'b = max(0.5 mm, H + 0.5 mm); H = highest per-stance minimum sole height, '
+                                  'stances = runs among the lower half of the feet'},
+        'slide': {**sld.report(bounds['contact']), 'band_m': band,
                   'by_clip': {c: w.report(bounds['contact']) for c, w in sorted(slide_by_clip.items())}},
         # No boundary configured is a failure: every arm has at least its loop seam.
         'seam': {**(seam_worst or Worst().report(bounds['seam'])), 'pass': bool(seams) and all(s['pass'] for s in seams),
@@ -758,7 +786,7 @@ def main(argv=None):
     parser.add_argument('--work', type=Path, help='scratch folder (default .superpowers/loco-cert/<arm>)')
     args = parser.parse_args(argv)
     config = json.loads(args.config.read_text())
-    for key in ('arm', 'scene', 'feet', 'forward', 'stride_m', 'stance', 'turn_q', 'hold_clip',
+    for key in ('arm', 'scene', 'feet', 'forward', 'stride_m', 'turn_q', 'hold_clip',
                 'march_stop_phases', 'march_start_phases', 'hold_phases'):
         if key not in config:
             raise SystemExit(f'config is missing {key}')

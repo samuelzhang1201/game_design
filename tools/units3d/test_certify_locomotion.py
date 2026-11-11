@@ -41,7 +41,10 @@ def pose(clip, phase):
         _, yl, zl, yr = MARCH[phase]
         return [move(), move(y=yl, z=zl), move(y=yr)]
     sign = 1 if clip == 'PIVOT_RIGHT' else -1
-    return [move(), move(y=-.004, yaw=sign * math.pi * phase), move(y=.00035 if phase == .5 else .03)]
+    return [move(), move(y=-.004, yaw=sign * math.pi * phase), move(y=PIVOT_TOUCH[0] if phase == .5 else .03)]
+
+
+PIVOT_TOUCH = [.00035]  # the pivot's right-foot touchdown height (a test may lift it)
 
 
 def sample(clip, phase, bones=None, provider=False):
@@ -68,12 +71,9 @@ def fixture():
             + [sample('MARCH', cert.LOOP_END)]}
 
 
-PIVOT_STANCE = {'l': [[0, 1]], 'r': [[.5, .5]]}
-
 
 CONFIG = {'arm': 'fixture', 'feet': {'l': ['foot_l'], 'r': ['foot_r']}, 'patch_band_m': .001,
           'forward': [0, 0, 1], 'stride_m': 1.0, 'turn_q': 400_000, 'radius_m': 731,
-          'stance': {'MARCH': 'lowest:1', 'PIVOT_LEFT': PIVOT_STANCE, 'PIVOT_RIGHT': PIVOT_STANCE},
           'hold_clip': HOLD, 'march_stop_phases': [0.0], 'march_start_phases': [0.0], 'hold_phases': '*',
           'boundaries': [['MARCH', '*', 'PIVOT_LEFT', 0.0]]}
 SCALE = {'k': 25.0, 'simulation_scale': 1000.0, 'lift_model_m': .001}
@@ -128,13 +128,32 @@ class Pieces(unittest.TestCase):
         out = cert.rot_y(np.array([[1., 0, 0]]), math.pi / 2)
         np.testing.assert_allclose(out, [[0, 0, -1]], atol=1e-15)  # Basis(UP, 90deg) * +X = -Z
 
-    def test_stance_runs_lowest_and_loop_merge(self):
+    def test_stance_runs_lowest_band_and_loop_merge(self):
         heights = {'l': [0, 0, 5, 5, 0], 'r': [5, 5, 0, 0, 5]}
-        runs = cert.stance_runs(heights, PHASES, 'lowest:1', 'l', loop=True)
+        runs = cert.stance_runs(heights, PHASES, ('lowest', 1), 'l', loop=True)
         self.assertEqual(runs, [[4, 0, 1]])
-        self.assertEqual(cert.stance_runs(heights, PHASES, 'lowest:1', 'l', loop=False), [[0, 1], [4]])
-        self.assertEqual(cert.stance_runs(heights, PHASES, {'l': [[.25, .75]]}, 'l', loop=False), [[1, 2, 3]])
-        self.assertEqual(cert.stance_runs(heights, PHASES, 'lowest:2', 'r', loop=False), [[0, 1, 2, 3, 4]])
+        self.assertEqual(cert.stance_runs(heights, PHASES, ('lowest', 1), 'l', loop=False), [[0, 1], [4]])
+        self.assertEqual(cert.stance_runs(heights, PHASES, ('lowest', 2), 'r', loop=False), [[0, 1, 2, 3, 4]])
+        self.assertEqual(cert.stance_runs(heights, PHASES, ('band', 5), 'r', loop=False), [[0, 1, 2, 3, 4]])
+        self.assertEqual(cert.stance_runs(heights, PHASES, ('band', 4.9), 'r', loop=True), [[2, 3]])
+
+    def test_planting_band_is_inherited_from_native_march(self):
+        # Two feet, metres. Lower-foot runs: l at 0..1 (min .00100) and at 4 (.00020);
+        # r at 2..3 (min .00226). H = the highest stance minimum = 2.26 mm (the
+        # infantry case), so b = H + 0.5 mm = 2.76 mm.
+        heights = {'l': [.0010, .0012, .0080, .0090, .0002], 'r': [.0050, .0060, .00226, .0030, .0040]}
+        high, band = cert.planting_band(heights, PHASES, loop=False)
+        self.assertAlmostEqual(high, .00226, places=12)
+        self.assertAlmostEqual(band, .00276, places=12)
+        # Looping, l's runs 4 and 0..1 are ONE stance (min .0002): H is r's 2.26 mm still.
+        self.assertAlmostEqual(cert.planting_band(heights, PHASES, loop=True)[0], .00226, places=12)
+        # Every stance dips under the plane (l's loop stance to -1 mm, r's to -2 mm):
+        # H = -1 mm and the band is the 0.5 mm floor.
+        low = {'l': [0, -.001, .01, .01, 0], 'r': [.01, .01, -.002, 0, .01]}
+        self.assertEqual(cert.planting_band(low, PHASES, loop=True), (-.001, .0005))
+        # Four hooves: a stance is among the lower two.
+        hooves = {'a': [0, 0, 9, 9], 'b': [0, 0, 9, 9], 'c': [9, 9, .001, .003], 'd': [9, 9, .002, .002]}
+        self.assertAlmostEqual(cert.planting_band(hooves, PHASES[:4], loop=False)[0], .002, places=12)
 
     def test_margin_adds_before_rounding(self):
         w = cert.Worst()
@@ -182,16 +201,16 @@ class Fixture(unittest.TestCase):
 
     def test_slide_worst_is_the_microdegree_pivot(self):
         # Net planted yaw (pi - theta) p; theta = 1 microdegree. Chord at p = 1 is
-        # 2 R sin(a/2). The pivot's own margin is one quarter step's chord of a
-        # planted sole vertex, 2 R sin(pi/8) (the right sole touching down at the
-        # 180 tie); the pooled margin is MARCH's coarse lift-off step (below).
+        # 2 R sin(a/2). The pivot's own margin is twice one quarter step's chord of
+        # a planted sole vertex, 2 x 2 R sin(pi/8) (the right sole touching down at
+        # the 180 tie); the pooled margin is MARCH's, twice its coarse lift-off step.
         a = math.pi - math.radians(1e-6)
         sld = self.report['slide']
         pivot = sld['by_clip']['PIVOT_RIGHT']
         self.assertEqual(sld['sampled_um'], cert.um(2 * R * math.sin(a / 2)))
         self.assertEqual(pivot['sampled_um'], sld['sampled_um'])
-        self.assertEqual(pivot['margin_um'], cert.um(2 * R * math.sin(math.pi / 8)))
-        self.assertEqual(sld['margin_um'], 490000)
+        self.assertEqual(pivot['margin_um'], cert.um(4 * R * math.sin(math.pi / 8)))
+        self.assertEqual(sld['margin_um'], 980000)
         self.assertEqual(abs(sld['witness']['turn_udeg']), 1)
         self.assertEqual(sld['witness']['phase'], 1.0)
         self.assertFalse(sld['pass'])
@@ -199,10 +218,10 @@ class Fixture(unittest.TestCase):
     def test_march_slide_crosses_the_loop_seam(self):
         # The left stance LOOP_END, 1.0, 0, .25, .5 is ONE stance: world z = zl + stride
         # * (phase + cycle) = 0.999999, 1.00, 1.00, 1.01, 1.02 -> 20.001 mm. The margin
-        # counts entry and exit steps: lift-off .5 -> .75 moves sole a from z .02 to
-        # .51 (0.49 m), touchdown .75 -> LOOP_END from .51 to .999999 (0.489999 m).
+        # is twice the largest entry/exit step: lift-off .5 -> .75 moves sole a from
+        # z .02 to .51 (0.49 m), so 0.98 m.
         sld = self.report['slide']['by_clip']['MARCH']
-        self.assertEqual((sld['sampled_um'], sld['margin_um'], sld['total_um']), (20001, 490000, 510001))
+        self.assertEqual((sld['sampled_um'], sld['margin_um'], sld['total_um']), (20001, 980000, 1000001))
         self.assertEqual((sld['witness']['touchdown_phase'], sld['witness']['phase']), (cert.LOOP_END, .5))
         self.assertFalse(sld['pass'])
 
@@ -276,16 +295,19 @@ class Fixture(unittest.TestCase):
 
     def test_a_foot_that_never_stands_fails(self):
         self.assertTrue(self.report['stance']['pass'])
-        config = copy.deepcopy(CONFIG)
-        config['stance']['PIVOT_LEFT'] = {}
-        report = cert.measure(fixture(), config, SCALE)
-        self.assertFalse(report['stance']['pass'])
+        PIVOT_TOUCH[0] = .03  # the pivot's right foot never comes within the 0.9 mm band
+        try:
+            report = cert.measure(fixture(), CONFIG, SCALE)
+        finally:
+            PIVOT_TOUCH[0] = .00035
         self.assertEqual(report['stance']['missing'],
-                         [{'clip': 'PIVOT_LEFT', 'turn_udeg': None, 'foot': f, 'reason': 'no stance'} for f in 'lr'])
+                         [{'clip': c, 'turn_udeg': None, 'foot': 'r', 'reason': 'no stance'}
+                          for c in ('PIVOT_LEFT', 'PIVOT_RIGHT')])
         self.assertFalse(report['pass'])
 
-    def test_a_stance_above_the_band_fails(self):
-        # Lift every MARCH stance 1 mm above the band: slide would see no vertex.
+    def test_the_band_follows_the_native_march(self):
+        # Lift every MARCH stance 1 mm: H = 1.4 mm, b = 1.9 mm, and the soles are
+        # still planted, so the MARCH stance slide is still measured.
         saved = dict(MARCH)
         try:
             for phase, (x, yl, zl, yr) in saved.items():
@@ -293,18 +315,10 @@ class Fixture(unittest.TestCase):
             report = cert.measure(fixture(), CONFIG, SCALE)
         finally:
             MARCH.update(saved)
-        self.assertEqual([(m['foot'], m['reason']) for m in report['stance']['missing']],
-                         [(f, 'stance above the band') for f in 'lr'])
-        self.assertEqual(report['slide']['by_clip']['MARCH']['total_um'], 0)
-        self.assertFalse(report['pass'])
-
-    def test_each_stance_must_touch_the_band(self):
-        # Pivot right stances: [.5, .5] touches (0.35 mm); [.25, .25] hangs 30 mm up.
-        config = copy.deepcopy(CONFIG)
-        config['stance']['PIVOT_RIGHT'] = {'l': [[0, 1]], 'r': [[.25, .25], [.5, .5]]}
-        missing = cert.measure(fixture(), config, SCALE)['stance']['missing']
-        self.assertEqual(missing, [{'clip': 'PIVOT_RIGHT', 'turn_udeg': None, 'foot': 'r',
-                                    'reason': 'stance above the band', 'phases': [.25, .25]}])
+        self.assertAlmostEqual(report['planting_band']['H_m'], .0014, places=12)
+        self.assertAlmostEqual(report['planting_band']['band_m'], .0019, places=12)
+        self.assertTrue(report['stance']['pass'])
+        self.assertEqual(report['slide']['by_clip']['MARCH']['sampled_um'], 20001)
 
     def test_envelope_against_the_footprint(self):
         env = self.report['envelope']  # sole a at z -0.48: r = hypot(.1, .48); margin 0.24 step
@@ -328,9 +342,13 @@ class Fixture(unittest.TestCase):
     def test_slide_is_reported_per_clip(self):
         by = self.report['slide']['by_clip']
         self.assertEqual(sorted(by), ['MARCH', 'PIVOT_LEFT', 'PIVOT_RIGHT'])
-        self.assertEqual(by['MARCH']['total_um'], 510001)
+        self.assertEqual(by['MARCH']['total_um'], 1000001)
         self.assertEqual(by['PIVOT_LEFT']['sampled_um'], by['PIVOT_RIGHT']['sampled_um'])  # mirror clips
-        self.assertEqual(self.report['slide']['band_m'], .0005)
+        self.assertAlmostEqual(self.report['slide']['band_m'], .0009, places=12)
+        band = self.report['planting_band']  # native MARCH stances: l at 0.3 mm, r at 0.4 mm
+        self.assertAlmostEqual(band['H_m'], .0004, places=12)
+        self.assertAlmostEqual(band['band_m'], .0009, places=12)
+        self.assertEqual(band['inherited_from'], 'shipped native MARCH')
 
 
 class VertexSlide(unittest.TestCase):
@@ -342,20 +360,20 @@ class VertexSlide(unittest.TestCase):
         # heel h: down at 0..1, then lifts and travels (not planted, not counted).
         # toe t: touches down at sample 2 at x = .05 and stays put (roll: 0).
         # skate s: down 0..3 while drifting 0, 1, 2 mm, then lifts: slide 2 mm.
-        # The margin counts entry/exit steps too: s lifting off 3 -> 4 moves 98 mm
-        # (the heel's lift-off 1 -> 2 moves 30 mm).
+        # The margin is twice the largest entry/exit step: s lifting off 3 -> 4 moves
+        # 98 mm (the heel's lift-off 1 -> 2 moves 30 mm), so 196 mm.
         heights = np.array([[0, up, 0], [0, up, 0], [up, 0, 0], [up, 0, 0], [up, 0, up]], dtype=float)
         x = np.array([[0, .05, .2], [0, .05, .2], [.03, .05, .201], [.06, .05, .202], [.09, .05, .3]])
         xz = np.stack([x, np.zeros_like(x)], axis=2)
         value, margin, witness = cert.vertex_slide(heights, xz, band)
         self.assertAlmostEqual(value, .002, places=12)
-        self.assertAlmostEqual(margin, .098, places=12)
+        self.assertAlmostEqual(margin, .196, places=12)
         self.assertEqual(witness, (3, 2, 0))  # sample 3, vertex s, touched down at 0
         # a vertex that leaves and re-enters the band is anchored afresh (slide 0;
-        # its out-and-back steps, 0.5 and 0.493, are the margin)
+        # its largest out-and-back step, 0.5, gives the margin 1.0)
         heights = np.array([[0], [up], [0]], dtype=float)
         xz = np.array([[[0, 0]], [[.5, 0]], [[.007, 0]]], dtype=float)
-        self.assertEqual(cert.vertex_slide(heights, xz, band)[:2], (0.0, .5))
+        self.assertEqual(cert.vertex_slide(heights, xz, band)[:2], (0.0, 1.0))
         # exactly at the band edge is planted
         heights = np.array([[band], [band]])
         xz = np.array([[[0, 0]], [[0, .003]]], dtype=float)
