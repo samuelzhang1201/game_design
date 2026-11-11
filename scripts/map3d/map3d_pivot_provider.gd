@@ -11,13 +11,17 @@ extends RefCounted
 ## `request` is tools/units3d/certify_locomotion.py's {clip, time_s, phase, turn_udeg}; a positive turn
 ## plays PIVOT_RIGHT and the world yaw is yaw0 - turn x phase (BodyMotion). MARCH, or a pivot with no
 ## turn, is the native seek. The consumer applies the same solve to a figure in place of seeking the
-## pivot clip. `solve` may sample the arm's own clips through `seek` / `locals`; pose bones the
-## skeleton lacks (the rig root) are ignored.
+## pivot clip. `solve` may sample the arm's own clips through `seek` / `locals`; pose entries the
+## skeleton lacks (a solver's rig root) are ignored, so a solver can never move the root: the body's
+## yaw and position stay BodyMotion's. A consumer keeps the figure's player stopped while it is posed.
 
 
 static func apply(solve: Callable, player: AnimationPlayer, skeleton: Skeleton3D, request: Dictionary) -> void:
 	var clip: String = request.clip
-	seek(player, skeleton, clip, float(request.phase) * player.get_animation(clip).length)
+	# The certifier's exact time when it sends one (its native twin seeks that same float).
+	var time_s: float = float(request.time_s) if request.get("time_s") != null \
+		else float(request.phase) * player.get_animation(clip).length
+	seek(player, skeleton, clip, time_s)
 	if not clip.begins_with("PIVOT_") or request.turn_udeg == null:
 		return
 	var result: Dictionary = solve.call(player, skeleton, clip, int(request.turn_udeg), float(request.phase))
@@ -31,7 +35,6 @@ static func apply(solve: Callable, player: AnimationPlayer, skeleton: Skeleton3D
 static func seek(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, time_s: float) -> void:
 	player.play(clip, 0.0)
 	player.seek(time_s, true)
-	player.advance(0.0)
 	player.stop(true)
 	skeleton.force_update_all_bone_transforms()
 

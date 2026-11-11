@@ -6,7 +6,7 @@ const Provider = preload("res://scripts/map3d/map3d_pivot_provider.gd")
 var _model: Node3D
 var _player: AnimationPlayer
 var _skeleton: Skeleton3D
-var _calls: Array = []
+static var _calls: Array = []
 
 
 func before_all() -> void:
@@ -34,7 +34,7 @@ func _same(a: Array[Transform3D], b: Array[Transform3D]) -> bool:
 	return true
 
 
-func _solve_lift(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, turn: int, phase: float) -> Dictionary:
+static func _solve_lift(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, turn: int, phase: float) -> Dictionary:
 	_calls.append([clip, turn, phase])
 	var root := skeleton.get_bone_name(0)
 	var lifted := skeleton.get_bone_pose(0).translated(Vector3(0, 0.25, 0))
@@ -69,3 +69,22 @@ func test_locals_keep_a_missing_bones_own_local() -> void:
 		[{"name": "rig_root_not_in_skeleton", "local": root}, {"name": _skeleton.get_bone_name(0), "local": Transform3D()}])
 	assert_eq(out.rig_root_not_in_skeleton, root)
 	assert_true(out[_skeleton.get_bone_name(0)].is_equal_approx(_skeleton.get_bone_pose(0)))
+
+
+func test_seek_is_the_certifiers_native_path() -> void:
+	# certify_locomotion.py's native twin: play(name, 0.0), seek(t, true), force_update.
+	var length := _player.get_animation("MARCH").length
+	for t: float in [0.0, 0.37 * length]:
+		_player.stop(true)
+		_skeleton.reset_bone_poses()
+		_player.play("MARCH", 0.0)
+		_player.seek(t, true)
+		_skeleton.force_update_all_bone_transforms()
+		var native := _globals()
+		_skeleton.reset_bone_poses()
+		Provider.seek(_player, _skeleton, "MARCH", t)
+		assert_true(_same(_globals(), native), "seek at %s" % t)
+	Provider.seek(_player, _skeleton, "MARCH", 0.0)
+	var start := _globals()
+	Provider.seek(_player, _skeleton, "MARCH", 0.37 * length)
+	assert_false(_same(_globals(), start), "seek moves the pose")
