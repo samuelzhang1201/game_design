@@ -6,7 +6,7 @@ extends RefCounted
 ## -turn x the swing's end, pivot_mapping.py `expand`) and Map3DInfantryPivot.sample_transition
 ## re-solves the legs, with the clip's own pose at the phase as the authored reference.
 ## Entry and exit stay the clip's endpoints (MARCH at PLAN.march_phase). The plan is generated
-## by tools/units3d/soldier_arp/pivot_mapping.py `plan`; nothing here reads Game.
+## by tools/units3d/soldier_arp/pivot_mapping.py `plan`.
 
 const Pivot = preload("res://scripts/map3d/map3d_infantry_pivot.gd")
 const Provider = preload("res://scripts/map3d/map3d_pivot_provider.gd")
