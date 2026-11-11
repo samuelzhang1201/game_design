@@ -112,7 +112,7 @@ entry does not discover/merge battles or replace production melee damage.
 ## Candidate contact enrollment
 
 `BodyBattle.plan_candidate` / `commit_candidate` accept the closed
-`contacts`, `enter`, `merge` and advance-stage `withdraw` requests from the CF05 contract at an admitted contact
+`contacts`, `enter`, `merge` and advance-stage `withdraw`, `end` and `cancel` requests from the CF05 contract at an admitted contact
 boundary. Planning leaves the source unchanged; commit independently replans
 and compares the entire canonical plan before publishing one detached state.
 Unsupported requests error; valid other stages and frozen rounds/decisions
@@ -200,4 +200,25 @@ and journal. The battle remains live for its separate terminal consumer. Frozen
 rounds/decisions and unseparated or unsafe departures defer unchanged; malformed
 requests and stale/forged receipts error without publication. Exact latest-plan
 retries through direct and JSON saves are detached no-ops. Ordinary day writers,
-end/cancel/merge, damage and campaign activation remain separate entrances.
+damage and campaign activation remain separate entrances.
+
+## Candidate terminal release
+
+`BodyBattle` accepts the closed CF05 `{kind:"end"|"cancel",battle_id,reason}`
+request at advance (a nonempty reason; the request is not authority). `end`
+needs a field that is already over, a side emptied by exits, and words it as
+production does (`rout_attacker` / `rout_defender` when a side routed, else
+`emptied`); a field with both sides occupied defers. `cancel` is the call-off
+(`called_off`). On private staging every member's exact store, anchor and
+facing transfers to owner zero through `UnitBodies.transfer_battle_candidate`
+first, an empty zero-fit store included, then `BattleSystem._end` runs with the
+recorded sides: warrants become terminal receipts with their reservations
+released, the end event and outcome are noted and the immutable report is
+snapshotted. Only then is the field deleted and dropped from the exhausted
+advance queue (its index shifts; `processed_battle_ids` keep it). The event is
+journaled with the request's reason. No personnel, death, capture or cost is
+invented; RNG is untouched. A frozen round or decision or another stage defers; a
+safe-boundary release (allowed by the contract) is not implemented yet and also
+defers; a missing repo, unknown or non-canonical field and malformed
+request error. Any failure discards the whole staged world. Ordinary `call_off`
+and `step_battle` are unchanged.

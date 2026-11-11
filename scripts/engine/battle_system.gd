@@ -1356,10 +1356,11 @@ static func call_off(state: GameState, id: int, repo: DataRepository = null, vic
 
 
 ## Preserve terminal warrant receipts while releasing every unspent reservation.
-static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: String, events: Array, left: Array = [], victorious_side := "") -> void:
+## `members` names the sides when the candidate release has already emptied them.
+static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: String, events: Array, left: Array = [], victorious_side := "", members := {}) -> void:
 	BattleOrders.end_battle(repo, state, int(b["id"]), "Battle ended: " + why)
-	var att: Array = b["att"]
-	var def: Array = b["def"]
+	var att: Array = members.get("att", b["att"])
+	var def: Array = members.get("def", b["def"])
 	var winner := victorious_side
 	match why:
 		"rout_attacker":
