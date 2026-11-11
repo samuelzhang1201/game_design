@@ -42,6 +42,7 @@ const MARCH := "MARCH"
 @export var battle_signal_height_ratio := 1.0
 @export var battle_signal_gap := 1.5
 const BattleGroupsView := preload("res://scripts/map3d/map3d_battle_groups.gd")
+const CandidateView := preload("res://scripts/map3d/map3d_candidate_bodies.gd")
 var _battle := Map3DBattleSignals.new()
 var _scouts := Map3DUnitScout.new()  ## the fans of the marching crown units
 var _camps := Map3DUnitCamps.new()  ## the camps pitched behind held lines
@@ -68,6 +69,23 @@ var _days: Dictionary = {}  ## code -> {key, from, to, s0}: its day's march (Map
 var _moves := 0
 var _roster_was: Array = []  ## the state the drawn set was last cut for (_roster_key)
 var _live: Array = []  ## the codes drawn, in roster order
+
+var _candidate_bodies := false
+var _candidate_committed: Dictionary = {}
+var _candidate_samples: Dictionary = {}
+var _candidate_history: Dictionary = {}
+
+## Explicit fixture seam; no ordinary dispatcher opts in before atomic activation.
+func set_candidate_bodies(enabled: bool, committed: Dictionary = {}) -> void:
+	if enabled != _candidate_bodies:
+		_candidate_history.clear()
+		_candidate_samples.clear()
+		_days.clear()
+	_candidate_bodies = enabled
+	_candidate_committed = committed.duplicate(true) if enabled else {}
+	_roster_was = []
+	refresh()
+
 
 
 func apply_snapshot(snapshot: Dictionary) -> void:
@@ -137,6 +155,7 @@ func refresh() -> void:
 ## What the drawn set reads: the state, its day, its regiments (orders, stances, fronts), foes, sightings, DEV MODE.
 func _roster_key() -> Array:
 	var st := ctx.state()
+	if _candidate_bodies: return CandidateView._candidate_key(ctx, _candidate_samples, _candidate_committed)
 	# Native hashes detect same-day edits without repeating public admission once per unit per frame.
 	return [st, st.absolute_day(), st.regiments.hash(), st.foes.hash(), st.sightings.hash(),
 		st.army_roster.hash(), st.military_rosters.hash(), st.military_cohorts.hash(), st.battles.hash(),
@@ -180,10 +199,17 @@ func _target_xz(reg: Dictionary) -> Vector2:
 ## SEATED on its footprint (Map3DUnits.seat; owner 2026-09-24: 斜面上兵人的一部分会被地图盖住).
 func _place(code: String, piece: Dictionary) -> void:
 	if piece.get("layout", "") == "physical_groups":
+		if piece.get("candidate_bodies", false):
+			piece["candidate_error"] = CandidateView._pose(ctx, code, piece, _candidate_samples.get(code, piece["candidate_sample"]), _candidate_history)
+			if not String(piece["candidate_error"]).is_empty():
+				Map3DUnits.show_piece(piece, false)
+				_rects.erase(code)
+				return
 		var box := BattleGroupsView.place(ctx, piece, _shown_xz[code], figure_footprint_gap, _selected.has(code))
 		_rects.erase(code)
 		if box.has_area(): _rects[code] = box
 		_yaw[code] = Map3DUnits.facing_yaw(WarFront.facing_vector(piece["facing_deg"]))
+		if piece.get("candidate_bodies", false): _sync_candidate_action(code)
 		return
 	var repo := ctx.repo
 	var xz: Vector2 = _shown_xz[code]
@@ -195,7 +221,7 @@ func _place(code: String, piece: Dictionary) -> void:
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), piece["size"])
 	piece["camp_scale"] = k
-	var heading := Map3DUnitRig.heading_for(repo, ctx.state(), code, _track.get(code, {}))
+	var heading := Map3DUnits.REST if _candidate_bodies and ctx.fogged(code) else Map3DUnitRig.heading_for(repo, ctx.state(), code, _track.get(code, {}))
 	_want_yaw[code] = Map3DUnits.facing_yaw(heading, piece.get("stand_deg", 0.0))
 	_yaw[code] = _yaw.get(code, _want_yaw[code])
 	var yaw := float(_yaw[code])
@@ -226,6 +252,15 @@ func step(delta: float) -> bool:
 		if not _shown_xz.has(code) or code.begins_with(Sighting.GHOST_CODE):
 			continue  # a ghost stands where it was last known
 		if _pieces[code].get("layout", "") == "physical_groups":
+			if _candidate_bodies and _pieces[code].get("candidate_bodies", false):
+				_place(code, _pieces[code])
+				moved = moved or bool(_pieces[code].get("candidate_moving", false))
+			else:
+				_sync_action(code)
+			continue
+		if _candidate_bodies:
+			_shown_xz[code] = _target_xz(ArmySystem.regiment(repo, code, ctx.state()))
+			_place(code, _pieces[code])
 			_sync_action(code)
 			continue
 		var now: Vector2 = _shown_xz[code]
@@ -319,11 +354,12 @@ func _piece_of(code: String) -> Dictionary:
 	var reg := ArmySystem.regiment(ctx.repo, code, ctx.state())
 	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 		return {}
-	var sampled := BattleGroupsView.sample(ctx, code)
+	var sampled: Dictionary = _candidate_samples.get(code, {}) if _candidate_bodies else BattleGroupsView.sample(ctx, code)
+	if sampled.is_empty(): sampled = CandidateView.sample_candidate(ctx, code, _candidate_committed)
 	if sampled["mode"] == "invalid":
 		if _pieces.has(code): _drop(code)
 		return {}
-	if sampled["mode"] == "groups":
+	if sampled["mode"] in ["groups", "bodies"]:
 		if _pieces.get(code, {}).get("layout", "") != "physical_groups":
 			if _pieces.has(code): _drop(code)
 			var built := BattleGroupsView.build(ctx.repo, reg, sampled)
@@ -331,8 +367,11 @@ func _piece_of(code: String) -> Dictionary:
 			_pieces[code] = built
 		elif _pieces[code].get("sample_key", []) != sampled["key"]:
 			BattleGroupsView.sync(ctx.repo, reg, _pieces[code], sampled)
+		_pieces[code]["candidate_bodies"] = sampled["mode"] == "bodies"
+		if sampled["mode"] == "bodies":
+			_pieces[code]["candidate_sample"] = sampled
 		_shown_xz[code] = _target_xz(reg)
-		_sync_action(code)
+		if sampled["mode"] != "bodies": _sync_action(code)
 		return _pieces[code]
 	if _pieces.get(code, {}).get("layout", "") == "physical_groups":
 		_drop(code)
@@ -387,6 +426,9 @@ func _day_of(code: String) -> Dictionary:
 ## a held stance's standing clip (DEFEND, front-line §2); GARRISON under that
 ## order; else STANDBY (the start, on arrival, ready on a stopped clock).
 func _sync_action(code: String) -> void:
+	if _pieces[code].get("candidate_bodies", false):
+		_sync_candidate_action(code)
+		return
 	var walking: bool = _pieces[code].get("layout", "") != "physical_groups" and _days.has(code) and Map3DUnits.walking(_days[code], ctx.day_share())
 	var st := ctx.state()
 	var order := ArmySystem.order_of(ctx.repo, st, code) if st != null else ArmySystem.ORDER_STANDBY
@@ -397,6 +439,12 @@ func _sync_action(code: String) -> void:
 		_settle.cancel(code, piece)  # marching on: a held halt is dropped
 	elif piece.get("layout", "") == "physical_groups" or not _settle.holds(ctx.repo, code, piece, action):  # a halt into GARRISON waits for the footfall
 		play(code, action)  # each figure's clip looked up only on a change
+
+
+func _sync_candidate_action(code: String) -> void:
+	var piece: Dictionary = _pieces[code]
+	CandidateView._animate_candidate(ctx, code, piece, _candidate_samples.get(code, piece["candidate_sample"]),
+		float(_candidate_history.get(code, {}).get("share", 1.0)), blend_s, _battle)
 
 
 ## The fans: one for each crown unit with a piece that is marching with men
@@ -444,11 +492,4 @@ func _sync_battle_signals() -> void:
 
 
 ## Actual instantiated group nodes for the developer capture, visible real units only.
-func group_geometry() -> Dictionary:
-	var out: Dictionary = {}
-	for code: String in _pieces:
-		var piece: Dictionary = _pieces[code]
-		if piece.get("layout", "") == "physical_groups" and (piece["node"] as Node3D).visible \
-				and BattleGroupsView.sample(ctx, code)["mode"] == "groups":
-			out[code] = BattleGroupsView.evidence(piece)
-	return out
+func group_geometry() -> Dictionary: return CandidateView._geometry(ctx, _pieces, _candidate_bodies, _candidate_committed)

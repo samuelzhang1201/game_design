@@ -67,7 +67,7 @@ static func sample(ctx: Map3DContext, code: String) -> Dictionary:
 static func build(repo: DataRepository, reg: Dictionary, sampled: Dictionary) -> Dictionary:
 	var piece := {"node": Node3D.new(), "layout": "physical_groups", "groups": [], "anims": [],
 		"figures": 0, "height_m": 0.0, "extent": Vector2.ZERO, "half_w_m": 0.0,
-		"model": MapObjects.army_piece(repo, reg)}
+		"model": MapObjects.army_piece(repo, reg), "candidate_bodies": sampled.get("mode", "") == "bodies"}
 	(piece["node"] as Node3D).top_level = true
 	sync(repo, reg, piece, sampled)
 	return piece
@@ -95,6 +95,8 @@ static func sync(repo: DataRepository, reg: Dictionary, piece: Dictionary, sampl
 			(child["node"] as Node3D).name = "Group%d" % int(row["slot"])
 			(piece["node"] as Node3D).add_child(child["node"])
 			(child["node"] as Node3D).top_level = true
+			if not String(piece.get("action", "")).is_empty():
+				Map3DUnitRig.play(child["anims"], piece["action"], 0.0, String(reg["regiment_code"]) + ":" + str(row["slot"]))
 		previous.erase(row["slot"])
 		var group := row.duplicate(true)
 		group["piece"] = child
@@ -113,9 +115,9 @@ static func sync(repo: DataRepository, reg: Dictionary, piece: Dictionary, sampl
 	piece["groups"] = groups
 	piece["anims"] = anims
 	piece["figures"] = groups.size()
-	piece["facing_deg"] = sampled["facing_deg"]
+	piece["facing_deg"] = sampled.get("facing_deg", 0)
 	piece["sample_key"] = sampled["key"].duplicate(true) if sampled.has("key") else []
-	piece["action"] = ""
+	if not piece.has("action"): piece["action"] = ""
 
 static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: float, selected: bool) -> Rect2:
 	var root: Node3D = piece["node"]
@@ -131,10 +133,15 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 	for group: Dictionary in piece["groups"]:
 		var child: Dictionary = group["piece"]
 		var node: Node3D = child["node"]
-		var xz := ctx.to_world(ArmySystem.metres_to_pack(repo, Vector2i(group["x_m"], group["y_m"])))
+		var pack_px := Vector2(group["x_m"], group["y_m"]) / float(ArmySystem.metres_per_pack_px(repo)) if piece.get("candidate_bodies", false) \
+			else ArmySystem.metres_to_pack(repo, Vector2i(group["x_m"], group["y_m"]))
+		var xz := ctx.to_world(pack_px)
 		var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
 			child["reference_height_m"], child["size"])
-		var yaw := Map3DUnits.facing_yaw(WarFront.facing_vector(piece["facing_deg"]), child["stand_deg"])
+		# A v2 sample carries the committed fractional yaw (pack microdegrees); else the saved facing.
+		var heading := Vector2.from_angle(deg_to_rad(float(group.yaw_udeg) / BodyMotion.LOCOMOTION_Q)) if group.has("yaw_udeg") \
+			else WarFront.facing_vector(int(group.get("facing_deg", piece["facing_deg"])))
+		var yaw := Map3DUnits.facing_yaw(heading, child["stand_deg"])
 		var y := ctx.height_at(xz)
 		for offset: Vector2 in Map3DUnits.footprint(child["extent"], yaw, k, int(repo.bal("map3d_unit_seat_ring"))):
 			y = maxf(y, ctx.height_at(xz + offset))
@@ -176,6 +183,7 @@ static func evidence(piece: Dictionary) -> Array:
 		var at := node.global_position
 		var scale := node.global_basis.get_scale()
 		out.append({"slot": group["slot"], "count": group["count"], "role": group["role"],
+			"node_id": str(node.get_instance_id()), "phase": (group["piece"]["anims"][0] as AnimationPlayer).current_animation_position if not group["piece"]["anims"].is_empty() and not (group["piece"]["anims"][0] as AnimationPlayer).current_animation.is_empty() else 0.0,
 			"x_m": group["x_m"], "y_m": group["y_m"], "xz_world": [at.x, at.z],
 			"y_world": at.y, "yaw_rad": node.global_rotation.y,
 			"scale": [scale.x, scale.y, scale.z], "bounds_world": group.get("bounds_world", []), "screen_bounds": group.get("screen_bounds", [])})
