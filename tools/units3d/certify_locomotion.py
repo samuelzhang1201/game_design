@@ -417,9 +417,11 @@ def measure(dump, config, scale):
             runs = stance_runs(heights, phases, rule, f, loop)
             if not runs:
                 missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f, 'reason': 'no stance'})
-            elif not any((patch_y[f][i] <= STANCE_BAND_M).any() for run in runs for i in run):
-                # it stands but never touches: slide (per vertex in the band) would not see it
-                missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f, 'reason': 'stance above the band'})
+            for run in runs:
+                if not any((patch_y[f][i] <= STANCE_BAND_M).any() for i in run):
+                    # a stance that never touches: slide (per vertex in the band) would not see it
+                    missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f, 'reason': 'stance above the band',
+                                    'phases': [phases[run[0]], phases[run[-1]]]})
             for run in runs:
                 for k, i in enumerate(run):
                     hov.offer(heights[f][i], {'clip': clip, 'foot': f, 'phase': phases[i], 'turn_udeg': turn})
@@ -730,8 +732,10 @@ def certificate(config, report, scale, inputs, capture_sha, dump):
             'input_sha256': inputs, 'capture': {'sha256': capture_sha, 'godot': dump['godot'],
                                                 'clips': dump['clips'], 'uniform': UNIFORM},
             'report': report,
-            'consumer_requirements': {k: config[k] for k in ('hold_clip', 'march_stop_phases', 'march_start_phases',
-                                                            'hold_phases')},
+            'consumer_requirements': {**{k: config[k] for k in ('hold_clip', 'march_stop_phases',
+                                                               'march_start_phases', 'hold_phases')},
+                                      'rule': 'stop, start and hold only at these MARCH phases; a MARCH hold '
+                                              'resumes at the phase it holds'},
             'visual_review': 'PENDING: R-C requires the real-window review after this numeric pass'}
     digest = hashlib.sha256(canonical(body)).hexdigest()
     body['payload_sha256'] = digest

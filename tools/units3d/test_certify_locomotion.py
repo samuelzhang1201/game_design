@@ -286,10 +286,18 @@ class Fixture(unittest.TestCase):
             report = cert.measure(fixture(), CONFIG, SCALE)
         finally:
             MARCH.update(saved)
-        self.assertEqual(report['stance']['missing'],
-                         [{'clip': 'MARCH', 'turn_udeg': None, 'foot': f, 'reason': 'stance above the band'} for f in 'lr'])
+        self.assertEqual([(m['foot'], m['reason']) for m in report['stance']['missing']],
+                         [(f, 'stance above the band') for f in 'lr'])
         self.assertEqual(report['slide']['by_clip']['MARCH']['total_um'], 0)
         self.assertFalse(report['pass'])
+
+    def test_each_stance_must_touch_the_band(self):
+        # Pivot right stances: [.5, .5] touches (0.35 mm); [.25, .25] hangs 30 mm up.
+        config = copy.deepcopy(CONFIG)
+        config['stance']['PIVOT_RIGHT'] = {'l': [[0, 1]], 'r': [[.25, .25], [.5, .5]]}
+        missing = cert.measure(fixture(), config, SCALE)['stance']['missing']
+        self.assertEqual(missing, [{'clip': 'PIVOT_RIGHT', 'turn_udeg': None, 'foot': 'r',
+                                    'reason': 'stance above the band', 'phases': [.25, .25]}])
 
     def test_envelope_against_the_footprint(self):
         env = self.report['envelope']  # sole a at z -0.48: r = hypot(.1, .48); margin 0.24 step
@@ -387,8 +395,10 @@ class Certificate(unittest.TestCase):
         body.pop('digest_rule')
         self.assertEqual(hashlib.sha256(json.dumps(body, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
                          digest)
-        self.assertEqual(body['consumer_requirements'], {'hold_clip': 'MARCH', 'march_stop_phases': [0.0],
-                                                         'march_start_phases': [0.0], 'hold_phases': [0.0]})
+        self.assertEqual({k: v for k, v in body['consumer_requirements'].items() if k != 'rule'},
+                         {'hold_clip': 'MARCH', 'march_stop_phases': [0.0], 'march_start_phases': [0.0],
+                          'hold_phases': [0.0]})
+        self.assertIn('resumes at the phase it holds', body['consumer_requirements']['rule'])
         failed = cert.certificate(config, dict(report, **{'pass': False}), {}, {}, 'c' * 64, {'godot': {}, 'clips': {}})
         self.assertIsNone(failed['locomotion_certificate'])
         self.assertEqual(failed['status'], 'FAIL')
