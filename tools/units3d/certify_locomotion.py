@@ -326,10 +326,13 @@ def required_boundaries(config):
         out += [['MARCH', p, pivot, 0.0] for p in side(stop)] + [[pivot, 1.0, 'MARCH', p] for p in side(start)]
     if hold == 'MARCH':
         # The held pose IS the MARCH pose it stopped in (a stop phase) or the pivot
-        # ended in (a start phase), so the seams above already cover every hold.
+        # ended in (a start phase, whose PIVOT(1) -> MARCH(h) seam is above). A hold
+        # is left by resuming at h (no seam) or by turning: MARCH(h) -> PIVOT(0).
         if held == '*' or not set(held) <= set(side(stop)) | set(side(start)):
             raise ValueError('a MARCH hold keeps a pose it stopped or turned into: hold_phases must be '
                              'admitted stop or start phases')
+        for pivot in ('PIVOT_LEFT', 'PIVOT_RIGHT'):
+            out += [b for b in (['MARCH', h, pivot, 0.0] for h in held) if b not in out]
         return out + [b for b in config.get('boundaries', []) if b not in out]
     if held == '*' and '*' in (stop, start):
         raise ValueError('hold_phases and a MARCH phase list cannot both be "*" (declare one side)')
@@ -355,7 +358,8 @@ def measure(dump, config, scale):
     grid = turn_grid()
     boundaries = required_boundaries(config)
 
-    def prov_of(clip):  # a provider poses the locomotion clips (MARCH included); a separate hold clip is native
+    def prov_of(clip):  # a provider poses the locomotion clips, MARCH (and so a MARCH hold) included;
+        # a separate hold clip is native
         return provider and clip in CLIPS
 
     if provider:

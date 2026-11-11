@@ -259,6 +259,13 @@ class Fixture(unittest.TestCase):
         for bad in [dict(config, hold_phases='*'), dict(config, hold_phases=[.5])]:
             with self.assertRaises(ValueError):
                 cert.required_boundaries(bad)
+        # Stop at 0, start at 0.5: a unit that turned holds MARCH 0.5 and may turn
+        # again, so MARCH(0.5) -> PIVOT(0) is required although 0.5 is no stop phase.
+        seams = cert.required_boundaries(dict(config, march_start_phases=[.5], hold_phases=[.5]))
+        for pivot in ('PIVOT_LEFT', 'PIVOT_RIGHT'):
+            self.assertIn(['MARCH', .5, pivot, 0.0], seams)
+            self.assertIn([pivot, 1.0, 'MARCH', .5], seams)
+            self.assertNotIn([pivot, 1.0, 'MARCH', 0.0], seams)  # a pivot never ends into the 0 hold
 
     def test_a_separate_hold_clip_uses_its_own_phase(self):
         config = dict(CONFIG, hold_phases=[.25], boundaries=[])
