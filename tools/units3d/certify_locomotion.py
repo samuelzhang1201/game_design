@@ -262,7 +262,9 @@ def vertex_slide(heights, xz, band=STANCE_BAND_M):
     """heights (N, V) above the seated plane and world xz (N, V, 2), in time order.
     Each vertex is planted while its height <= band, anchored where it entered the
     band; returns (worst displacement from its anchor, margin = largest one-step
-    move of a vertex planted at both ends, (sample, vertex, touchdown sample))."""
+    move of a vertex planted at EITHER end of the step (a vertex entering or leaving
+    between samples is anchored late or measured early by at most that step),
+    (sample, vertex, touchdown sample))."""
     anchor = np.zeros(xz.shape[1:])
     touch = np.full(heights.shape[1], -1)
     before = np.zeros(heights.shape[1], dtype=bool)
@@ -276,9 +278,9 @@ def vertex_slide(heights, xz, band=STANCE_BAND_M):
             v = int(np.argmax(d))
             if witness is None or d[v] > value:
                 value, witness = float(d[v]), (i, v, int(touch[v]))
-            both = planted & before
-            if both.any():
-                margin = max(margin, float(np.linalg.norm(xz[i] - xz[i - 1], axis=1)[both].max()))
+        either = planted | before
+        if i and either.any():
+            margin = max(margin, float(np.linalg.norm(xz[i] - xz[i - 1], axis=1)[either].max()))
         before = planted
     return value, margin, witness
 
@@ -318,17 +320,23 @@ def required_boundaries(config):
     stop = phase_list(config['march_stop_phases'], 'march_stop_phases')
     start = phase_list(config['march_start_phases'], 'march_start_phases')
     held = phase_list(config['hold_phases'], 'hold_phases')
-    if hold == 'MARCH' and (held == '*' or stop == '*' or not set(held) <= set(stop)):
-        raise ValueError('a MARCH hold keeps the pose it stopped in: hold_phases must be admitted stop phases')
-    if held == '*' and start == '*':
-        raise ValueError('hold_phases and march_start_phases cannot both be "*" (declare one side)')
     side = lambda v: ['*'] if v == '*' else v
     out = [['MARCH', LOOP_END, 'MARCH', 0.0]]
     for pivot in ('PIVOT_LEFT', 'PIVOT_RIGHT'):
         out += [['MARCH', p, pivot, 0.0] for p in side(stop)] + [[pivot, 1.0, 'MARCH', p] for p in side(start)]
-        out += [[hold, p, pivot, 0.0] for p in side(held)] + [[pivot, 1.0, hold, 0.0]]
-    out += [['MARCH', p, hold, 0.0] for p in side(stop)]
-    out += [[hold, a, 'MARCH', b] for a in side(held) for b in side(start)]
+    if hold == 'MARCH':
+        # The held pose IS the MARCH pose it stopped in (a stop phase) or the pivot
+        # ended in (a start phase), so the seams above already cover every hold.
+        if held == '*' or not set(held) <= set(side(stop)) | set(side(start)):
+            raise ValueError('a MARCH hold keeps a pose it stopped or turned into: hold_phases must be '
+                             'admitted stop or start phases')
+        return out + [b for b in config.get('boundaries', []) if b not in out]
+    if held == '*' and '*' in (stop, start):
+        raise ValueError('hold_phases and a MARCH phase list cannot both be "*" (declare one side)')
+    for pivot in ('PIVOT_LEFT', 'PIVOT_RIGHT'):
+        out += [[hold, h, pivot, 0.0] for h in side(held)] + [[pivot, 1.0, hold, h] for h in side(held)]
+    out += [['MARCH', p, hold, h] for p in side(stop) for h in side(held)]
+    out += [[hold, h, 'MARCH', b] for h in side(held) for b in side(start)]
     return out + [b for b in config.get('boundaries', []) if b not in out]
 
 
@@ -338,7 +346,6 @@ def measure(dump, config, scale):
     model = Model(dump)
     bounds = bounds_um(scale['k'])
     feet = patches(model, config['feet'], config.get('patch_band_m', .005))
-    sole = np.concatenate(list(patches(model, config['feet'], math.inf).values()))  # every foot-bound vertex
     forward = np.array(config['forward'], dtype=float)
     stride = float(config['stride_m'])
     slope = float(config.get('slope', 0.0))
@@ -348,7 +355,7 @@ def measure(dump, config, scale):
     grid = turn_grid()
     boundaries = required_boundaries(config)
 
-    def prov_of(clip):  # a provider poses the locomotion clips only; the hold clip is native
+    def prov_of(clip):  # a provider poses the locomotion clips (MARCH included); a separate hold clip is native
         return provider and clip in CLIPS
 
     if provider:
@@ -381,7 +388,8 @@ def measure(dump, config, scale):
         loop = clip == 'MARCH' and dump['clips']['MARCH']['loop_mode'] != 0
         phases = [s['phase'] for s in rows]
         heights = {f: [] for f in feet}
-        sole_pts = []
+        patch_y = {f: [] for f in feet}
+        reach = np.zeros(model.offsets[-1], dtype=bool)
         prev = None
         for s in rows:
             p = model.points(s['_g'])
@@ -398,7 +406,8 @@ def measure(dump, config, scale):
             prev = p
             for f, ids in feet.items():
                 heights[f].append(p[ids, 1].min())
-            sole_pts.append(p[sole])
+                patch_y[f].append(p[ids, 1])
+            reach |= p[:, 1] <= STANCE_BAND_M
         if clip not in CLIPS:
             continue  # the hold clip: penetration and envelope only
         rule = config['stance'][clip]
@@ -407,17 +416,20 @@ def measure(dump, config, scale):
         for f in feet:
             runs = stance_runs(heights, phases, rule, f, loop)
             if not runs:
-                missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f})
+                missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f, 'reason': 'no stance'})
+            elif not any((patch_y[f][i] <= STANCE_BAND_M).any() for run in runs for i in run):
+                # it stands but never touches: slide (per vertex in the band) would not see it
+                missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f, 'reason': 'stance above the band'})
             for run in runs:
                 for k, i in enumerate(run):
                     hov.offer(heights[f][i], {'clip': clip, 'foot': f, 'phase': phases[i], 'turn_udeg': turn})
                     if k:
-                        hov.widen(abs(heights[f][i] - heights[f][run[k - 1]]))
-        # Slide, per sole vertex. Heights are yaw-invariant; keep only vertices that
-        # ever reach the band. A looping MARCH runs twice so a stance can cross the seam.
-        pts = np.array(sole_pts)
-        reach = (pts[:, :, 1] <= STANCE_BAND_M).any(axis=0)
-        pts, ids = pts[:, reach], sole[reach]
+                        hov.widen(np.abs(patch_y[f][i] - patch_y[f][run[k - 1]]).max())
+        # Slide, per vertex of ANY mesh that reaches the band (whatever its binding):
+        # skin again keeping only those. Heights are yaw-invariant. A looping MARCH
+        # runs twice so a stance can cross the seam.
+        ids = np.flatnonzero(reach)
+        pts = np.array([model.points(s['_g'])[ids] for s in rows]) if len(ids) else np.zeros((len(rows), 0, 3))
         per_clip = slide_by_clip.setdefault(clip, Worst())
         frames = [(i, c) for c in range(2 if loop else 1) for i in range(len(rows))]
         for t in turns:

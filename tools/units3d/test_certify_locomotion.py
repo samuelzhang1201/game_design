@@ -25,11 +25,12 @@ def move(x=0., y=0., z=0., yaw=0.):
 
 
 # Bones: 0 root, 1 foot_l, 2 foot_r. MARCH is a loop: the left sole stands for
-# phases 0..0.5 (2 mm up, drifting 0.01 m per quarter in the world), the right
-# only at 0.75 (1 mm up). Each pivot keeps the left sole 4 mm below the seat,
-# counter-rotating 180 degrees over the clip; the right foot hangs 30 mm up.
-MARCH = {0.0: (0, .002, 0, .04), .25: (0, .002, -.24, .04), .5: (0, .002, -.48, .04),
-         .75: (0, .05, -.24, .001), 1.0: (0, .002, 0, .04)}
+# phases 0..0.5 (0.3 mm up, inside the 0.5 mm band, drifting 0.01 m per quarter in
+# the world), the right only at 0.75 (0.4 mm up). Each pivot keeps the left sole
+# 4 mm below the seat, counter-rotating 180 degrees over the clip; the right foot
+# hangs 30 mm up and touches down (0.35 mm) once, at phase 0.5.
+MARCH = {0.0: (0, .0003, 0, .04), .25: (0, .0003, -.24, .04), .5: (0, .0003, -.48, .04),
+         .75: (0, .05, -.24, .0004), 1.0: (0, .0003, 0, .04)}
 MARCH[cert.LOOP_END] = MARCH[1.0]
 
 
@@ -40,8 +41,7 @@ def pose(clip, phase):
         _, yl, zl, yr = MARCH[phase]
         return [move(), move(y=yl, z=zl), move(y=yr)]
     sign = 1 if clip == 'PIVOT_RIGHT' else -1
-    # the right foot touches down (1.5 mm up) once, at phase 0.5
-    return [move(), move(y=-.004, yaw=sign * math.pi * phase), move(y=.0015 if phase == .5 else .03)]
+    return [move(), move(y=-.004, yaw=sign * math.pi * phase), move(y=.00035 if phase == .5 else .03)]
 
 
 def sample(clip, phase, bones=None, provider=False):
@@ -51,8 +51,9 @@ def sample(clip, phase, bones=None, provider=False):
 
 def fixture():
     eye = np.eye(4).tolist()
-    # a, b: left sole; c, d: right sole; e: head; f (root), g (right foot): a short seam edge.
-    vertices = [[-.1, 0, 0], [-.1, 0, .1], [.1, 0, 0], [.1, 0, .1], [0, 1, 0], [0, 0, 0], [.01, 0, 0]]
+    # a, b: left sole; c, d: right sole; e: head; f (root), g (right foot): a short
+    # skin edge, half a metre up so it never touches the ground.
+    vertices = [[-.1, 0, 0], [-.1, 0, .1], [.1, 0, 0], [.1, 0, .1], [0, 1, 0], [0, .5, 0], [.01, .5, 0]]
     bones = [[1, 0], [1, 0], [2, 0], [2, 0], [0, 0], [0, 0], [2, 0]]
     weights = [[1, 0]] * 7
     return {'godot': {}, 'skeleton_to_model': eye,
@@ -167,47 +168,43 @@ class Fixture(unittest.TestCase):
 
     def test_penetration_with_velocity_margin(self):
         # lowest vertex: pivot sole at -0.004, ground at -0.001 -> 3 mm deep;
-        # largest one-step height change: left sole 0.002 <-> 0.05 = 48 mm.
+        # largest one-step height change: left sole 0.0003 <-> 0.05 = 49.7 mm.
         pen = self.report['penetration']
-        self.assertEqual((pen['sampled_um'], pen['margin_um'], pen['total_um']), (3000, 48000, 51000))
+        self.assertEqual((pen['sampled_um'], pen['margin_um'], pen['total_um']), (3000, 49700, 52700))
         self.assertEqual(pen['bound_um'], 24000)
         self.assertFalse(pen['pass'])
         self.assertIn(pen['witness']['clip'], ('PIVOT_LEFT', 'PIVOT_RIGHT'))
 
     def test_hover_on_the_seated_plane(self):
-        hov = self.report['hover']  # left MARCH stance 2 mm; stance heights never change
-        self.assertEqual((hov['sampled_um'], hov['margin_um'], hov['total_um'], hov['pass']), (2000, 0, 2000, True))
-        self.assertEqual((hov['witness']['clip'], hov['witness']['foot']), ('MARCH', 'l'))
+        hov = self.report['hover']  # right MARCH stance 0.4 mm; no stance height changes within a stance
+        self.assertEqual((hov['sampled_um'], hov['margin_um'], hov['total_um'], hov['pass']), (400, 0, 400, True))
+        self.assertEqual((hov['witness']['clip'], hov['witness']['foot']), ('MARCH', 'r'))
 
     def test_slide_worst_is_the_microdegree_pivot(self):
         # Net planted yaw (pi - theta) p; theta = 1 microdegree. Chord at p = 1 is
-        # 2 R sin(a/2); the margin is one quarter step's chord, 2 R sin(a/8).
+        # 2 R sin(a/2). The pivot's own margin is one quarter step's chord of a
+        # planted sole vertex, 2 R sin(pi/8) (the right sole touching down at the
+        # 180 tie); the pooled margin is MARCH's coarse lift-off step (below).
         a = math.pi - math.radians(1e-6)
         sld = self.report['slide']
+        pivot = sld['by_clip']['PIVOT_RIGHT']
         self.assertEqual(sld['sampled_um'], cert.um(2 * R * math.sin(a / 2)))
-        self.assertEqual(sld['margin_um'], cert.um(2 * R * math.sin(a / 8)))
-        self.assertEqual(sld['total_um'], cert.um(2 * R * math.sin(a / 2) + 2 * R * math.sin(a / 8)))
+        self.assertEqual(pivot['sampled_um'], sld['sampled_um'])
+        self.assertEqual(pivot['margin_um'], cert.um(2 * R * math.sin(math.pi / 8)))
+        self.assertEqual(sld['margin_um'], 490000)
         self.assertEqual(abs(sld['witness']['turn_udeg']), 1)
         self.assertEqual(sld['witness']['phase'], 1.0)
         self.assertFalse(sld['pass'])
 
     def test_march_slide_crosses_the_loop_seam(self):
-        # With the left sole lowered into the band (0.3 mm), its stance runs LOOP_END,
-        # 1.0, 0, .25, .5 as ONE stance: world z = zl + stride * (phase + cycle) =
-        # 0.999999, 1.00, 1.00, 1.01, 1.02 -> 20.001 mm; the largest step is 10 mm.
-        global MARCH
-        saved = dict(MARCH)
-        try:
-            for phase in MARCH:
-                if MARCH[phase][1] == .002:
-                    MARCH[phase] = (0, .0003) + MARCH[phase][2:]
-            sld = cert.measure(fixture(), CONFIG, SCALE)['slide']['by_clip']['MARCH']
-        finally:
-            MARCH.clear()
-            MARCH.update(saved)
-        self.assertEqual((sld['sampled_um'], sld['margin_um'], sld['total_um']), (20001, 10000, 30001))
+        # The left stance LOOP_END, 1.0, 0, .25, .5 is ONE stance: world z = zl + stride
+        # * (phase + cycle) = 0.999999, 1.00, 1.00, 1.01, 1.02 -> 20.001 mm. The margin
+        # counts entry and exit steps: lift-off .5 -> .75 moves sole a from z .02 to
+        # .51 (0.49 m), touchdown .75 -> LOOP_END from .51 to .999999 (0.489999 m).
+        sld = self.report['slide']['by_clip']['MARCH']
+        self.assertEqual((sld['sampled_um'], sld['margin_um'], sld['total_um']), (20001, 490000, 510001))
         self.assertEqual((sld['witness']['touchdown_phase'], sld['witness']['phase']), (cert.LOOP_END, .5))
-        self.assertFalse(sld['pass'])  # 30001 > contact_um 24000
+        self.assertFalse(sld['pass'])
 
     def test_seams_are_the_full_required_list(self):
         seams = {(tuple(x['witness']['from'][:1]), tuple(x['witness']['to'][:1])): [] for x in
@@ -221,8 +218,8 @@ class Fixture(unittest.TestCase):
         self.assertEqual(self.report['seam']['boundaries'][0]['total_um'], 0)
         for pivot in ('PIVOT_LEFT', 'PIVOT_RIGHT'):
             self.assertEqual(seams[(('MARCH',), (pivot,))][0]['total_um'], 10000)  # right foot 0.04 -> 0.03
-            # Pivot end: the left sole turned half round; b (-.1, .002, .1) vs (.1, -.004, -.1).
-            end = cert.um(math.sqrt(.2 ** 2 + .006 ** 2 + .2 ** 2))
+            # Pivot end: the left sole turned half round; b (-.1, .0003, .1) vs (.1, -.004, -.1).
+            end = cert.um(math.sqrt(.2 ** 2 + .0043 ** 2 + .2 ** 2))
             self.assertEqual([x['sampled_um'] for x in seams[((pivot,), ('MARCH',))]], [end])
             self.assertEqual([x['sampled_um'] for x in seams[((pivot,), (HOLD,))]], [end])
             # The hold stands in MARCH 0's pose at every phase: its sweep has no margin.
@@ -230,12 +227,12 @@ class Fixture(unittest.TestCase):
             self.assertEqual((hold['sampled_um'], hold['margin_um']), (10000, 0))
         self.assertEqual([x['total_um'] for x in seams[(('MARCH',), (HOLD,))]], [0])
         self.assertEqual([x['total_um'] for x in seams[((HOLD,), ('MARCH',))]], [0])
-        # A cut from any MARCH phase: worst at 0.5 (z 0.48, y 0.006); margin = the
-        # largest MARCH step, 0.5 -> 0.75: dz 0.24, dy 0.048.
+        # A cut from any MARCH phase: worst at 0.5 (z 0.48, y 0.0043); margin = the
+        # largest MARCH step, 0.5 -> 0.75: dz 0.24, dy 0.0497.
         cut = self.report['seam']['boundaries'][-1]
         self.assertEqual(cut['witness']['from'], ['MARCH', .5])
-        self.assertEqual(cut['sampled_um'], cert.um(math.hypot(.48, .006)))
-        self.assertEqual(cut['margin_um'], cert.um(math.hypot(.24, .048)))
+        self.assertEqual(cut['sampled_um'], cert.um(math.hypot(.48, .0043)))
+        self.assertEqual(cut['margin_um'], cert.um(math.hypot(.24, .0497)))
         self.assertEqual(self.report['seam']['total_um'], cut['total_um'])
         self.assertEqual(self.report['seam']['bound_um'], 2000)
         self.assertFalse(self.report['seam']['pass'])
@@ -251,18 +248,24 @@ class Fixture(unittest.TestCase):
         self.assertEqual(cert.required_boundaries(config)[1], ['MARCH', '*', 'PIVOT_LEFT', 0.0])
 
     def test_march_hold_at_the_admitted_phase(self):
-        # Stop, start and hold only at MARCH 0: the held pose IS MARCH 0, so every
-        # hold seam is 0 and the pivot seams equal MARCH 0's.
+        # Stop, start and hold only at MARCH 0: the held pose IS MARCH 0 (stopped in)
+        # or the pivot's end (turned into), so no seam is added beyond the loop seam
+        # and stop/start per pivot.
         config = dict(CONFIG, hold_clip='MARCH', hold_phases=[0.0], boundaries=[])
         report = cert.measure(fixture(), config, SCALE)
-        held = [b for b in report['seam']['boundaries'] if b['witness']['from'] == ['MARCH', 0.0]
-                and b['witness']['to'] == ['MARCH', 0.0]]
-        self.assertEqual([b['total_um'] for b in held], [0, 0])  # stop into the hold, start from it
-        self.assertEqual(sorted(b['total_um'] for b in report['seam']['boundaries'])[-1],
-                         cert.um(math.sqrt(.2 ** 2 + .006 ** 2 + .2 ** 2)))  # pivot end -> MARCH 0
+        self.assertEqual(len(report['seam']['boundaries']), 5)
+        self.assertEqual(cert.required_boundaries(config), [['MARCH', cert.LOOP_END, 'MARCH', 0.0]] + [
+            b for p in ('PIVOT_LEFT', 'PIVOT_RIGHT') for b in (['MARCH', 0.0, p, 0.0], [p, 1.0, 'MARCH', 0.0])])
         for bad in [dict(config, hold_phases='*'), dict(config, hold_phases=[.5])]:
             with self.assertRaises(ValueError):
                 cert.required_boundaries(bad)
+
+    def test_a_separate_hold_clip_uses_its_own_phase(self):
+        config = dict(CONFIG, hold_phases=[.25], boundaries=[])
+        seams = cert.required_boundaries(config)
+        self.assertIn(['PIVOT_LEFT', 1.0, HOLD, .25], seams)
+        self.assertIn(['MARCH', 0.0, HOLD, .25], seams)
+        self.assertNotIn(['MARCH', 0.0, HOLD, 0.0], seams)
 
     def test_a_foot_that_never_stands_fails(self):
         self.assertTrue(self.report['stance']['pass'])
@@ -270,8 +273,22 @@ class Fixture(unittest.TestCase):
         config['stance']['PIVOT_LEFT'] = {}
         report = cert.measure(fixture(), config, SCALE)
         self.assertFalse(report['stance']['pass'])
-        self.assertEqual(report['stance']['missing'], [{'clip': 'PIVOT_LEFT', 'turn_udeg': None, 'foot': 'l'},
-                                                       {'clip': 'PIVOT_LEFT', 'turn_udeg': None, 'foot': 'r'}])
+        self.assertEqual(report['stance']['missing'],
+                         [{'clip': 'PIVOT_LEFT', 'turn_udeg': None, 'foot': f, 'reason': 'no stance'} for f in 'lr'])
+        self.assertFalse(report['pass'])
+
+    def test_a_stance_above_the_band_fails(self):
+        # Lift every MARCH stance 1 mm above the band: slide would see no vertex.
+        saved = dict(MARCH)
+        try:
+            for phase, (x, yl, zl, yr) in saved.items():
+                MARCH[phase] = (x, yl + .001 if yl < .001 else yl, zl, yr + .001 if yr < .001 else yr)
+            report = cert.measure(fixture(), CONFIG, SCALE)
+        finally:
+            MARCH.update(saved)
+        self.assertEqual(report['stance']['missing'],
+                         [{'clip': 'MARCH', 'turn_udeg': None, 'foot': f, 'reason': 'stance above the band'} for f in 'lr'])
+        self.assertEqual(report['slide']['by_clip']['MARCH']['total_um'], 0)
         self.assertFalse(report['pass'])
 
     def test_envelope_against_the_footprint(self):
@@ -295,8 +312,9 @@ class Fixture(unittest.TestCase):
 
     def test_slide_is_reported_per_clip(self):
         by = self.report['slide']['by_clip']
-        self.assertEqual(by['MARCH']['total_um'], 0)  # MARCH soles stay 1-2 mm up, never in the band
-        self.assertEqual(by['PIVOT_RIGHT']['total_um'], self.report['slide']['total_um'])
+        self.assertEqual(sorted(by), ['MARCH', 'PIVOT_LEFT', 'PIVOT_RIGHT'])
+        self.assertEqual(by['MARCH']['total_um'], 510001)
+        self.assertEqual(by['PIVOT_LEFT']['sampled_um'], by['PIVOT_RIGHT']['sampled_um'])  # mirror clips
         self.assertEqual(self.report['slide']['band_m'], .0005)
 
 
@@ -308,18 +326,21 @@ class VertexSlide(unittest.TestCase):
         up = .01
         # heel h: down at 0..1, then lifts and travels (not planted, not counted).
         # toe t: touches down at sample 2 at x = .05 and stays put (roll: 0).
-        # skate s: down 0..3 while drifting 0, 1, 2 mm, then lifts: slide 2 mm, margin 1 mm.
+        # skate s: down 0..3 while drifting 0, 1, 2 mm, then lifts: slide 2 mm.
+        # The margin counts entry/exit steps too: s lifting off 3 -> 4 moves 98 mm
+        # (the heel's lift-off 1 -> 2 moves 30 mm).
         heights = np.array([[0, up, 0], [0, up, 0], [up, 0, 0], [up, 0, 0], [up, 0, up]], dtype=float)
         x = np.array([[0, .05, .2], [0, .05, .2], [.03, .05, .201], [.06, .05, .202], [.09, .05, .3]])
         xz = np.stack([x, np.zeros_like(x)], axis=2)
         value, margin, witness = cert.vertex_slide(heights, xz, band)
         self.assertAlmostEqual(value, .002, places=12)
-        self.assertAlmostEqual(margin, .001, places=12)
+        self.assertAlmostEqual(margin, .098, places=12)
         self.assertEqual(witness, (3, 2, 0))  # sample 3, vertex s, touched down at 0
-        # a vertex that leaves and re-enters the band is anchored afresh
+        # a vertex that leaves and re-enters the band is anchored afresh (slide 0;
+        # its out-and-back steps, 0.5 and 0.493, are the margin)
         heights = np.array([[0], [up], [0]], dtype=float)
         xz = np.array([[[0, 0]], [[.5, 0]], [[.007, 0]]], dtype=float)
-        self.assertEqual(cert.vertex_slide(heights, xz, band)[:2], (0.0, 0.0))
+        self.assertEqual(cert.vertex_slide(heights, xz, band)[:2], (0.0, .5))
         # exactly at the band edge is planted
         heights = np.array([[band], [band]])
         xz = np.array([[[0, 0]], [[0, .003]]], dtype=float)
