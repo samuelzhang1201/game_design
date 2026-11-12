@@ -207,6 +207,9 @@ func test_layout_is_the_fixed_block_rotated() -> void:
 	assert_eq(BattleGroups.layout(repo, 3, Vector2i(0, 0), 90),
 		[Vector2i(25, 0), Vector2i(25, -40), Vector2i(-25, 0)] as Array[Vector2i])
 	assert_eq(BattleGroups.layout(repo, 1, Vector2i(10, 20), 0), [Vector2i(10, 20)] as Array[Vector2i])
+	# Facing 0: across = +y at 50 m, back = -x at 40 m: (0,-25), (-40,-25), (0,25).
+	assert_eq(BattleGroups.layout(repo, 3, Vector2i(0, 0), 0),
+		[Vector2i(0, -25), Vector2i(-40, -25), Vector2i(0, 25)] as Array[Vector2i])
 
 func test_full_infantry_unit_is_a_tight_five_by_two_block() -> void:
 	var repo := SuiteData.repo()
@@ -221,13 +224,18 @@ func test_full_infantry_unit_is_a_tight_five_by_two_block() -> void:
 	var bounds := BattleGroupGeometry.envelope(rows, 927)
 	# 4 x 1944 + 2 x 927 = 9630 across; 1944 + 1854 = 3798 deep; neighbours 90 m apart.
 	assert_eq([bounds.depth_m, bounds.width_m], [9630, 3798])
+	# Edge to edge is exactly the 90 m gap: out of reach at 89, in reach at 90.
 	assert_false(BattleGroupGeometry.pair([0, 0], 927, [0, 1944], 927, 0).overlap)
+	assert_false(BattleGroupGeometry.pair([0, 0], 927, [0, 1944], 927, 89).in_reach)
+	assert_true(BattleGroupGeometry.pair([0, 0], 927, [0, 1944], 927, 90).in_reach)
 
-func test_double_rank_depth_is_behind_the_front() -> void:
+func test_every_footprint_pitch_is_its_diameter_plus_the_gap() -> void:
 	var repo := SuiteData.repo()
-	# double_rank 3 groups, facing 0: slots (-0.5,0), (-0.5,1), (0.5,0) -> (0,-25), (-40,-25), (0,25)
-	assert_eq(BattleGroups.layout(repo, 3, Vector2i(0, 0), 0),
-		[Vector2i(0, -25), Vector2i(-40, -25), Vector2i(0, 25)] as Array[Vector2i])
+	var gap := int(repo.bal("unit_body_gap_m"))
+	assert_eq(gap, 90)
+	for arm: String in repo.unit_footprints:
+		var row: Dictionary = repo.unit_footprints[arm]
+		assert_eq(int(row.pitch_m), 2 * int(row.radius_m) + gap, arm)
 
 func test_refresh_groups_follow_fit_count() -> void:
 	var f := _fixture()

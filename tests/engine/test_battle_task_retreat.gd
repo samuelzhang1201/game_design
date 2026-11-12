@@ -65,8 +65,9 @@ func _fixture() -> Dictionary:
 	for code: String in battle.att + battle.def:
 		placed[code] = BattleSystem._at_m(repo, state, code)
 	assert_true(BattleGroups.refresh(repo, state, battle))
-	# Units deploy as one block (owner R-H); these loss fixtures keep hand-laid
-	# single-rank fronts at the placed anchors, 80 m apart across each facing.
+	# Units deploy as one block (owner R-H); these loss fixtures deliberately bypass
+	# that deployment and keep hand-laid single-rank fronts at the placed anchors,
+	# 80 m apart across each facing, as saved rows the engine then reads.
 	for code: String in battle.att + battle.def:
 		var rows: Array = battle.groups[code]
 		var spot: Vector2i = placed[code]
