@@ -65,13 +65,19 @@ static func sample(rest: Dictionary, phase: float, turn_udeg: int, march: Dictio
 		return {"ok": false, "locals": {}, "diagnostics": {"reason": "request"}}
 	var turn: float = float(turn_udeg) / 1e6
 	var steps: int = steps_for(turn, profile)
-	var w: float = maxf(1.0 / float(steps), float(profile.blend))
-	var native: Dictionary = stand
-	if phase == 0.0 or phase == 1.0:
-		native = march
-	elif phase < w or phase > 1.0 - w:
-		var t: float = phase / w if phase < w else (1.0 - phase) / w
-		native = _blend(march, stand, t * t * (3.0 - 2.0 * t))
+	# The horse eases MARCH <-> stand over one step (a longer ease folds the fore legs against the
+	# planted hooves and tears the chest skin); the rider, whose sword swing read as a flick over
+	# one step, eases over at least PLAN.blend.
+	var horse_w: float = 1.0 / float(steps)
+	var rider_w: float = maxf(horse_w, float(profile.blend))
+	var native: Dictionary = march
+	if phase > 0.0 and phase < 1.0:
+		var rider: Dictionary = riders(rest, String(profile.rider_root))
+		native = {}
+		for name: String in march:
+			var w: float = rider_w if rider.has(name) else horse_w
+			var t: float = clampf(minf(phase, 1.0 - phase) / w, 0.0, 1.0)
+			native[name] = (march[name] as Transform3D).interpolate_with(stand[name], t * t * (3.0 - 2.0 * t))
 	var op: Dictionary = {"start_heading": 0.0, "end_heading": fposmod(turn, 360.0), "turn_degrees": turn,
 		"duration": 1.0, "phase": phase, "entry_phase": float(profile.march_phase),
 		"exit_phase": float(profile.march_phase)}
@@ -250,10 +256,12 @@ static func seat(rest: Dictionary, stand: Dictionary, patches: Dictionary) -> Di
 	return locals
 
 
-static func _blend(a: Dictionary, b: Dictionary, t: float) -> Dictionary:
+## The rider: every bone below `root` (the saddle, which is the horse's), as a set.
+static func riders(rest: Dictionary, root: String) -> Dictionary:
 	var out: Dictionary = {}
-	for name: String in a:
-		out[name] = (a[name] as Transform3D).interpolate_with(b[name], t)
+	for bone: Dictionary in rest.bones:  # parents come before children
+		if bone.parent == root or out.has(bone.parent):
+			out[bone.name] = true
 	return out
 
 

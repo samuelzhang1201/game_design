@@ -53,6 +53,21 @@ func test_plan_admits_one_march_phase() -> void:
 	assert_eq(plan.support_m, 0.003)
 	assert_eq(plan.patch_band_m, 0.005, "the royal certifier config's patch_band_m")
 	assert_eq(plan.blend, 0.25)
+	assert_eq(plan.rider_root, "Saddle")
+
+
+func test_only_the_rider_eases_over_the_long_blend() -> void:
+	var rider: Dictionary = Provider.riders(_rest, "Saddle")
+	for name: String in ["R_Hips", "R_Chest", "R_Hand.R", "Sword", "head", "R_Foot.L"]:
+		assert_true(rider.has(name), name)
+	for name: String in ["Saddle", "Spine1", "Chest", "FrontForearm.R", "Neck1", "head_h", "Pelvis"]:
+		assert_false(rider.has(name), name)
+	# A 90 degree turn has 6 steps: past phase 1/6 the horse is the stand (bar the hoof chains the
+	# kernel solves); the rider is still easing until 0.25.
+	var pose: Dictionary = _pose(90000000, 0.2)
+	assert_eq(pose["Neck1"], _stand["Neck1"])
+	assert_ne(pose["R_Chest"], _stand["R_Chest"])
+	assert_eq(_pose(90000000, 0.3)["R_Chest"], _stand["R_Chest"])
 
 
 func test_leaves_and_rejoins_march_exactly() -> void:
