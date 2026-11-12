@@ -215,6 +215,45 @@ func test_positive_cross_field_fire_merges_the_fields() -> void:
 	assert_eq(blocked.status, "deferred")
 	assert_eq(blocked.reason, "No lawful physical cross-field contact or direct fire")
 
+func test_contact_with_any_opponent_suppresses_fire_at_the_named_target() -> void:
+	# `other` touches the shooter (surface gap 50, behind it); the enemy is a clear target.
+	var f := _field()
+	_put(f, f.other, 0, 10000 - 2 * R - 50, 10000)
+	var named := _fire(f, "", f.enemy)
+	assert_eq(named.firing, 0, "melee with a non-target foe still suppresses fire")
+	assert_eq(named.melee, 0, "and is not melee against the named target")
+	var all := _fire(f)
+	assert_eq(all.firing, 0)
+	assert_eq(all.melee, 100, "close defence against the touching foe")
+	assert_eq(all.pairs[0].target_unit, f.other)
+	# A designated target restricts melee with a holding (non-attacking) foe.
+	UnitBodies._entry(f.state, f.unit).supplies = 1000000
+	f.state.unit_tasks = {f.unit: {"current_id": "t1", "received_sequence": 1, "orders": {"t1": {
+		"sequence": 1, "status": "received", "reason": "Received", "history": [],
+		"request": {"id": "t1", "unit": f.unit, "battle_id": 8, "task": "advance", "formation": "",
+			"target_unit": f.enemy, "source": "player", "issuer": "", "max_route_m": 0, "region": ""}}}}}
+	assert_eq(_fire(f).melee, 0, "holding `other` is not the designated target")
+	f.state.battles[0].actions.def = {"kind": "attack", "reason": "Received advance plan"}
+	assert_eq(_fire(f).melee, 100, "self-defence against an attacking foe")
+
+func test_real_radius_bodies_fire_across_an_open_surface_gap() -> void:
+	# Production radii (archers 932, cavalry 804) and reach 400 measured as a surface gap (#248):
+	# centres 1736 + 300 apart fire; + 401 do not.
+	for row: Array in [[300, 100], [401, 0]]:
+		var helper: GutTest = load("res://tests/engine/test_body_battle_contact.gd").new()
+		var f: Dictionary = helper.call("_fixture", 100, 100)
+		helper.free()
+		for arm: String in f.repo.world_table("military", "unit_types"):
+			f.state.army_roster[f.unit][arm] = "0"
+		f.state.army_roster[f.unit].archers = "100"
+		assert_eq(BattleGroupGeometry.footprint(f.repo, f.state.army_roster[f.unit]).radius_m, 932)
+		f.state.battles[0].actions = {"att": {"kind": "attack", "reason": "Advance"}, "def": {"kind": "hold", "reason": "Hold"}}
+		f.state.battles[0].group_facing = {f.unit: 0, f.enemy: 180, f.other: 180}
+		_put(f, f.unit, 0, 10000, 10000)
+		_put(f, f.enemy, 0, 10000 + 932 + 804 + row[0], 10000)
+		var shot := _fire(f, "", f.enemy)
+		assert_eq(shot.firing, row[1], "real-radius gap %d: %s" % [row[0], shot.reason])
+
 func test_malformed_requests_error() -> void:
 	var f := _field()
 	for args: Array in [[f.unit, "nobody", 8, 0], [f.unit, f.unit, 8, 0], ["nobody", "", 8, 0], [f.unit, "", 12, 0], [f.unit, "", 8, 12]]:

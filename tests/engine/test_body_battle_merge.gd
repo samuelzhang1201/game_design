@@ -272,7 +272,7 @@ func test_received_unit_task_attack_alone_is_evaluated_by_the_fire_query() -> vo
 	f.state.unit_tasks = {f.c: {"current_id": "adv9", "received_sequence": 1, "orders": {"adv9": {
 		"sequence": 1, "status": "received", "reason": "Received", "history": [],
 		"request": {"id": "adv9", "unit": f.c, "battle_id": 9, "task": "advance", "formation": "",
-			"target_unit": f.d, "source": "ai", "issuer": "", "max_route_m": 0, "region": ""}}}}}
+			"target_unit": "", "source": "ai", "issuer": "", "max_route_m": 0, "region": ""}}}}}
 	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.state.battles[1], f.c).kind, "attack")
 	_assert_out_of_reach_stays_apart(f)
 

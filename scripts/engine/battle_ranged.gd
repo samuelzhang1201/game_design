@@ -220,16 +220,34 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 		result.reason = "Captured or incapable units neither fire nor defend"
 		return result
 	var action := BattleSystem.unit_action(repo, state, battle, unit)
-	var close := BodyBattleContact.query_candidate(repo, source, own_id, unit, foes, boundary)
+	var task := BattleTaskSystem.current(state, unit)
+	var designated := String(task.get("request", {}).get("target_unit", "")) if String(action.get("task_id", "")) != "" else ""
+	var sight := int(repo.bal("ai_sight_km" if ArmySystem.is_foe(state, unit) else "player_sight_km") * 1000)
+	# Contact with ANY opponent of its own field (or the queried field) suppresses fire.
+	var nearby: Array = battle["def" if side == "att" else "att"].duplicate()
+	for foe: String in foes:
+		if foe not in nearby: nearby.append(foe)
+	nearby.sort()
+	var close := BodyBattleContact.query_candidate(repo, source, own_id, unit, nearby, boundary)
 	if close.status != "complete": return _fire_failure(own_id, unit, close.reason)
 	if int(close.engaged) > 0:
-		# Physical contact suppresses fire in favour of close defence (a received retreat stays retreat).
+		# Close defence (a received retreat stays retreat). Outside self-defence against an
+		# attacking foe, the designated target and local sight still restrict the pair.
 		if action.kind == "retreat":
 			result.reason = "A received retreat neither fires nor defends forward"
 			return result
-		result.melee = int(close.engaged)
-		result.pairs = close.pairs
-		result.reason = "Close defence at physical contact: %d of %d" % [result.melee, fit]
+		var rows := {}
+		for pair: Dictionary in close.pairs:
+			if pair.target_unit not in foes or int(pair.count) <= 0 or int(pair.target_count) <= 0: continue
+			var foe_field := opponents if pair.target_unit in opponents[other] else battle
+			var defending: bool = BattleSystem.unit_action(repo, state, foe_field, pair.target_unit).kind == "attack"
+			var seen := BattleSystem._at_m(repo, state, pair.target_unit) - BattleSystem._at_m(repo, state, unit)
+			if seen.length_squared() > sight * sight: continue
+			if not defending and designated != "" and designated != pair.target_unit: continue
+			result.pairs.append(pair)
+			rows[pair.slot] = int(pair.count)
+		for count: int in rows.values(): result.melee += count
+		result.reason = "Close defence at physical contact: %d of %d; fire suppressed" % [result.melee, fit]
 		return result
 	if action.kind != "attack" or share(repo, state, unit) <= 0:
 		result.reason = "Only an attacking ranged-equipped unit fires (%s)" % action.kind
@@ -239,19 +257,18 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 		return result
 	var grid := MarchPath.of_pack(repo)
 	if not BodyMotion._loco_grid_ok(grid): return _fire_failure(own_id, unit, "Fire requires valid land terrain")
-	var task := BattleTaskSystem.current(state, unit)
-	var designated := String(task.get("request", {}).get("target_unit", "")) if String(action.get("task_id", "")) != "" else ""
-	var sight := int(repo.bal("ai_sight_km" if ArmySystem.is_foe(state, unit) else "player_sight_km") * 1000)
 	var axis := Vector2i((WarFront.facing_vector(int(battle.get("group_facing", {}).get(unit, 0))) * 1000).round())
 	var radius := int(BattleGroups.piece(repo, state, unit).get("radius_m", -1))
+	if radius <= 0: return _fire_failure(own_id, unit, "Fire requires the shooter's measured radius")
 	var friends: Array = []
 	var fields: Array = [[battle, side]] if other_id == own_id else [[battle, side], [opponents, friendly]]
 	for pair: Array in fields:
 		for member: String in pair[0][pair[1]]:
 			for row: Dictionary in pair[0].groups.get(member, []):
 				if int(row.count) > 0:
-					friends.append({"unit": member, "slot": int(row.slot), "x_m": row.x_m, "y_m": row.y_m,
-						"radius_m": int(BattleGroups.piece(repo, state, member).get("radius_m", -1))})
+					var blocker_radius := int(BattleGroups.piece(repo, state, member).get("radius_m", -1))
+					if blocker_radius <= 0: return _fire_failure(own_id, unit, "Fire requires every blocker's measured radius")
+					friends.append({"unit": member, "slot": int(row.slot), "x_m": row.x_m, "y_m": row.y_m, "radius_m": blocker_radius})
 	var reasons: Array[String] = []
 	var region := String(action.get("pursuit_region", ""))
 	var pairs: Array = []
@@ -270,6 +287,7 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 				if not why in reasons: reasons.append(why)
 				continue
 			var foe_radius := int(BattleGroups.piece(repo, state, foe).get("radius_m", -1))
+			if foe_radius <= 0: return _fire_failure(own_id, unit, "Fire requires the target's measured radius")
 			for enemy: Dictionary in opponents.groups.get(foe, []):
 				if int(enemy.count) <= 0: continue
 				var to := point(enemy)
