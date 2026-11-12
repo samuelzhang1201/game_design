@@ -686,7 +686,18 @@ func _passive_pending() -> void:
 	for entry: Dictionary in _json(fresh).regiments.values():
 		assert_false(entry.has("body_reconciliation"))
 	for path: String in ["scripts/engine/march_path.gd", "scripts/engine/battle_ranged.gd", "scripts/map3d/map3d_units.gd"]:
-		assert_false(FileAccess.get_file_as_string("res://" + path).contains("UnitBodies."), path)
+		var source := FileAccess.get_file_as_string("res://" + path)
+		if path.ends_with("battle_ranged.gd"):
+			# CF06 D-FIRE: only the explicit candidate section below its marker reads bodies.
+			var boundary := source.find("## CF06 candidate direct fire")
+			assert_true(boundary > 0, "the candidate fire section must follow the ordinary entry points")
+			var candidate := source.substr(boundary)
+			assert_eq(candidate.count("static func "), 3, "only counts_candidate and its two helpers")
+			for method: String in ["counts_candidate", "_fire_barred", "_fire_failure"]:
+				assert_true(candidate.contains("static func " + method + "("))
+			source = source.substr(0, boundary)
+			assert_false(source.contains("counts_candidate("), "ordinary callers cannot reach the candidate fire query")
+		assert_false(source.contains("UnitBodies."), path)
 
 func _replace(repo: DataRepository, state: GameState, code: String, amount: int) -> void:
 	var result := Personnel.replace(repo, state, code, amount)
