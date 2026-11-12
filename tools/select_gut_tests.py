@@ -46,6 +46,11 @@ HARNESS_PATHS = {
 }
 
 
+def not_game_input(path):
+    """Repository plumbing the game never reads, so it selects no GUT."""
+    return path in ('.github/pull_request_template.md', '.gitignore') or path.startswith('.superpowers/')
+
+
 def comment_only_diff(base, cwd=ROOT):
     """Treat source edits made only of comments/blank lines as documentation changes."""
     paths = subprocess.check_output(
@@ -67,7 +72,7 @@ def gut_relevant_paths(base, cwd=ROOT):
     if comment_only_diff(base, cwd):
         return [path for path in paths if path in HARNESS_PATHS or (path.endswith('.md')
                 and path not in {'RANDOM_EVENTS.md'} and not path.startswith('game_story/'))
-                or path.startswith('.codex/') or path == '.github/pull_request_template.md']
+                or not_game_input(path)]
     return paths
 
 
@@ -102,8 +107,8 @@ def select(paths, groups, include=()):
     functional = set(functional_categories())
     # Harness behavior is validated by the dedicated Python/shell self-checks.
     if paths and all(path in HARNESS_PATHS or (path.endswith('.md') and path not in {'RANDOM_EVENTS.md'}
-                     and not path.startswith('game_story/')) or path.startswith('.codex/')
-                     or path == '.github/pull_request_template.md' for path in paths):
+                     and not path.startswith('game_story/'))
+                     or not_game_input(path) for path in paths):
         return result(selected, groups)
     for path in paths:
         if path.startswith('tests/') and (path.endswith('.gd') or path.endswith('.gd.uid')) and Path(path.removesuffix('.uid')).name.startswith('test_'):
@@ -118,7 +123,7 @@ def select(paths, groups, include=()):
             selected.update(functional)
         elif path in HARNESS_PATHS:
             continue
-        elif path.endswith('.md') or path.startswith('.codex/') or path == '.github/pull_request_template.md':
+        elif path.endswith('.md') or not_game_input(path):
             continue
         else:
             for route in MANIFEST['routes']:

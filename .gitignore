@@ -49,5 +49,5 @@ assets/3D/units/shots/
 # Personal Claude Code settings (shared ones are in .claude/settings.json)
 .claude/settings.local.json
 
-# Session checkpoints are worktree-local (.codex/harness.md), never committed.
+# Session checkpoints are worktree-local, never committed.
 /HANDOVER.md
