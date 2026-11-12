@@ -774,7 +774,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "54a2152ab8043baa96b5a91e1a91d740d19e36a745f2a719b3b5aae4dbd2fae5",
+  "sha256": "b3501de0f259a2af693b37458aeb8add2d1673011ebde7b072fac0a188d151b7",
   "uniform": 512
  },
  "config": {
@@ -811,6 +811,7 @@
   ],
   "note": "LOCO-ROY-PROVIDER numeric check, NOT a certificate (LOCO-CERT-ROY certifies). Provider Map3DRoyalPivot through the shared Map3DPivotProvider shell; pivots leave and rejoin MARCH at 7/16 and the hold is MARCH frozen there (coordinator ruling 2026-11-11). Run on #291's certifier (per-vertex slide, per-arm band). Stances: MARCH lowest:2 (native, judged by LOCO-CERT-ROY), pivots lowest:3. turn_q 400000 placeholder; no policy row.",
   "patch_band_m": 0.005,
+  "phase_map": null,
   "provider": "scripts/map3d/map3d_royal_pivot.gd",
   "radius_m": 749,
   "scene": "scenes/models/units/royal.tscn",
@@ -851,6 +852,7 @@
   "assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
   "data/army/balance.csv": "c91faaef284442c03ae8e36d1269ec4ad0c401536d90c26d08ca857b1e559ae3",
   "data/army/unit_footprints.csv": "3f4b06c876ac881377d9a4e387ffb89b7f9fdfad6e5d21d714dea6b84d386fc7",
+  "data/screens/map3d/army_art.csv": "5e2b5dff395c3f98b50a560686a1c2e260ef7464ec32b7f7ed58f3f013a8358b",
   "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
@@ -862,7 +864,7 @@
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
  "locomotion_certificate": null,
- "payload_sha256": "4b6003b1937a1384c2a3e5d408bcce0690da2a23ced5a2a692f8c706e0efe04e",
+ "payload_sha256": "3d78fef86771d6cf8226dc155718e67ba141a9ebd71fd7666dd4be776dc33d09",
  "report": {
   "bounds_um": {
    "contact": 29338,
@@ -1862,6 +1864,6 @@
  },
  "schema": 1,
  "status": "FAIL",
- "tool_sha256": "0959a6330a43f30a0ceab51b990b5011482e7b01dee88ace2616f9e131f0d4fa",
+ "tool_sha256": "efc58b6634fbd5e0866e1d931d09feb2e3cb8b457c817c104030bb6e9211ef18",
  "visual_review": "PENDING: R-C requires the real-window review after this numeric pass"
 }
