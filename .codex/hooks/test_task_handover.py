@@ -727,7 +727,7 @@ class HandoverHookTests(unittest.TestCase):
 
     VALID_PR_BODY = 'Summary.\n\nprd_step: Step 5\nplayer_outcome: the petition appears at court\nwired: true\n'
     def pr_problems(self, body=VALID_PR_BODY, branch='codex/x', number=None, files=('scripts/a.gd',)):
-        return hook.pr_body_problems(body, branch, number or hook.FIRST_CHECKED_PR, list(files))
+        return hook.pr_body_problems(body, branch, number or hook.FIRST_CHECKED_PR[branch[:branch.find('/') + 1]], list(files))
 
     def test_pr_body_with_the_three_fields_passes(self):
         self.assertEqual(self.pr_problems(), [])
@@ -750,13 +750,17 @@ class HandoverHookTests(unittest.TestCase):
     def test_pr_declared_harness_must_only_change_harness_files(self):
         body = 'prd_step: harness\nplayer_outcome: none: rule maintenance\nwired: false\n'
         self.assertEqual(self.pr_problems(body, files=['.codex/harness.md', 'AGENTS.md', '.github/workflows/tests.yml']), [])
+        self.assertEqual(self.pr_problems(body, branch='claude/x', files=['.claude/agents/architect.md', 'CLAUDE.md']), [])
         self.assertIn('scripts/a.gd', ' '.join(self.pr_problems(body, files=['.codex/harness.md', 'scripts/a.gd'])))
         self.assertIn('wired', ' '.join(self.pr_problems(body.replace('wired: false', 'wired: true'),
                                                          files=['AGENTS.md'])))
-    def test_pr_check_covers_only_new_codex_branches(self):
-        self.assertEqual(self.pr_problems('', branch='claude/x'), [])
-        self.assertEqual(self.pr_problems('', number=hook.FIRST_CHECKED_PR - 1), [])
-        self.assertNotEqual(self.pr_problems('', branch='codex/x'), [])
+    def test_pr_check_covers_new_codex_and_claude_branches(self):
+        for prefix in ('codex/', 'claude/'):
+            self.assertNotEqual(self.pr_problems('', branch=prefix + 'x'), [])
+            self.assertEqual(self.pr_problems('', branch=prefix + 'x', number=hook.FIRST_CHECKED_PR[prefix] - 1), [])
+            self.assertEqual(self.pr_problems(branch=prefix + 'x'), [])
+        self.assertEqual(self.pr_problems('', branch='feat/x', number=10**6), [])
+        self.assertEqual(self.pr_problems('', branch='claude/x', number=hook.FIRST_CHECKED_PR['codex/']), [])
     def test_check_pr_command_reads_the_real_diff_and_fails_closed(self):
         git = ['git', '-C', str(self.root), '-c', 'user.name=Test', '-c', 'user.email=test@example.com']
         subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
@@ -766,7 +770,7 @@ class HandoverHookTests(unittest.TestCase):
         def run(body, base='HEAD'):
             return subprocess.run(['python3', hook.__file__, '--check-pr'], cwd=self.root, capture_output=True, text=True,
                                   timeout=10, env={**os.environ, 'PR_BODY': body, 'PR_BRANCH': 'codex/x',
-                                                   'PR_NUMBER': str(hook.FIRST_CHECKED_PR), 'BASE_SHA': base})
+                                                   'PR_NUMBER': str(hook.FIRST_CHECKED_PR['codex/']), 'BASE_SHA': base})
         self.assertEqual(run(self.VALID_PR_BODY).returncode, 0)
         refused = run(self.VALID_PR_BODY.replace('prd_step: Step 5', 'prd_step: harness').replace('wired: true', 'wired: false'))
         self.assertEqual(refused.returncode, 1)

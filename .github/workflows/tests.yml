@@ -68,7 +68,7 @@ jobs:
             python3 tools/select_gut_tests.py --functional \
               --request-text "GUT_INCLUDE: $MANUAL_INCLUDE" --github-output "$GITHUB_OUTPUT"
           fi
-      - name: Check a Codex PR declares its product fields
+      - name: Check a codex/ or claude/ PR declares its product fields
         if: ${{ github.event_name == 'pull_request' }}
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
