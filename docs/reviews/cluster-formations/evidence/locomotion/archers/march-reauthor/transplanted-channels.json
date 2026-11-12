@@ -1,0 +1,107 @@
+[
+ {
+  "node": "arm_stretch.l",
+  "path": "translation",
+  "max_change": 0.008635163307189941
+ },
+ {
+  "node": "arm_stretch.r",
+  "path": "translation",
+  "max_change": 0.008635163307189941
+ },
+ {
+  "node": "foot.l",
+  "path": "translation",
+  "max_change": 0.11424469947814941
+ },
+ {
+  "node": "foot.r",
+  "path": "translation",
+  "max_change": 0.03610926866531372
+ },
+ {
+  "node": "forearm_stretch.l",
+  "path": "translation",
+  "max_change": 0.00863504409790039
+ },
+ {
+  "node": "forearm_stretch.r",
+  "path": "translation",
+  "max_change": 0.008635401725769043
+ },
+ {
+  "node": "head",
+  "path": "translation",
+  "max_change": 0.008635282516479492
+ },
+ {
+  "node": "leg_stretch.l",
+  "path": "rotation",
+  "max_change": 0.023269236087799072
+ },
+ {
+  "node": "leg_stretch.l",
+  "path": "translation",
+  "max_change": 0.10639059543609619
+ },
+ {
+  "node": "leg_stretch.r",
+  "path": "rotation",
+  "max_change": 0.01567065715789795
+ },
+ {
+  "node": "leg_stretch.r",
+  "path": "translation",
+  "max_change": 0.04348035156726837
+ },
+ {
+  "node": "root.x",
+  "path": "translation",
+  "max_change": 0.008635282516479492
+ },
+ {
+  "node": "spine_01.x",
+  "path": "translation",
+  "max_change": 0.008635282516479492
+ },
+ {
+  "node": "spine_02.x",
+  "path": "translation",
+  "max_change": 0.008635401725769043
+ },
+ {
+  "node": "thigh_stretch.l",
+  "path": "rotation",
+  "max_change": 1.4476652145385742
+ },
+ {
+  "node": "thigh_stretch.l",
+  "path": "translation",
+  "max_change": 0.0531991571187973
+ },
+ {
+  "node": "thigh_stretch.r",
+  "path": "rotation",
+  "max_change": 0.03928513824939728
+ },
+ {
+  "node": "thigh_stretch.r",
+  "path": "translation",
+  "max_change": 0.021740004420280457
+ },
+ {
+  "node": "thigh_twist.l",
+  "path": "rotation",
+  "max_change": 0.11708617955446243
+ },
+ {
+  "node": "thigh_twist.r",
+  "path": "rotation",
+  "max_change": 0.04540048539638519
+ },
+ {
+  "node": "toes_01.r",
+  "path": "rotation",
+  "max_change": 0.2085757553577423
+ }
+]
