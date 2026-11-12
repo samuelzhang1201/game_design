@@ -18,20 +18,20 @@ refused across all units. Requests and returned snapshots are independent copies
 Every transition retains world day, source and reason. Old saves start empty.
 
 `behaviors.csv` lists the seven primary tasks and their legal battle actions;
-formation is an independent field referencing `formations.csv`. Receipt checks
+a task's formation field is retired: any non-empty formation refuses the task. Receipt checks
 live unit/target membership, current received law and battlefield obligations.
 Unit-scoped law checks affect only the receiving unit; army-wide warrants retain
 their intersection across the side. The current eligible battlefield general
 may task unassigned units but cannot replace a delivered player task, even when
 his pending warrant has a newer sequence. A local commander cannot issue a new
-primary task. Risk and formation preparation do not veto lawful receipt;
+primary task. Risk does not veto lawful receipt;
 routing and incapacity remain facts that prevent resuming a line.
 Until contact-plan delivery is integrated, pursuit requires an explicit player
 task; a general's deployment warrant alone cannot authorize it.
 
 `BATTLE_TASK` is the paid player dispatch path for a single battlefield unit.
 It accepts `request_id`, `regiment`, `battle_id`, `task` and optional
-`target_unit` and `formation`; source/issuer are not action parameters. The
+`target_unit` (a non-empty `formation`, from an old save, refuses the whole task at receipt); source/issuer are not action parameters. The
 OrderCosts filing charge applies once per new request, plus a courier fee only
 for a new courier. Pending co-carried tasks pay independent filing charges.
 Reserved reward gold is unavailable. Exact retries return the saved original
@@ -39,10 +39,7 @@ outcome before costs, history or current eligibility; conflicting reuse fails.
 Local king command range delivers immediately through CourierSystem; remote
 warrants remain pending until arrival. Delivery checks recipient identity,
 current realm control, membership and law. Lost/expired couriers invalidate
-pending tasks with a reason without refunding spent fees. A formation rides in
-the same warrant (below): no extra filing or courier fee, refused before any
-mutation when unknown or unsuitable, and reuse of a request id with another
-formation fails.
+pending tasks with a reason without refunding spent fees.
 
 `BATTLE_TASK_CANCEL` accepts only `request_id`, `regiment` and `battle_id`,
 pays its own filing row and uses the same local/courier path. Its internal
