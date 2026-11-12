@@ -148,7 +148,7 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 		"stand_deg": float(art.get("stand_deg", "0")),
 		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
 		"exact_pace": String(art.get("exact_pace", "0")) == "1", "steps": Map3DUnitSettle.steps_of(art),
-		"chains": Map3DClipChain.of_art(art),
+		"chains": Map3DClipChain.of_art(art), "phase_map": Map3DMarchPhase.of_art(art),
 		"clip_s": (anims[0] as AnimationPlayer).get_animation(clip).length if clip != "" else 0.0}
 
 

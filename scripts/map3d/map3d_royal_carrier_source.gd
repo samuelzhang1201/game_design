@@ -16,7 +16,7 @@ const _SOURCES: Dictionary = {
 	"res://scripts/map3d/map3d_unit_glow.gd":"48aa3aecc97c901cb4f7e138962a49bf47a315676a241377c01807659c852874",
 	"res://scripts/map3d/map3d_unit_settle.gd":"26ba22e211409286e6a750a34a3821a483811aae95ca1f086396c53b38f76a2f",
 	"res://scripts/map3d/map3d_clip_chain.gd":"a435e3a8f481ddb68e1f4e636e3086aac89c9e15d1b46cc5a34c053b0fa3ed67",
-	"res://scripts/map3d/map3d_unit_rig.gd":"60891e8fb8ec0a21b0431d2994ff97a7bf7aa36cdf78a0887f102f62062348ae",
+	"res://scripts/map3d/map3d_unit_rig.gd":"71e683b7baabe3dd87e1185ec2ad34c9a8b41e35cf56b19d0dacd3bcc6fb8fec",
 	"res://scripts/map3d/map3d_royal_locomotion_source.gd":"b4301e3953e92676cdb0386bf4324c9e779687c665dfd9c9433a0083d3e827e7",
 	"res://scripts/map3d/map3d_world_loader.gd":"b59e4fb2cb7223fbd1989047fce0b2c5e05ab2cd0f3878a24fc212c9dc4c61bd",
 	"res://scripts/engine/body_motion.gd":"3b1206a72c4785c72295bb2d0847b3c76ea3f7cf2c411adaf040202e33389c53",
@@ -26,9 +26,9 @@ const _SOURCES: Dictionary = {
 	"res://scripts/engine/war_front.gd":"73c5fa064b95c84f4e5c5215bf120bd7ff7e496792179810ed59ba64d053a6dc",
 	"res://scripts/map3d/map3d_battle_groups.gd":"8d5b66ff995eeb1db5a9eda90e2e37c0b30611bdca1d415e2a74169a2a24e372",
 	"res://scripts/map3d/map3d_units.gd":"e842566f033267ae5cbb8bf548bed2aefc88103a9234b344cdc1b3554e32fb4d",
-	"res://scripts/map3d/map3d_formation.gd":"fc702e2e5371ec5f9a52a06f88962410d357da7ead28a22038762140a2a469e4",
+	"res://scripts/map3d/map3d_formation.gd":"fc1a56f37aac13340938321f88347b3e183c7f992e28d45e71fa26d2dac85ab9",
 	"res://scripts/map3d/map3d_geometry.gd":"64797a53505cff9bd849e9245107f9be9f73fbb78cc2d27ab9f58b71bfce9e4c",
-	"res://scripts/map3d/map3d_layer_units.gd":"9108541d02af6c6c178254a7f6d137f567a8f94b661fc48d18de30cd3df660bd",
+	"res://scripts/map3d/map3d_layer_units.gd":"3ad3ef5388354ab33b93160c6457a54e8bd87f291152f726d923214ec970cf7f",
 	"res://scripts/map3d/map3d_context.gd":"d7d45a27a77d7859a7df00b6d87980e106535c198b2828795d5f47837a5d3172"}
 
 
