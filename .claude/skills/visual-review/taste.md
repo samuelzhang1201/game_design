@@ -43,6 +43,10 @@ existing one.
   foot.
 - **Physically possible.** A building stands plumb on its ground; a body only
   holds poses a body can make, from every side.
+- **Carried equipment has weight and a secure grip.** A shield follows the
+  stride in a continuous arc; rapid trembling reads as a broken attachment.
+- **Cloth, leather and metal must read as different materials.** Padded cloth
+  is matte and fibrous; broad oily highlights belong neither on tunics nor trousers.
 - **Colour a little richer than true, never lighter.** Warmth and variety stay
   inside one palette; a shade that turns pink, chalky or garish is outside it.
 
