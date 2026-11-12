@@ -31,6 +31,20 @@ static func solve(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, t
 	var entry := Provider.locals(player, skeleton, clip, 0.0, rest.bones)
 	var exit := Provider.locals(player, skeleton, clip, length, rest.bones)
 	var current := Provider.locals(player, skeleton, clip, phase * length, rest.bones)
+	# The clip's body above the legs carries MARCH's arm swing, right for a 90-degree turn and an
+	# unmotivated flourish for a small one: scale it toward the held entry pose by the turn's share
+	# of 90 degrees (at +/-90 the clip is unchanged; entry == exit, so both ends stay native).
+	var share := minf(1.0, absf(float(turn_udeg)) / 90000000.0)
+	if share < 1.0:
+		var legs := {}
+		for leg: Dictionary in rest.legs:
+			for name: String in [leg.hip, leg.knee, leg.ankle, leg.toe]:
+				legs[name] = true
+			for name: String in leg.followers:
+				legs[name] = true
+		for bone: Dictionary in rest.bones:
+			if bone.parent != "" and not legs.has(bone.name):
+				current[bone.name] = (entry[bone.name] as Transform3D).interpolate_with(current[bone.name], share)
 	var march: float = plan.march_phase
 	var op := {"duration_q": 100000, "phase": phase, "yaw0_udeg": 0, "turn_udeg": turn_udeg,
 		"current_yaw_udeg": fposmod(float(turn_udeg) * phase, 360000000.0),

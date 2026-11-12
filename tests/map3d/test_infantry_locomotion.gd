@@ -80,3 +80,16 @@ func test_a_march_request_is_the_native_seek() -> void:
 	for bone: int in _skeleton.get_bone_count():
 		posed.append(_skeleton.get_bone_global_pose(bone))
 	assert_lt(_max_joint_m(posed, _clip_globals("MARCH", 0.3)), 1e-6)
+
+
+func test_a_small_turn_holds_the_body_above_the_legs() -> void:
+	# Near zero turn the clip's MARCH arm swing is scaled out: the head stays at its entry place.
+	var head := _skeleton.find_bone("head")
+	var entry := _clip_globals("PIVOT_RIGHT", 0.0)[head].origin
+	var clip := _clip_globals("PIVOT_RIGHT", 0.5)[head].origin
+	var held := _solved_globals("PIVOT_RIGHT", 1, 0.5)[head].origin
+	assert_gt(clip.distance_to(entry), 0.01, "the 90-degree clip swings the upper body")
+	assert_lt(held.distance_to(entry), 0.001, "a 1 microdegree turn holds it")
+	var half := _solved_globals("PIVOT_RIGHT", 45000000, 0.5)[head].origin
+	assert_almost_eq(half.distance_to(entry), 0.5 * clip.distance_to(entry), 0.25 * clip.distance_to(entry),
+		"45 degrees carries about half the swing")
