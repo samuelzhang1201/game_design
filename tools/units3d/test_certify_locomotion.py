@@ -201,6 +201,13 @@ class Pieces(unittest.TestCase):
             self.assertIn(rel, files)
         self.assertFalse(any(f.startswith('.godot/') for f in files))
 
+    def test_dependency_closure_of_the_infantry_provider(self):
+        # map3d_infantry_pivot.gd ends a comment sentence with a res:// path and a full stop.
+        files = cert.closure(['scripts/map3d/map3d_infantry_locomotion.gd'])
+        for rel in ('scripts/map3d/map3d_infantry_pivot.gd', 'scripts/map3d/guide/infantry_pivot.md',
+                    'assets/3D/units/infantry/infantry_pivot_plan.json'):
+            self.assertIn(rel, files)
+
 
 class Fixture(unittest.TestCase):
     def setUp(self):
