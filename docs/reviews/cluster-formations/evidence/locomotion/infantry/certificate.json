@@ -1,0 +1,1480 @@
+{
+ "arm": "infantry",
+ "capture": {
+  "clips": {
+   "MARCH": {
+    "key_times": [
+     0.0,
+     0.0333333350718021,
+     0.0666666701436043,
+     0.100000001490116,
+     0.133333340287209,
+     0.16666667163372,
+     0.200000002980232,
+     0.233333334326744,
+     0.266666680574417,
+     0.300000011920929,
+     0.333333343267441,
+     0.366666674613953,
+     0.400000005960464,
+     0.433333337306976,
+     0.466666668653488,
+     0.5,
+     0.533333361148834,
+     0.566666662693024,
+     0.600000023841858,
+     0.633333325386047,
+     0.666666686534882,
+     0.699999988079071,
+     0.733333349227905,
+     0.766666650772095,
+     0.800000011920929,
+     0.833333313465118,
+     0.866666674613953,
+     0.899999976158142,
+     0.933333337306976,
+     0.966666638851166,
+     1.0,
+     1.03333330154419,
+     1.06666672229767,
+     1.10000002384186,
+     1.13333332538605,
+     1.16666662693024,
+     1.20000004768372
+    ],
+    "length_s": 1.20000004768372,
+    "loop_mode": 1,
+    "tracks": 126
+   },
+   "PIVOT_LEFT": {
+    "key_times": [
+     0.0,
+     0.0299999993294477,
+     0.0599999986588955,
+     0.0900000035762787,
+     0.119999997317791,
+     0.150000005960464,
+     0.180000007152557,
+     0.209999993443489,
+     0.239999994635582,
+     0.270000010728836,
+     0.300000011920929,
+     0.330000013113022,
+     0.360000014305115,
+     0.389999985694885,
+     0.419999986886978,
+     0.449999988079071,
+     0.479999989271164,
+     0.509999990463257,
+     0.540000021457672,
+     0.569999992847443,
+     0.600000023841858,
+     0.629999995231628,
+     0.660000026226044,
+     0.689999997615814,
+     0.720000028610229,
+     0.75,
+     0.779999971389771,
+     0.810000002384186,
+     0.839999973773956,
+     0.870000004768372,
+     0.899999976158142,
+     0.930000007152557,
+     0.959999978542328,
+     0.990000009536743,
+     1.01999998092651,
+     1.04999995231628,
+     1.08000004291534,
+     1.11000001430511,
+     1.13999998569489,
+     1.16999995708466,
+     1.20000004768372,
+     1.23000001907349,
+     1.25999999046326,
+     1.28999996185303,
+     1.32000005245209,
+     1.35000002384186,
+     1.37999999523163,
+     1.4099999666214,
+     1.44000005722046,
+     1.47000002861023,
+     1.5,
+     1.52999997138977,
+     1.55999994277954,
+     1.5900000333786,
+     1.62000000476837,
+     1.64999997615814,
+     1.67999994754791,
+     1.71000003814697,
+     1.74000000953674,
+     1.76999998092651,
+     1.79999995231628,
+     1.83000004291534,
+     1.86000001430511,
+     1.88999998569489,
+     1.91999995708466,
+     1.95000004768372,
+     1.98000001907349,
+     2.00999999046326,
+     2.03999996185303,
+     2.0699999332428,
+     2.09999990463257,
+     2.13000011444092,
+     2.16000008583069,
+     2.19000005722046,
+     2.22000002861023,
+     2.25,
+     2.27999997138977,
+     2.30999994277954,
+     2.33999991416931,
+     2.36999988555908,
+     2.40000009536743,
+     2.4300000667572,
+     2.46000003814697,
+     2.49000000953674,
+     2.51999998092651,
+     2.54999995231628,
+     2.57999992370605,
+     2.60999989509583,
+     2.64000010490417,
+     2.67000007629395,
+     2.70000004768372,
+     2.73000001907349,
+     2.75999999046326,
+     2.78999996185303,
+     2.8199999332428,
+     2.84999990463257,
+     2.88000011444092,
+     2.91000008583069,
+     2.94000005722046,
+     2.97000002861023,
+     3.0,
+     3.02999997138977,
+     3.05999994277954,
+     3.08999991416931,
+     3.11999988555908,
+     3.15000009536743,
+     3.1800000667572,
+     3.21000003814697,
+     3.24000000953674,
+     3.26999998092651,
+     3.29999995231628,
+     3.32999992370605,
+     3.35999989509583,
+     3.375,
+     3.39000010490417,
+     3.40499997138977,
+     3.42000007629395,
+     3.43499994277954,
+     3.45000004768372,
+     3.46499991416931,
+     3.48000001907349,
+     3.49499988555908,
+     3.50999999046326,
+     3.52500009536743,
+     3.53999996185303,
+     3.5550000667572,
+     3.5699999332428,
+     3.58500003814697,
+     3.59999990463257,
+     3.625,
+     3.65000009536743,
+     3.67499995231628,
+     3.70000004768372,
+     3.72499990463257,
+     3.75,
+     3.77500009536743,
+     3.79999995231628,
+     3.82500004768372,
+     3.84999990463257,
+     3.875,
+     3.90000009536743,
+     3.92499995231628,
+     3.95000004768372,
+     3.97499990463257,
+     4.0
+    ],
+    "length_s": 4.0,
+    "loop_mode": 0,
+    "tracks": 207
+   },
+   "PIVOT_RIGHT": {
+    "key_times": [
+     0.0,
+     0.0299999993294477,
+     0.0599999986588955,
+     0.0900000035762787,
+     0.119999997317791,
+     0.150000005960464,
+     0.180000007152557,
+     0.209999993443489,
+     0.239999994635582,
+     0.270000010728836,
+     0.300000011920929,
+     0.330000013113022,
+     0.360000014305115,
+     0.389999985694885,
+     0.419999986886978,
+     0.449999988079071,
+     0.479999989271164,
+     0.509999990463257,
+     0.540000021457672,
+     0.569999992847443,
+     0.600000023841858,
+     0.629999995231628,
+     0.660000026226044,
+     0.689999997615814,
+     0.720000028610229,
+     0.75,
+     0.779999971389771,
+     0.810000002384186,
+     0.839999973773956,
+     0.870000004768372,
+     0.899999976158142,
+     0.930000007152557,
+     0.959999978542328,
+     0.990000009536743,
+     1.01999998092651,
+     1.04999995231628,
+     1.08000004291534,
+     1.11000001430511,
+     1.13999998569489,
+     1.16999995708466,
+     1.20000004768372,
+     1.23000001907349,
+     1.25999999046326,
+     1.28999996185303,
+     1.32000005245209,
+     1.35000002384186,
+     1.37999999523163,
+     1.4099999666214,
+     1.44000005722046,
+     1.47000002861023,
+     1.5,
+     1.52999997138977,
+     1.55999994277954,
+     1.5900000333786,
+     1.62000000476837,
+     1.64999997615814,
+     1.67999994754791,
+     1.71000003814697,
+     1.74000000953674,
+     1.76999998092651,
+     1.79999995231628,
+     1.83000004291534,
+     1.86000001430511,
+     1.88999998569489,
+     1.91999995708466,
+     1.95000004768372,
+     1.98000001907349,
+     2.00999999046326,
+     2.03999996185303,
+     2.0699999332428,
+     2.09999990463257,
+     2.13000011444092,
+     2.16000008583069,
+     2.19000005722046,
+     2.22000002861023,
+     2.25,
+     2.27999997138977,
+     2.30999994277954,
+     2.33999991416931,
+     2.36999988555908,
+     2.40000009536743,
+     2.4300000667572,
+     2.46000003814697,
+     2.49000000953674,
+     2.51999998092651,
+     2.54999995231628,
+     2.57999992370605,
+     2.60999989509583,
+     2.64000010490417,
+     2.67000007629395,
+     2.70000004768372,
+     2.73000001907349,
+     2.75999999046326,
+     2.78999996185303,
+     2.8199999332428,
+     2.84999990463257,
+     2.88000011444092,
+     2.91000008583069,
+     2.94000005722046,
+     2.97000002861023,
+     3.0,
+     3.02999997138977,
+     3.05999994277954,
+     3.08999991416931,
+     3.11999988555908,
+     3.15000009536743,
+     3.1800000667572,
+     3.21000003814697,
+     3.24000000953674,
+     3.26999998092651,
+     3.29999995231628,
+     3.32999992370605,
+     3.35999989509583,
+     3.375,
+     3.39000010490417,
+     3.40499997138977,
+     3.42000007629395,
+     3.43499994277954,
+     3.45000004768372,
+     3.46499991416931,
+     3.48000001907349,
+     3.49499988555908,
+     3.50999999046326,
+     3.52500009536743,
+     3.53999996185303,
+     3.5550000667572,
+     3.5699999332428,
+     3.58500003814697,
+     3.59999990463257,
+     3.625,
+     3.65000009536743,
+     3.67499995231628,
+     3.70000004768372,
+     3.72499990463257,
+     3.75,
+     3.77500009536743,
+     3.79999995231628,
+     3.82500004768372,
+     3.84999990463257,
+     3.875,
+     3.90000009536743,
+     3.92499995231628,
+     3.95000004768372,
+     3.97499990463257,
+     4.0
+    ],
+    "length_s": 4.0,
+    "loop_mode": 0,
+    "tracks": 207
+   }
+  },
+  "godot": {
+   "build": "official",
+   "hash": "ed1daf0bf001b61586d9930840f2f1394092c079",
+   "hex": 263938,
+   "major": 4,
+   "minor": 7,
+   "patch": 2,
+   "status": "stable",
+   "string": "4.7.2-stable (official)",
+   "timestamp": 0
+  },
+  "sha256": "45eb5f0f70fb90088d032aec59a2db06df74e6e838f18b17b36f5dca80cb0b4a",
+  "uniform": 512
+ },
+ "config": {
+  "arm": "infantry",
+  "entry_phase": 0.8928571428571429,
+  "feet": {
+   "l": [
+    "foot.l",
+    "toes_01.l"
+   ],
+   "r": [
+    "foot.r",
+    "toes_01.r"
+   ]
+  },
+  "forward": [
+   0,
+   0,
+   -1
+  ],
+  "hold_clip": "MARCH",
+  "hold_phases": [
+   0.8928571428571429
+  ],
+  "march_start_phases": [
+   0.8928571428571429
+  ],
+  "march_stop_phases": [
+   0.8928571428571429
+  ],
+  "note": "LOCO-CERT-INF. Provider Map3DInfantryLocomotion: the coupled pivot plan expanded for each grid turn and re-solved by Map3DInfantryPivot (the shipped clips are its +/-90 solve). Pivots enter and leave MARCH at 25/28 only; the hold is MARCH frozen at 25/28 (the consumer's admitted phases, recorded here as a consumer requirement). Pivot stance = the plan's authored stance intervals; MARCH stance = the lower sole patch. turn_q 400000 is the contract's example value (contact does not depend on duration); LOCO-POLICY installs the real row.",
+  "patch_band_m": 0.005,
+  "provider": "scripts/map3d/map3d_infantry_locomotion.gd",
+  "radius_m": 927,
+  "scene": "scenes/models/units/infantry.tscn",
+  "stance": {
+   "MARCH": "lowest:1",
+   "PIVOT_LEFT": {
+    "l": [
+     [
+      0.12,
+      0.24
+     ],
+     [
+      0.36,
+      0.48
+     ],
+     [
+      0.6,
+      0.72
+     ],
+     [
+      0.84,
+      0.9
+     ]
+    ],
+    "r": [
+     [
+      0.0,
+      0.12
+     ],
+     [
+      0.24,
+      0.36
+     ],
+     [
+      0.48,
+      0.6
+     ],
+     [
+      0.72,
+      0.84
+     ],
+     [
+      0.9,
+      1.0
+     ]
+    ]
+   },
+   "PIVOT_RIGHT": {
+    "l": [
+     [
+      0.12,
+      0.24
+     ],
+     [
+      0.36,
+      0.48
+     ],
+     [
+      0.6,
+      0.72
+     ],
+     [
+      0.84,
+      0.9
+     ]
+    ],
+    "r": [
+     [
+      0.0,
+      0.12
+     ],
+     [
+      0.24,
+      0.36
+     ],
+     [
+      0.48,
+      0.6
+     ],
+     [
+      0.72,
+      0.84
+     ],
+     [
+      0.9,
+      1.0
+     ]
+    ]
+   }
+  },
+  "stride_m": 1.765,
+  "turn_q": 400000
+ },
+ "consumer_requirements": {
+  "hold_clip": "MARCH",
+  "hold_phases": [
+   0.8928571428571429
+  ],
+  "march_start_phases": [
+   0.8928571428571429
+  ],
+  "march_stop_phases": [
+   0.8928571428571429
+  ],
+  "rule": "stop, start and hold only at these MARCH phases; a MARCH hold resumes at the phase it holds"
+ },
+ "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
+ "input_sha256": {
+  "assets/3D/units/infantry/infantry.glb": "1d3bcb4214ace7721d912e52ace904336b48449129334a3b7ac7238ce3cba758",
+  "assets/3D/units/infantry/infantry.glb.import": "30053b147d2096e1a8e72b6927e7d1ec74ec8e3c7c894975991ac2b4af7a1341",
+  "assets/3D/units/infantry/infantry_infantry_atlas.jpg": "91fb05c250db5b07559e942bfbb374cf9947a8034b39c12ac1011c9b855f3c7d",
+  "assets/3D/units/infantry/infantry_infantry_atlas.jpg.import": "21810c4ac8df48a472e97a8ae199e7e9dc72da3a83a8c69e99adf08178fc6118",
+  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg": "1bc292fff0198978e0d0dba7b612f6485cb41f9111eba49a1876e24ff603415d",
+  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg.import": "90857ba1a82322b4911384fcc4b115c3cc6bd7bcc870bc28a87ca75e0f674fa5",
+  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "0b311e0f6b2b2759b6cd25ef2fb644f10db26cac49e893725e6bc3730a6e0a3e",
+  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg.import": "e3202dc6386dc16015feb870d65b5a0c7accc35ecb758b57de6f209d835055e6",
+  "assets/3D/units/infantry/infantry_pivot_plan.json": "b47bf73d4c4dac10bd9ae1fde6b8de6971dc357aa553b0348038ff1b59bc146f",
+  "data/army/balance.csv": "c91faaef284442c03ae8e36d1269ec4ad0c401536d90c26d08ca857b1e559ae3",
+  "data/army/unit_footprints.csv": "3f4b06c876ac881377d9a4e387ffb89b7f9fdfad6e5d21d714dea6b84d386fc7",
+  "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
+  "scenes/models/units/infantry.tscn": "69256e86dfd2d93050522bdcef422afa3ce3d4c2472d063752b7b085da848921",
+  "scripts/map3d/guide/infantry_pivot.md": "eecc824eff4da2e5ccc0d536749eeeace3d43e184b34ba6fba69fcbaf90a264a",
+  "scripts/map3d/map3d_infantry_locomotion.gd": "0e664ba2072072e594e3826a8103555ca7b64abc5c065d1846f915cf30045d83",
+  "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
+  "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
+  "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
+ },
+ "locomotion_certificate": {
+  "all_turns": true,
+  "clips": [
+   "PIVOT_LEFT",
+   "PIVOT_RIGHT",
+   "MARCH"
+  ],
+  "contact_um": 22769,
+  "digest": "c74d179f2e727a50c0b6b8910de816a4cc37417cb6b2437182471887682bfec4",
+  "radius_m": 927,
+  "turn_q": 400000
+ },
+ "payload_sha256": "c74d179f2e727a50c0b6b8910de816a4cc37417cb6b2437182471887682bfec4",
+ "report": {
+  "bounds_um": {
+   "contact": 22769,
+   "seam": 1898
+  },
+  "envelope": {
+   "footprint_radius_m": 927,
+   "margin_um": 11044,
+   "pass": true,
+   "radius_model_um": 892460,
+   "radius_simulation_m": 477,
+   "witness": {
+    "clip": "MARCH",
+    "mesh": "infantry",
+    "phase": 0.222222224981696,
+    "surface": 0,
+    "turn_udeg": null,
+    "vertex": 5775
+   }
+  },
+  "hover": {
+   "bound_um": 22769,
+   "margin_um": 3245,
+   "pass": true,
+   "sampled_um": 2750,
+   "total_um": 5995,
+   "witness": {
+    "clip": "MARCH",
+    "foot": "l",
+    "phase": 0.51953125,
+    "turn_udeg": null
+   }
+  },
+  "pass": true,
+  "patches": {
+   "l": {
+    "first": [
+     {
+      "mesh": "infantry",
+      "surface": 0,
+      "vertex": 2138
+     },
+     {
+      "mesh": "infantry",
+      "surface": 0,
+      "vertex": 2140
+     },
+     {
+      "mesh": "infantry",
+      "surface": 0,
+      "vertex": 2141
+     },
+     {
+      "mesh": "infantry",
+      "surface": 0,
+      "vertex": 2235
+     }
+    ],
+    "vertices": 502
+   },
+   "r": {
+    "first": [
+     {
+      "mesh": "infantry",
+      "surface": 0,
+      "vertex": 1606
+     },
+     {
+      "mesh": "infantry",
+      "surface": 0,
+      "vertex": 1607
+     },
+     {
+      "mesh": "infantry",
+      "surface": 0,
+      "vertex": 1608
+     },
+     {
+      "mesh": "infantry",
+      "surface": 0,
+      "vertex": 1609
+     }
+    ],
+    "vertices": 509
+   }
+  },
+  "penetration": {
+   "bound_um": 22769,
+   "margin_um": 7509,
+   "pass": true,
+   "sampled_um": 0,
+   "total_um": 7509,
+   "witness": {
+    "clip": "PIVOT_LEFT",
+    "mesh": "infantry",
+    "phase": 0.0,
+    "surface": 0,
+    "turn_udeg": -1,
+    "vertex": 13161
+   }
+  },
+  "planting_band": {
+   "feet": {
+    "l": {
+     "H_m": 0.0022558146438436356,
+     "band_m": 0.0027558146438436356
+    },
+    "r": {
+     "H_m": -0.0018430571020956834,
+     "band_m": 0.0005
+    }
+   },
+   "inherited_from": "shipped native MARCH",
+   "rule": "per foot: b_f = max(0.5 mm, H_f + 0.5 mm); H_f = highest of the foot's per-stance minimum sole heights, stances = runs among the lower half of the feet; a vertex belongs to the foot whose bone carries its largest skin weight (ties: lower bone index); vertices of no foot are never planted"
+  },
+  "sample_count": 18458,
+  "seam": {
+   "bound_um": 1898,
+   "boundaries": [
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.999999
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 16402
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -1,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -2000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -45000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -90000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -135000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -179999999,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": -1,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": -2000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": -45000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": -90000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": -135000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": -179999999,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 1,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 2000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 45000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 90000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 135000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 179999999,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 180000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 180000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": 1,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": 2000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": 45000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": 90000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": 135000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": 179999999,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": 180000000,
+      "vertex": 17512
+     }
+    },
+    {
+     "bound_um": 1898,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "infantry",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.8928571428571429
+      ],
+      "turn_udeg": 180000000,
+      "vertex": 17512
+     }
+    }
+   ],
+   "margin_um": 0,
+   "pass": true,
+   "sampled_um": 1,
+   "total_um": 1,
+   "witness": {
+    "from": [
+     "PIVOT_RIGHT",
+     1.0
+    ],
+    "mesh": "infantry",
+    "surface": 0,
+    "to": [
+     "MARCH",
+     0.8928571428571429
+    ],
+    "turn_udeg": 180000000,
+    "vertex": 17512
+   }
+  },
+  "skin": {
+   "flagged_pairs_inherited": 0,
+   "flagged_pairs_introduced": 0,
+   "introduced_witnesses": [],
+   "pass": true,
+   "rule": "length > 4 x native-entry AND > 0.03 model m; fails unless the native seek at the same phase is flagged"
+  },
+  "slide": {
+   "band_m": {
+    "l": 0.0027558146438436356,
+    "r": 0.0005
+   },
+   "bound_um": 22769,
+   "by_clip": {
+    "MARCH": {
+     "bound_um": 22769,
+     "margin_um": 2274,
+     "pass": true,
+     "sampled_um": 8946,
+     "total_um": 11219,
+     "witness": {
+      "clip": "MARCH",
+      "mesh": "infantry",
+      "phase": 0.328125,
+      "surface": 0,
+      "touchdown_phase": 0.30078125,
+      "turn_udeg": null,
+      "vertex": 13147
+     }
+    },
+    "PIVOT_LEFT": {
+     "bound_um": 22769,
+     "margin_um": 5704,
+     "pass": true,
+     "sampled_um": 9265,
+     "total_um": 14969,
+     "witness": {
+      "clip": "PIVOT_LEFT",
+      "mesh": "infantry",
+      "phase": 0.419999986886978,
+      "surface": 0,
+      "touchdown_phase": 0.108749996870756,
+      "turn_udeg": -1,
+      "vertex": 2294
+     }
+    },
+    "PIVOT_RIGHT": {
+     "bound_um": 22769,
+     "margin_um": 5493,
+     "pass": true,
+     "sampled_um": 13803,
+     "total_um": 19295,
+     "witness": {
+      "clip": "PIVOT_RIGHT",
+      "mesh": "infantry",
+      "phase": 0.88671875,
+      "surface": 0,
+      "touchdown_phase": 0.109375,
+      "turn_udeg": 2000000,
+      "vertex": 3707
+     }
+    }
+   },
+   "margin_um": 5704,
+   "pass": true,
+   "sampled_um": 13803,
+   "total_um": 19506,
+   "witness": {
+    "clip": "PIVOT_RIGHT",
+    "mesh": "infantry",
+    "phase": 0.88671875,
+    "surface": 0,
+    "touchdown_phase": 0.109375,
+    "turn_udeg": 2000000,
+    "vertex": 3707
+   }
+  },
+  "stance": {
+   "missing": [],
+   "pass": true
+  },
+  "turn_grid": [
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 1,
+    "name": "+1 microdegree",
+    "turn_udeg": 1,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 1,
+    "name": "-1 microdegree",
+    "turn_udeg": -1,
+    "yaw0_udeg": 1
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 2223,
+    "name": "359 to 1 wrap",
+    "turn_udeg": 2000000,
+    "yaw0_udeg": 359000000
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 2223,
+    "name": "1 to 359 wrap",
+    "turn_udeg": -2000000,
+    "yaw0_udeg": 1000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 50000,
+    "name": "+45",
+    "turn_udeg": 45000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 50000,
+    "name": "-45",
+    "turn_udeg": -45000000,
+    "yaw0_udeg": 45000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 100000,
+    "name": "+90",
+    "turn_udeg": 90000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 100000,
+    "name": "-90",
+    "turn_udeg": -90000000,
+    "yaw0_udeg": 90000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 150000,
+    "name": "+135",
+    "turn_udeg": 135000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 150000,
+    "name": "-135",
+    "turn_udeg": -135000000,
+    "yaw0_udeg": 135000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 200000,
+    "name": "+179.999999",
+    "turn_udeg": 179999999,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 200000,
+    "name": "-179.999999",
+    "turn_udeg": -179999999,
+    "yaw0_udeg": 179999999
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 200000,
+    "name": "180 tie",
+    "turn_udeg": 180000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 200000,
+    "name": "180 tie reversed",
+    "turn_udeg": 180000000,
+    "yaw0_udeg": 180000000
+   }
+  ]
+ },
+ "ruling": "docs/reviews/cluster-formations/owner-rulings-2026-11-10.md R-A R-B R-C",
+ "scale": {
+  "k": 26.3519187631584,
+  "lift_model_m": 0.02406241893768315,
+  "model_height_m": 1.60416126251221,
+  "simulation_scale": 527.038375263168
+ },
+ "schema": 1,
+ "status": "NUMERIC_PASS",
+ "tool_sha256": "b5e098eef99072a42143cd9347f102d3d4156cf89d7caf937901c4b7b0984db9",
+ "visual_review": "PENDING: R-C requires the real-window review after this numeric pass"
+}
