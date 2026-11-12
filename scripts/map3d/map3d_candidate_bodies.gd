@@ -289,7 +289,7 @@ static func _candidate_at(ctx: Map3DContext, code: String, sampled: Dictionary, 
 	return along_candidate(sampled, share)
 
 static func _animate_candidate(ctx: Map3DContext, code: String, piece: Dictionary, sample: Dictionary,
-		share: float, blend_s: float, battle: Map3DBattleSignals) -> void:
+		share: float, blend_s: float, battle: Map3DBattleSignals, dt := 0.0) -> void:
 	var state := ctx.state()
 	var hostile := ctx.fogged(code)
 	var order := "" if hostile else ArmySystem.order_of(ctx.repo, state, code)
@@ -338,9 +338,14 @@ static func _animate_candidate(ctx: Map3DContext, code: String, piece: Dictionar
 		var world_speed := speed * float(ctx.meta["m_per_px"]) / float(ArmySystem.metres_per_pack_px(ctx.repo)) \
 			* slices * ctx.clock_speed() / ctx.repo.bal("time_day_seconds")
 		var stature := float(child.get("statures", [1.0])[0])
-		var rate := Map3DUnitRig.gait_rate(world_speed, (child["node"] as Node3D).global_basis.get_scale().x,
-			float(child["clip_s"]), float(child["stride_m"]) * stature, 0.0, INF)
-		for anim: AnimationPlayer in child["anims"]:
+		var k := (child["node"] as Node3D).global_basis.get_scale().x
+		var rate := Map3DUnitRig.gait_rate(world_speed, k, float(child["clip_s"]), float(child["stride_m"]) * stature, 0.0, INF)
+		var knots: PackedFloat64Array = child.get("phase_map", PackedFloat64Array())  # Map3DMarchPhase: the exact secant
+		for j: int in child["anims"].size():
+			var anim: AnimationPlayer = child["anims"][j]
+			if not knots.is_empty() and speed > 0.0 and ctx.clock_speed() != 0 and k > 0.0:
+				rate = Map3DUnitRig.mapped_rate(anim, knots, float(child["clip_s"]), world_speed / k / stature, dt,
+					Map3DMarchLag.phase(identity, j))
 			anim.speed_scale = 0.0 if ctx.clock_speed() == 0 else (rate if speed > 0.0 else 1.0)
 	piece["candidate_moving"] = (moving or turning) and ctx.clock_speed() > 0
 	# A pivot stands in place: the unit-level clip (and its march sound) walks only while translating.

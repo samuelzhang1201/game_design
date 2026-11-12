@@ -703,7 +703,8 @@ def closure(paths):
         if (ROOT / sidecar).is_file():
             todo.append(sidecar)
         if source.suffix in ('.tscn', '.tres', '.import', '.gd'):
-            todo += re.findall(r'res://([^"\s)]+)', source.read_text(errors='replace'))
+            # A path ending a comment's sentence carries its full stop; resource names never end in one.
+            todo += [p.rstrip('.,;:') for p in re.findall(r'res://([^"\s)]+)', source.read_text(errors='replace'))]
     return sorted(seen)
 
 

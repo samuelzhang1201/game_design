@@ -4,6 +4,7 @@
 1. The uncoupled parameters rebuild the frozen feasibility references exactly (the port is faithful).
 2. The canonical pair rebuilt from the committed captures passes the R-B skin and R-A contact audit.
 3. Baking the committed solve onto the installed GLB's own five-clip prefix reproduces it byte for byte.
+4. The committed runtime plan (infantry_pivot_plan.json) is what the mapping generates.
 """
 import base64
 import hashlib
@@ -22,6 +23,7 @@ import pivot_mapping as pm  # noqa: E402
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/infantry_pivot_mapping.json'
 GLB = ROOT / 'assets/3D/units/infantry/infantry.glb'
+PLAN = ROOT / 'assets/3D/units/infantry/infantry_pivot_plan.json'
 HASHES = {'native-march.json': '2c04d2b90d5dfe28ed23b316f7a46762bd0daa3a08d89033bce846fa8c640b98',
           'canonical-samples.json': 'b0d8c7b5104e158ad95795e3ff8bb9636c3acd9e1b478c43ef68109b512b8cfe'}
 MAIN_GLB_SHA256 = 'bb1d80b916be406f91390883034e07d0cf2d7690666951c3216b202393548085'  # five clips
@@ -56,6 +58,16 @@ def bare_source(path, out):
                               len(binary).to_bytes(4, 'little'), b'BIN\0', binary]))
 
 
+def close(a, b):
+    if isinstance(a, dict):
+        return a.keys() == b.keys() and all(close(a[k], b[k]) for k in a)
+    if isinstance(a, list):
+        return len(a) == len(b) and all(close(x, y) for x, y in zip(a, b))
+    if isinstance(a, float) or isinstance(b, float):
+        return abs(a - b) < 1e-9
+    return a == b
+
+
 def main():
     model = pm.Model(pm.load_frozen())
     pm.self_check(model)
@@ -77,6 +89,10 @@ def main():
             assert a == b and ab[:OLD['binary']] == bb[:OLD['binary']], 'installed GLB is not the committed bake'
             x, y = (np.frombuffer(v[OLD['binary']:], '<f4') for v in (ab, bb))
             assert len(x) == len(y) and float(np.abs(x - y).max()) < 2e-6, 'installed GLB is not the committed bake'
+    committed = json.loads(PLAN.read_text())
+    mine = pm.encode([{k: g[k] if k not in ('sole', 'toe') else g[k][:3, :3] for k in g} for g in cases[0]['plan']])
+    assert committed['march_phase'] == pm.CANONICAL_PHASE and committed['rest'] == pm.encode(cases[0]['rest'])
+    assert close(committed['legs'], mine), 'infantry_pivot_plan.json is stale: rerun pivot_mapping.py plan'
     print('PIVOT_MAPPING_MATCH', json.dumps([{k: r[k] for k in ('turn_udeg', 'skin', 'contact_um')} for r in report]))
 
 

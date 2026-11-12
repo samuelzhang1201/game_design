@@ -184,6 +184,7 @@ var _council_click_frame := -1
 var _council_hover := false
 ## --look3d x,y,M,F (with --screen root) frames pack px (x,y) M metres away at
 ## frame F — after an order, to follow its courier from the capital.
+## Repeatable: each --look3d reframes at its own frame (aim far, then shoot near).
 var _look3d := PackedFloat32Array()
 ## --click-courier F (with --screen root) left-clicks, as a player would, the
 ## first courier drawn inside the 3D map at frame F and prints the card the
@@ -1050,10 +1051,12 @@ func _process(_delta: float) -> void:
 		_ledger_step()
 	if _root != null and _war_room:
 		_war_room_step()
-	if _root != null and _look3d.size() == 4 and _frames == int(_look3d[3]) \
-			and _root.current_screen.has_method("map3d_view") \
+	if _root != null and not _look3d.is_empty() and _look3d.size() % 4 == 0 \
+			and _root.current_screen != null and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
-		_root.current_screen.map3d_view().look_at_pack(Vector2(_look3d[0], _look3d[1]), _look3d[2])
+		for j in range(0, _look3d.size(), 4):
+			if _frames == int(_look3d[j + 3]):
+				_root.current_screen.map3d_view().look_at_pack(Vector2(_look3d[j], _look3d[j + 1]), _look3d[j + 2])
 	if _root != null and _follow3d.size() == 2 and _frames >= int(_follow3d[1]) and _supply_flow_code != "" \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:

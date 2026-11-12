@@ -567,11 +567,13 @@ func _goal(track: Array, phase: float) -> Dictionary:
 
 
 func test_raw_native_counterexample_is_preserved_and_not_repaired_in_the_fixture() -> void:
-	var raw: Dictionary = _native(.81)
+	# Witness phase 1.5/35: outside the archer MARCH re-author's leg locks (2026-11-12),
+	# where the raw native knee-ankle span still differs from rest (it was .81 before).
+	var raw: Dictionary = _native(1.5 / 35.0)
 	var rest: Dictionary = _native(-1.0)
 	var g: Dictionary = _globals(raw.locals, raw.parents)
 	var r: Dictionary = _globals(rest.locals, rest.parents)
-	assert_almost_eq(g["leg_stretch.l"].origin.distance_to(g["foot.l"].origin), .365093371, .000001)
+	assert_almost_eq(g["leg_stretch.l"].origin.distance_to(g["foot.l"].origin), .363132524, .000001)
 	assert_almost_eq(r["leg_stretch.l"].origin.distance_to(r["foot.l"].origin), .365650014, .000001)
 	assert_gt(absf(g["leg_stretch.l"].origin.distance_to(g["foot.l"].origin) - r["leg_stretch.l"].origin.distance_to(r["foot.l"].origin)), .0005)
 
