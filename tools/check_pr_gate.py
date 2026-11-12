@@ -13,7 +13,7 @@ import sys
 PRD_STEP = re.compile(r'Step (10|[1-9])|BG-[1-6]|CS-[1-5]\.[1-5]|EV-[1-4]|CH-[1-5]|FS-[1-4]|RD-[1-3]|EC-[1-3]|AR-[1-4]|L0|M[1-6]|harness')
 DECLARED_PRODUCT_FIELDS = ('prd_step', 'player_outcome', 'wired')
 MAX_UNWIRED_BACKLOG = 5
-HARNESS_PATHS = ('.codex', '.claude/agents', '.claude/hooks', '.claude/settings.json', '.github',
+HARNESS_PATHS = ('.gitignore', '.superpowers/session-handovers', '.claude/agents', '.claude/hooks', '.claude/settings.json', '.github',
                  'AGENTS.md', 'CLAUDE.md', 'cicd_procedure.md', 'run_tests.sh',
                  'tests/categories.json', 'tools/select_gut_tests.py', 'tools/test_select_gut_tests.py',
                  'tools/run_with_timeout.py', 'tools/test_run_with_timeout.py', 'tools/test_run_tests.py',

@@ -42,9 +42,9 @@ class PrGateTests(unittest.TestCase):
         self.assertIn('wired', ' '.join(self.pr_problems(self.VALID_PR_BODY.replace('wired: true', 'wired: yes'))))
     def test_pr_declared_harness_must_only_change_harness_files(self):
         body = 'prd_step: harness\nplayer_outcome: none: rule maintenance\nwired: false\n'
-        self.assertEqual(self.pr_problems(body, files=['.codex/harness.md', 'AGENTS.md', '.github/workflows/tests.yml']), [])
+        self.assertEqual(self.pr_problems(body, files=['cicd_procedure.md', 'AGENTS.md', '.github/workflows/tests.yml']), [])
         self.assertEqual(self.pr_problems(body, branch='claude/x', files=['.claude/agents/architect.md', 'CLAUDE.md']), [])
-        self.assertIn('scripts/a.gd', ' '.join(self.pr_problems(body, files=['.codex/harness.md', 'scripts/a.gd'])))
+        self.assertIn('scripts/a.gd', ' '.join(self.pr_problems(body, files=['cicd_procedure.md', 'scripts/a.gd'])))
         self.assertIn('wired', ' '.join(self.pr_problems(body.replace('wired: false', 'wired: true'),
                                                          files=['AGENTS.md'])))
     def test_pr_check_covers_new_codex_and_claude_branches(self):
