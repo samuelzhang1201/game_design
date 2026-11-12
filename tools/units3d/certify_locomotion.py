@@ -6,13 +6,15 @@ every equipped mesh with the native imported arrays and bone poses, and checks:
 
   1. penetration  any vertex below the rendered ground, every sample;
   2. hover        the planted material patch above the seated plane, stance only;
-  3. slide        per vertex: while it lies within the arm's planting band b of
+  3. slide        per foot vertex: while it lies within its foot's planting band b of
                   the seated plane it is planted, and its slide is its ground-
                   projected displacement from where it touched down (ruling
                   2026-11-11: the planted part of the sole; heel-to-toe roll is not
-                  slide, skating is). b = max(0.5 mm, H + 0.5 mm), H inherited from
-                  the shipped native MARCH (`planting_band`); a stance is where a
-                  foot's lowest sole vertex is within b, and hover is read there;
+                  slide, skating is). Per foot, b = max(0.5 mm, H + 0.5 mm), H
+                  inherited from the shipped native MARCH (`planting_band`); a
+                  vertex belongs to the foot whose bone carries its largest skin
+                  weight; a stance is where a foot's lowest vertex is within its b,
+                  and hover is read there;
   4. seam         any vertex jump at a clip boundary;
   plus the envelope against the arm's footprint radius and the skin diagnostic.
 
@@ -189,24 +191,26 @@ class Model:
         return self.points(matrix4(np.array([b['global_rest'] for b in self.dump['bones']])[:, :3, :]))
 
 
-def patches(model, feet, band):
-    """Material patch per foot, chosen ONCE in rest: the foot-bound vertices of the
-    body mesh within `band` model metres of that foot's lowest rest vertex."""
-    rest = model.rest_points()
+def dominant_bones(joints, weights, binds):
+    """Per vertex, the skeleton bone carrying its largest skin weight; a tie goes
+    to the lower bone index."""
+    bones = np.array([bone for bone, _ in binds])[joints]
+    top = weights.max(axis=1, keepdims=True)
+    return np.where(weights == top, bones, np.iinfo(np.int64).max).min(axis=1)
+
+
+def patches(model, feet):
+    """Ruling 2026-11-11: a vertex belongs to the foot whose bone carries its
+    largest skin weight (ties to the lower bone index); vertices of no foot are
+    never planted (penetration still covers the whole mesh)."""
     names = [b['name'] for b in model.dump['bones']]
+    dominant = np.concatenate([dominant_bones(m['j'], m['w'], m['binds']) for m in model.meshes])
     out = {}
     for foot, bones in feet.items():
-        ids = {names.index(b) for b in bones}
-        chosen = []
-        for part, m in enumerate(model.meshes):
-            bound = np.array([bone in ids for bone, _ in m['binds']])
-            share = np.where(bound[m['j']], m['w'], 0).sum(axis=1)
-            chosen.append(np.flatnonzero(share > .8) + model.offsets[part])
-        chosen = np.concatenate(chosen)
-        if not len(chosen):
-            raise ValueError('no vertex bound to foot ' + foot)
-        low = rest[chosen, 1].min()
-        out[foot] = chosen[rest[chosen, 1] <= low + band]
+        ids = np.flatnonzero(np.isin(dominant, [names.index(b) for b in bones]))
+        if not len(ids):
+            raise ValueError('no vertex belongs to foot ' + foot)
+        out[foot] = ids
     return out
 
 
@@ -264,17 +268,20 @@ def stance_runs(heights, phases, rule, foot, loop):
 
 
 def planting_band(heights, phases, loop):
-    """Ruling 2026-11-11, inherited from the shipped native MARCH: a foot's
-    stances there are its maximal runs among the lower half of the feet; H is
-    the highest of the stances' minimum sole heights above the seated plane and
-    the arm's planting band is max(STANCE_BAND_M, H + STANCE_BAND_M)."""
+    """Ruling 2026-11-11, inherited from the shipped native MARCH, PER FOOT: a
+    foot's stances there are its maximal runs among the lower half of the feet;
+    H_f is the highest of that foot's stance minimum sole heights above the seated
+    plane and its band is max(STANCE_BAND_M, H_f + STANCE_BAND_M).
+    Returns {foot: (H_f, b_f)}."""
     n = max(1, len(heights) // 2)
-    lows = [min(heights[f][i] for i in run) for f in sorted(heights)
-            for run in stance_runs(heights, phases, ('lowest', n), f, loop)]
-    if not lows:
-        raise ValueError('native MARCH has no stance to derive the planting band from')
-    high = float(max(lows))
-    return high, max(STANCE_BAND_M, high + STANCE_BAND_M)
+    out = {}
+    for f in sorted(heights):
+        lows = [min(heights[f][i] for i in run) for run in stance_runs(heights, phases, ('lowest', n), f, loop)]
+        if not lows:
+            raise ValueError(f'native MARCH has no stance of foot {f} to derive its planting band from')
+        high = float(max(lows))
+        out[f] = (high, max(STANCE_BAND_M, high + STANCE_BAND_M))
+    return out
 
 
 def vertex_slide(heights, xz, band):
@@ -368,7 +375,7 @@ def measure(dump, config, scale):
     {k, simulation_scale, lift_model_m}."""
     model = Model(dump)
     bounds = bounds_um(scale['k'])
-    feet = patches(model, config['feet'], math.inf)  # every vertex bound to a foot's bones
+    feet = patches(model, config['feet'])
     forward = np.array(config['forward'], dtype=float)
     stride = float(config['stride_m'])
     slope = float(config.get('slope', 0.0))
@@ -394,8 +401,11 @@ def measure(dump, config, scale):
         p = model.points(s['_g'])
         for f, ids in feet.items():
             native_heights[f].append(float(p[ids, 1].min()))
-    high, band = planting_band(native_heights, [s['phase'] for s in native],
-                               dump['clips']['MARCH']['loop_mode'] != 0)
+    bands = planting_band(native_heights, [s['phase'] for s in native],
+                          dump['clips']['MARCH']['loop_mode'] != 0)
+    band_v = np.full(model.offsets[-1], -np.inf)  # a vertex of no foot is never planted
+    for f, ids in feet.items():
+        band_v[ids] = bands[f][1]
     slide_by_clip = {}
     missing = []  # a foot with no stance in a locomotion clip leaves hover and slide unmeasured
 
@@ -440,14 +450,13 @@ def measure(dump, config, scale):
             for f, ids in feet.items():
                 heights[f].append(p[ids, 1].min())
                 patch_y[f].append(p[ids, 1])
-            reach |= p[:, 1] <= band
+            reach |= p[:, 1] <= band_v
         if clip not in CLIPS:
             continue  # the hold clip: penetration and envelope only
-        rule = ('band', band)
         turns = [turn] if clip == 'MARCH' or turn is not None else \
             [g['turn_udeg'] for g in grid if clip_for(g['turn_udeg']) == clip]
         for f in feet:
-            runs = stance_runs(heights, phases, rule, f, loop)
+            runs = stance_runs(heights, phases, ('band', bands[f][1]), f, loop)
             if not runs:
                 missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f, 'reason': 'no stance'})
             for run in runs:
@@ -455,7 +464,7 @@ def measure(dump, config, scale):
                     hov.offer(heights[f][i], {'clip': clip, 'foot': f, 'phase': phases[i], 'turn_udeg': turn})
                     if k:
                         hov.widen(np.abs(patch_y[f][i] - patch_y[f][run[k - 1]]).max())
-        # Slide, per vertex of ANY mesh that reaches the band (whatever its binding):
+        # Slide, per foot vertex that reaches its foot's band:
         # skin again keeping only those. Heights are yaw-invariant. A looping MARCH
         # runs twice so a stance can cross the seam.
         ids = np.flatnonzero(reach)
@@ -464,7 +473,7 @@ def measure(dump, config, scale):
         frames = [(i, c) for c in range(2 if loop else 1) for i in range(len(rows))]
         for t in turns:
             w = np.array([world(clip, phases[i], pts[i], t, c)[:, [0, 2]] for i, c in frames])
-            value, margin, hit = vertex_slide(pts[[i for i, _ in frames], :, 1], w, band) if pts.shape[1] \
+            value, margin, hit = vertex_slide(pts[[i for i, _ in frames], :, 1], w, band_v[ids]) if pts.shape[1] \
                 else (0.0, 0.0, None)
             if hit is not None:
                 for worst in (sld, per_clip):
@@ -536,10 +545,13 @@ def measure(dump, config, scale):
         'bounds_um': bounds,
         'penetration': pen.report(bounds['contact']),
         'hover': hov.report(bounds['contact']),
-        'planting_band': {'band_m': band, 'H_m': high, 'inherited_from': 'shipped native MARCH',
-                          'rule': 'b = max(0.5 mm, H + 0.5 mm); H = highest per-stance minimum sole height, '
-                                  'stances = runs among the lower half of the feet'},
-        'slide': {**sld.report(bounds['contact']), 'band_m': band,
+        'planting_band': {'feet': {f: {'H_m': h, 'band_m': b} for f, (h, b) in bands.items()},
+                          'inherited_from': 'shipped native MARCH',
+                          'rule': 'per foot: b_f = max(0.5 mm, H_f + 0.5 mm); H_f = highest of the foot\'s per-stance '
+                                  'minimum sole heights, stances = runs among the lower half of the feet; a vertex '
+                                  'belongs to the foot whose bone carries its largest skin weight (ties: lower bone index); '
+                                  'vertices of no foot are never planted'},
+        'slide': {**sld.report(bounds['contact']), 'band_m': {f: b for f, (_, b) in bands.items()},
                   'by_clip': {c: w.report(bounds['contact']) for c, w in sorted(slide_by_clip.items())}},
         # No boundary configured is a failure: every arm has at least its loop seam.
         'seam': {**(seam_worst or Worst().report(bounds['seam'])), 'pass': bool(seams) and all(s['pass'] for s in seams),

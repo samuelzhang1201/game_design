@@ -52,11 +52,11 @@ def sample(clip, phase, bones=None, provider=False):
             'globals_f64': enc(bones or pose(clip, phase), '<f8')}
 
 
-def fixture():
+def fixture(root_vertex_y=.5):
     eye = np.eye(4).tolist()
     # a, b: left sole; c, d: right sole; e: head; f (root), g (right foot): a short
     # skin edge, half a metre up so it never touches the ground.
-    vertices = [[-.1, 0, 0], [-.1, 0, .1], [.1, 0, 0], [.1, 0, .1], [0, 1, 0], [0, .5, 0], [.01, .5, 0]]
+    vertices = [[-.1, 0, 0], [-.1, 0, .1], [.1, 0, 0], [.1, 0, .1], [0, 1, 0], [0, root_vertex_y, 0], [.01, .5, 0]]
     bones = [[1, 0], [1, 0], [2, 0], [2, 0], [0, 0], [0, 0], [2, 0]]
     weights = [[1, 0]] * 7
     return {'godot': {}, 'skeleton_to_model': eye,
@@ -137,23 +137,36 @@ class Pieces(unittest.TestCase):
         self.assertEqual(cert.stance_runs(heights, PHASES, ('band', 5), 'r', loop=False), [[0, 1, 2, 3, 4]])
         self.assertEqual(cert.stance_runs(heights, PHASES, ('band', 4.9), 'r', loop=True), [[2, 3]])
 
-    def test_planting_band_is_inherited_from_native_march(self):
-        # Two feet, metres. Lower-foot runs: l at 0..1 (min .00100) and at 4 (.00020);
-        # r at 2..3 (min .00226). H = the highest stance minimum = 2.26 mm (the
-        # infantry case), so b = H + 0.5 mm = 2.76 mm.
+    def test_planting_band_is_per_foot_and_inherited_from_native_march(self):
+        # Metres. Lower-foot runs (no loop): l at 0..1 (min 1.0 mm) and at 4 (0.2 mm),
+        # r at 2..3 (min 2.26 mm). Per foot: H_l = 1.0 mm -> b_l 1.5 mm; H_r = 2.26 mm
+        # (the infantry case) -> b_r 2.76 mm.
         heights = {'l': [.0010, .0012, .0080, .0090, .0002], 'r': [.0050, .0060, .00226, .0030, .0040]}
-        high, band = cert.planting_band(heights, PHASES, loop=False)
-        self.assertAlmostEqual(high, .00226, places=12)
-        self.assertAlmostEqual(band, .00276, places=12)
-        # Looping, l's runs 4 and 0..1 are ONE stance (min .0002): H is r's 2.26 mm still.
-        self.assertAlmostEqual(cert.planting_band(heights, PHASES, loop=True)[0], .00226, places=12)
-        # Every stance dips under the plane (l's loop stance to -1 mm, r's to -2 mm):
-        # H = -1 mm and the band is the 0.5 mm floor.
+        bands = cert.planting_band(heights, PHASES, loop=False)
+        self.assertAlmostEqual(bands['l'][0], .0010, places=12)
+        self.assertAlmostEqual(bands['l'][1], .0015, places=12)
+        self.assertAlmostEqual(bands['r'][0], .00226, places=12)
+        self.assertAlmostEqual(bands['r'][1], .00276, places=12)
+        # Looping, l's runs 4 and 0..1 are ONE stance (min 0.2 mm): b_l = 0.7 mm.
+        self.assertAlmostEqual(cert.planting_band(heights, PHASES, loop=True)['l'][1], .0007, places=12)
+        # Stances under the plane (l to -1 mm, r to -2 mm): both bands are the 0.5 mm floor.
         low = {'l': [0, -.001, .01, .01, 0], 'r': [.01, .01, -.002, 0, .01]}
-        self.assertEqual(cert.planting_band(low, PHASES, loop=True), (-.001, .0005))
-        # Four hooves: a stance is among the lower two.
+        self.assertEqual(cert.planting_band(low, PHASES, loop=True), {'l': (-.001, .0005), 'r': (-.002, .0005)})
+        # Four hooves: a stance is among the lower two; c's lowest is 1 mm, d's 2 mm.
         hooves = {'a': [0, 0, 9, 9], 'b': [0, 0, 9, 9], 'c': [9, 9, .001, .003], 'd': [9, 9, .002, .002]}
-        self.assertAlmostEqual(cert.planting_band(hooves, PHASES[:4], loop=False)[0], .002, places=12)
+        got = cert.planting_band(hooves, PHASES[:4], loop=False)
+        self.assertEqual({f: round(h, 6) for f, (h, _) in got.items()}, {'a': 0, 'b': 0, 'c': .001, 'd': .002})
+        with self.assertRaises(ValueError):  # a foot that never stands has no band to inherit
+            cert.planting_band({'l': [0, 0], 'r': [1, 1]}, [0, .5], loop=False)
+
+    def test_a_vertex_belongs_to_its_dominant_bone(self):
+        # binds map slots to skeleton bones 7, 3, 5. Vertex 0: 0.6 on bone 7 -> 7.
+        # Vertex 1: 0.5 / 0.5 on bones 7 and 3 -> the tie goes to the lower index, 3.
+        # Vertex 2: 0.25 on 5, 0.75 on 3 -> 3.
+        binds = [(7, None), (3, None), (5, None)]
+        joints = np.array([[0, 1], [0, 1], [2, 1]])
+        weights = np.array([[.6, .4], [.5, .5], [.25, .75]])
+        self.assertEqual(cert.dominant_bones(joints, weights, binds).tolist(), [7, 3, 3])
 
     def test_margin_adds_before_rounding(self):
         w = cert.Worst()
@@ -305,6 +318,14 @@ class Fixture(unittest.TestCase):
                           for c in ('PIVOT_LEFT', 'PIVOT_RIGHT')])
         self.assertFalse(report['pass'])
 
+    def test_a_vertex_of_no_foot_is_never_planted(self):
+        # Root-bound vertex f put on the ground: it rides the body 1.5 stride per
+        # cycle through the band, but belongs to no foot, so slide ignores it; only
+        # penetration (whole mesh) sees it.
+        report = cert.measure(fixture(root_vertex_y=0.0), CONFIG, SCALE)
+        self.assertEqual(report['slide']['by_clip']['MARCH']['sampled_um'], 20001)
+        self.assertEqual(report['slide']['sampled_um'], self.report['slide']['sampled_um'])
+
     def test_the_band_follows_the_native_march(self):
         # Lift every MARCH stance 1 mm: H = 1.4 mm, b = 1.9 mm, and the soles are
         # still planted, so the MARCH stance slide is still measured.
@@ -315,8 +336,9 @@ class Fixture(unittest.TestCase):
             report = cert.measure(fixture(), CONFIG, SCALE)
         finally:
             MARCH.update(saved)
-        self.assertAlmostEqual(report['planting_band']['H_m'], .0014, places=12)
-        self.assertAlmostEqual(report['planting_band']['band_m'], .0019, places=12)
+        feet = report['planting_band']['feet']  # each foot lifted 1 mm: l 1.3 -> 1.8 mm, r 1.4 -> 1.9 mm
+        self.assertAlmostEqual(feet['l']['band_m'], .0018, places=12)
+        self.assertAlmostEqual(feet['r']['band_m'], .0019, places=12)
         self.assertTrue(report['stance']['pass'])
         self.assertEqual(report['slide']['by_clip']['MARCH']['sampled_um'], 20001)
 
@@ -344,11 +366,13 @@ class Fixture(unittest.TestCase):
         self.assertEqual(sorted(by), ['MARCH', 'PIVOT_LEFT', 'PIVOT_RIGHT'])
         self.assertEqual(by['MARCH']['total_um'], 1000001)
         self.assertEqual(by['PIVOT_LEFT']['sampled_um'], by['PIVOT_RIGHT']['sampled_um'])  # mirror clips
-        self.assertAlmostEqual(self.report['slide']['band_m'], .0009, places=12)
-        band = self.report['planting_band']  # native MARCH stances: l at 0.3 mm, r at 0.4 mm
-        self.assertAlmostEqual(band['H_m'], .0004, places=12)
-        self.assertAlmostEqual(band['band_m'], .0009, places=12)
-        self.assertEqual(band['inherited_from'], 'shipped native MARCH')
+        feet = self.report['planting_band']['feet']  # native MARCH stances: l at 0.3 mm, r at 0.4 mm
+        self.assertAlmostEqual(feet['l']['H_m'], .0003, places=12)
+        self.assertAlmostEqual(feet['l']['band_m'], .0008, places=12)
+        self.assertAlmostEqual(feet['r']['H_m'], .0004, places=12)
+        self.assertAlmostEqual(feet['r']['band_m'], .0009, places=12)
+        self.assertEqual(self.report['slide']['band_m'], {f: feet[f]['band_m'] for f in 'lr'})
+        self.assertEqual(self.report['planting_band']['inherited_from'], 'shipped native MARCH')
 
 
 class VertexSlide(unittest.TestCase):
