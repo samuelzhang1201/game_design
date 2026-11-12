@@ -180,21 +180,16 @@ static func along_locomotion_candidate(sampled: Dictionary, time_q: int) -> Dict
 
 ## What the drawn figures cannot show honestly refuses the whole unit (no partial
 ## publication): a v1 leg off the saved facing would walk sideways on forward-only
-## clips, and a v2 pivot needs that arm's PIVOT_LEFT/PIVOT_RIGHT clip.
-static func _candidate_render_error(piece: Dictionary, sampled: Dictionary) -> String:
+## clips, and a v2 row needs everything its arm's certified gait requires (Map3DCandidateGait).
+static func _candidate_render_error(ctx: Map3DContext, piece: Dictionary, sampled: Dictionary) -> String:
 	if piece["groups"].size() != sampled.rows.size(): return "Figures disagree with bodies"
 	for i: int in sampled.rows.size():
 		if piece["groups"][i]["slot"] != sampled.rows[i].slot: return "Figures disagree with bodies"
 	for i: int in sampled.rows.size():
 		var row: Dictionary = sampled.rows[i]
 		if row.has("move"):
-			for op: Dictionary in row.move.ops:
-				if op.kind != "pivot": continue
-				var clip := "PIVOT_RIGHT" if int(op.turn_udeg) > 0 else "PIVOT_LEFT"
-				if piece["groups"][i]["piece"]["anims"].is_empty(): return "%s has no %s clip: transverse leg refused" % [piece.get("model", "arm"), clip]
-				for anim: AnimationPlayer in piece["groups"][i]["piece"]["anims"]:
-					if Map3DUnits.clip_named(anim, clip).is_empty():
-						return "%s has no %s clip: transverse leg refused" % [piece.get("model", "arm"), clip]
+			var refused := Map3DCandidateGait.refusal(ctx, piece, piece["groups"][i]["piece"], row)
+			if not refused.is_empty(): return refused
 			continue
 		if int(row.get("budget_m", 0)) == 0: continue
 		var path: Array = row.path_m
@@ -301,40 +296,25 @@ static func _animate_candidate(ctx: Map3DContext, code: String, piece: Dictionar
 		var child: Dictionary = piece["groups"][i]["piece"]
 		var row: Dictionary = sample.rows[i]
 		var speed := 0.0
-		var pivot := ""
-		var phase := 0.0
 		if row.has("move"):
-			# v2: stop, pivot in place on the arm's PIVOT clip, then walk forward.
-			var time_q := _time_q(share)
-			var op := _locomotion_op(row.move, time_q)
-			var span := float(int(op.t1_q) - int(op.t0_q))
-			phase = clampf(float(time_q - int(op.t0_q)) / span, 0.0, 1.0)
-			if op.kind == "pivot":
-				pivot = "PIVOT_RIGHT" if int(op.turn_udeg) > 0 else "PIVOT_LEFT"
-			elif op.kind == "move":
-				var dx := BodyMotion._difference(int(op.b[0]), int(op.a[0]))
-				var dy := BodyMotion._difference(int(op.b[1]), int(op.a[1]))
-				speed = sqrt(dx * dx + dy * dy) * BodyMotion.LOCOMOTION_Q / span
-		else:
-			for segment: Dictionary in BodyMotion._segments(row.path_m, int(row.budget_m)):
-				if share < segment.t0 or share >= segment.t1: continue
-				var dx := BodyMotion._difference(int(segment.b[0]), int(segment.a[0]))
-				var dy := BodyMotion._difference(int(segment.b[1]), int(segment.a[1]))
-				speed = sqrt(dx * dx + dy * dy) / (segment.t1 - segment.t0)
-				break
+			# v2: only the arm's certified gait, posed from the committed op time (no clip playback).
+			var op := _locomotion_op(row.move, _time_q(share))
+			moving = moving or op.kind == "move"
+			turning = turning or op.kind == "pivot"
+			child["action"] = Map3DCandidateGait.pose(ctx, piece, child, row, _time_q(share))
+			continue
+		for segment: Dictionary in BodyMotion._segments(row.path_m, int(row.budget_m)):
+			if share < segment.t0 or share >= segment.t1: continue
+			var dx := BodyMotion._difference(int(segment.b[0]), int(segment.a[0]))
+			var dy := BodyMotion._difference(int(segment.b[1]), int(segment.a[1]))
+			speed = sqrt(dx * dx + dy * dy) / (segment.t1 - segment.t0)
+			break
 		moving = moving or speed > 0.0
-		turning = turning or not pivot.is_empty()
-		var action := pivot if not pivot.is_empty() else battle.action_for(code, Map3DUnitRig.action_for(speed > 0.0, order, stance))
+		var action := battle.action_for(code, Map3DUnitRig.action_for(speed > 0.0, order, stance))
 		var identity := code + ":" + str(row.slot)
 		if child.get("action", "") != action:
 			child["action"] = action
 			Map3DUnitRig.play(child["anims"], action, blend_s, identity)
-		if not pivot.is_empty():
-			# The pivot clip is scrubbed by the committed operation's phase, never by frame delta.
-			for anim: AnimationPlayer in child["anims"]:
-				anim.speed_scale = 0.0
-				if not anim.current_animation.is_empty(): anim.seek(phase * anim.current_animation_length, true)
-			continue
 		var world_speed := speed * float(ctx.meta["m_per_px"]) / float(ArmySystem.metres_per_pack_px(ctx.repo)) \
 			* slices * ctx.clock_speed() / ctx.repo.bal("time_day_seconds")
 		var stature := float(child.get("statures", [1.0])[0])
@@ -360,7 +340,7 @@ static func _geometry(ctx: Map3DContext, pieces: Dictionary, candidate: bool, co
 static func _pose(ctx: Map3DContext, code: String, piece: Dictionary, projected: Dictionary, history: Dictionary) -> String:
 	var sampled := _candidate_at(ctx, code, projected, history)
 	if sampled.mode == "invalid": return sampled.error
-	var refused := _candidate_render_error(piece, sampled)
+	var refused := _candidate_render_error(ctx, piece, sampled)
 	if not refused.is_empty(): return refused
 	for i: int in piece["groups"].size():
 		piece["groups"][i]["x_m"] = sampled.rows[i].x_m
