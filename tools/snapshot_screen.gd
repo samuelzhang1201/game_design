@@ -1051,7 +1051,8 @@ func _process(_delta: float) -> void:
 		_ledger_step()
 	if _root != null and _war_room:
 		_war_room_step()
-	if _root != null and _look3d.size() % 4 == 0 and _root.current_screen.has_method("map3d_view") \
+	if _root != null and not _look3d.is_empty() and _look3d.size() % 4 == 0 \
+			and _root.current_screen != null and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
 		for j in range(0, _look3d.size(), 4):
 			if _frames == int(_look3d[j + 3]):
