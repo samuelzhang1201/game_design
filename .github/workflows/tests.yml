@@ -34,6 +34,7 @@ jobs:
       - name: Check harness rules and handoff graph
         run: |
           python3 -m unittest discover -s .codex/hooks -p 'test_*.py'
+          python3 tools/test_check_pr_gate.py
           python3 tools/test_select_gut_tests.py
           python3 tools/test_run_tests.py
           python3 tools/test_run_with_timeout.py
@@ -78,7 +79,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: python3 .codex/hooks/task-handover.py --check-pr
+        run: python3 tools/check_pr_gate.py
 
   gut-selected:
     needs: harness-checks
