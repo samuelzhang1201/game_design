@@ -57,16 +57,32 @@ frames per turn. Each sheet puts the shipped 180° clip scrubbed for that turn (
 - `turn-90deg-before-after.png`
 - `turn-180deg-before-after.png` (identical by construction)
 
-An independent critic, given only the sheets, `taste.md` and the rubric, found no taste-principle
-break and judged the provider a clear improvement:
-- At 2° the feet step almost in place.
-- At 90° they step round about a quarter turn and end uncrossed. Before, the legs end crossed.
+The sheets are rendered with the final leg IK. Two independent critics saw them, each given only the
+sheets, `taste.md` and the rubric.
 
-It recorded two points, neither blocking:
-- **A raised left heel at the 2° endpoints.** This is the MARCH-0 pose that the consumer
-  requirement holds, and the shipped clip has it too.
-- **Boots that seem to overlap at 90°.** This is the camera angle. Measured, the closest boot or shin
-  gap is 76 mm (model) in provider turns, against 90 mm in the native clip, so nothing
-  interpenetrates.
+**First pass.** No taste-principle break, and the provider a clear improvement:
+- at 2° the feet step almost in place;
+- at 90° they step round about a quarter turn and end uncrossed, where the scrubbed clip crosses
+  them.
+
+**Second pass**, after the IK fix. No principle-breaking defect. The provider ranks clearly better at
+2° and slightly better at 90°, and 180° reads as the authored turn.
+
+Three points were recorded, none blocking:
+- **The far foot is lifted at the 2° endpoints.** This is the MARCH-0 pose the consumer requirement
+  holds, and the shipped clip has the same pose.
+- **At 90° the far toe sits close behind the near heel (phases 0.57–0.71).** It does so in both rows.
+  Measured over 129 phases, the closest distance between the two lower legs' bone axes (knee–ankle
+  and ankle–toe, skeleton space) barely changes:
+
+  | Turn | Native | Provider |
+  |---|---:|---:|
+  | +2° | 299.5 mm | 290.0 mm |
+  | +90° | 299.5 mm | 297.9 mm |
+  | −90° | 282.8 mm | 282.2 mm |
+
+  The provider brings the legs no closer than the shipped clip does.
+- **All sheets are close views.** At playing zoom a turn this small barely shows; the archer's
+  map-zoom sheets are in `march-reauthor/`.
 
 The MARCH foot views and map-zoom sheets are in `march-reauthor/` (#299).
