@@ -583,27 +583,6 @@ static func deployment(repo: DataRepository, state: GameState, battle: Dictionar
 	return out
 
 
-## CF06 candidate melee input: `{engaged, fit, reason}` adapted from the admitted lawful
-## physical query at the state's own boundary (its saved battle day, or the safe boundary
-## when no day is open). A rejection is never a legitimate zero: it returns -1 counts and
-## a "Rejected:" reason. No front/reserve fallback.
-static func melee_counts(repo: DataRepository, state: GameState, battle: Dictionary, unit: String, enemies: Array) -> Dictionary:
-	var rejected := {"engaged": -1, "fit": -1, "reason": "Rejected: candidate melee needs an admitted battle boundary"}
-	if repo == null or state == null or not BodyMotion._loco_integer(battle.get("id")): return rejected
-	var boundary: Dictionary
-	if state.day_resolution.get("body_battle") is Dictionary:
-		var raw := DayResolution.body_battle_incompatibility_reason(state.day_resolution)
-		if not raw.is_empty(): return {"engaged": -1, "fit": -1, "reason": "Rejected: " + raw}
-		boundary = BodyBattleMotion._boundary(state)
-	elif state.day_resolution.is_empty(): boundary = BodyBattle.safe_boundary(state)
-	else: return rejected
-	var sorted := enemies.duplicate()
-	sorted.sort()
-	var query := BodyBattleContact.query_candidate(repo, state, int(battle.id), unit, sorted, boundary)
-	if query.status != "complete": return {"engaged": -1, "fit": -1, "reason": "Rejected: " + String(query.reason)}
-	return {"engaged": int(query.engaged), "fit": int(query.fit), "reason": String(query.reason)}
-
-
 ## Saved front-group contact, with active pursuit restricted to its received
 ## region. An attacking opponent still permits self-defence outside it.
 ## A pursuit_target asks only for pursuit contact with that enemy, not defence.
@@ -970,3 +949,24 @@ static func _body_close_front(repo: DataRepository, source: GameState, battle: D
 		if pair.ok and not pair.overlap and pair.in_reach \
 			and ArmySystem._body_path_terrain(MarchPath.of_pack(repo), [point, to], 0).is_empty(): return delta
 	return []
+
+
+## CF06 candidate melee input: `{engaged, fit, reason}` adapted from the admitted lawful
+## physical query at the state's own boundary (its saved battle day, or the safe boundary
+## when no day is open). A rejection is never a legitimate zero: it returns -1 counts and
+## a "Rejected:" reason. No front/reserve fallback.
+static func melee_counts(repo: DataRepository, state: GameState, battle: Dictionary, unit: String, enemies: Array) -> Dictionary:
+	var rejected := {"engaged": -1, "fit": -1, "reason": "Rejected: candidate melee needs an admitted battle boundary"}
+	if repo == null or state == null or not BodyMotion._loco_integer(battle.get("id")): return rejected
+	var boundary: Dictionary
+	if state.day_resolution.get("body_battle") is Dictionary:
+		var raw := DayResolution.body_battle_incompatibility_reason(state.day_resolution)
+		if not raw.is_empty(): return {"engaged": -1, "fit": -1, "reason": "Rejected: " + raw}
+		boundary = BodyBattleMotion._boundary(state)
+	elif state.day_resolution.is_empty(): boundary = BodyBattle.safe_boundary(state)
+	else: return rejected
+	var sorted := enemies.duplicate()
+	sorted.sort()
+	var query := BodyBattleContact.query_candidate(repo, state, int(battle.id), unit, sorted, boundary)
+	if query.status != "complete": return {"engaged": -1, "fit": -1, "reason": "Rejected: " + String(query.reason)}
+	return {"engaged": int(query.engaged), "fit": int(query.fit), "reason": String(query.reason)}
