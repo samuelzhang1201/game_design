@@ -17,10 +17,12 @@ PRODUCT_FIELDS = DECLARED_PRODUCT_FIELDS + ('owner_approval',)
 PREFLIGHT_FIELDS = PRODUCT_FIELDS + ('dependencies', 'owned_files', 'acceptance', 'worktree', 'branch')
 MAX_UNWIRED_PREREQUISITE_DEPTH = 2
 MAX_UNWIRED_BACKLOG = 5
-HARNESS_PATHS = ('.codex', '.github', 'AGENTS.md', 'CLAUDE.md', 'cicd_procedure.md', 'run_tests.sh',
+HARNESS_PATHS = ('.codex', '.claude/agents', '.claude/hooks', '.claude/settings.json', '.github',
+                 'AGENTS.md', 'CLAUDE.md', 'cicd_procedure.md', 'run_tests.sh',
                  'tests/categories.json', 'tools/select_gut_tests.py', 'tools/test_select_gut_tests.py',
                  'tools/run_with_timeout.py', 'tools/test_run_with_timeout.py', 'tools/test_run_tests.py')
-FIRST_CHECKED_PR = 279  # Earlier PRs finish under their existing declaration.
+# The first PR checked on each branch prefix; earlier PRs finish under their existing declaration.
+FIRST_CHECKED_PR = {'codex/': 279, 'claude/': 294}
 
 
 def is_harness_file(name):
@@ -298,8 +300,9 @@ def check_product_gate(steps, task, refused):
 
 
 def pr_body_problems(body, branch, number, files):
-    """A Codex PR repeats its product declaration, so CI covers work that never went through dispatch."""
-    if not branch.startswith('codex/') or number < FIRST_CHECKED_PR:
+    """A Codex or Claude Code PR declares what it does for the MVP, so CI covers work that never went through dispatch."""
+    first = next((n for prefix, n in FIRST_CHECKED_PR.items() if branch.startswith(prefix)), None)
+    if first is None or number < first:
         return []
     fields, problems = {}, []
     for name in DECLARED_PRODUCT_FIELDS:
@@ -329,7 +332,7 @@ def check_pr():
     for problem in problems:
         print(problem)
     if problems:
-        print('Declare the product fields as standalone PR body lines; see the product gate in .codex/harness.md.')
+        print('Declare the product fields as standalone PR body lines; see the product gate in cicd_procedure.md.')
     return 1 if problems else 0
 
 

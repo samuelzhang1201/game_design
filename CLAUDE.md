@@ -88,7 +88,7 @@ docs/             # design/ (PRD, systems, chapter 0), references/, superpowers/
 ## Done means
 
 1. Run checks relevant to the owned change on its final code state; pure harness/config/guidance changes run Python/shell/config/guide checks without Godot. Game changes retain targeted GUT, hand-computed formula and relevant save/determinism checks. Follow the actual runner/workflow and `cicd_procedure.md`; do not run a full local suite routinely or reuse results after relevant code/data changes.
-2. One small step lands through its own PR against `main` and merges only after every required check on its current HEAD has passed; no direct main push, timeout exception or next feature in the same PR. `cicd_procedure.md` describes the checks; skipped/absent required checks are not success.
+2. One small step lands through its own PR against `main` and merges only after every required check on its current HEAD has passed; no direct main push, timeout exception or next feature in the same PR. Its body declares `prd_step:`, `player_outcome:` and `wired:` as standalone lines (`harness-checks` fails a `claude/` PR without them; `cicd_procedure.md`). `cicd_procedure.md` describes the checks; skipped/absent required checks are not success.
 3. A new engine formula has its hand-computed GUT test; a new rule is written into the right nested `CLAUDE.md` (or its `guide/`), not here.
 4. A visual change has been through `visual-review` — or, in a cloud session, the final message says it still needs it.
 
