@@ -1,26 +1,23 @@
 ## One small change
 
-Plan step:
-
 Problem → resulting behavior:
 
 Owned files / boundaries:
 
 Acceptance (one independently verifiable result):
 
-## Exactly two responsible sessions
+## Verification on the current HEAD
 
-- Implementation session:
-- Unique `<step>-Review` session (assigned at handoff):
+Commands / test categories and results:
 
-No other session/subagent participates in this step or PR. Oversized steps are split before implementation; follow-on features use separate branches and PRs after this one merges.
+Independent review (a read-only subagent or /code-review) and remaining risks:
 
-## Current-HEAD verification
+## Product gate (standalone lines; `harness-checks` fails a `claude/` PR without them)
 
-Relevant test categories / commands and results:
+prd_step:
+player_outcome:
+wired:
 
-CI run / commit:
-
-Review outcome and remaining risks:
-
-Implementation makes all changes and fixes. Review only reviews, returns findings to the original implementation session, re-reviews the resulting HEAD and merges after all required current-HEAD checks pass. Repeat within the same pair as needed; Review never edits the PR. Pending/failing/timed-out required checks do not permit merge.
+<!-- prd_step: a PRD step (Step 5, CS-5.1, AR-2, M3 ...) or harness for a PR that changes only harness files.
+     wired: true only if merging this PR alone changes ordinary campaign play; tools, proofs and contracts are false.
+     A sixth unwired PR in a row also needs a line "owner_approval: <the owner's words naming #N>". -->

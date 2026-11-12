@@ -95,7 +95,6 @@ docs/             # design/ (PRD, systems, chapter 0), references/, superpowers/
 ## Execution discipline
 
 - **One small problem, one step, one PR.** A session discusses and implements only one bounded, independently testable change. Split an oversized plan step before coding; leave follow-on features and unrelated cleanup for later PRs. Never accumulate several steps in an existing PR.
-- **Codex sessions** additionally follow `AGENTS.md` and `.codex/harness.md` (the implementation/Review session pair, one-to-one handoff markers, model routing). Those rules bind Codex only, not a Claude Code session.
 
 ## Conventions
 

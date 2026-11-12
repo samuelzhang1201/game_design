@@ -599,11 +599,22 @@ func test_v2_stop_pivot_move_hand_computed_l() -> void:
 func test_v2_pivot_needs_the_arms_clip_else_refuses_the_unit() -> void:
 	var f := _fixture()
 	f.state.army_roster[f.code].organization_arm = "infantry"
-	assert_eq(MapObjects.army_piece(f.repo, f.state.army_roster[f.code]), "infantry", "this arm has MARCH only")
+	assert_eq(MapObjects.army_piece(f.repo, f.state.army_roster[f.code]), "infantry")
 	var envelope := _commit_v2(f, [[0, 0], [3, 0], [3, 4]], 10)
 	f.ctx.day_fn = func() -> float: return 0.35
 	var layer := _layer(f, envelope)
 	var piece: Dictionary = layer.built_piece(f.code)
+	# Every installed arm has its pivots now: give THIS figure a copy of its clips without them
+	# (the imported library is shared by every infantry instance, so it is never edited).
+	for anim: AnimationPlayer in piece.groups[0].piece.anims:
+		for library: StringName in anim.get_animation_library_list():
+			var stripped := anim.get_animation_library(library).duplicate() as AnimationLibrary
+			for clip: StringName in [&"PIVOT_LEFT", &"PIVOT_RIGHT"]:
+				if stripped.has_animation(clip): stripped.remove_animation(clip)
+			anim.remove_animation_library(library)
+			anim.add_animation_library(library, stripped)
+	layer.step(0.0)
+	piece = layer.built_piece(f.code)
 	assert_false(piece.groups[0].piece.node.is_visible_in_tree())
 	assert_string_contains(String(piece.candidate_error), "no PIVOT_RIGHT clip")
 	assert_false(layer.screen_rects().has(f.code))
