@@ -167,6 +167,14 @@ class Pieces(unittest.TestCase):
         joints = np.array([[0, 1], [0, 1], [2, 1]])
         weights = np.array([[.6, .4], [.5, .5], [.25, .75]])
         self.assertEqual(cert.dominant_bones(joints, weights, binds).tolist(), [7, 3, 3])
+        # Weights are summed per bone: .3 + .3 on bone 7 (two slots) beat .4 on bone 3.
+        # A vertex with no weight belongs to no bone.
+        self.assertEqual(cert.dominant_bones(np.array([[0, 0, 1], [0, 1, 2]]),
+                                             np.array([[.3, .3, .4], [0, 0, 0]]), binds).tolist(), [7, -1])
+
+    def test_a_bone_under_two_feet_is_rejected(self):
+        with self.assertRaises(ValueError):
+            cert.measure(fixture(), dict(CONFIG, feet={'l': ['foot_l'], 'r': ['foot_r', 'foot_l']}), SCALE)
 
     def test_margin_adds_before_rounding(self):
         w = cert.Worst()

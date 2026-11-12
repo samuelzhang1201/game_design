@@ -192,11 +192,14 @@ class Model:
 
 
 def dominant_bones(joints, weights, binds):
-    """Per vertex, the skeleton bone carrying its largest skin weight; a tie goes
-    to the lower bone index."""
+    """Per vertex, the skeleton bone carrying its largest skin weight, summed over
+    the slots that name the same bone; a tie goes to the lower bone index; a
+    vertex with no weight at all has no bone (-1)."""
     bones = np.array([bone for bone, _ in binds])[joints]
-    top = weights.max(axis=1, keepdims=True)
-    return np.where(weights == top, bones, np.iinfo(np.int64).max).min(axis=1)
+    total = (weights[:, None, :] * (bones[:, None, :] == bones[:, :, None])).sum(axis=2)
+    top = total.max(axis=1, keepdims=True)
+    best = np.where(total == top, bones, np.iinfo(np.int64).max).min(axis=1)
+    return np.where(top[:, 0] > 0, best, -1)
 
 
 def patches(model, feet):
@@ -204,6 +207,9 @@ def patches(model, feet):
     largest skin weight (ties to the lower bone index); vertices of no foot are
     never planted (penetration still covers the whole mesh)."""
     names = [b['name'] for b in model.dump['bones']]
+    listed = [b for bones in feet.values() for b in bones]
+    if len(listed) != len(set(listed)):
+        raise ValueError('a bone is listed under two feet')
     dominant = np.concatenate([dominant_bones(m['j'], m['w'], m['binds']) for m in model.meshes])
     out = {}
     for foot, bones in feet.items():
