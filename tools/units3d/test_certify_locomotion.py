@@ -93,6 +93,30 @@ class Bounds(unittest.TestCase):
         self.assertEqual(cert.um(0.0), 0)
 
 
+class MarchTravel(unittest.TestCase):
+    def test_phase_map_by_hand(self):
+        # the cavalry contract's synthetic f: (0,0), (.5,1), (1,3); F(z) = floor(z) 3 + f(frac z)
+        f = cert.march_travel([[0, 0], [.5, 1], [1, 3]], 9.0)
+        self.assertAlmostEqual(f(.25), .5)
+        self.assertAlmostEqual(f(.75), 2.0)
+        self.assertAlmostEqual(f(1.75), 5.0)
+        self.assertAlmostEqual(f(1.0), 3.0)
+
+    def test_no_map_is_the_constant_stride(self):
+        self.assertAlmostEqual(cert.march_travel(None, 2.0)(1.25), 2.5)
+
+    def test_a_map_must_rise_from_zero_to_one(self):
+        for bad in ([[0, 0], [.5, 1], [.9, 3]], [[0, 0], [.5, 2], [1, 1]], [[.1, 0], [1, 3]]):
+            with self.assertRaises(ValueError):
+                cert.march_travel(bad, 1.0)
+
+    def test_cavalry_reads_its_army_art_map(self):
+        m = cert.army_phase_map('cavalry')
+        self.assertEqual(m[0], [0.0, 0.0])
+        self.assertEqual(m[-1][0], 1.0)
+        self.assertIsNone(cert.army_phase_map('infantry'))
+
+
 class Turns(unittest.TestCase):
     def test_tie_wrap_and_microdegree(self):
         self.assertEqual(cert.shortest(0, 180_000_000), 180_000_000)
