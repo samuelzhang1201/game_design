@@ -6,7 +6,15 @@ every equipped mesh with the native imported arrays and bone poses, and checks:
 
   1. penetration  any vertex below the rendered ground, every sample;
   2. hover        the planted material patch above the seated plane, stance only;
-  3. slide        the planted patch's ground-projected drift from touchdown, per stance;
+  3. slide        per foot vertex: while it lies within its foot's planting band b of
+                  the seated plane it is planted, and its slide is its ground-
+                  projected displacement from where it touched down (ruling
+                  2026-11-11: the planted part of the sole; heel-to-toe roll is not
+                  slide, skating is). Per foot, b = max(0.5 mm, H + 0.5 mm), H
+                  inherited from the shipped native MARCH (`planting_band`); a
+                  vertex belongs to the foot whose bone carries its largest skin
+                  weight; a stance is where a foot's lowest vertex is within its b,
+                  and hover is read there;
   4. seam         any vertex jump at a clip boundary;
   plus the envelope against the arm's footprint radius and the skin diagnostic.
 
@@ -27,7 +35,10 @@ the loop seam (its last pose sampled just before the wrap), MARCH -> pivot,
 pivot -> MARCH, stop and start to the `hold_clip`, and the stationary pivot
 from and to it, at the phases the config admits (`march_stop_phases`,
 `march_start_phases`, `hold_phases`: a list, or '*' for any sampled phase,
-i.e. a mid-stance cut). Every foot must stand at least once in every
+i.e. a mid-stance cut). `hold_clip` "MARCH" holds the MARCH pose a unit stopped
+in (owner ruling 2026-11-10: stop, start and hold only at the MARCH phases where
+the pivots enter and leave MARCH); the certificate records these phases as
+`consumer_requirements`. Every foot must stand at least once in every
 locomotion clip, or hover and slide go unmeasured and the run fails. Hover is
 the patch's LOWEST vertex above the seated plane. The ground is flat at the
 seat lift below the origin unless `slope` (rise per run, applied at every yaw)
@@ -57,6 +68,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CLIPS = ['PIVOT_LEFT', 'PIVOT_RIGHT', 'MARCH']  # BodyMotion._loco_policy's list
 BOUND_WORLD_M = {'contact': 0.60, 'seam': 0.05}  # R-A
 SKIN_RATIO, SKIN_MIN_M = 4.0, 0.03  # R-B, unchanged thresholds
+STANCE_BAND_M = 0.0005  # the planting band's floor and its allowance over native MARCH (ruling 2026-11-11)
 TURN = 360_000_000
 LOCO_Q = 1_000_000  # BodyMotion.LOCOMOTION_Q
 UNIFORM = 512
@@ -179,24 +191,32 @@ class Model:
         return self.points(matrix4(np.array([b['global_rest'] for b in self.dump['bones']])[:, :3, :]))
 
 
-def patches(model, feet, band):
-    """Material patch per foot, chosen ONCE in rest: the foot-bound vertices of the
-    body mesh within `band` model metres of that foot's lowest rest vertex."""
-    rest = model.rest_points()
+def dominant_bones(joints, weights, binds):
+    """Per vertex, the skeleton bone carrying its largest skin weight, summed over
+    the slots that name the same bone; a tie goes to the lower bone index; a
+    vertex with no weight at all has no bone (-1)."""
+    bones = np.array([bone for bone, _ in binds])[joints]
+    total = (weights[:, None, :] * (bones[:, None, :] == bones[:, :, None])).sum(axis=2)
+    top = total.max(axis=1, keepdims=True)
+    best = np.where(total == top, bones, np.iinfo(np.int64).max).min(axis=1)
+    return np.where(top[:, 0] > 0, best, -1)
+
+
+def patches(model, feet):
+    """Ruling 2026-11-11: a vertex belongs to the foot whose bone carries its
+    largest skin weight (ties to the lower bone index); vertices of no foot are
+    never planted (penetration still covers the whole mesh)."""
     names = [b['name'] for b in model.dump['bones']]
+    listed = [b for bones in feet.values() for b in bones]
+    if len(listed) != len(set(listed)):
+        raise ValueError('a bone is listed under two feet')
+    dominant = np.concatenate([dominant_bones(m['j'], m['w'], m['binds']) for m in model.meshes])
     out = {}
     for foot, bones in feet.items():
-        ids = {names.index(b) for b in bones}
-        chosen = []
-        for part, m in enumerate(model.meshes):
-            bound = np.array([bone in ids for bone, _ in m['binds']])
-            share = np.where(bound[m['j']], m['w'], 0).sum(axis=1)
-            chosen.append(np.flatnonzero(share > .8) + model.offsets[part])
-        chosen = np.concatenate(chosen)
-        if not len(chosen):
-            raise ValueError('no vertex bound to foot ' + foot)
-        low = rest[chosen, 1].min()
-        out[foot] = chosen[rest[chosen, 1] <= low + band]
+        ids = np.flatnonzero(np.isin(dominant, [names.index(b) for b in bones]))
+        if not len(ids):
+            raise ValueError('no vertex belongs to foot ' + foot)
+        out[foot] = ids
     return out
 
 
@@ -229,14 +249,16 @@ def check_coverage(dump, extra):
 
 
 def stance_runs(heights, phases, rule, foot, loop):
-    """Index runs where `foot` stands. rule 'lowest:N' = among the N lowest
-    patches at that sample; {foot: [[p0, p1], ...]} = authored intervals."""
-    if isinstance(rule, dict):
-        return [[i for i, p in enumerate(phases) if a <= p <= b] for a, b in rule.get(foot, [])]
-    n = int(rule.split(':')[1])
-    names = sorted(heights)
-    order = np.argsort(np.array([heights[f] for f in names]), axis=0, kind='stable')
-    down = (order[:n] == names.index(foot)).any(axis=0)
+    """Index runs where `foot` stands: rule ('lowest', N) = among the N lowest
+    feet at that sample; ('band', b) = its lowest sole vertex within b of the
+    seated plane. A run crossing a looping clip's seam is ONE stance."""
+    kind, value = rule
+    if kind == 'lowest':
+        names = sorted(heights)
+        order = np.argsort(np.array([heights[f] for f in names]), axis=0, kind='stable')
+        down = (order[:value] == names.index(foot)).any(axis=0)
+    else:
+        down = np.array(heights[foot]) <= value
     runs, current = [], []
     for i, d in enumerate(down):
         if d:
@@ -247,8 +269,53 @@ def stance_runs(heights, phases, rule, foot, loop):
     if current:
         runs.append(current)
     if loop and len(runs) > 1 and runs[0][0] == 0 and runs[-1][-1] == len(phases) - 1:
-        runs[0] = runs.pop() + runs[0]  # the stance crossing the loop seam is ONE stance
+        runs[0] = runs.pop() + runs[0]
     return [r for r in runs if r]
+
+
+def planting_band(heights, phases, loop):
+    """Ruling 2026-11-11, inherited from the shipped native MARCH, PER FOOT: a
+    foot's stances there are its maximal runs among the lower half of the feet;
+    H_f is the highest of that foot's stance minimum sole heights above the seated
+    plane and its band is max(STANCE_BAND_M, H_f + STANCE_BAND_M).
+    Returns {foot: (H_f, b_f)}."""
+    n = max(1, len(heights) // 2)
+    out = {}
+    for f in sorted(heights):
+        lows = [min(heights[f][i] for i in run) for run in stance_runs(heights, phases, ('lowest', n), f, loop)]
+        if not lows:
+            raise ValueError(f'native MARCH has no stance of foot {f} to derive its planting band from')
+        high = float(max(lows))
+        out[f] = (high, max(STANCE_BAND_M, high + STANCE_BAND_M))
+    return out
+
+
+def vertex_slide(heights, xz, band):
+    """heights (N, V) above the seated plane and world xz (N, V, 2), in time order.
+    Each vertex is planted while its height <= band, anchored where it entered the
+    band; returns (worst displacement from its anchor, margin, (sample, vertex,
+    touchdown sample)). The margin is TWICE the largest one-step move of a vertex
+    planted at either end of a step: a vertex entering between samples is
+    anchored up to one step late and one leaving is measured up to one step early,
+    and one slide can lose both."""
+    anchor = np.zeros(xz.shape[1:])
+    touch = np.full(heights.shape[1], -1)
+    before = np.zeros(heights.shape[1], dtype=bool)
+    value, margin, witness = 0.0, 0.0, None
+    for i in range(len(heights)):
+        planted = heights[i] <= band
+        new = planted & ~before
+        anchor[new], touch[new] = xz[i][new], i
+        if planted.any():
+            d = np.where(planted, np.linalg.norm(xz[i] - anchor, axis=1), -1.0)
+            v = int(np.argmax(d))
+            if witness is None or d[v] > value:
+                value, witness = float(d[v]), (i, v, int(touch[v]))
+        either = planted | before
+        if i and either.any():
+            margin = max(margin, float(np.linalg.norm(xz[i] - xz[i - 1], axis=1)[either].max()))
+        before = planted
+    return value, 2 * margin, witness
 
 
 class Worst:
@@ -286,15 +353,26 @@ def required_boundaries(config):
     stop = phase_list(config['march_stop_phases'], 'march_stop_phases')
     start = phase_list(config['march_start_phases'], 'march_start_phases')
     held = phase_list(config['hold_phases'], 'hold_phases')
-    if held == '*' and start == '*':
-        raise ValueError('hold_phases and march_start_phases cannot both be "*" (declare one side)')
     side = lambda v: ['*'] if v == '*' else v
     out = [['MARCH', LOOP_END, 'MARCH', 0.0]]
     for pivot in ('PIVOT_LEFT', 'PIVOT_RIGHT'):
         out += [['MARCH', p, pivot, 0.0] for p in side(stop)] + [[pivot, 1.0, 'MARCH', p] for p in side(start)]
-        out += [[hold, p, pivot, 0.0] for p in side(held)] + [[pivot, 1.0, hold, 0.0]]
-    out += [['MARCH', p, hold, 0.0] for p in side(stop)]
-    out += [[hold, a, 'MARCH', b] for a in side(held) for b in side(start)]
+    if hold == 'MARCH':
+        # The held pose IS the MARCH pose it stopped in (a stop phase) or the pivot
+        # ended in (a start phase, whose PIVOT(1) -> MARCH(h) seam is above). A hold
+        # is left by resuming at h (no seam) or by turning: MARCH(h) -> PIVOT(0).
+        if held == '*' or not set(held) <= set(side(stop)) | set(side(start)):
+            raise ValueError('a MARCH hold keeps a pose it stopped or turned into: hold_phases must be '
+                             'admitted stop or start phases')
+        for pivot in ('PIVOT_LEFT', 'PIVOT_RIGHT'):
+            out += [b for b in (['MARCH', h, pivot, 0.0] for h in held) if b not in out]
+        return out + [b for b in config.get('boundaries', []) if b not in out]
+    if held == '*' and '*' in (stop, start):
+        raise ValueError('hold_phases and a MARCH phase list cannot both be "*" (declare one side)')
+    for pivot in ('PIVOT_LEFT', 'PIVOT_RIGHT'):
+        out += [[hold, h, pivot, 0.0] for h in side(held)] + [[pivot, 1.0, hold, h] for h in side(held)]
+    out += [['MARCH', p, hold, h] for p in side(stop) for h in side(held)]
+    out += [[hold, h, 'MARCH', b] for h in side(held) for b in side(start)]
     return out + [b for b in config.get('boundaries', []) if b not in out]
 
 
@@ -303,7 +381,7 @@ def measure(dump, config, scale):
     {k, simulation_scale, lift_model_m}."""
     model = Model(dump)
     bounds = bounds_um(scale['k'])
-    feet = patches(model, config['feet'], config.get('patch_band_m', .005))
+    feet = patches(model, config['feet'])
     forward = np.array(config['forward'], dtype=float)
     stride = float(config['stride_m'])
     slope = float(config.get('slope', 0.0))
@@ -313,7 +391,8 @@ def measure(dump, config, scale):
     grid = turn_grid()
     boundaries = required_boundaries(config)
 
-    def prov_of(clip):  # a provider poses the locomotion clips only; the hold clip is native
+    def prov_of(clip):  # a provider poses the locomotion clips, MARCH (and so a MARCH hold) included;
+        # a separate hold clip is native
         return provider and clip in CLIPS
 
     if provider:
@@ -321,6 +400,19 @@ def measure(dump, config, scale):
             if not by.get((clip_for(g['turn_udeg']), g['turn_udeg'], True)):
                 raise ValueError(f"no provider stream for turn {g['turn_udeg']}")
     pen, hov, sld, env = Worst(), Worst(), Worst(), Worst()
+    # The planting band, from the native MARCH stream (never a provider's).
+    native = by[('MARCH', None, False)]
+    native_heights = {f: [] for f in feet}
+    for s in native:
+        p = model.points(s['_g'])
+        for f, ids in feet.items():
+            native_heights[f].append(float(p[ids, 1].min()))
+    bands = planting_band(native_heights, [s['phase'] for s in native],
+                          dump['clips']['MARCH']['loop_mode'] != 0)
+    band_v = np.full(model.offsets[-1], -np.inf)  # a vertex of no foot is never planted
+    for f, ids in feet.items():
+        band_v[ids] = bands[f][1]
+    slide_by_clip = {}
     missing = []  # a foot with no stance in a locomotion clip leaves hover and slide unmeasured
 
     def world(clip, phase, points, turn, cycle=0):
@@ -345,7 +437,8 @@ def measure(dump, config, scale):
         loop = clip == 'MARCH' and dump['clips']['MARCH']['loop_mode'] != 0
         phases = [s['phase'] for s in rows]
         heights = {f: [] for f in feet}
-        patch_pts = {f: [] for f in feet}
+        patch_y = {f: [] for f in feet}
+        reach = np.zeros(model.offsets[-1], dtype=bool)
         prev = None
         for s in rows:
             p = model.points(s['_g'])
@@ -362,33 +455,38 @@ def measure(dump, config, scale):
             prev = p
             for f, ids in feet.items():
                 heights[f].append(p[ids, 1].min())
-                patch_pts[f].append(p[ids])
+                patch_y[f].append(p[ids, 1])
+            reach |= p[:, 1] <= band_v
         if clip not in CLIPS:
             continue  # the hold clip: penetration and envelope only
-        rule = config['stance'][clip]
         turns = [turn] if clip == 'MARCH' or turn is not None else \
             [g['turn_udeg'] for g in grid if clip_for(g['turn_udeg']) == clip]
         for f in feet:
-            runs = stance_runs(heights, phases, rule, f, loop)
+            runs = stance_runs(heights, phases, ('band', bands[f][1]), f, loop)
             if not runs:
-                missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f})
+                missing.append({'clip': clip, 'turn_udeg': turn, 'foot': f, 'reason': 'no stance'})
             for run in runs:
-                cycles = np.cumsum([0] + [1 if b < a else 0 for a, b in zip(run, run[1:])])
                 for k, i in enumerate(run):
                     hov.offer(heights[f][i], {'clip': clip, 'foot': f, 'phase': phases[i], 'turn_udeg': turn})
                     if k:
-                        hov.widen(np.abs(patch_pts[f][i][:, 1] - patch_pts[f][run[k - 1]][:, 1]).max())
-                for t in turns:
-                    anchor = world(clip, phases[run[0]], patch_pts[f][run[0]], t)[:, [0, 2]]
-                    last = None
-                    for k, i in enumerate(run):
-                        w = world(clip, phases[i], patch_pts[f][i], t, cycles[k])[:, [0, 2]]
-                        sld.offer(np.linalg.norm(w - anchor, axis=1).max(),
-                                  {'clip': clip, 'foot': f, 'turn_udeg': t, 'touchdown_phase': phases[run[0]],
-                                   'phase': phases[i]})
-                        if last is not None:
-                            sld.widen(np.linalg.norm(w - last, axis=1).max())
-                        last = w
+                        hov.widen(np.abs(patch_y[f][i] - patch_y[f][run[k - 1]]).max())
+        # Slide, per foot vertex that reaches its foot's band:
+        # skin again keeping only those. Heights are yaw-invariant. A looping MARCH
+        # runs twice so a stance can cross the seam.
+        ids = np.flatnonzero(reach)
+        pts = np.array([model.points(s['_g'])[ids] for s in rows]) if len(ids) else np.zeros((len(rows), 0, 3))
+        per_clip = slide_by_clip.setdefault(clip, Worst())
+        frames = [(i, c) for c in range(2 if loop else 1) for i in range(len(rows))]
+        for t in turns:
+            w = np.array([world(clip, phases[i], pts[i], t, c)[:, [0, 2]] for i, c in frames])
+            value, margin, hit = vertex_slide(pts[[i for i, _ in frames], :, 1], w, band_v[ids]) if pts.shape[1] \
+                else (0.0, 0.0, None)
+            if hit is not None:
+                for worst in (sld, per_clip):
+                    worst.offer(value, {'clip': clip, 'turn_udeg': t, 'touchdown_phase': phases[frames[hit[2]][0]],
+                                        'phase': phases[frames[hit[0]][0]], **model.where(int(ids[hit[1]]))})
+            sld.widen(margin)
+            per_clip.widen(margin)
 
     # Seams: both one-sided values at every boundary, compared in the receiving
     # clip's model frame (the consumer's yaw and position are continuous there).
@@ -453,7 +551,14 @@ def measure(dump, config, scale):
         'bounds_um': bounds,
         'penetration': pen.report(bounds['contact']),
         'hover': hov.report(bounds['contact']),
-        'slide': sld.report(bounds['contact']),
+        'planting_band': {'feet': {f: {'H_m': h, 'band_m': b} for f, (h, b) in bands.items()},
+                          'inherited_from': 'shipped native MARCH',
+                          'rule': 'per foot: b_f = max(0.5 mm, H_f + 0.5 mm); H_f = highest of the foot\'s per-stance '
+                                  'minimum sole heights, stances = runs among the lower half of the feet; a vertex '
+                                  'belongs to the foot whose bone carries its largest skin weight (ties: lower bone index); '
+                                  'vertices of no foot are never planted'},
+        'slide': {**sld.report(bounds['contact']), 'band_m': {f: b for f, (_, b) in bands.items()},
+                  'by_clip': {c: w.report(bounds['contact']) for c, w in sorted(slide_by_clip.items())}},
         # No boundary configured is a failure: every arm has at least its loop seam.
         'seam': {**(seam_worst or Worst().report(bounds['seam'])), 'pass': bool(seams) and all(s['pass'] for s in seams),
                  'boundaries': seams},
@@ -627,7 +732,7 @@ def capture(config, godot, work, extra):
         'config_version=5\n[application]\nconfig/name="loco-cert numeric extraction"\n'
         '[rendering]\nrenderer/rendering_method="gl_compatibility"\n')
     (project / 'capture.gd').write_text(CAPTURE)
-    request = {'scene': 'res://' + config['scene'], 'clips': CLIPS + [config['hold_clip']], 'uniform': UNIFORM,
+    request = {'scene': 'res://' + config['scene'], 'clips': CLIPS + [c for c in [config['hold_clip']] if c not in CLIPS], 'uniform': UNIFORM,
                'extra_phases': sorted(set(extra)), 'turns': [g['turn_udeg'] for g in turn_grid()],
                'provider': 'res://' + config['provider'] if config.get('provider') else ''}
     (work / 'request.json').write_text(json.dumps(request))
@@ -676,7 +781,12 @@ def certificate(config, report, scale, inputs, capture_sha, dump):
             'tool_sha256': sha(Path(__file__)), 'config': config, 'scale': scale,
             'input_sha256': inputs, 'capture': {'sha256': capture_sha, 'godot': dump['godot'],
                                                 'clips': dump['clips'], 'uniform': UNIFORM},
-            'report': report, 'visual_review': 'PENDING: R-C requires the real-window review after this numeric pass'}
+            'report': report,
+            'consumer_requirements': {**{k: config[k] for k in ('hold_clip', 'march_stop_phases',
+                                                               'march_start_phases', 'hold_phases')},
+                                      'rule': 'stop, start and hold only at these MARCH phases; a MARCH hold '
+                                              'resumes at the phase it holds'},
+            'visual_review': 'PENDING: R-C requires the real-window review after this numeric pass'}
     digest = hashlib.sha256(canonical(body)).hexdigest()
     body['payload_sha256'] = digest
     body['digest_rule'] = 'sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate'
@@ -694,14 +804,15 @@ def main(argv=None):
     parser.add_argument('--work', type=Path, help='scratch folder (default .superpowers/loco-cert/<arm>)')
     args = parser.parse_args(argv)
     config = json.loads(args.config.read_text())
-    for key in ('arm', 'scene', 'feet', 'forward', 'stride_m', 'stance', 'turn_q', 'hold_clip',
+    for key in ('arm', 'scene', 'feet', 'forward', 'stride_m', 'turn_q', 'hold_clip',
                 'march_stop_phases', 'march_start_phases', 'hold_phases'):
         if key not in config:
             raise SystemExit(f'config is missing {key}')
     radius = footprint_radius(config['arm'])
     if config.setdefault('radius_m', radius) != radius:
         raise SystemExit(f"config radius_m {config['radius_m']} is not unit_footprints.csv's {radius}")
-    work = args.work or ROOT / '.superpowers/loco-cert' / config['arm']
+    # absolute: Godot reads --script relative to the isolated project, not to this cwd
+    work = (args.work or ROOT / '.superpowers/loco-cert' / config['arm']).resolve()
     work.mkdir(parents=True, exist_ok=True)
     extra = [config.get('entry_phase', 0.0)] + [p for b in required_boundaries(config) for p in (b[1], b[3]) if p != '*']
     dump, inputs, capture_sha = capture(config, args.godot, work, extra)
