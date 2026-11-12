@@ -80,3 +80,9 @@ Every selected category batch uses the same `run_tests.sh`: forced offline, boun
 GitHub enforces this on `main` through branch protection: `harness-checks` and `gut-tests` are required status checks, every change needs a PR (zero approvals, since every session merges as the owner's account), admins are included, and force pushes and deletion are blocked. The branch need not be up to date with `main` before merging. A direct push to `main` is rejected; in an emergency the owner turns protection off in Settings → Branches and back on afterwards.
 
 GitHub 分支保护强制执行：`harness-checks` 和 `gut-tests` 为必需检查，所有改动必须走 PR（无需批准，因为所有 session 都用 owner 账号），管理员同样受约束，禁止强推和删除 main；合并前不要求与 main 同步。直接 push main 会被拒绝，紧急情况由 owner 在 Settings → Branches 临时关闭保护后再恢复。
+
+## Worktree pruning
+
+The SessionStart hook runs `.claude/hooks/prune_merged_worktrees.py` in the background (tests: `.claude/hooks/test_prune_merged_worktrees.py`, in `harness-checks`). It removes a git worktree only when its HEAD is a merged PR's head commit, it is clean, it holds no git-ignored files but caches (`model_wip/` art and handovers keep it), it is unlocked, not the current checkout and idle an hour; branches stay, and offline it removes nothing. `--dry-run` prints every keep reason; removals go to `<git-common-dir>/prune-merged-worktrees.log`.
+
+SessionStart hook 在后台删除已合并 PR 的 worktree：HEAD 等于已合并 PR 的头提交、工作区干净、除缓存外没有被忽略的文件、未锁定、非当前 checkout 且闲置一小时；分支保留，离线时不删。`--dry-run` 列出每个保留原因。
