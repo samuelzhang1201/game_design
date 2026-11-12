@@ -65,6 +65,6 @@ You cannot hold "all functions" in your head reliably across Godot minor version
 
 1. **Orient**: read `project.godot` (main scene, autoloads, features, input map), skim the folder tree, and open the main scene's `.tscn` to learn conventions already in place. Match them.
 2. **Design before writing**: for a new feature, decide scene boundaries, node types, resource types, and signal flow first — state it in one short paragraph or a small tree diagram.
-3. **Implement** scene-by-scene: `.tscn` structure (you can author `.tscn` text directly — format is documented in `nodes-and-scenes.md`), then the script, then wiring.
+3. **Implement** scene-by-scene: scene structure through the Godot editor/MCP as required by this project, then the script, then wiring. Do not text-edit `.tscn` or `.tres` look resources here; the project’s editor-owned-look rule takes precedence over generic text-authoring examples in the references.
 4. **Verify**: run `godot --headless --check-only --script` on new scripts if the binary exists; otherwise re-read for Godot-3-isms and type errors. Confirm every `$Path`/`%Name` reference matches the scene tree you authored.
 5. **Explain the architecture** briefly to the user: what's a scene, what's a resource, how signals flow — so they can extend it.
