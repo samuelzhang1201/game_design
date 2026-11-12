@@ -2,20 +2,7 @@
 
 `BattleRules.freeze` snapshots each side's received laws once at contact, using the first unit in sorted code order as the saved representative. `LawSystem.received` reads the newer town/unit version; foreign columns carry independent `received_laws`, seeded from declared defaults, never crown decrees. Legacy columns without that map read defaults. Existing battles without a snapshot acquire one at the first resumed day. Semantic proposals compare all conditions, scopes and deadlines independently, with both proposals and a reason preserved on rejection. The saved `parley` remains bound to the battle through new laws, commanders, reinforcements and JSON saves. `legal_actions(…, unit, target)` applies live own laws plus shared obligations scoped per agreement: `parley.parties` (`{att, def}`: the sides at contact, a joining reinforcement appended, an old save defaulting to the current members) names who an agreement binds; the battle's own parley and every `sources[*].parley` count; an agreement applies to a unit that is its party when the `target` is a party on its other side (no target: the object cannot be confirmed, so the possibly breaching action is held). A merge never adds one battle's units to the other's parties, so a new opponent from another source gets no bilateral treatment; `BattleTaskSystem` passes the task's target; protected withdrawal/ceasefire overrides pursuit, and accepting surrender prohibits a red refusal flag without prohibiting one's own surrender. There is no king renegotiation action. `parley_clauses.csv` maps each clause to its law; prisoner treatment, wounded evacuation, safe withdrawal, permitted tactics and own surrender are separate military policies.
 
-`BattleFormation` owns deployment independently of stance/action. `formations.csv` declares four shapes, frontage, terrain/arm/morale/training suitability, centre requirements, factors and reforming costs. A diamond's positive protection requires an actual nearby king or wounded personnel; absent a centre its penalties remain. `BATTLE_FORMATION` is a paid typed order through `ActionSystem` and the existing local/courier path; delivery revalidates membership and suitability, uses a separate side order id and saved within-courier sequence, and expires with the battle. Same-target requests do nothing; retargeting preserves the longest disorder deadline. Saved current/previous/target, progress and last-progress day advance once per completed day using fit-personnel discipline. During reforming only current deployment plus disorder applies; each factor has one source and reason; combat merges the formation/terrain category before one integer truncation. WAR ROOM and map share its shape; narrow lines fold into extra ranks instead of overlapping figures. Figure-count tiers remain `army_formations.csv`'s responsibility.
-
-`BattleFormation.request/refusal/context/effects` accept an optional unit for internal
-received deployment integration. A valid first unit request copies its side's full
-current deployment into saved `battle.unit_formations`; later side defaults never
-rewrite it. Duplicate targets preserve progress/exposure; retargeting retains the
-longest disorder deadline. Unit overrides progress once per day in sorted code order
-using only their recipient's fit discipline; departed/incapacitated/captured recipients
-do not progress. Suitability and factors use that recipient's terrain, arms and
-personnel. Unit strength and shape lookup read the same current override and
-recipient terrain context, including the map's narrow-line frontage; legacy
-battles and unassigned units retain side deployment and side context. This internal
-API does not issue a warrant or pay costs. Internal task receipt uses this API;
-public formation parameters still require integration before player use.
+**Formations are retired in ordinary play** (owner R-H 2026-11-13; design `2026-10-25-cluster-formations-design.md` §2 rules 1-2): a unit has no internal tactical formation. Every unit stands in the one fixed block (`BattleGroups.layout`, `guide/battle_groups.md`), and no deployment, flank or missile factor from `formations.csv` enters combat. `BattleFormation.refusal` refuses every formation with `BattleFormation.RETIRED` once the battle and unit checks pass, so `BATTLE_FORMATION` and a task warrant with a nonempty formation are refused at issue; a formation courier or task from an old save lapses on arrival with that reason. Saved `formations` / `unit_formations` records still load, merge and save unchanged; nothing advances or reads them for odds or layout. `BattleFormation.context` stays: `BattleEvents` reads its `flanked` fact. `formations.csv` stays as the labels of old saved records.
 
 ## Unit task warrants
 
@@ -71,14 +58,9 @@ reused across assignment and cancellation actions. The player issues both from
 the WAR ROOM's docked folio, which reads `BattlePresentation.task_view` (status)
 and sends exactly `task_quote`'s params (`scripts/war_room/CLAUDE.md`).
 
-Internal task warrants with a nonempty formation validate the recipient against
-`BattleFormation.refusal` at issue and receipt, including its CSV suitability.
-After law, authority and sequence validation, receipt starts that unit's existing
-reforming state atomically with task replacement. Pending, failed, stale and
-repeated receipts cannot reform a unit. A new task with the same formation keeps
-progress; a different explicit formation retargets with the longest disorder
-deadline. An empty formation or task cancellation leaves the received physical
-deployment and its progress/disorder intact; neither refunds preparation costs.
+A task warrant with a nonempty formation is refused by `BattleFormation.refusal`
+at issue and receipt (formations are retired); an empty formation is the only
+accepted one, and nothing in a task reforms a unit.
 The side default and other units are unaffected. These internal operations do
 not add a second filing charge or courier fee.
 
@@ -199,9 +181,9 @@ deployment. Actual contact commits the approach (`flank.phase = contact`),
 preserved by synonymous receipts on that canonical battlefield: this task never starts an automatic second
 circle, including after leaving the battlefield. Subsequent repositioning requires leaving the committed approach through
 a different received task; there is no automatic disengagement/regroup cycle.
-`BattleFormation.context` grants its existing single flank factor only when an
-enemy front group really contacts a defending group outside the defender’s
-`battle_flank_front_half_deg` cone. Remote columns and a task label grant nothing.
+`BattleFormation.context` reports `flanked` (read by `BattleEvents`; no formation
+factor follows from it) only when an enemy front group really contacts a defending
+group outside the defender’s `battle_flank_front_half_deg` cone. Remote columns and a task label grant nothing.
 Turning the defender so contact becomes frontal removes that factor immediately
 for the next unfrozen round; no benefit accumulates per day or per circle.
 

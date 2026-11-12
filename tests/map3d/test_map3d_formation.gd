@@ -147,7 +147,7 @@ func test_tactical_shapes_and_narrow_line_use_shared_slots() -> void:
 	assert_eq(xs.size(), 5, "narrow front folds into ranks")
 	assert_eq(ys.size(), 2)
 
-func test_unit_line_width_uses_its_own_ground_and_legacy_keeps_side_ground() -> void:
+func test_a_battle_formation_never_changes_the_stance_layout() -> void:
 	var data := SuiteData.repo()
 	var state := SuiteData.campaign(data, 99)
 	var places := {}
@@ -173,12 +173,12 @@ func test_unit_line_width_uses_its_own_ground_and_legacy_keeps_side_ground() -> 
 		state.regiments[codes[i]].order = ArmySystem.ORDER_GARRISON
 	var battle := {"id": 989, "att": [codes[0], codes[1]], "def": [], "place_x_m": 0, "place_y_m": 0}
 	state.battles = [battle]
+	var plain := [Map3DFormation.layout_of(data, state, codes[0]), Map3DFormation.layout_of(data, state, codes[1])]
 	BattleFormation.ensure(battle)
 	battle.formations.att.current = "line"
-	assert_eq(Map3DFormation.layout_of(data, state, codes[0]), "line:500", "legacy side context includes its narrow-ground ally")
-	battle.unit_formations = {codes[0]: battle.formations.att.duplicate(true), codes[1]: battle.formations.att.duplicate(true)}
-	assert_eq(Map3DFormation.layout_of(data, state, codes[0]), "line", "open-ground recipient must not fold for its ally")
-	assert_eq(Map3DFormation.layout_of(data, state, codes[1]), "line:500", "narrow-ground recipient still folds")
+	battle.unit_formations = {codes[0]: battle.formations.att.duplicate(true)}
+	assert_eq([Map3DFormation.layout_of(data, state, codes[0]), Map3DFormation.layout_of(data, state, codes[1])], plain,
+		"formations are retired (owner R-H): only the stance lays a standing piece out")
 
 func test_fit_tier_counts_people_and_reuses_tactical_slots() -> void:
 	for layout: String in ["block", "line", "wedge", "diamond", "double_rank", "line:500"]:

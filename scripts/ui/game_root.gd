@@ -269,9 +269,6 @@ func _make_battle_encounter() -> void:
 	_battle_encounter.name = "BattleEncounterPanel"
 	_battle_encounter.decision_selected.connect(_on_battle_decision_selected)
 	_battle_encounter.deployment_requested.connect(_on_battle_deployment)
-	_battle_encounter.formation_requested.connect(func(code: String, id: int, formation: String) -> void:
-		var result := Game.try_execute(ActionRequest.make("BATTLE_FORMATION", {"regiment": code, "battle_id": id, "formation": formation}))
-		_battle_encounter.show_order_result(result))
 	add_child(_battle_encounter)
 	if not get_viewport().size_changed.is_connected(_fit_battle_encounter):
 		get_viewport().size_changed.connect(_fit_battle_encounter)

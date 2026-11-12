@@ -62,7 +62,7 @@ func _ready() -> void:
 				and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 			set_full(true))   # a click on the docked page holds the book up
 	(%TakeApart as Button).pressed.connect(toggle_take_apart)
-	for pick: OptionButton in [%Task, %Target, %TaskFormation]:
+	for pick: OptionButton in [%Task, %Target]:
 		pick.item_selected.connect(func(_i: int) -> void: _quote_task())
 	(%SendTask as Button).pressed.connect(send_task.bind(false))
 	(%CancelTask as Button).pressed.connect(send_task.bind(true))
@@ -229,7 +229,6 @@ func _fill_task() -> bool:
 		return true
 	_fill_pick(%Task, view["tasks"], "id", [])
 	_fill_pick(%Target, view["targets"], "code", [["", "Any enemy"]])
-	_fill_pick(%TaskFormation, view["formations"], "id", [["", "Keep deployment"]])
 	var lines: PackedStringArray = []
 	if not view["current"].is_empty():
 		lines.append("Received: " + _task_words(view["current"]) + ".")
@@ -275,7 +274,7 @@ func task_quote(cancel := false) -> Dictionary:
 	if cancel:
 		return BattlePresentation.task_quote(Game.data, Game.state, _code, "cancel")
 	return BattlePresentation.task_quote(Game.data, Game.state, _code, String((%Task as OptionButton).get_selected_metadata()),
-		String((%Target as OptionButton).get_selected_metadata()), String((%TaskFormation as OptionButton).get_selected_metadata()))
+		String((%Target as OptionButton).get_selected_metadata()))
 
 
 func _quote_task() -> void:
@@ -462,10 +461,6 @@ func _fill_arms() -> void:
 func _fill_formation() -> void:
 	var form: Control = %Formation
 	form.set_meta("figures", WarFolio.figures(Game.data, Game.state, _code))
-	var layout := Map3DFormation.layout_of(Game.data, Game.state, _code).split(":")
-	var formation := BattleFormation.of_unit(Game.state, _code)
-	form.set_meta("formation", formation)
-	form.set_meta("frontage_permille", int(layout[1]) if layout.size() == 2 else 1000)
 	form.queue_redraw()
 
 

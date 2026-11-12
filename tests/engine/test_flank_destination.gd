@@ -61,11 +61,6 @@ func test_received_flank_walks_to_side_and_turning_removes_actual_benefit() -> v
 		assert_ne(to, BASE + Vector2i(1000, 0), "never the target centre")
 	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), BASE + Vector2i(1020, -100), "east-facing transverse vector tie chooses first reachable side")
 	assert_true(BattleFormation.context(f.repo, f.state, f.battle, "def", f.enemy).flanked)
-	var factors: Array = BattleFormation.effects(f.repo, f.state, f.battle, "def", false, f.enemy).factors
-	var flanks := factors.filter(func(factor: Dictionary) -> bool: return factor.source == "formation:flank")
-	assert_eq(flanks.size(), 1, "one existing factor, independent of approach days")
-	if not flanks.is_empty():
-		assert_eq(int(flanks[0].permille), 850, "compact rank's one 150-per-mille exposure penalty")
 	f.state.foes[f.enemy]["facing_deg"] = 270
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	assert_false(BattleFormation.context(f.repo, f.state, f.battle, "def", f.enemy).flanked, "same contact now lies directly ahead")

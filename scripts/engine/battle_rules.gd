@@ -182,17 +182,11 @@ static func summary(repo: DataRepository, battle: Dictionary) -> String:
 
 ## Bilateral terms are public; enemy strength and private policies stay out.
 static func encounter_view(repo: DataRepository, state: GameState, battle: Dictionary) -> Dictionary:
-	var view := {"agreements": summary(repo, battle), "options": [], "regiment": "", "battle_id": int(battle.get("id", -1))}
+	var view := {"agreements": summary(repo, battle), "regiment": "", "battle_id": int(battle.get("id", -1))}
 	for side: String in BattleSystem.SIDES:
 		for code: String in battle.get(side, []):
 			if ArmySystem.is_foe(state, code):
 				continue
 			view["regiment"] = code
-			view["gold"] = int(OrderCosts.gold_of(repo, "BATTLE_FORMATION"))
-			view["courier_gold"] = 0 if KingSystem.can_command(repo, state, code) or not CourierSystem.joinable(state, CourierSystem.ORDINARY, code, {}).is_empty() else CourierSystem.fee_gold(repo, CourierSystem.ORDINARY)
-			for formation: String in repo.battle_formations:
-				view["options"].append({"id": formation, "label": String(repo.battle_formations[formation]["label"]),
-					"reason": BattleFormation.refusal(repo, state, int(battle["id"]), side, formation),
-					"note": BattleFormation.evaluate(repo, formation, BattleFormation.context(repo, state, battle, side), false)["reason"]})
 			return view
 	return view

@@ -479,13 +479,7 @@ func _validate_formation(req: ActionRequest, state: GameState) -> String:
 		return "This army is not yours to command."
 	var id := int(req.params.get("battle_id", -1))
 	var battle := BattleSystem.battle_by_id(state, id)
-	var side := BattleRules.side_of(battle, code)
-	var why := BattleFormation.refusal(data, state, id, side, String(req.params.get("formation", "")))
-	if why != "":
-		return why
-	if BattleOrders.available_gold(state) < OrderCosts.gold_of(data, req.action_code) + _fee_for(state, code):
-		return "The chancery cannot pay for this formation order."
-	return ""
+	return BattleFormation.refusal(data, state, id, BattleRules.side_of(battle, code), String(req.params.get("formation", "")))
 
 
 ## ARMY_STANCE (spec 2026-10-07-enemy-ai-and-battle §4.4): a land regiment
@@ -1082,12 +1076,6 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			for code: String in issued["units"]:
 				_send_courier(state, effects, code, {"action_code": "ARMY_TASK",
 					"army_task_id": String(issued["id"]), "revision": int(issued["revision"])}, what)
-		"BATTLE_FORMATION":
-			var code := String(req.params["regiment"])
-			var formation := String(req.params["formation"])
-			_send_courier(state, effects, code, {"action_code": "BATTLE_FORMATION",
-				"battle_id": int(req.params["battle_id"]), "formation": formation},
-				"to form " + String(data.battle_formations[formation]["label"]))
 		"ARMY_STANCE":
 			var code := String(req.params["regiment"])
 			var stance := String(req.params["stance"])

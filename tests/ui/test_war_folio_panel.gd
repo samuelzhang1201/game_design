@@ -548,7 +548,7 @@ func test_the_task_block_shows_only_on_a_battlefield() -> void:
 	assert_true((panel.get_node("%TaskOrders") as Control).visible)
 	assert_eq((panel.get_node("%Task") as OptionButton).item_count, Game.data.battle_behaviors.size())
 	assert_eq((panel.get_node("%Target") as OptionButton).item_count, 2, "any enemy, then the one opponent")
-	assert_eq((panel.get_node("%TaskFormation") as OptionButton).item_count, Game.data.battle_formations.size() + 1)
+	assert_null(panel.get_node_or_null("%TaskFormation"), "no formation pick: formations are retired")
 	assert_false((panel.get_node("%CancelTask") as Control).visible, "nothing to cancel yet")
 	await wait_process_frames(2)
 	assert_lte(panel.book_rect().size.x, 1280.0 * 0.30, "the block never widens the docked page")

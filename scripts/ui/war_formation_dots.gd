@@ -31,9 +31,6 @@ func _draw() -> void:
 
 func deployment_slots() -> Array:
 	var n := int(get_meta("figures", 0))
-	var formation := String(get_meta("formation", ""))
-	if formation != "":
-		return BattleFormation.slots(formation, n, int(get_meta("frontage_permille", 1000)))
 	if Game.data != null:
 		for row: Dictionary in Game.data.army_formations:
 			if int(row["figures"]) == n:
