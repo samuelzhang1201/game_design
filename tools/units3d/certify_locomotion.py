@@ -835,8 +835,12 @@ def main(argv=None):
         if key not in config:
             raise SystemExit(f'config is missing {key}')
     # The MARCH travel the game plays (Map3DMarchPhase), bound into the certificate.
-    if config.setdefault('phase_map', army_phase_map(config['arm'])) != army_phase_map(config['arm']):
+    # The certifier refuses a malformed map (the game would silently fall back to stride_m), before
+    # any Godot run.
+    csv_map = army_phase_map(config['arm'])
+    if config.setdefault('phase_map', csv_map) != csv_map:
         raise SystemExit("config phase_map is not army_art.csv's")
+    march_travel(csv_map, float(config['stride_m']))
     radius = footprint_radius(config['arm'])
     if config.setdefault('radius_m', radius) != radius:
         raise SystemExit(f"config radius_m {config['radius_m']} is not unit_footprints.csv's {radius}")
