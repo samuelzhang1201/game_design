@@ -835,6 +835,13 @@ func _drift_toward(r: TickReport, m: Dictionary, metric: String, baseline: float
 	var delta := clampf(baseline - m[metric], -rate, rate)
 	_apply(r, m, metric, delta, reason)
 
+## Opt-in candidate battle day (CF05). The production phase machine never dispatches here.
+func begin_body_battle_candidate(source: GameState) -> Dictionary:
+	return BodyBattle.begin_candidate(data, source)
+
+func step_body_battle_candidate(source: GameState) -> Dictionary:
+	return BodyBattle.step_candidate(data, source)
+
 ## Opt-in march-only harness. The production phase machine never dispatches here.
 func begin_body_march_candidate(source: GameState) -> Dictionary:
 	return _begin_body_march_candidate(source, 1)

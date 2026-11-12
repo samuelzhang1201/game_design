@@ -109,6 +109,17 @@ actual personnel once across all touching targets, including the partial last
 row. Querying changes no state, RNG, law parties, rows or costs. This candidate
 entry does not discover/merge battles or replace production melee damage.
 
+`BodyBattleContact.exposure_candidate` has the same closed result and pair
+schema but skips the outgoing law/agreement filter: its `engaged` is the unit's
+physically contactable personnel, once per identity. It is defensive evidence,
+never permission to attack, and a protected pair cannot erase exposure to an
+unprotected opponent. Capture is not a filter there: a captured body still
+occupies its disc. `BattleGroups.melee_counts(repo,state,battle,unit,enemies)`
+is CF06's three-field `{engaged,fit,reason}` adapter over the lawful query at the
+state's own boundary (its saved battle day, or the safe boundary with no day open).
+A rejection returns `-1` counts and a `Rejected:` reason, never a legitimate zero;
+there is no front/reserve fallback. Neither entry replaces production damage.
+
 ## Candidate contact enrollment
 
 `BodyBattle.plan_candidate` / `commit_candidate` accept the closed
@@ -222,3 +233,31 @@ safe-boundary release (allowed by the contract) is not implemented yet and also
 defers; a missing repo, unknown or non-canonical field and malformed
 request error. Any failure discards the whole staged world. Ordinary `call_off`
 and `step_battle` are unchanged.
+
+## Candidate day driver
+
+`TickEngine.begin_body_battle_candidate` / `step_body_battle_candidate` (bodies in
+`BodyBattle.begin_candidate` / `step_candidate`) drive one isolated candidate
+day; ordinary `resolve_day` never dispatches here. Begin is the CF05 `begin`
+request at the safe boundary: it freezes the accepted march setup (a budget for
+every non-naval unit, battle-owned and holding peers included; march entries for
+marching units) into a fresh `day_resolution.body_battle` at move, consumes one
+outer operation and returns no plan; on a frozen day it defers. Each step runs
+exactly one transition through the existing transactions: move (the union
+sweep), `contacts`, then at round the current field's `round_ready`, and at
+advance an `end` for a field with an emptied side, else a `withdraw` that
+completes, else `advance` (clear both queues, next slice, `complete` at the
+count). Complete defers; it is not tomorrow.
+
+`round_ready` acts only on `battle_ids[battle_index]`. A new encounter first
+publishes its existing decision token and returns `blocked`; the `acknowledge`
+request consumes exactly that token and keeps the queue. Then readiness saves
+`battle.body_round` (token `bodyround:<id>:<day>:<rounds + 1>`, this slice's
+closed motion receipt, the field's lawful pairs from `BodyBattleContact` and
+their digest, every member's `BattleSystem.unit_action`, and the basis hash over
+bodies, personnel, rosters, entries, battles without round envelopes, aliases,
+tasks, laws, diplomacy, closed motion and the terrain/policy context; the outer
+sequence and receipt are not in it) and returns `blocked`. It draws no RNG and
+applies no damage or cost. Until the CF06 consumer settles it, every step returns
+`blocked` on an identical basis and errors on a changed one. A merge
+canonicalizes `processed_battle_ids`, so no unit resolves twice through an alias.

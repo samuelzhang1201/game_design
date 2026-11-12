@@ -222,11 +222,19 @@ static func heading_for(repo: DataRepository, state: GameState, code: String, tr
 ## The feet keep pace with the ground, timed from the day's PLAN (walk_speed,
 ## march_rate); 1 at rest, where no figure is jittered. A marching figure's
 ## speed_scale gets its own hashed jitter, clamped after it. Set only on a change.
+## A piece with a `phase_map` (army_art.csv, Map3DMarchPhase) instead sets every
+## marching figure each frame to the map's secant over the next `dt`: never held,
+## never jittered, so its planted hooves keep the ground at any clock.
 static func keep_pace(repo: DataRepository, piece: Dictionary, day: Dictionary, share: float, clock: int,
-		code: String = "") -> void:
+		code: String = "", dt: float = 0.0) -> void:
 	if piece.get("settling", false):
 		return  # a halt held to its next footfall walks on at its pace (Map3DUnitSettle)
 	var walking := Map3DUnits.walking(day, share)
+	var knots: PackedFloat64Array = piece.get("phase_map", PackedFloat64Array())
+	if not knots.is_empty():
+		_keep_phase(piece, knots, walking, walk_speed(day, repo.bal("time_day_seconds"), clock) if walking else 0.0,
+			code, dt)
+		return
 	# an exact-pace arm (army_art.csv exact_pace, owner 2026-10-14: 步伐和移动能够完全匹配)
 	# plays the true rate at any speed, every figure alike: no bounds, no jitter
 	var exact := bool(piece.get("exact_pace", false))
@@ -246,3 +254,31 @@ static func keep_pace(repo: DataRepository, piece: Dictionary, day: Dictionary, 
 			var own := pace / float(statures[i]) if exact and i < statures.size() else pace
 			(anims[i] as AnimationPlayer).speed_scale = Map3DMarchLag.pace(code, i, own,
 				spread, lo, hi) if walking else 1.0
+
+
+## keep_pace for a phase-mapped piece: each figure from its own clip phase (its hashed
+## MARCH start before the clip has switched), at the model speed of its stature.
+static func _keep_phase(piece: Dictionary, knots: PackedFloat64Array, walking: bool, world_speed: float,
+		code: String, dt: float) -> void:
+	var anims: Array = piece["anims"]
+	var clip_s := float(piece["clip_s"])
+	var k := (piece["node"] as Node3D).transform.basis.get_scale().x
+	var statures: Array = piece.get("statures", [])
+	piece["pace_key"] = []  # a later constant-rate piece re-sets its rate
+	for i in anims.size():
+		var anim: AnimationPlayer = anims[i]
+		if not walking or world_speed <= 0.0 or k <= 0.0 or clip_s <= 0.0:
+			anim.speed_scale = 1.0  # as gait_rate at rest or with no clock
+			continue
+		var stature := float(statures[i]) if i < statures.size() else 1.0
+		anim.speed_scale = mapped_rate(anim, knots, clip_s, world_speed / k / stature, dt,
+			Map3DMarchLag.phase(code, i))
+
+
+## A phase-mapped figure's MARCH rate (Map3DMarchPhase.rate) from its own clip phase, or
+## from `start_p` (the phase Map3DUnitRig.play seeks MARCH to) before the clip switched.
+static func mapped_rate(anim: AnimationPlayer, knots: PackedFloat64Array, clip_s: float,
+		model_speed: float, dt: float, start_p: float) -> float:
+	var marching := anim.current_animation == Map3DUnits.clip_named(anim, "MARCH")
+	var p := fposmod(anim.current_animation_position / clip_s, 1.0) if marching else start_p
+	return Map3DMarchPhase.rate(knots, p, model_speed, dt, clip_s)

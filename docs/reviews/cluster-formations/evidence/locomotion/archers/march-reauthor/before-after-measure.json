@@ -1,0 +1,105 @@
+{
+ "after": {
+  "archers_glb_sha256_prefix": "f7112ff7",
+  "bounds_um": {
+   "contact": 28474,
+   "seam": 2373
+  },
+  "capture_sha256": "6f46be36b298a34d450c98169bf5528680b00eeace314a0c207a5c6174e18a40",
+  "envelope_sim_m": 374,
+  "hover_um": 5700,
+  "penetration_um": 5589,
+  "planting_band": {
+   "l": {
+    "H_m": -0.0053953271294433225,
+    "band_m": 0.0005
+   },
+   "r": {
+    "H_m": -0.001091966855674087,
+    "band_m": 0.0005
+   }
+  },
+  "seam_um": [
+   1,
+   842,
+   842,
+   842,
+   842
+  ],
+  "skin_introduced": 0,
+  "slide_um_by_clip": {
+   "MARCH": {
+    "margin_um": 1881,
+    "pass": true,
+    "sampled_um": 5117,
+    "total_um": 6998
+   },
+   "PIVOT_LEFT": {
+    "margin_um": 14441,
+    "pass": false,
+    "sampled_um": 94753,
+    "total_um": 109194
+   },
+   "PIVOT_RIGHT": {
+    "margin_um": 8901,
+    "pass": false,
+    "sampled_um": 94753,
+    "total_um": 103653
+   }
+  },
+  "stance_pass": true
+ },
+ "before": {
+  "archers_glb_sha256_prefix": "02356e6f",
+  "bounds_um": {
+   "contact": 28474,
+   "seam": 2373
+  },
+  "capture_sha256": "38531738e627b71a8676d29e58abdafde73ff04ba7cd5fe0d89d98f41e7213c2",
+  "envelope_sim_m": 374,
+  "hover_um": 5729,
+  "penetration_um": 5589,
+  "planting_band": {
+   "l": {
+    "H_m": 4.060653717792199e-05,
+    "band_m": 0.000540606537177922
+   },
+   "r": {
+    "H_m": -0.0010098388968083905,
+    "band_m": 0.0005
+   }
+  },
+  "seam_um": [
+   1,
+   842,
+   842,
+   842,
+   842
+  ],
+  "skin_introduced": 0,
+  "slide_um_by_clip": {
+   "MARCH": {
+    "margin_um": 21901,
+    "pass": false,
+    "sampled_um": 490552,
+    "total_um": 512453
+   },
+   "PIVOT_LEFT": {
+    "margin_um": 14441,
+    "pass": false,
+    "sampled_um": 94753,
+    "total_um": 109194
+   },
+   "PIVOT_RIGHT": {
+    "margin_um": 8901,
+    "pass": false,
+    "sampled_um": 94753,
+    "total_um": 103653
+   }
+  },
+  "stance_pass": true
+ },
+ "note": "Offline re-measure of two Godot-native captures with one tool version. Pivots run without a provider, so their small-turn slide fails; this is not a certificate.",
+ "tool": "tools/units3d/certify_locomotion.py at #291 1c7e4041 (per-foot band)",
+ "tool_sha256": "0959a6330a43f30a0ceab51b990b5011482e7b01dee88ace2616f9e131f0d4fa"
+}

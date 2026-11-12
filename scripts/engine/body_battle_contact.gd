@@ -4,6 +4,17 @@ extends RefCounted
 
 static func query_candidate(repo: DataRepository, source: GameState, battle_id: int,
 		unit: String, enemies: Array, boundary: Dictionary) -> Dictionary:
+	return _query(repo, source, battle_id, unit, enemies, boundary, true)
+
+## Physical defensive exposure: the same admitted world, owner, terrain and surface-gap
+## test as the lawful query, but independent of this unit's outgoing attack permission.
+## Evidence that the unit can be reached, never permission for it to attack.
+static func exposure_candidate(repo: DataRepository, source: GameState, battle_id: int,
+		unit: String, enemies: Array, boundary: Dictionary) -> Dictionary:
+	return _query(repo, source, battle_id, unit, enemies, boundary, false)
+
+static func _query(repo: DataRepository, source: GameState, battle_id: int,
+		unit: String, enemies: Array, boundary: Dictionary, lawful: bool) -> Dictionary:
 	if repo == null or source == null or battle_id <= 0 or battle_id > BodyMotion.JSON_INTEGER_MAX:
 		return _failure(battle_id, unit, "Contact requires data, source and a live battle ID")
 	var canonical := _canonical_id(source, battle_id)
@@ -47,7 +58,7 @@ static func query_candidate(repo: DataRepository, source: GameState, battle_id: 
 		var touching := false
 		for target: Dictionary in targets:
 			var enemy: String = target.unit
-			var barred := _barred(repo, state, battle, target.battle, side, unit, enemy)
+			var barred := _barred(repo, state, battle, target.battle, side, unit, enemy) if lawful else ""
 			if not barred.is_empty():
 				if not barred in reasons: reasons.append(barred)
 				continue
@@ -67,12 +78,12 @@ static func query_candidate(repo: DataRepository, source: GameState, battle_id: 
 				touching = true
 				pairs.append({"unit": unit, "slot": int(row.slot), "target_unit": enemy,
 					"target_slot": int(other.slot), "count": int(row.count), "target_count": int(other.count),
-					"kind": "melee", "reason": "Lawful physical surface contact over open ground"})
+					"kind": "melee", "reason": "Lawful physical surface contact over open ground" if lawful else "Physical surface contact over open ground"})
 		if touching: engaged += int(row.count)
 	pairs.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return UnitBodies._battle_pair_less([a.unit, a.slot, a.target_unit, a.target_slot],
 			[b.unit, b.slot, b.target_unit, b.target_slot]))
-	var reason := "Lawful surface contact: %d of %d fit personnel" % [engaged, fit]
+	var reason := ("Lawful surface contact: %d of %d fit personnel" if lawful else "Physical exposure: %d of %d fit personnel") % [engaged, fit]
 	if not reasons.is_empty(): reason += "; " + "; ".join(reasons)
 	return {"status": "complete", "reason": reason, "error": "", "battle_id": battle_id,
 		"unit": unit, "fit": fit, "engaged": engaged, "pairs": pairs}
