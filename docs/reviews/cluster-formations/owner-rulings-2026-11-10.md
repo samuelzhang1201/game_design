@@ -85,6 +85,14 @@ disjoint. Each parallel step builds on merged interfaces only.
 The CF24 targets for a stable, recognizable formation advantage are set before its validation
 seeds run.
 
+## R-H Cavalry MARCH re-authored (2026-11-13)
+
+Owner, 2026-11-13: "Re-author cavalry MARCH". No phase map can bring the shipped cavalry MARCH under
+the per-vertex slide bound, so the protected cavalry MARCH clip may be re-authored, as an exception
+for that one clip (as for the archer MARCH, #299). The bound does not move: contact 29,273 µm
+(0.60 world m at k = 20.4973). Every other cavalry clip, the mesh, rest, binds, weights, root, seat
+and scale stay as they are.
+
 ## Unchanged
 
 The envelope and radius gate: if a sampled envelope crosses an arm's radius, the radius in the

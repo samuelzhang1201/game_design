@@ -1,0 +1,14 @@
+{
+ "arm": "cavalry",
+ "note": "LOCO-CAV-MARCH: the re-authored MARCH measured natively (no provider), held at the MARCH phase the cavalry pivot provider admits (7/16). Not a certificate: the native PIVOT clips are source fixtures that no MARCH pose meets, so the pivots fail here; the provider (LOCO-CAV-PROVIDER) replaces them.",
+ "scene": "scenes/models/units/cavalry.tscn",
+ "feet": {"fl": ["FrontHoof.L"], "fr": ["FrontHoof.R"], "hl": ["HindHoof.L"], "hr": ["HindHoof.R"]},
+ "forward": [0, 0, -1],
+ "stride_m": 2.4,
+ "turn_q": 400000,
+ "entry_phase": 0.4375,
+ "hold_clip": "MARCH",
+ "march_stop_phases": [0.4375],
+ "march_start_phases": [0.4375],
+ "hold_phases": [0.4375]
+}

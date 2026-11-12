@@ -110,10 +110,9 @@ class MarchTravel(unittest.TestCase):
             with self.assertRaises(ValueError):
                 cert.march_travel(bad, 1.0)
 
-    def test_cavalry_reads_its_army_art_map(self):
-        m = cert.army_phase_map('cavalry')
-        self.assertEqual(m[0], [0.0, 0.0])
-        self.assertEqual(m[-1][0], 1.0)
+    def test_an_arm_without_a_map_reads_none(self):
+        # the re-authored cavalry MARCH (LOCO-CAV-MARCH) is paced by stride_m, like the infantry
+        self.assertIsNone(cert.army_phase_map('cavalry'))
         self.assertIsNone(cert.army_phase_map('infantry'))
 
 
