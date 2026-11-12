@@ -1,0 +1,845 @@
+{
+ "arm": "archers",
+ "capture": {
+  "clips": {
+   "MARCH": {
+    "key_times": [
+     0.0,
+     0.0333333350718021,
+     0.0666666701436043,
+     0.100000001490116,
+     0.133333340287209,
+     0.16666667163372,
+     0.200000002980232,
+     0.233333334326744,
+     0.266666680574417,
+     0.300000011920929,
+     0.333333343267441,
+     0.366666674613953,
+     0.400000005960464,
+     0.433333337306976,
+     0.466666668653488,
+     0.5,
+     0.533333361148834,
+     0.566666662693024,
+     0.600000023841858,
+     0.633333325386047,
+     0.666666686534882,
+     0.699999988079071,
+     0.733333349227905,
+     0.766666650772095,
+     0.800000011920929,
+     0.833333313465118,
+     0.866666674613953,
+     0.899999976158142,
+     0.933333337306976,
+     0.966666638851166,
+     1.0,
+     1.03333330154419,
+     1.06666672229767,
+     1.10000002384186,
+     1.13333332538605,
+     1.16666662693024
+    ],
+    "length_s": 1.16666662693024,
+    "loop_mode": 1,
+    "tracks": 89
+   },
+   "PIVOT_LEFT": {
+    "key_times": [
+     0.0,
+     0.03125,
+     0.0333333350718021,
+     0.0625,
+     0.0666666701436043,
+     0.09375,
+     0.100000001490116,
+     0.125,
+     0.133333340287209,
+     0.15625,
+     0.16666667163372,
+     0.1875,
+     0.200000002980232,
+     0.21875,
+     0.233333334326744,
+     0.25,
+     0.266666680574417,
+     0.28125,
+     0.300000011920929,
+     0.3125,
+     0.333333343267441,
+     0.34375,
+     0.366666674613953,
+     0.375,
+     0.400000005960464,
+     0.40625,
+     0.433333337306976,
+     0.4375,
+     0.466666668653488,
+     0.46875,
+     0.5,
+     0.53125,
+     0.533333361148834,
+     0.5625,
+     0.566666662693024,
+     0.59375,
+     0.600000023841858,
+     0.625,
+     0.633333325386047,
+     0.65625,
+     0.666666686534882,
+     0.6875,
+     0.699999988079071,
+     0.71875,
+     0.733333349227905,
+     0.75,
+     0.766666650772095,
+     0.78125,
+     0.800000011920929,
+     0.8125,
+     0.833333313465118,
+     0.84375,
+     0.866666674613953,
+     0.875,
+     0.899999976158142,
+     0.90625,
+     0.933333337306976,
+     0.9375,
+     0.966666638851166,
+     0.96875,
+     1.0,
+     1.03125,
+     1.03333330154419,
+     1.0625,
+     1.06666672229767,
+     1.09375,
+     1.10000002384186,
+     1.125,
+     1.13333332538605,
+     1.15625,
+     1.16666662693024,
+     1.1875,
+     1.20000004768372,
+     1.21875,
+     1.23333334922791,
+     1.25,
+     1.26666665077209,
+     1.28125,
+     1.29999995231628,
+     1.3125,
+     1.33333337306976,
+     1.34375,
+     1.36666667461395,
+     1.375,
+     1.39999997615814,
+     1.40625,
+     1.43333327770233,
+     1.4375,
+     1.46666669845581,
+     1.46875,
+     1.5,
+     1.53125,
+     1.53333330154419,
+     1.5625,
+     1.56666672229767,
+     1.59375,
+     1.60000002384186,
+     1.625,
+     1.63333332538605,
+     1.65625,
+     1.66666662693024,
+     1.6875,
+     1.70000004768372,
+     1.71875,
+     1.73333334922791,
+     1.75,
+     1.76666665077209,
+     1.7734375,
+     1.796875,
+     1.79999995231628,
+     1.8203125,
+     1.83333337306976,
+     1.84375,
+     1.86666667461395,
+     1.8671875,
+     1.890625,
+     1.89999997615814,
+     1.9140625,
+     1.93333327770233,
+     1.9375,
+     1.9453125,
+     1.953125,
+     1.9609375,
+     1.96666669845581,
+     1.96875,
+     1.9765625,
+     1.984375,
+     1.9921875,
+     2.0
+    ],
+    "length_s": 2.0,
+    "loop_mode": 0,
+    "tracks": 219
+   },
+   "PIVOT_RIGHT": {
+    "key_times": [
+     0.0,
+     0.03125,
+     0.0333333350718021,
+     0.0625,
+     0.0666666701436043,
+     0.09375,
+     0.100000001490116,
+     0.125,
+     0.133333340287209,
+     0.15625,
+     0.16666667163372,
+     0.1875,
+     0.200000002980232,
+     0.21875,
+     0.233333334326744,
+     0.25,
+     0.266666680574417,
+     0.28125,
+     0.300000011920929,
+     0.3125,
+     0.333333343267441,
+     0.34375,
+     0.366666674613953,
+     0.375,
+     0.400000005960464,
+     0.40625,
+     0.433333337306976,
+     0.4375,
+     0.466666668653488,
+     0.46875,
+     0.5,
+     0.53125,
+     0.533333361148834,
+     0.5625,
+     0.566666662693024,
+     0.59375,
+     0.600000023841858,
+     0.625,
+     0.633333325386047,
+     0.65625,
+     0.666666686534882,
+     0.6875,
+     0.699999988079071,
+     0.71875,
+     0.733333349227905,
+     0.75,
+     0.766666650772095,
+     0.78125,
+     0.800000011920929,
+     0.8125,
+     0.833333313465118,
+     0.84375,
+     0.866666674613953,
+     0.875,
+     0.899999976158142,
+     0.90625,
+     0.933333337306976,
+     0.9375,
+     0.966666638851166,
+     0.96875,
+     1.0,
+     1.03125,
+     1.03333330154419,
+     1.0625,
+     1.06666672229767,
+     1.09375,
+     1.10000002384186,
+     1.125,
+     1.13333332538605,
+     1.15625,
+     1.16666662693024,
+     1.1875,
+     1.20000004768372,
+     1.21875,
+     1.23333334922791,
+     1.25,
+     1.26666665077209,
+     1.28125,
+     1.29999995231628,
+     1.3125,
+     1.33333337306976,
+     1.34375,
+     1.36666667461395,
+     1.375,
+     1.39999997615814,
+     1.40625,
+     1.43333327770233,
+     1.4375,
+     1.46666669845581,
+     1.46875,
+     1.5,
+     1.53125,
+     1.53333330154419,
+     1.5625,
+     1.56666672229767,
+     1.59375,
+     1.60000002384186,
+     1.625,
+     1.63333332538605,
+     1.65625,
+     1.66666662693024,
+     1.6875,
+     1.70000004768372,
+     1.71875,
+     1.73333334922791,
+     1.75,
+     1.76666665077209,
+     1.7734375,
+     1.796875,
+     1.79999995231628,
+     1.8203125,
+     1.83333337306976,
+     1.84375,
+     1.86666667461395,
+     1.8671875,
+     1.890625,
+     1.89999997615814,
+     1.9140625,
+     1.93333327770233,
+     1.9375,
+     1.9453125,
+     1.953125,
+     1.9609375,
+     1.96666669845581,
+     1.96875,
+     1.9765625,
+     1.984375,
+     1.9921875,
+     2.0
+    ],
+    "length_s": 2.0,
+    "loop_mode": 0,
+    "tracks": 219
+   }
+  },
+  "godot": {
+   "build": "official",
+   "hash": "ed1daf0bf001b61586d9930840f2f1394092c079",
+   "hex": 263938,
+   "major": 4,
+   "minor": 7,
+   "patch": 2,
+   "status": "stable",
+   "string": "4.7.2-stable (official)",
+   "timestamp": 0
+  },
+  "sha256": "6f46be36b298a34d450c98169bf5528680b00eeace314a0c207a5c6174e18a40",
+  "uniform": 512
+ },
+ "config": {
+  "arm": "archers",
+  "feet": {
+   "l": [
+    "foot.l",
+    "toes_01.l"
+   ],
+   "r": [
+    "foot.r",
+    "toes_01.r"
+   ]
+  },
+  "forward": [
+   0,
+   0,
+   -1
+  ],
+  "hold_clip": "MARCH",
+  "hold_phases": [
+   0.0
+  ],
+  "march_start_phases": [
+   0.0
+  ],
+  "march_stop_phases": [
+   0.0
+  ],
+  "note": "Re-authored archer MARCH measured natively; pivots native (no provider), so small-turn pivot slide is expected to fail and is not this PR's subject.",
+  "radius_m": 932,
+  "scene": "scenes/models/units/archers.tscn",
+  "stride_m": 1.5283,
+  "turn_q": 400000
+ },
+ "consumer_requirements": {
+  "hold_clip": "MARCH",
+  "hold_phases": [
+   0.0
+  ],
+  "march_start_phases": [
+   0.0
+  ],
+  "march_stop_phases": [
+   0.0
+  ],
+  "rule": "stop, start and hold only at these MARCH phases; a MARCH hold resumes at the phase it holds"
+ },
+ "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
+ "input_sha256": {
+  "assets/3D/units/archers/archers.glb": "f7112ff73bda1a6150cc6c45c6b8a8a4538334be0d1008b54df517f393a9f6b2",
+  "assets/3D/units/archers/archers.glb.import": "8bec227ce7a2623cfd7dbe62fc773cf23cca7d6f6273ee00adcaeaf86a3e4283",
+  "assets/3D/units/archers/archers_archers_body_metal_rough.jpg": "c94059dc1cd9c2ff7d6f5ce29283e08e433cf638a8d08f5686417bb47baa0ba7",
+  "assets/3D/units/archers/archers_archers_body_metal_rough.jpg.import": "abd291136c4f2ed333b809ce3798a9e3e29e147d15e89c9c86981ff4ce57427b",
+  "assets/3D/units/archers/archers_archers_body_normal.jpg": "264cb3ab255df74c2dad64ef48541be7c234eb6af3bca2e94fa9a86a81c28ec4",
+  "assets/3D/units/archers/archers_archers_body_normal.jpg.import": "41c08da6297fac1ac4e9a8ddcaa5aa33f945e1870478ccde4e495d19624d238d",
+  "assets/3D/units/archers/archers_arrow.res": "60db0721273e60b499e839f755d314343671c4e389a4055d788c2339efd318fd",
+  "assets/3D/units/archers/archers_arrow_archers_arrow_metal_rough.jpg": "df3567a1636d4dffbf621283deed1bd18e3b5d4bbd336caf0e257f3018f222d3",
+  "assets/3D/units/archers/archers_arrow_archers_arrow_metal_rough.jpg.import": "ac785e4ba611b66502a77c43e89c6069f3ba99713adfa2ebb365ef964e6ddbaf",
+  "assets/3D/units/archers/archers_arrow_archers_arrow_normal.jpg": "d10ef1f7eaab6cf3eeed80cbe195770e386d5a9b32fee4d7423a99538702ad52",
+  "assets/3D/units/archers/archers_arrow_archers_arrow_normal.jpg.import": "953e21e16fb391c6df20a17e1bef7571252497374e5013ebb4a9dc45d8cf7355",
+  "assets/3D/units/archers/archers_arrow_tripo_image_a0b7e2fc-bcdd-4027-9e2f-c1aedd82e123_0.jpg": "e809ca8fd8ccfcf78f4d547cea4efc1d9aaf6faf5b34eca1b63d7f1c7496ec32",
+  "assets/3D/units/archers/archers_arrow_tripo_image_a0b7e2fc-bcdd-4027-9e2f-c1aedd82e123_0.jpg.import": "22b8cd14eef4ea5a63e0b4c5f20bc21479135aac43e4cb191fb9376938aaa121",
+  "assets/3D/units/archers/archers_bow.res": "193c73bf7ebff99067a03ccd8bc644a5ebcadbcad40e2b619fbfef47e3f3ff29",
+  "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_0.jpg": "245dde1da3b707110efa45b17a04a4fc0f34b60e46a3eb65cb6d1f2e0df0a804",
+  "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_0.jpg.import": "2ff91d064b76d61d9ff6ae1edafee50bad88e0ea033042978eb15b71f9450dda",
+  "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_1.jpg": "9b562f22dfccb2968aa2ab45db155119cbc96f8b3b94c7739176e5afe490bb36",
+  "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_1.jpg.import": "26c7ad9d67c50819914931d2b10b495224e5e577c1962b05e4577f98dbdfe944",
+  "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_2.jpg": "a45721d6fc4f8bcc409f47da94dd74ca12ab3cd3fc327cfed53666b607da5732",
+  "assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_2.jpg.import": "11d5c08b1d6fde3ca11c87c4473b8918245e8e440b7374c892aa67f223ed5d24",
+  "assets/3D/units/archers/archers_quiver.res": "c6ffbb9806925ac42f75b3e6a0271a4cf113cf86ed0d364badc5b37de02df975",
+  "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_0.jpg": "1164ae683442cb6da8be06b1ef91f4196b898d5b9f2797d2ac9fdfeb72a3bb8a",
+  "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_0.jpg.import": "655aa7cedc5c1968b5828991c3ee55483c500aa868d4d82ed03e765f38261a7c",
+  "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg": "f1225d1d75e4bd47f82ec957e875c8d65cc7c7576eb330b2eee85bfd5d7615c4",
+  "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg.import": "3d1b0b7a807b6798161b3ad06e9b4fc9d38f151661dcfd68ad84fa847080348f",
+  "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
+  "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg.import": "c8dc15fa86145c123bff4e26fef8300d719dfc5d946d22be712cf4d478ce9067",
+  "data/army/balance.csv": "c91faaef284442c03ae8e36d1269ec4ad0c401536d90c26d08ca857b1e559ae3",
+  "data/army/unit_footprints.csv": "3f4b06c876ac881377d9a4e387ffb89b7f9fdfad6e5d21d714dea6b84d386fc7",
+  "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
+  "scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
+  "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
+ },
+ "locomotion_certificate": null,
+ "payload_sha256": "d6179dc9de0dc8308310c77b3531a319f8954bc0ba0cf0c93965d61aafe49cc5",
+ "report": {
+  "bounds_um": {
+   "contact": 28474,
+   "seam": 2373
+  },
+  "envelope": {
+   "footprint_radius_m": 932,
+   "margin_um": 8945,
+   "pass": true,
+   "radius_model_um": 876794,
+   "radius_simulation_m": 374,
+   "witness": {
+    "clip": "MARCH",
+    "mesh": "archers_bow",
+    "phase": 0.200000007663455,
+    "surface": 0,
+    "turn_udeg": null,
+    "vertex": 563
+   }
+  },
+  "hover": {
+   "bound_um": 28474,
+   "margin_um": 5205,
+   "pass": true,
+   "sampled_um": 496,
+   "total_um": 5700,
+   "witness": {
+    "clip": "MARCH",
+    "foot": "r",
+    "phase": 0.8828125,
+    "turn_udeg": null
+   }
+  },
+  "pass": false,
+  "patches": {
+   "l": {
+    "first": [
+     {
+      "mesh": "archers",
+      "surface": 0,
+      "vertex": 776
+     },
+     {
+      "mesh": "archers",
+      "surface": 0,
+      "vertex": 777
+     },
+     {
+      "mesh": "archers",
+      "surface": 0,
+      "vertex": 783
+     },
+     {
+      "mesh": "archers",
+      "surface": 0,
+      "vertex": 784
+     }
+    ],
+    "vertices": 2038
+   },
+   "r": {
+    "first": [
+     {
+      "mesh": "archers",
+      "surface": 0,
+      "vertex": 64
+     },
+     {
+      "mesh": "archers",
+      "surface": 0,
+      "vertex": 65
+     },
+     {
+      "mesh": "archers",
+      "surface": 0,
+      "vertex": 69
+     },
+     {
+      "mesh": "archers",
+      "surface": 0,
+      "vertex": 70
+     }
+    ],
+    "vertices": 1659
+   }
+  },
+  "penetration": {
+   "bound_um": 28474,
+   "margin_um": 5589,
+   "pass": true,
+   "sampled_um": 0,
+   "total_um": 5589,
+   "witness": {
+    "clip": "PIVOT_LEFT",
+    "mesh": "archers",
+    "phase": 0.0,
+    "surface": 0,
+    "turn_udeg": null,
+    "vertex": 31272
+   }
+  },
+  "planting_band": {
+   "H_m": -0.001091966855674087,
+   "band_m": 0.0005,
+   "inherited_from": "shipped native MARCH",
+   "rule": "b = max(0.5 mm, H + 0.5 mm); H = highest per-stance minimum sole height, stances = runs among the lower half of the feet"
+  },
+  "sample_count": 2501,
+  "seam": {
+   "bound_um": 2373,
+   "boundaries": [
+    {
+     "bound_um": 2373,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.999999
+      ],
+      "mesh": "archers",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 7853
+     }
+    },
+    {
+     "bound_um": 2373,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 842,
+     "total_um": 842,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.0
+      ],
+      "mesh": "archers",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 35966
+     }
+    },
+    {
+     "bound_um": 2373,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 842,
+     "total_um": 842,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "archers",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 35966
+     }
+    },
+    {
+     "bound_um": 2373,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 842,
+     "total_um": 842,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.0
+      ],
+      "mesh": "archers",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 35966
+     }
+    },
+    {
+     "bound_um": 2373,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 842,
+     "total_um": 842,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "archers",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 35966
+     }
+    }
+   ],
+   "margin_um": 0,
+   "pass": true,
+   "sampled_um": 842,
+   "total_um": 842,
+   "witness": {
+    "from": [
+     "PIVOT_RIGHT",
+     1.0
+    ],
+    "mesh": "archers",
+    "surface": 0,
+    "to": [
+     "MARCH",
+     0.0
+    ],
+    "turn_udeg": null,
+    "vertex": 35966
+   }
+  },
+  "skin": {
+   "flagged_pairs_inherited": 0,
+   "flagged_pairs_introduced": 0,
+   "introduced_witnesses": [],
+   "pass": true,
+   "rule": "length > 4 x native-entry AND > 0.03 model m; fails unless the native seek at the same phase is flagged"
+  },
+  "slide": {
+   "band_m": 0.0005,
+   "bound_um": 28474,
+   "by_clip": {
+    "MARCH": {
+     "bound_um": 28474,
+     "margin_um": 1881,
+     "pass": true,
+     "sampled_um": 5117,
+     "total_um": 6998,
+     "witness": {
+      "clip": "MARCH",
+      "mesh": "archers",
+      "phase": 0.306640625,
+      "surface": 0,
+      "touchdown_phase": 0.28125,
+      "turn_udeg": null,
+      "vertex": 1112
+     }
+    },
+    "PIVOT_LEFT": {
+     "bound_um": 28474,
+     "margin_um": 14441,
+     "pass": false,
+     "sampled_um": 94753,
+     "total_um": 109194,
+     "witness": {
+      "clip": "PIVOT_LEFT",
+      "mesh": "archers",
+      "phase": 0.875,
+      "surface": 0,
+      "touchdown_phase": 0.75,
+      "turn_udeg": -1,
+      "vertex": 5154
+     }
+    },
+    "PIVOT_RIGHT": {
+     "bound_um": 28474,
+     "margin_um": 8901,
+     "pass": false,
+     "sampled_um": 94753,
+     "total_um": 103653,
+     "witness": {
+      "clip": "PIVOT_RIGHT",
+      "mesh": "archers",
+      "phase": 0.375,
+      "surface": 0,
+      "touchdown_phase": 0.25,
+      "turn_udeg": 1,
+      "vertex": 5154
+     }
+    }
+   },
+   "margin_um": 14441,
+   "pass": false,
+   "sampled_um": 94753,
+   "total_um": 109194,
+   "witness": {
+    "clip": "PIVOT_LEFT",
+    "mesh": "archers",
+    "phase": 0.875,
+    "surface": 0,
+    "touchdown_phase": 0.75,
+    "turn_udeg": -1,
+    "vertex": 5154
+   }
+  },
+  "stance": {
+   "missing": [],
+   "pass": true
+  },
+  "turn_grid": [
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 1,
+    "name": "+1 microdegree",
+    "turn_udeg": 1,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 1,
+    "name": "-1 microdegree",
+    "turn_udeg": -1,
+    "yaw0_udeg": 1
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 2223,
+    "name": "359 to 1 wrap",
+    "turn_udeg": 2000000,
+    "yaw0_udeg": 359000000
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 2223,
+    "name": "1 to 359 wrap",
+    "turn_udeg": -2000000,
+    "yaw0_udeg": 1000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 50000,
+    "name": "+45",
+    "turn_udeg": 45000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 50000,
+    "name": "-45",
+    "turn_udeg": -45000000,
+    "yaw0_udeg": 45000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 100000,
+    "name": "+90",
+    "turn_udeg": 90000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 100000,
+    "name": "-90",
+    "turn_udeg": -90000000,
+    "yaw0_udeg": 90000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 150000,
+    "name": "+135",
+    "turn_udeg": 135000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 150000,
+    "name": "-135",
+    "turn_udeg": -135000000,
+    "yaw0_udeg": 135000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 200000,
+    "name": "+179.999999",
+    "turn_udeg": 179999999,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 200000,
+    "name": "-179.999999",
+    "turn_udeg": -179999999,
+    "yaw0_udeg": 179999999
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 200000,
+    "name": "180 tie",
+    "turn_udeg": 180000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 200000,
+    "name": "180 tie reversed",
+    "turn_udeg": 180000000,
+    "yaw0_udeg": 180000000
+   }
+  ]
+ },
+ "ruling": "docs/reviews/cluster-formations/owner-rulings-2026-11-10.md R-A R-B R-C",
+ "scale": {
+  "k": 21.0718843818879,
+  "lift_model_m": 0.03397461175918575,
+  "model_height_m": 2.26497411727905,
+  "simulation_scale": 421.437687637757
+ },
+ "schema": 1,
+ "status": "FAIL",
+ "tool_sha256": "6ee780d4cdf61bfd09946a07ee3cb049ffc9519c6d13682847a1f89a41c40156",
+ "visual_review": "PENDING: R-C requires the real-window review after this numeric pass"
+}
