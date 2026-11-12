@@ -600,6 +600,32 @@ const STUB := "res://tests/fixtures/pivot_provider_stub.gd"
 const Stub := preload("res://tests/fixtures/pivot_provider_stub.gd")
 const PHASE := 25.0 / 28.0  ## an admitted MARCH phase, as the infantry certificate admits
 
+func test_v2_pivot_needs_the_arms_clip_else_refuses_the_unit() -> void:
+	var f := _fixture()
+	f.state.army_roster[f.code].organization_arm = "infantry"
+	assert_eq(MapObjects.army_piece(f.repo, f.state.army_roster[f.code]), "infantry")
+	var envelope := _commit_v2(f, [[0, 0], [3, 0], [3, 4]], 10)
+	f.ctx.day_fn = func() -> float: return 0.35
+	var layer := _layer(f, envelope)
+	var piece: Dictionary = layer.built_piece(f.code)
+	# Every installed arm has its pivots now: give THIS figure a copy of its clips without them
+	# (the imported library is shared by every infantry instance, so it is never edited).
+	for anim: AnimationPlayer in piece.groups[0].piece.anims:
+		for library: StringName in anim.get_animation_library_list():
+			var stripped := anim.get_animation_library(library).duplicate() as AnimationLibrary
+			for clip: StringName in [&"PIVOT_LEFT", &"PIVOT_RIGHT"]:
+				if stripped.has_animation(clip): stripped.remove_animation(clip)
+			anim.remove_animation_library(library)
+			anim.add_animation_library(library, stripped)
+	var row: Dictionary = (view.call("sample_candidate", f.ctx, f.code, envelope) as Dictionary).rows[0]
+	_install_gait(f, Map3DCandidateGait.model_length(f.ctx, piece, piece.groups[0].piece, row.move.ops[0]) / 3.0)
+	layer.step(0.0)
+	piece = layer.built_piece(f.code)
+	assert_false(piece.groups[0].piece.node.is_visible_in_tree())
+	assert_string_contains(String(piece.candidate_error), "no PIVOT_RIGHT clip")
+	assert_false(layer.screen_rects().has(f.code))
+
+
 ## The consumer's certified-gait fields, added after the commit (the engine's strict policy
 ## check predates them; LOCO-POLICY installs them for real).
 func _install_gait(f: Dictionary, stride_m: float, provider: String = STUB) -> void:
