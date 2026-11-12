@@ -1,0 +1,13 @@
+{
+ "arm": "archers",
+ "note": "Re-authored archer MARCH measured natively; pivots native (no provider), so small-turn pivot slide is expected to fail and is not this PR's subject.",
+ "scene": "scenes/models/units/archers.tscn",
+ "feet": {"l": ["foot.l", "toes_01.l"], "r": ["foot.r", "toes_01.r"]},
+ "forward": [0, 0, -1],
+ "stride_m": 1.5283,
+ "turn_q": 400000,
+ "hold_clip": "MARCH",
+ "march_stop_phases": [0.0],
+ "march_start_phases": [0.0],
+ "hold_phases": [0.0]
+}

@@ -20,7 +20,11 @@ class SelectionTests(unittest.TestCase):
         return selector.select(paths, self.catalog, include)
 
     def test_docs_and_harness_need_no_godot(self):
-        self.assertEqual(self.select('README.md', '.codex/hooks/task-handover.py')['files'], [])
+        self.assertEqual(self.select('README.md', '.github/pull_request_template.md')['files'], [])
+
+    def test_repository_plumbing_needs_no_godot(self):
+        self.assertEqual(self.select('.gitignore', '.superpowers/session-handovers/a.json')['files'], [])
+        self.assertNotEqual(self.select('.gitignore', 'data/economy/balance.csv')['files'], [])
 
     def test_runtime_prose_and_data_are_functional(self):
         for path in ['RANDOM_EVENTS.md', 'game_story/opening.md', 'data/economy/balance.csv']:
