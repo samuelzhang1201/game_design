@@ -482,13 +482,18 @@ static func step_candidate(repo: DataRepository, source: GameState) -> Dictionar
 	if done.status != "complete": return _result(done.status, done.reason)
 	return _result("deferred", "Candidate day is complete")
 
+## The safe boundary at the next outer operation number; a malformed receipt gives an
+## empty sequence, which admission rejects.
+static func safe_boundary(state: GameState) -> Dictionary:
+	var outer: Variant = state.military_migration.get("body_battle", {})
+	var sequence: Variant = outer.get("sequence", "") if outer is Dictionary else ""
+	return {"version": 1, "kind": "safe", "abs_day": str(state.absolute_day()),
+		"sequence": "0" if outer is Dictionary and outer.is_empty() else (str(int(sequence) + 1) if DayResolution._body_decimal(sequence) else "")}
+
 ## Begin consumes the next outer operation at the safe boundary; repeating it on a frozen day defers.
 static func begin_candidate(repo: DataRepository, source: GameState) -> Dictionary:
 	if repo == null or source == null: return _result("error", "Begin requires data and source")
-	var outer: Variant = source.military_migration.get("body_battle", {})
-	var sequence: Variant = outer.get("sequence", "") if outer is Dictionary else ""
-	var boundary := {"version": 1, "kind": "safe", "abs_day": str(source.absolute_day()),
-		"sequence": "0" if outer is Dictionary and outer.is_empty() else (str(int(sequence) + 1) if DayResolution._body_decimal(sequence) else "0")}
+	var boundary := safe_boundary(source)
 	var planned := plan_candidate(repo, source, {"kind": "begin"}, boundary)
 	if planned.status != "complete": return planned
 	var begun := commit_candidate(repo, source, planned.plan, boundary)

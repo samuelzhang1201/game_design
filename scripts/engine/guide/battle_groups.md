@@ -113,7 +113,8 @@ entry does not discover/merge battles or replace production melee damage.
 schema but skips the outgoing law/agreement filter: its `engaged` is the unit's
 physically contactable personnel, once per identity. It is defensive evidence,
 never permission to attack, and a protected pair cannot erase exposure to an
-unprotected opponent. `BattleGroups.melee_counts(repo,state,battle,unit,enemies)`
+unprotected opponent. Capture is not a filter there: a captured body still
+occupies its disc. `BattleGroups.melee_counts(repo,state,battle,unit,enemies)`
 is CF06's three-field `{engaged,fit,reason}` adapter over the lawful query at the
 state's own boundary (its saved battle day, or the safe boundary with no day open).
 A rejection returns `-1` counts and a `Rejected:` reason, never a legitimate zero;

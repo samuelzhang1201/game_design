@@ -69,9 +69,12 @@ func test_protected_outgoing_keeps_defensive_exposure_and_nonparty_scope() -> vo
 	# B = the crown unit; A = enemy (touches B's row 0) under an A<->B ceasefire;
 	# C = other (touches B's row 1) is no party to it.
 	_put(f, f.other, 0, 21731, 10000)
+	assert_eq(_melee(f, f.enemy, [f.unit]).engaged, 100, "baseline: before the ceasefire A attacks B")
 	var term := {"policy": "protect", "scope": "battle", "until_day": 0, "end_condition": "battle_end", "conditions": {}}
 	f.state.battles[0].parley = {"battle_id": 8, "agreed": {"ceasefire": term}, "parties": {"att": [f.unit], "def": [f.enemy]}}
-	assert_eq(_melee(f, f.enemy, [f.unit]).engaged, 0, "A may not attack B")
+	var barred := _melee(f, f.enemy, [f.unit])
+	assert_eq(barred.engaged, 0, "A may not attack B")
+	assert_true(String(barred.reason).contains("ceasefire"), barred.reason)
 	assert_eq(_exposure(f, f.enemy, [f.unit]).engaged, 100, "A is still physically exposed to B")
 	assert_eq(_melee(f, f.unit, [f.enemy]).engaged, 0, "B may not attack A either")
 	assert_eq(_melee(f, f.other, [f.unit]).engaged, 100, "C is no party: its attack on B stays lawful")
@@ -129,6 +132,8 @@ func test_wall_water_and_raw_overflow() -> void:
 	var raw := _melee(f, f.unit, [f.enemy])
 	assert_eq(raw.engaged, -1)
 	assert_true(String(raw.reason).begins_with("Rejected"))
+	assert_eq(_exposure(f, f.unit, [f.enemy]).status, "error")
+	assert_eq(_exposure(_fixture(), f.unit, [f.enemy, f.enemy]).status, "error", "duplicate enemies")
 
 func test_rejections_are_never_a_zero() -> void:
 	var f := _fixture()
@@ -144,3 +149,6 @@ func test_rejections_are_never_a_zero() -> void:
 	assert_eq(other_day.engaged, -1)
 	assert_eq(other_day.reason, "Rejected: candidate melee needs an admitted battle boundary")
 	assert_eq(BattleGroups.melee_counts(null, f.state, f.state.battles[0], f.unit, [f.enemy]).engaged, -1)
+	# A malformed saved battle day is a rejection, not a runtime error.
+	f.state.day_resolution = {"body_battle": {"stage": "round"}}
+	assert_eq(_melee(f, f.unit, [f.enemy]).engaged, -1)

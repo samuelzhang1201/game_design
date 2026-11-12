@@ -583,9 +583,6 @@ static func deployment(repo: DataRepository, state: GameState, battle: Dictionar
 	return out
 
 
-## Saved front-group contact, with active pursuit restricted to its received
-## region. An attacking opponent still permits self-defence outside it.
-## A pursuit_target asks only for pursuit contact with that enemy, not defence.
 ## CF06 candidate melee input: `{engaged, fit, reason}` adapted from the admitted lawful
 ## physical query at the state's own boundary (its saved battle day, or the safe boundary
 ## when no day is open). A rejection is never a legitimate zero: it returns -1 counts and
@@ -595,12 +592,10 @@ static func melee_counts(repo: DataRepository, state: GameState, battle: Diction
 	if repo == null or state == null or not BodyMotion._loco_integer(battle.get("id")): return rejected
 	var boundary: Dictionary
 	if state.day_resolution.get("body_battle") is Dictionary:
+		var raw := DayResolution.body_battle_incompatibility_reason(state.day_resolution)
+		if not raw.is_empty(): return {"engaged": -1, "fit": -1, "reason": "Rejected: " + raw}
 		boundary = BodyBattleMotion._boundary(state)
-	elif state.day_resolution.is_empty():
-		var outer: Variant = state.military_migration.get("body_battle", {})
-		var sequence: Variant = outer.get("sequence", "") if outer is Dictionary else ""
-		boundary = {"version": 1, "kind": "safe", "abs_day": str(state.absolute_day()),
-			"sequence": "0" if outer is Dictionary and outer.is_empty() else (str(int(sequence) + 1) if DayResolution._body_decimal(sequence) else "")}
+	elif state.day_resolution.is_empty(): boundary = BodyBattle.safe_boundary(state)
 	else: return rejected
 	var sorted := enemies.duplicate()
 	sorted.sort()
@@ -609,6 +604,9 @@ static func melee_counts(repo: DataRepository, state: GameState, battle: Diction
 	return {"engaged": int(query.engaged), "fit": int(query.fit), "reason": String(query.reason)}
 
 
+## Saved front-group contact, with active pursuit restricted to its received
+## region. An attacking opponent still permits self-defence outside it.
+## A pursuit_target asks only for pursuit contact with that enemy, not defence.
 static func engaged_counts(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
 		pursuit_target := "") -> Vector2i:
 	var rows: Array = battle.get("groups", {}).get(code, [])
