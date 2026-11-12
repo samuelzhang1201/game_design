@@ -48,7 +48,7 @@ HARNESS_PATHS = {
 
 def not_game_input(path):
     """Repository plumbing the game never reads, so it selects no GUT."""
-    return path in ('.github/pull_request_template.md', '.gitignore') or path.startswith('.superpowers/')
+    return path in ('.github/pull_request_template.md', '.gitignore') or path.startswith(('.superpowers/', '.claude/'))
 
 
 def comment_only_diff(base, cwd=ROOT):

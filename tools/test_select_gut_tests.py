@@ -24,6 +24,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_repository_plumbing_needs_no_godot(self):
         self.assertEqual(self.select('.gitignore', '.superpowers/session-handovers/a.json')['files'], [])
+        self.assertEqual(self.select('.claude/settings.json', '.claude/hooks/session-start.sh')['files'], [])
         self.assertNotEqual(self.select('.gitignore', 'data/economy/balance.csv')['files'], [])
 
     def test_runtime_prose_and_data_are_functional(self):
