@@ -586,6 +586,29 @@ static func deployment(repo: DataRepository, state: GameState, battle: Dictionar
 ## Saved front-group contact, with active pursuit restricted to its received
 ## region. An attacking opponent still permits self-defence outside it.
 ## A pursuit_target asks only for pursuit contact with that enemy, not defence.
+## CF06 candidate melee input: `{engaged, fit, reason}` adapted from the admitted lawful
+## physical query at the state's own boundary (its saved battle day, or the safe boundary
+## when no day is open). A rejection is never a legitimate zero: it returns -1 counts and
+## a "Rejected:" reason. No front/reserve fallback.
+static func melee_counts(repo: DataRepository, state: GameState, battle: Dictionary, unit: String, enemies: Array) -> Dictionary:
+	var rejected := {"engaged": -1, "fit": -1, "reason": "Rejected: candidate melee needs an admitted battle boundary"}
+	if repo == null or state == null or not BodyMotion._loco_integer(battle.get("id")): return rejected
+	var boundary: Dictionary
+	if state.day_resolution.get("body_battle") is Dictionary:
+		boundary = BodyBattleMotion._boundary(state)
+	elif state.day_resolution.is_empty():
+		var outer: Variant = state.military_migration.get("body_battle", {})
+		var sequence: Variant = outer.get("sequence", "") if outer is Dictionary else ""
+		boundary = {"version": 1, "kind": "safe", "abs_day": str(state.absolute_day()),
+			"sequence": "0" if outer is Dictionary and outer.is_empty() else (str(int(sequence) + 1) if DayResolution._body_decimal(sequence) else "")}
+	else: return rejected
+	var sorted := enemies.duplicate()
+	sorted.sort()
+	var query := BodyBattleContact.query_candidate(repo, state, int(battle.id), unit, sorted, boundary)
+	if query.status != "complete": return {"engaged": -1, "fit": -1, "reason": "Rejected: " + String(query.reason)}
+	return {"engaged": int(query.engaged), "fit": int(query.fit), "reason": String(query.reason)}
+
+
 static func engaged_counts(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
 		pursuit_target := "") -> Vector2i:
 	var rows: Array = battle.get("groups", {}).get(code, [])
