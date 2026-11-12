@@ -596,6 +596,10 @@ func test_v2_stop_pivot_move_hand_computed_l() -> void:
 	assert_eq(view.call("sample_locomotion_candidate", v1.ctx, v1.code, v1_envelope).mode, "invalid", "v1 receipt is not a v2 timeline")
 	assert_eq(view.call("sample_candidate", v1.ctx, v1.code, v1_envelope).mode, "bodies")
 
+const STUB := "res://tests/fixtures/pivot_provider_stub.gd"
+const Stub := preload("res://tests/fixtures/pivot_provider_stub.gd")
+const PHASE := 25.0 / 28.0  ## an admitted MARCH phase, as the infantry certificate admits
+
 func test_v2_pivot_needs_the_arms_clip_else_refuses_the_unit() -> void:
 	var f := _fixture()
 	f.state.army_roster[f.code].organization_arm = "infantry"
@@ -613,49 +617,132 @@ func test_v2_pivot_needs_the_arms_clip_else_refuses_the_unit() -> void:
 				if stripped.has_animation(clip): stripped.remove_animation(clip)
 			anim.remove_animation_library(library)
 			anim.add_animation_library(library, stripped)
+	var row: Dictionary = (view.call("sample_candidate", f.ctx, f.code, envelope) as Dictionary).rows[0]
+	_install_gait(f, Map3DCandidateGait.model_length(f.ctx, piece, piece.groups[0].piece, row.move.ops[0]) / 3.0)
 	layer.step(0.0)
 	piece = layer.built_piece(f.code)
 	assert_false(piece.groups[0].piece.node.is_visible_in_tree())
 	assert_string_contains(String(piece.candidate_error), "no PIVOT_RIGHT clip")
 	assert_false(layer.screen_rects().has(f.code))
-	# A straight v2 leg along the facing needs no pivot and plays on MARCH alone.
-	var straight := _fixture()
-	straight.state.army_roster[straight.code].organization_arm = "infantry"
-	var ahead := _commit_v2(straight, [[0, 0], [4, 0]], 8)
-	straight.ctx.day_fn = func() -> float: return 0.25
-	var walking := _layer(straight, ahead)
-	var shown: Dictionary = walking.built_piece(straight.code)
-	assert_true(shown.groups[0].piece.node.is_visible_in_tree(), String(shown.get("candidate_error", "")))
-	assert_eq(shown.groups[0].piece.action, "MARCH")
 
-func test_v2_arm_with_pivot_clips_stops_turns_then_walks() -> void:
+
+## The consumer's certified-gait fields, added after the commit (the engine's strict policy
+## check predates them; LOCO-POLICY installs them for real).
+func _install_gait(f: Dictionary, stride_m: float, provider: String = STUB) -> void:
+	var piece := MapObjects.army_piece(f.repo, f.state.army_roster[f.code])
+	var cert: Dictionary = f.repo.unit_footprints[piece].locomotion_certificate
+	for key: String in ["march_stop_phases", "march_start_phases", "hold_phases"]: cert[key] = [PHASE]
+	cert.hold_clip = "MARCH"
+	cert.stride_m = stride_m
+	cert.provider = provider
+
+func _archer_l(share: float) -> Dictionary:
 	var f := _fixture()
 	f.state.army_roster[f.code].organization_arm = "archers"
-	assert_eq(MapObjects.army_piece(f.repo, f.state.army_roster[f.code]), "archers")
 	var envelope := _commit_v2(f, [[0, 0], [3, 0], [3, 4]], 10)
-	var clock := {"share": 0.3 + 0.1 * 0.25, "speed": 1}
+	var clock := {"share": share, "speed": 1}
 	f.ctx.day_fn = func() -> float: return clock.share
 	f.ctx.clock_fn = func() -> int: return clock.speed
-	var layer := _layer(f, envelope)
+	f.envelope = envelope
+	f.clock = clock
+	return f
+
+func _bones(skeleton: Skeleton3D) -> Array:
+	var out: Array = []
+	for bone: int in skeleton.get_bone_count(): out.append(skeleton.get_bone_pose(bone))
+	return out
+
+func test_whole_strides_hand_computed_against_contact_bound() -> void:
+	# Infantry native stride 1.765 model m, contact bound 22769 um (0.60 world m at k 26.35).
+	for item: Array in [[3.53, 2], [1.78, 1], [1.79, -1], [0.5, -1], [70.0, 40], [100.0, 57]]:
+		assert_eq(Map3DCandidateGait.strides(item[0], 1.765, 22769), item[1], str(item))
+	# 1.78/1 slides 15000 um; 1.79/1 slides 25000 um > 22769, and 1.79/2 is far worse.
+	# 70/40 = 1.75 slides 15000 (70/39 = 1.79487 would slide 29872); 100/57 slides 10614.
+	assert_eq(Map3DCandidateGait.admitted_phase([[PHASE], [PHASE], [PHASE]]), PHASE)
+	assert_eq(Map3DCandidateGait.admitted_phase(["*", [0.5], "*"]), 0.5)
+	assert_eq(Map3DCandidateGait.admitted_phase([[0.1], [0.2], "*"]), -1.0)
+	assert_eq(Map3DCandidateGait.admitted_phase(["*", "*", "*"]), 0.0)
+	for bad: Variant in [null, "", 5, "x"]:
+		assert_eq(Map3DCandidateGait.admitted_phase([bad, [PHASE], [PHASE]]), -1.0, "malformed %s is no wildcard" % str(bad))
+
+func test_v2_without_certified_gait_refuses_the_unit() -> void:
+	for case: Array in [["", "lacks march_stop_phases"], ["res://tests/fixtures/missing.gd", "no turn -> pose provider"]]:
+		var f := _archer_l(0.35)
+		if not case[0].is_empty(): _install_gait(f, 1.0, case[0])
+		var layer := _layer(f, f.envelope)
+		var piece: Dictionary = layer.built_piece(f.code)
+		assert_false(piece.groups[0].piece.node.is_visible_in_tree(), case[1])
+		assert_string_contains(String(piece.candidate_error), case[1])
+		assert_false(layer.screen_rects().has(f.code))
+
+func test_v2_leg_that_fits_no_whole_stride_is_refused() -> void:
+	var f := _archer_l(0.15)
+	var layer := _layer(f, f.envelope)
 	var child: Dictionary = layer.built_piece(f.code).groups[0].piece
-	assert_true(child.node.is_visible_in_tree(), String(layer.built_piece(f.code).get("candidate_error", "")))
+	var row: Dictionary = (view.call("sample_candidate", f.ctx, f.code, f.envelope) as Dictionary).rows[0]
+	var leg := Map3DCandidateGait.model_length(f.ctx, layer.built_piece(f.code), child, row.move.ops[0])
+	_install_gait(f, leg / 2.5)
+	layer.set_candidate_bodies(true, f.envelope)
+	assert_false(child.node.is_visible_in_tree())
+	assert_string_contains(String(layer.built_piece(f.code).candidate_error), "fits no whole MARCH stride")
+
+func test_v2_stops_turns_and_walks_only_at_admitted_phases() -> void:
+	var f := _archer_l(0.1875)
+	var layer := _layer(f, f.envelope)
+	var piece: Dictionary = layer.built_piece(f.code)
+	var child: Dictionary = piece.groups[0].piece
+	var row: Dictionary = (view.call("sample_candidate", f.ctx, f.code, f.envelope) as Dictionary).rows[0]
+	# Stride = first leg / 3, so the 3 m leg walks 3 loops and the 4 m leg exactly 4.
+	_install_gait(f, Map3DCandidateGait.model_length(f.ctx, piece, child, row.move.ops[0]) / 3.0)
+	layer.set_candidate_bodies(true, f.envelope)
 	var anim: AnimationPlayer = child.anims[0]
-	layer.step(0.0)
-	assert_eq(child.action, "PIVOT_RIGHT")
-	assert_eq(anim.speed_scale, 0.0, "pivot is scrubbed by operation phase, not frame delta")
-	assert_almost_eq(anim.current_animation_position, 0.25 * anim.current_animation_length, 0.001)
-	var expected := [["PIVOT_RIGHT", 45.0, Vector2(3, 0)], ["MARCH", 90.0, Vector2(3, 1)], ["PIVOT_LEFT", 45.0, Vector2(3, 4)]]
-	var i := 0
-	for share: float in [0.35, 0.5, 0.85]:
-		clock.share = share
+	var skeleton := Map3DCandidateGait._skeleton(anim)
+	Stub.calls.clear()
+	# Binary-exact shares (time_q = floor(share x Q)). share -> clip, the MARCH phase it must
+	# show (or the pivot phase), yaw degrees, pack offset. Leg 1: 0..300000, pivot +90 to
+	# 400000, leg 2 to 800000, pivot -90 to 900000, then the hold at the admitted phase.
+	for item: Array in [[0.1875, "MARCH", fposmod(PHASE + 3 * 0.625, 1.0), 0.0, Vector2(1.875, 0)],
+			[0.375, "PIVOT_RIGHT", 0.75, 67.5, Vector2(3, 0)],
+			[0.5, "MARCH", fposmod(PHASE + 4 * 0.25, 1.0), 90.0, Vector2(3, 1)],
+			[0.875, "PIVOT_LEFT", 0.75, 22.5, Vector2(3, 4)],
+			[0.9375, "MARCH", PHASE, 0.0, Vector2(3, 4)]]:
+		f.clock.share = item[0]
 		layer.step(0.0)
-		assert_eq(child.action, expected[i][0], str(share))
-		var yaw := Map3DUnits.facing_yaw(Vector2.from_angle(deg_to_rad(expected[i][1])), child.stand_deg)
-		assert_almost_eq(wrapf((child.node as Node3D).global_rotation.y - yaw, -PI, PI), 0.0, 0.0001, str(share))
-		var xz: Vector2 = f.ctx.to_world((expected[i][2] + Vector2(O, O)) / float(ArmySystem.metres_per_pack_px(f.repo)))
+		assert_true(child.node.is_visible_in_tree(), String(piece.get("candidate_error", "")))
+		assert_eq(child.action, "v2:" + item[1], str(item[0]))
+		assert_false(anim.is_playing(), "posed with the player stopped: no crossfade can hang at speed_scale 0")
+		assert_eq(anim.speed_scale, 0.0)
+		var shown := _bones(skeleton)
+		var clip := Map3DUnits.clip_named(anim, item[1])
+		Map3DPivotProvider.seek(anim, skeleton, clip, float(item[2]) * anim.get_animation(clip).length)
+		assert_eq(shown, _bones(skeleton), "exact pose at %s, no blend residue" % item[0])
+		var yaw := Map3DUnits.facing_yaw(Vector2.from_angle(deg_to_rad(item[3])), child.stand_deg)
+		assert_almost_eq(wrapf((child.node as Node3D).global_rotation.y - yaw, -PI, PI), 0.0, 0.0001, str(item[0]))
+		var xz: Vector2 = f.ctx.to_world((item[4] + Vector2(O, O)) / float(ArmySystem.metres_per_pack_px(f.repo)))
 		assert_almost_eq((child.node as Node3D).global_position.x, xz.x, 0.0001)
 		assert_almost_eq((child.node as Node3D).global_position.z, xz.y, 0.0001)
-		i += 1
+	assert_eq(Stub.calls, [["PIVOT_RIGHT", 90000000, 0.75], ["PIVOT_LEFT", -90000000, 0.75]], "pivot poses come from the provider")
+	# Leaving the candidate seam replays the ordinary clip on the stopped figure.
+	layer.set_candidate_bodies(false)
+	layer.step(0.0)
+	var after: Dictionary = layer.built_piece(f.code)
+	assert_false(after.anims.is_empty())
+	for player: AnimationPlayer in after.anims:
+		assert_true(player.is_playing(), "a figure frozen by v2 is never left stopped")
+
+func test_v2_straight_leg_walks_march_on_an_infantry_figure() -> void:
+	var f := _fixture()
+	f.state.army_roster[f.code].organization_arm = "infantry"
+	var envelope := _commit_v2(f, [[0, 0], [4, 0]], 8)
+	f.ctx.day_fn = func() -> float: return 0.25
+	var layer := _layer(f, envelope)
+	var piece: Dictionary = layer.built_piece(f.code)
+	var child: Dictionary = piece.groups[0].piece
+	var row: Dictionary = (view.call("sample_candidate", f.ctx, f.code, envelope) as Dictionary).rows[0]
+	_install_gait(f, Map3DCandidateGait.model_length(f.ctx, piece, child, row.move.ops[0]) / 2.0)
+	layer.set_candidate_bodies(true, envelope)
+	assert_true(child.node.is_visible_in_tree(), String(piece.get("candidate_error", "")))
+	assert_eq(child.action, "v2:MARCH")
 
 func test_v2_saved_path_must_match_the_committed_operations() -> void:
 	var f := _fixture()
