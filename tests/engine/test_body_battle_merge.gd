@@ -252,8 +252,11 @@ func test_pending_round_two_towns_friendly_contact_and_incompatible_union_do_not
 ## D-FIRE replaced the explicit dependency with the real fire query: an attacking archer C
 ## 6141 m (surface gap) from A, far beyond reach 400, neither merges nor blocks discovery.
 func _assert_out_of_reach_stays_apart(f: Dictionary) -> void:
+	var before := BodyMotion._hash(f.state.to_dict())
 	var merge := _run(f, _merge_request())
 	assert_eq(merge.status, "deferred", merge.reason)
+	assert_null(merge.candidate)
+	assert_eq(BodyMotion._hash(f.state.to_dict()), before)
 	assert_eq(merge.reason, "No lawful physical cross-field contact or direct fire")
 	var discovery := _run(f, {"kind": "contacts"})
 	assert_eq(discovery.status, "complete", discovery.reason)
