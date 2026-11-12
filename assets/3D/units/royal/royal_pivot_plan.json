@@ -1,0 +1,8 @@
+{
+ "note": "Map3DRoyalPivot (LOCO-ROY-PROVIDER). march_phase: the one MARCH phase a royal pivot leaves and rejoins MARCH at, which is also the hold pose (coordinator ruling 2026-11-11: stop, start and hold only at admitted phases) - MARCH key 7/16, three hooves down, the frame nearest the stand. step_deg: every hoof steps once per this much turn, at least twice (the installed pivots' 12 steps a half turn). lift_m: a stepping hoof's rise mid-step in model metres, at most 0.4 of the distance it travels. support_m: a hoof whose lowest patch vertex is within this of the seated plane (or under it) at march_phase is planted; the others are in the air and step first and last. At 7/16 both fore hooves and the right hind are down (-2.7, +2.2, -1.8 mm); the left hind is 95 mm up. blend: the least share of the operation over which the body eases from MARCH to the stand and back (independent critic 2026-11-12: over one step of a 90 degree turn the rider's sword swing read as a flick).",
+ "march_phase": 0.4375,
+ "step_deg": 15.0,
+ "lift_m": 0.06,
+ "support_m": 0.003,
+ "blend": 0.25
+}
