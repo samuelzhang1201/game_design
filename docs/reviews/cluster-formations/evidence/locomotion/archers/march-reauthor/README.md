@@ -13,7 +13,7 @@ touches z = 0. In frames 12–17 (phase 0.31–0.46) the swinging right toe was 
 - the rest of the body floated up to 18.8 mm.
 
 The planted feet also crept, from 25 to 69 mm, during stance and toe-off. Under the per-vertex slide rule
-(#291), the shipped MARCH measures **501,503 µm** against the archer bound of 28,474 µm (0.60 world m).
+(#291), the shipped MARCH measures **512,453 µm** (per-foot band) against the archer bound of 28,474 µm (0.60 world m).
 
 ## What changed
 
@@ -47,16 +47,23 @@ GLB sha256: `02356e6f…` before, `f7112ff7…` after.
 
 ## Godot-native measurement
 
-`march-native-measure.json` was produced by the #291 certifier (`certify_locomotion.py`) with
-`march-native-measure.config.json`. It is not a certificate: the pivots run without a provider, so the
-small turns fail, and that is the LOCO-CERT-ARCH node's job. Bounds are contact 28,474 µm and seam
-2,373 µm; the planting band derived from this MARCH is H = −1.09 mm, so b = 0.5 mm.
+`march-native-measure.json` is the certifier's own output for the re-authored GLB
+(`march-native-measure.config.json`). It is not a certificate: the pivots run without a provider, so the
+small turns fail, and that is the LOCO-CERT-ARCH node's job.
+
+`before-after-measure.json` re-measures, offline, the shipped capture and the re-authored capture with
+ONE tool version: the #291 certifier with its final per-foot planting band. Each foot's band is
+inherited from the native MARCH it measures; after this PR that is the re-authored clip.
+- Before: left 0.54 mm, right 0.5 mm.
+- After: 0.5 mm for each foot.
+
+Bounds are contact 28,474 µm and seam 2,373 µm.
 
 | Quantity | Before (shipped) | After |
 |---|---:|---:|
-| MARCH slide (per vertex) | 501,503 µm | **6,998 µm** (5,117 + 1,881 margin) |
+| MARCH slide (per vertex) | 512,453 µm | **6,998 µm** (5,117 + 1,881 margin) |
 | Penetration | 5,589 µm | 5,589 µm |
-| Hover | 23,910 µm | 5,700 µm |
+| Hover | 5,729 µm | 5,700 µm |
 | Seams (loop / MARCH ↔ pivot) | 1 / 842 µm | 1 / 842 µm |
 | Envelope | 374 ≤ 932 sim m | 374 ≤ 932 sim m |
 | Skin flags introduced | 0 | 0 |
