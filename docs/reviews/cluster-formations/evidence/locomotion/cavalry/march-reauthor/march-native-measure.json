@@ -2086,7 +2086,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "cce41d7542a0c50939640195c3f813f636055ec0d586b95ddd6575325a1b4f3a",
+  "sha256": "86573edf390388c6754e2111a2150b4a1f95c228519aab168bb4ce93519c4c90",
   "uniform": 512
  },
  "config": {
@@ -2153,14 +2153,14 @@
   "assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg.import": "e99b960c02adede00ec5aecf53389c48384c93fdf4fc6a6ef24ed8efb0c6f250",
   "data/army/balance.csv": "c91faaef284442c03ae8e36d1269ec4ad0c401536d90c26d08ca857b1e559ae3",
   "data/army/unit_footprints.csv": "3f4b06c876ac881377d9a4e387ffb89b7f9fdfad6e5d21d714dea6b84d386fc7",
-  "data/screens/map3d/army_art.csv": "04cd8c6c7614d8fc726e82840b08147aef17d58b0b041dfaee7b68af5f554b3b",
+  "data/screens/map3d/army_art.csv": "7881804c8397b042480ad456dbaa3d9c02b1c4937289473bac91ed8853a21d16",
   "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
   "scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
  "locomotion_certificate": null,
- "payload_sha256": "00883542d9888d734e0c1b5a2fcac4e63999aa69e38342c16873f282e011c41b",
+ "payload_sha256": "02a2f6ccb1f18a73ee068a86a6d357fbcf580b9ca1fc6fcb1d0dacc62c7d80e6",
  "report": {
   "bounds_um": {
    "contact": 29273,
