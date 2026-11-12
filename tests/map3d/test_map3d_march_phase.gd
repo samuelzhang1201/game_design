@@ -90,6 +90,20 @@ func test_no_installed_arm_carries_a_phase_map() -> void:
 	assert_almost_eq(float(repo.army_art["cavalry"]["stride_m"]), 2.4, 1e-9)
 
 
+## The re-keyed cavalry MARCH keeps its dense keys through the import (cavalry.glb.import bakes at
+## animation/fps 240: 129 keys a loop, of which the importer drops the collinear ones; at 30 Godot
+## re-bakes every track to 17 and the planted hooves slide between keys again).
+func test_the_cavalry_march_keeps_its_dense_keys() -> void:
+	var model: Node = load("res://scenes/models/units/cavalry.tscn").instantiate()
+	var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]
+	var march: Animation = player.get_animation("MARCH")
+	var most: int = 0
+	for t: int in march.get_track_count():
+		most = maxi(most, march.track_get_key_count(t))
+	model.free()
+	assert_gt(most, 64, "MARCH keys on its busiest track")
+
+
 ## The candidate consumer's per-figure rate (Map3DUnitRig.mapped_rate): before MARCH is the
 ## current clip it starts from the phase play() will seek (here .25 -> 10, as above); on
 ## MARCH at .5 s of a 2 s clip (phase .25) the same; at 1 s (phase .5), 5.

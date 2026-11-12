@@ -53,8 +53,8 @@ def swing(k, half, back):
 
 
 def op_gait_rigid(a, u, stride=STRIDE, lift=1.0):
-    """op_gait's canter, the same stance path and lift, with the swing by `swing`, the fold eased in
-    (sin ** FOLD_POWER) and each hoof set by op_hoof."""
+    """op_gait's canter, the same stance path, lift and fold, with the swing by `swing` and each hoof set
+    by op_hoof."""
     for hoof, ph in CANTER.items():
         kind, s = ("Front" if hoof.startswith("Front") else "Hind"), hoof[-1]
         cb = a.data.bones[kind + "Cannon." + s]

@@ -37,13 +37,17 @@ generator re-run at 16 keys reproduced the shipped MARCH exactly (max matrix dif
   10 cm ahead before it lands. The hoof's fold keeps the generator's own timing (sin): easing it in as sin²
   scored worse (14.8 mm) and, per the critic, left a lifting fore hoof dangling toe-down.
 - **The import** `cavalry.glb.import` `animation/fps` went from 30 to 240. Godot's importer re-bakes every
-  clip at that rate, and at 30 it resampled the 128 keys back to 16; the other clips' 30 fps keys are
-  linear, so baking them at 240 changes no pose.
+  clip at that rate, and at 30 it resampled the 128 keys back to 16. The other clips' LINEAR samplers are
+  on the 1/30 s grid and their STEP samplers are all constant, so baking them at 240 changes no pose
+  (the pivots are rebuilt from exact keys by `pivot_import.gd` anyway). A GUT test holds MARCH's key
+  count.
 - `tools/units3d/cavalry_rig/march_transplant.py` moved ONLY the MARCH channels into the shipped
   `assets/3D/units/cavalry/cavalry.glb`:
   - it appended 159 new output accessors and one shared 129-key input, and repointed MARCH's samplers;
   - every original JSON table and BIN byte is kept, as are the other clips (the appended pivots included);
-  - re-running it on the shipped GLB is byte-reproducible.
+  - re-running it on the pre-transplant GLB with the same export reproduces the bytes (on an already
+    transplanted GLB it would append a second set);
+  - the old MARCH accessors stay in the BIN, unused.
 - `army_art.csv` cavalry: `stride_m` is now 2.4 (the canter's own loop, `actions.py` `STRIDE`) and
   `phase_map` is empty. The re-authored clip needs no map, so cavalry is paced like every other arm.
 
@@ -77,7 +81,7 @@ Over the whole run:
 
 `tools/units3d/march_gait_review.gd` (a real Godot window, `cavalry.tscn` paced by the real
 `Map3DUnitRig.keep_pace` over a striped ground, fixed side camera, red post at the hind-left touchdown):
-- before: `--variant map`;
+- before: `--variant map` on main before this PR (its `phase_map` is now empty);
 - after: `--variant stride --stride 2.4`.
 
 Worst hoof bone drift per stance (model m), as the tool prints it:
