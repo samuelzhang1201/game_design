@@ -24,7 +24,7 @@
           },
           {
             "type": "command",
-            "command": "nohup python3 \"$CLAUDE_PROJECT_DIR/tools/prune_merged_worktrees.py\" >/dev/null 2>&1 &"
+            "command": "nohup python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/prune_merged_worktrees.py\" >/dev/null 2>&1 &"
           }
         ]
       }

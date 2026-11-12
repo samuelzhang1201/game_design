@@ -2,8 +2,6 @@
 
 Headless bakes, importers, installers, snapshots and benches (`Godot -s`, or the `.tscn` runners). Every tool takes `--map` and defaults to `maps.csv` `is_default`; none names a pack (`tools/packs.py`). Guides: `tools/NEW_MAP.md` (a new pack, in order), `tools/map3d/README.md` (the Terrain3D build), `assets/imagegen/README.md` (the 2D art pipeline), `tools/units3d/README.md` and each model folder's README. Root rules apply: assets land in the asset layout, ComfyUI stops at images, no Hunyuan3D, Tripo on the paid plan only.
 
-**Worktree pruning**: the SessionStart hook runs `tools/prune_merged_worktrees.py` in the background; it removes a worktree only when its HEAD is a merged PR's head, it is clean, holds no git-ignored files but caches, is unlocked and idle an hour (docstring; `--dry-run` lists every keep reason; log in `<git-common-dir>/prune-merged-worktrees.log`). Branches stay.
-
 ## Map pack import and bakes
 
 - `tools/import_azgaar.gd` reads only the pack's `*Full*.json` (never a PNG) and writes the pack tables and the `world_*_index.png` hit-test bitmaps; the other `world_*.png` come from the bakes in `NEW_MAP.md`. All pack coordinates are the JSON's own; nothing is calibrated or scaled. Hand edits are overwritten on re-import.
