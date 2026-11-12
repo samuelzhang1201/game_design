@@ -42,7 +42,8 @@ the pivots enter and leave MARCH); the certificate records these phases as
 locomotion clip, or hover and slide go unmeasured and the run fails. Hover is
 the patch's LOWEST vertex above the seated plane. The ground is flat at the
 seat lift below the origin unless `slope` (rise per run, applied at every yaw)
-is set.
+is set. MARCH carries the piece forward by the arm's army_art.csv `phase_map` when it
+has one (the game's Map3DMarchPhase), else by `stride_m` per loop.
 
 Writes a digest-bound certificate JSON; exit 0 PASS, 1 FAIL, 2 error. A PASS is
 the numeric half of R-C only: the real-window review is still required.
@@ -415,9 +416,11 @@ def measure(dump, config, scale):
     slide_by_clip = {}
     missing = []  # a foot with no stance in a locomotion clip leaves hover and slide unmeasured
 
+    travel = march_travel(config.get('phase_map'), stride)
+
     def world(clip, phase, points, turn, cycle=0):
         if clip == 'MARCH':
-            return points + forward * stride * (phase + cycle)
+            return points + forward * travel(phase + cycle)
         return rot_y(points, -math.radians(turn / 1e6) * phase)
 
     def stream(clip, turn, prov=None):
@@ -754,6 +757,28 @@ def capture(config, godot, work, extra):
     return json.loads(dump.read_text()), inputs, sha(dump)
 
 
+def march_travel(phase_map, stride):
+    """Model metres a MARCH has carried the piece at unwrapped phase z: the arm's
+    army_art.csv `phase_map` (Map3DMarchPhase: F(z) = floor(z) S + f(frac z), f piecewise
+    linear through [[phase, metres], ...] from (0, 0) to (1, S)) when it has one, else the
+    constant stride (z x stride_m)."""
+    if not phase_map:
+        return lambda z: stride * z
+    ph = np.array([float(p) for p, _ in phase_map])
+    d = np.array([float(m) for _, m in phase_map])
+    if ph[0] != 0 or d[0] != 0 or ph[-1] != 1 or np.any(np.diff(ph) <= 0) or np.any(np.diff(d) <= 0):
+        raise ValueError('phase_map must rise strictly from (0, 0) to phase 1')
+    return lambda z: math.floor(z) * d[-1] + float(np.interp(z - math.floor(z), ph, d))
+
+
+def army_phase_map(arm):
+    """The arm's army_art.csv `phase_map` as [[phase, metres], ...], or None."""
+    with (ROOT / 'data/screens/map3d/army_art.csv').open() as stream:
+        row = next((r for r in csv.DictReader(stream) if r['piece'] == arm), {})
+    text = (row.get('phase_map') or '').strip()
+    return [[float(a), float(b)] for a, b in (pair.split(':') for pair in text.split(';'))] if text else None
+
+
 def balance(path, key):
     with (ROOT / path).open() as stream:
         for row in csv.reader(stream):
@@ -809,6 +834,9 @@ def main(argv=None):
                 'march_stop_phases', 'march_start_phases', 'hold_phases'):
         if key not in config:
             raise SystemExit(f'config is missing {key}')
+    # The MARCH travel the game plays (Map3DMarchPhase), bound into the certificate.
+    if config.setdefault('phase_map', army_phase_map(config['arm'])) != army_phase_map(config['arm']):
+        raise SystemExit("config phase_map is not army_art.csv's")
     radius = footprint_radius(config['arm'])
     if config.setdefault('radius_m', radius) != radius:
         raise SystemExit(f"config radius_m {config['radius_m']} is not unit_footprints.csv's {radius}")
@@ -821,6 +849,7 @@ def main(argv=None):
     if missing:
         raise SystemExit(f'sampling gap: {missing[:3]}')
     for rel in ('docs/reviews/cluster-formations/evidence/cf01/measurements.json', 'data/screens/map3d/balance.csv',
+                'data/screens/map3d/army_art.csv',
                 'data/army/unit_footprints.csv', 'data/army/balance.csv'):
         inputs[rel] = sha(ROOT / rel)
     scale = arm_scale(config['arm'])
