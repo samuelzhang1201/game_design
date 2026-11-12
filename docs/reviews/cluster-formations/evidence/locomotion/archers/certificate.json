@@ -329,7 +329,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "e942bc51c56698f8eca5e5b884ed5d39d2b9342d4e4daa4950e954f39b42ac90",
+  "sha256": "17ef2c92c23368d67a79b9186656de1acbaf6cd0b2c012d43d45bd7de3fcc275",
   "uniform": 512
  },
  "config": {
@@ -413,7 +413,7 @@
   "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
   "scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
-  "scripts/map3d/map3d_archer_locomotion.gd": "c0f6fa3dad4a72eff2d933780c5ba32581ac7c193dbb717c6a1c1f4962c97e6e",
+  "scripts/map3d/map3d_archer_locomotion.gd": "747cb3f67d51d7f82f34b6888948022f307022f72060c561dd245d4572182fea",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
@@ -425,11 +425,11 @@
    "MARCH"
   ],
   "contact_um": 28474,
-  "digest": "ea4e42946a163808089291df4bc6ad99ca9bced6ae61adbb45746102f7bc8d0b",
+  "digest": "25b74e2414b7217404638e079ce7cd00b7109479773c8d4a0abce4b98e8cbbbc",
   "radius_m": 932,
   "turn_q": 400000
  },
- "payload_sha256": "ea4e42946a163808089291df4bc6ad99ca9bced6ae61adbb45746102f7bc8d0b",
+ "payload_sha256": "25b74e2414b7217404638e079ce7cd00b7109479773c8d4a0abce4b98e8cbbbc",
  "report": {
   "bounds_um": {
    "contact": 28474,
@@ -437,7 +437,7 @@
   },
   "envelope": {
    "footprint_radius_m": 932,
-   "margin_um": 8945,
+   "margin_um": 9247,
    "pass": true,
    "radius_model_um": 876794,
    "radius_simulation_m": 374,

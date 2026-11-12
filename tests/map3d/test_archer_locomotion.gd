@@ -71,16 +71,20 @@ func test_a_planted_foot_holds_the_world_for_small_and_quarter_turns() -> void:
 
 
 func test_leg_spans_and_pelvis_are_kept() -> void:
-	var native := _posed("PIVOT_RIGHT", null, 0.4)
-	var turned := _posed("PIVOT_RIGHT", 2000000, 0.4)
 	var root := _skeleton.find_bone("root.x")
-	assert_lt(native[root].origin.distance_to(turned[root].origin), 0.000001, "pelvis stays native")
-	for side: String in ["l", "r"]:
-		var hip := _skeleton.find_bone("thigh_twist." + side)
-		var knee := _skeleton.find_bone("leg_stretch." + side)
-		var ankle := _skeleton.find_bone("foot." + side)
-		assert_almost_eq(turned[hip].origin.distance_to(turned[knee].origin), native[hip].origin.distance_to(native[knee].origin), 0.00001)
-		assert_almost_eq(turned[knee].origin.distance_to(turned[ankle].origin), native[knee].origin.distance_to(native[ankle].origin), 0.00001)
+	for turn: int in [1, 2000000, 45000000, 90000000, -2000000, -90000000]:
+		var clip := "PIVOT_RIGHT" if turn > 0 else "PIVOT_LEFT"
+		for phase: float in [0.15, 0.4, 0.6, 0.85]:
+			var native := _posed(clip, null, phase)
+			var turned := _posed(clip, turn, phase)
+			var label := "%d at %s" % [turn, phase]
+			assert_lt(native[root].origin.distance_to(turned[root].origin), 0.000001, "pelvis stays native, " + label)
+			for side: String in ["l", "r"]:
+				var hip := _skeleton.find_bone("thigh_twist." + side)
+				var knee := _skeleton.find_bone("leg_stretch." + side)
+				var ankle := _skeleton.find_bone("foot." + side)
+				assert_almost_eq(turned[hip].origin.distance_to(turned[knee].origin), native[hip].origin.distance_to(native[knee].origin), 0.00001, "thigh " + side + " " + label)
+				assert_almost_eq(turned[knee].origin.distance_to(turned[ankle].origin), native[knee].origin.distance_to(native[ankle].origin), 0.00001, "shin " + side + " " + label)
 
 
 func test_a_turn_on_the_other_clip_is_refused() -> void:

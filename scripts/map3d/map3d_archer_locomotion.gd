@@ -90,11 +90,14 @@ static func _reach(skeleton: Skeleton3D, globals: Array, side: String, target: T
 	var span := goal.distance_to(hip)
 	if span > upper + lower + 0.0001:
 		return "%s foot out of reach by %.4f m" % [side, span - upper - lower]
-	var normal := (knee - hip).cross(ankle - hip).normalized()
+	if span < absf(upper - lower) + 0.0001:
+		return "%s foot too close to the hip (%.4f m)" % [side, span]
 	var along := (goal - hip) / span
-	var up := normal.cross(along)
-	if up.dot(knee - hip) < 0.0:
-		up = -up
+	# The knee bends the way it bends natively: the thigh's direction off the new hip-foot line.
+	var up := (knee - hip) - along * along.dot(knee - hip)
+	if up.length_squared() < 1e-12:
+		return "%s leg straight along the foot line" % side
+	up = up.normalized()
 	var x := (upper * upper - lower * lower + span * span) / (2.0 * span)
 	var new_knee := hip + along * x + up * sqrt(maxf(0.0, upper * upper - x * x))
 	var thigh := Transform3D(Basis(Quaternion((knee - hip).normalized(), (new_knee - hip).normalized())), Vector3.ZERO)
@@ -110,9 +113,9 @@ static func _reach(skeleton: Skeleton3D, globals: Array, side: String, target: T
 
 
 ## Each foot's accumulated world heading (ankle -> toe, about world up) over the native clip,
-## unwrapped from 0 at phase 0; cached per player and clip.
+## unwrapped from 0 at phase 0; cached per clip resource (the archer rig is one scene).
 static func _heading_table(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, to_model: Transform3D) -> Dictionary:
-	var key := "%d/%s" % [player.get_instance_id(), clip]
+	var key := player.get_animation(clip).get_instance_id()  # one table per clip resource
 	if _headings.has(key):
 		return _headings[key]
 	var sign := -1.0 if clip == "PIVOT_RIGHT" else 1.0

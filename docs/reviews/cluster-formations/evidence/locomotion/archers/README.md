@@ -2,7 +2,7 @@
 
 `certificate.json` is the output of main's `tools/units3d/certify_locomotion.py` (per-foot planting band, #291)
 for `certificate.config.json`. It runs on main's assets, with the re-authored archer MARCH from #299
-(`archers.glb` `f7112ff7…`), and its status is **NUMERIC_PASS**. Its digest (`ea4e4294…`) binds the tool,
+(`archers.glb` `f7112ff7…`), and its status is **NUMERIC_PASS**. Its digest (`25b74e24…`) binds the tool,
 the config and every input: scene, GLB, textures and the provider.
 
 | Quantity | Total (sampled + margin) | Bound |
@@ -44,7 +44,7 @@ GUT (`tests/map3d/test_archer_locomotion.gd`) checks five properties:
 - a half turn equals the native clip;
 - every turn keeps the native endpoints;
 - a planted right foot holds the world to within 3 mm for turns of 1 µdeg, 2° and 90°;
-- the leg spans and the pelvis are kept;
+- the leg spans and the pelvis are kept, for turns from 1 µdeg to ±90° at four phases;
 - a turn on the other clip is refused.
 
 ## Real-window review (R-C)
