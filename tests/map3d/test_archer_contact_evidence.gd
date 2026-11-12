@@ -167,7 +167,14 @@ func test_retained_evidence_replays_complete_frozen_arrays_and_anatomical_invent
 			assert_almost_eq(areas[13891], 0.00015227095922581654, 0.00000001)
 	assert_eq(evidence.resource_sha256.size(), 35)
 	for resource: String in evidence.resource_sha256:
-		assert_eq(FileAccess.get_sha256("res://" + resource), evidence.resource_sha256[resource], resource)
+		var expected: String = evidence.resource_sha256[resource]
+		if resource == "assets/3D/units/archers/archers.glb":
+			# MARCH re-authored 2026-11-12 (owner ruling; evidence/locomotion/archers/march-reauthor):
+			# only MARCH channels were appended, every mesh byte kept, so the labels and charts stay
+			# valid; observed_native_march describes the pre-reauthor clip (02356e6f...) as history.
+			assert_eq(expected, "02356e6fe312a3da89a94f265ee8a62b8067dd9e1915f717accae7f40de90243")
+			expected = "f7112ff73bda1a6150cc6c45c6b8a8a4538334be0d1008b54df517f393a9f6b2"
+		assert_eq(FileAccess.get_sha256("res://" + resource), expected, resource)
 	var chart_faces: Dictionary = {}
 	var valid_chart_faces: bool = true
 	for chart: Dictionary in evidence.charts:
