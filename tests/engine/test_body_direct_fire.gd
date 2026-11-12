@@ -64,8 +64,11 @@ func _fire(f: Dictionary, unit: String = "", target: String = "", battle_id: int
 	return result
 
 func test_reach_contact_cone_and_facing_edges() -> void:
+	# At gap 100 the archer holds in close defence; it defends against the ATTACKING enemy
+	# (two holders never hurt each other, the original active-round rule).
 	for row: Array in [[399, 100, 0], [400, 100, 0], [401, 0, 0], [100, 0, 100], [101, 100, 0]]:
 		var f := _field(row[0])
+		if row[0] == 100: f.state.battles[0].actions.def = {"kind": "attack", "reason": "Received advance plan"}
 		var result := _fire(f)
 		assert_eq(result.status, "complete", result.reason)
 		assert_eq(result.firing, row[1], "gap %d firing" % row[0])
@@ -224,17 +227,32 @@ func test_contact_with_any_opponent_suppresses_fire_at_the_named_target() -> voi
 	assert_eq(named.melee, 0, "and is not melee against the named target")
 	var all := _fire(f)
 	assert_eq(all.firing, 0)
-	assert_eq(all.melee, 100, "close defence against the touching foe")
-	assert_eq(all.pairs[0].target_unit, f.other)
-	# A designated target restricts melee with a holding (non-attacking) foe.
-	UnitBodies._entry(f.state, f.unit).supplies = 1000000
-	f.state.unit_tasks = {f.unit: {"current_id": "t1", "received_sequence": 1, "orders": {"t1": {
-		"sequence": 1, "status": "received", "reason": "Received", "history": [],
-		"request": {"id": "t1", "unit": f.unit, "battle_id": 8, "task": "advance", "formation": "",
-			"target_unit": f.enemy, "source": "player", "issuer": "", "max_route_m": 0, "region": ""}}}}}
-	assert_eq(_fire(f).melee, 0, "holding `other` is not the designated target")
+	assert_eq(all.melee, 0, "the archer holds in close defence and `other` holds: no melee")
 	f.state.battles[0].actions.def = {"kind": "attack", "reason": "Received advance plan"}
-	assert_eq(_fire(f).melee, 100, "self-defence against an attacking foe")
+	var defended := _fire(f)
+	assert_eq(defended.firing, 0)
+	assert_eq(defended.melee, 100, "self-defence against the attacking touching foe")
+	assert_eq(defended.pairs.size(), 1)
+	assert_eq(defended.pairs[0].target_unit, f.other)
+	assert_eq(defended.pairs[0].kind, "melee")
+
+func test_contact_on_the_queried_field_with_a_non_target_still_suppresses_fire() -> void:
+	# Cross-field: crown D moves into field 8 beside A and touches C (surface gap 50, behind C).
+	# C (field 9) is queried against A only; D is a hostile non-target of the queried field.
+	var f := _cross()
+	var nine: Dictionary = f.state.battles[1]
+	var eight: Dictionary = f.state.battles[0]
+	nine.def.erase(f.d)
+	eight.att.append(f.d)
+	for key: String in ["groups", "group_anchor_m", "group_facing"]:
+		eight[key][f.d] = nine[key][f.d]
+		nine[key].erase(f.d)
+	_put(f, f.d, 0, 10000 - 2 * R - 50, 10000, 0)
+	eight.group_anchor_m[f.d] = [10000 - 2 * R - 50, 10000]
+	BodyBattle._seal_private(f.repo, f.state)
+	var result := _cross_fire(f)
+	assert_eq(result.status, "complete", result.reason)
+	assert_eq(result.firing, 0, "touching D of the queried field stops fire at A")
 
 func test_touching_a_protected_opponent_still_suppresses_fire() -> void:
 	# `other` touches the shooter but is protected by a ceasefire; the enemy is a clear target.

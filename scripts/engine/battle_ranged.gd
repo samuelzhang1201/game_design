@@ -37,26 +37,33 @@ static func touching(repo: DataRepository, battle: Dictionary, code: String, sta
 ## Inclusive reach and cone edge; a friendly disc tangent to the open segment blocks.
 static func clear_shot(repo: DataRepository, from: Vector2i, to: Vector2i,
 		facing: Vector2i, friends: Array[Vector2i], radius_from := 0, radius_to := 0, discs: Array = []) -> bool:
+	var blockers: Array = discs.duplicate()
+	for at: Vector2i in friends:
+		blockers.append({"x_m": at.x, "y_m": at.y, "radius_m": int(repo.bal("battle_ranged_block_radius_m"))})
+	var checked := shot(repo, from, to, facing, radius_from, radius_to, blockers)
+	return checked.ok and checked.clear
+
+
+## `clear_shot` with its geometry errors kept apart from "no clear shot": `{ok, clear}`.
+static func shot(repo: DataRepository, from: Vector2i, to: Vector2i, facing: Vector2i,
+		radius_from: int, radius_to: int, blockers: Array) -> Dictionary:
 	var d := to - from
-	var length_sq := d.length_squared()
 	var reach := int(repo.bal("battle_ranged_reach_m"))
 	var close := int(repo.bal("battle_group_contact_m"))
 	var contact := BattleGroupGeometry.pair([from.x, from.y], radius_from, [to.x, to.y], radius_to, close)
 	var range_ := BattleGroupGeometry.pair([from.x, from.y], radius_from, [to.x, to.y], radius_to, reach)
-	if not contact.ok or not range_.ok or contact.in_reach or not range_.in_reach:
-		return false
+	if not contact.ok or not range_.ok: return {"ok": false, "clear": false}
+	if contact.in_reach or not range_.in_reach: return {"ok": true, "clear": false}
 	var forward := d.x * facing.x + d.y * facing.y
 	var cross := d.x * facing.y - d.y * facing.x
 	if forward <= 0 or absi(cross) * 1000 > forward * int(repo.bal("battle_ranged_cone_permille")):
-		return false
-	var blockers: Array = discs.duplicate()
-	for at: Vector2i in friends:
-		blockers.append({"x_m": at.x, "y_m": at.y, "radius_m": int(repo.bal("battle_ranged_block_radius_m"))})
+		return {"ok": true, "clear": false}
 	for blocker: Dictionary in blockers:
 		var hit := BattleGroupGeometry.segment_disc([from.x, from.y], [to.x, to.y],
 			[blocker.x_m, blocker.y_m], int(blocker.radius_m))
-		if not hit.ok or hit.blocked: return false
-	return true
+		if not hit.ok: return {"ok": false, "clear": false}
+		if hit.blocked: return {"ok": true, "clear": false}
+	return {"ok": true, "clear": true}
 
 
 ## Count each group once. An optional other field retains both sources' commands and terms.
@@ -206,12 +213,15 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 	if battle.is_empty() or opponents.is_empty() or side == "": return _fire_failure(own_id, unit, "Fire unit is not a live battle member")
 	var friendly := side if other_id == own_id else BattleSystem._side_for(state, opponents, unit)
 	var other := "def" if friendly == "att" else "att"
-	var foes: Array = opponents[other].filter(func(code: String) -> bool: return ArmySystem._body_enemies(repo, state, unit, code)) \
-		if target == "" else [target]
+	var relations := {"player": repo.resolve_realm("player_realm"), "raider": repo.resolve_realm("raider_realm"),
+		"diplomacy": repo.world_table("political", "diplomacy"), "hostile": {}}
+	var hostile := func(code: String) -> bool:   # the contact query's own hostility predicate
+		return ArmySystem._hostile(relations, ArmySystem.realm_of(repo, unit, state), ArmySystem.realm_of(repo, code, state))
+	var all_foes: Array = opponents[other].filter(hostile)
+	var foes: Array = all_foes.duplicate() if target == "" else [target]
 	foes.sort()
 	for foe: String in foes:
-		if foe not in opponents[other] or not ArmySystem._body_enemies(repo, state, unit, foe):
-			return _fire_failure(own_id, unit, "Fire target is not a hostile opposing member of that field")
+		if foe not in all_foes: return _fire_failure(own_id, unit, "Fire target is not a hostile opposing member of that field")
 	var fit := MilitaryRoster.fit(state, unit)
 	var result := {"status": "complete", "reason": "", "error": "", "battle_id": own_id, "unit": unit,
 		"fit": fit, "firing": 0, "melee": 0, "pairs": []}
@@ -227,8 +237,8 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 	var sight := int(repo.bal("ai_sight_km" if ArmySystem.is_foe(state, unit) else "player_sight_km") * 1000)
 	# PHYSICAL contact with ANY hostile opponent of its own field (or the queried field) suppresses
 	# fire, even where the law bars attacking that opponent; the lawful query gives the melee pairs.
-	var nearby: Array = battle["def" if side == "att" else "att"].filter(func(code: String) -> bool: return ArmySystem._body_enemies(repo, state, unit, code))
-	for foe: String in foes:
+	var nearby: Array = battle["def" if side == "att" else "att"].filter(hostile)
+	for foe: String in all_foes:
 		if foe not in nearby: nearby.append(foe)
 	nearby.sort()
 	var touching := BodyBattleContact.exposure_candidate(repo, source, own_id, unit, nearby, boundary)
@@ -242,14 +252,22 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 			result.reason = "A received retreat neither fires nor defends forward"
 			return result
 		var rows := {}
+		var melee_region := String(action.get("pursuit_region", ""))
 		for pair: Dictionary in close.pairs:
 			if pair.target_unit not in foes or int(pair.count) <= 0 or int(pair.target_count) <= 0: continue
+			if not BattleSystem._can_fight(repo, state, pair.target_unit): continue
 			var foe_field := opponents if pair.target_unit in opponents[other] else battle
 			var foe_action := BattleSystem.unit_action(repo, state, foe_field, pair.target_unit)
 			var defending: bool = foe_action.kind == "attack" or bool(foe_action.get("close_defence", false))
+			# A holding pair cannot hurt each other: one side must attack (original active-round rule).
+			if action.kind != "attack" and not defending: continue
 			var seen := BattleSystem._at_m(repo, state, pair.target_unit) - BattleSystem._at_m(repo, state, unit)
 			if seen.length_squared() > sight * sight: continue
 			if not defending and designated != "" and designated != pair.target_unit: continue
+			if not defending and melee_region != "":
+				var own_row: Dictionary = battle.groups[unit].filter(func(r: Dictionary) -> bool: return int(r.slot) == int(pair.slot))[0]
+				var cell := MapEconomy.cell_at(repo, ArmySystem.metres_to_pack(repo, point(own_row)))
+				if not MapManors.province_of(repo, cell, state) in melee_region.split("|"): continue
 			result.pairs.append(pair)
 			rows[pair.slot] = int(pair.count)
 		for count: int in rows.values(): result.melee += count
@@ -297,7 +315,9 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 			for enemy: Dictionary in opponents.groups.get(foe, []):
 				if int(enemy.count) <= 0: continue
 				var to := point(enemy)
-				if not clear_shot(repo, from, to, axis, [], radius, foe_radius, blockers): continue
+				var aim := shot(repo, from, to, axis, radius, foe_radius, blockers)
+				if not aim.ok: return _fire_failure(own_id, unit, "Invalid fire geometry")
+				if not aim.clear: continue
 				var terrain := ArmySystem._body_path_terrain(grid, [[from.x, from.y], [to.x, to.y]], 0)
 				if not terrain.is_empty():
 					if not terrain in reasons: reasons.append(terrain)
