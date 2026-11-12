@@ -1974,7 +1974,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "4275d7e427ec25473b694a7aff301e262a7a8927e45ccb4c140ca89ba61ac627",
+  "sha256": "0bc8d8b82e17a3889a359fb88d946ab99008caedb2a143898cc5d96f93ebdacf",
   "uniform": 512
  },
  "config": {
@@ -2045,7 +2045,7 @@
   "assets/3D/units/cavalry/cavalry_cavalry_atlas_mr.jpg.import": "11dff65fe566eeb885a8fa35def5ba0f20d11d667c845cbc134ed5550c09818f",
   "assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg": "38f28344390a6b6844b3cedfb3da1a0383ce253025701a30cc232818c448e228",
   "assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg.import": "e99b960c02adede00ec5aecf53389c48384c93fdf4fc6a6ef24ed8efb0c6f250",
-  "assets/3D/units/cavalry/cavalry_pivot_plan.json": "65b83f67c4b12ebc400c097d502cbfc24e59675e97cc36c59644f343ba2b94c6",
+  "assets/3D/units/cavalry/cavalry_pivot_plan.json": "48221f17712aed8e0633c7c1c64f152d7c65d3c64106b402776acbd767e242a4",
   "assets/3D/units/royal/royal.glb": "265cefc8aabb9860b7ad18b036d158fd255943b96127fdead127574ec349fe0f",
   "assets/3D/units/royal/royal.glb.import": "5c17fddf7820092f51bdafa47e9c80eb614f98f899316db040aaa89fabde4f7c",
   "assets/3D/units/royal/royal_locomotion_source.tres": "34a7f6ba015f8d5cdbf7e2d9b310f511c2a2a665bba9b6ccbf496bca5e8f0265",
@@ -2062,7 +2062,7 @@
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
   "scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
-  "scripts/map3d/map3d_cavalry_locomotion.gd": "c6b452b222c570179bdaa44c18f9dee326da38eebf1bc8baa979226d87c1ff89",
+  "scripts/map3d/map3d_cavalry_locomotion.gd": "f3911b9f0af7238f0d435d01b744556c884e8b5821be098d178f8a19c7b1e45e",
   "scripts/map3d/map3d_cavalry_pivot.gd": "567a68683f34d51ada2105a4bd6d1ec67ecf9cf474efbaf9a2ce0840b516129c",
   "scripts/map3d/map3d_cavalry_pivot_math.gd": "66538405f1a76a0e11f1c62ae8f15ebef889557486bb70eff721c603ad5bbcca",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
@@ -2071,7 +2071,7 @@
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
  "locomotion_certificate": null,
- "payload_sha256": "1096950a3fa04d38c5740fc3d7b3653bbbd3f325b4786902e524325e579450a7",
+ "payload_sha256": "f5e9a8c55393033fb1bfd65823fa6eb7d4923f582404ebfa65bb716875575b6e",
  "report": {
   "bounds_um": {
    "contact": 29273,

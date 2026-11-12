@@ -66,7 +66,8 @@ func test_landmarks_connect_every_leg_chain_exactly() -> void:
 
 ## At 7/16 the left fore and right hind stand; the right fore (4.5 mm) and left hind (10.8 mm) are
 ## barely up, so their first and last steps are short and flat (at 8/16 the left hind is 151 mm up
-## and flexed, and its swing to the stand dragged the toe 168 mm through the planting band).
+## and flexed, and its swing to the stand dragged the toe through the planting band: pivot slide 168 mm sampled,
+## 196 mm with the certifier's margin).
 func test_two_hooves_stand_and_two_are_barely_up_at_the_admitted_phase() -> void:
 	var march_g: Dictionary = Math._fk(_rest.bones, _march)
 	var down: Array = []
@@ -85,15 +86,16 @@ func test_leaves_and_rejoins_march_exactly_and_never_moves_the_root() -> void:
 			for name: String in _march:
 				assert_eq(pose[name], _march[name], "%s %s %s" % [turn, phase, name])
 	# Cavalry MARCH keys the root bone (an 8.5 cm bob and a slight pitch about X); STANDBY does not,
-	# so the eased pose blends the two. The root bone never yaws or moves sideways: the body's yaw
-	# and ground position stay BodyMotion's.
+	# so the eased pose blends the two. The root bone never yaws or moves sideways, and its height and
+	# fore-aft stay within MARCH's own bob: the body's yaw and ground position stay BodyMotion's.
 	for phase: float in [0.05, 0.2, 0.5, 0.95]:
 		var root: Transform3D = _pose(90000000, phase)["root"]
 		assert_almost_eq(root.basis.x, Vector3.RIGHT, Vector3.ONE * 1e-5, str(phase))
 		assert_almost_eq(root.origin.x, 0.0, 1e-6, str(phase))
-		var lo: float = minf(_march["root"].origin.y, _stand["root"].origin.y)
-		var hi: float = maxf(_march["root"].origin.y, _stand["root"].origin.y)
-		assert_between(root.origin.y, lo - 1e-6, hi + 1e-6, str(phase))
+		for axis: int in [1, 2]:  # height and the bob's few mm fore-aft stay between MARCH's and the stand's
+			var lo: float = minf(_march["root"].origin[axis], _stand["root"].origin[axis])
+			var hi: float = maxf(_march["root"].origin[axis], _stand["root"].origin[axis])
+			assert_between(root.origin[axis], lo - 1e-6, hi + 1e-6, "%s axis %d" % [phase, axis])
 
 
 func test_the_stand_is_seated_on_the_plane() -> void:

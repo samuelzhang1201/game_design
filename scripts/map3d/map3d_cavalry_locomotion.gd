@@ -81,7 +81,8 @@ static func bind(player: AnimationPlayer, skeleton: Skeleton3D) -> Dictionary:
 		var meshes: Array[Node] = skeleton.find_children("*", "MeshInstance3D", true, false)
 		var mesh: MeshInstance3D = null
 		for node: Node in meshes:
-			if (node as MeshInstance3D).skin != null and (node as MeshInstance3D).mesh.get_surface_count() > 0 \
+			if (node as MeshInstance3D).skin != null and (node as MeshInstance3D).mesh != null \
+					and (node as MeshInstance3D).mesh.get_surface_count() > 0 \
 					and (mesh == null or (node as MeshInstance3D).name == "cavalry"):
 				mesh = node
 		if mesh == null:
