@@ -793,7 +793,8 @@ def main(argv=None):
     radius = footprint_radius(config['arm'])
     if config.setdefault('radius_m', radius) != radius:
         raise SystemExit(f"config radius_m {config['radius_m']} is not unit_footprints.csv's {radius}")
-    work = args.work or ROOT / '.superpowers/loco-cert' / config['arm']
+    # absolute: Godot reads --script relative to the isolated project, not to this cwd
+    work = (args.work or ROOT / '.superpowers/loco-cert' / config['arm']).resolve()
     work.mkdir(parents=True, exist_ok=True)
     extra = [config.get('entry_phase', 0.0)] + [p for b in required_boundaries(config) for p in (b[1], b[3]) if p != '*']
     dump, inputs, capture_sha = capture(config, args.godot, work, extra)
