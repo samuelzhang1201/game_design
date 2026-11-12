@@ -1,12 +1,23 @@
 class_name BodyBattle
 extends RefCounted
-## Explicit detached contact enrollment. Ordinary daily dispatch remains unchanged.
+## Explicit detached candidate battle day: begin, contact lifecycle, readiness and advance.
+## Ordinary daily dispatch remains unchanged.
+
+const FROZEN_ROUND := "Frozen round requires its own settlement consumer"
+## Each request kind runs at exactly one stage; begin runs at the safe boundary.
+const STAGE_OF := {"contacts": "contact", "enter": "contact", "merge": "contact", "round_ready": "round",
+	"acknowledge": "round", "withdraw": "advance", "end": "advance", "cancel": "advance", "advance": "advance"}
 
 static func _result(status: String, reason: String, candidate: GameState = null, plan: Dictionary = {}) -> Dictionary:
 	return BodyBattleMotion._result(status, reason, candidate, plan)
 
 static func _request_ok(request: Dictionary) -> bool:
-	if request.get("kind") == "contacts": return BodyMotion._keys(request, ["kind"])
+	if request.get("kind") in ["contacts", "begin", "advance"]: return BodyMotion._keys(request, ["kind"])
+	if request.get("kind") == "round_ready":
+		return BodyMotion._keys(request, ["kind", "battle_id"]) and DayResolution._body_decimal(request.battle_id) and request.battle_id != "0"
+	if request.get("kind") == "acknowledge":
+		return BodyMotion._keys(request, ["kind", "token", "choice"]) and request.token is String and not request.token.is_empty() \
+			and request.choice is String and not request.choice.is_empty()
 	if request.get("kind") == "merge":
 		return BodyMotion._keys(request, ["kind", "first_id", "second_id"]) \
 			and DayResolution._body_decimal(request.first_id) and request.first_id != "0" \
@@ -25,15 +36,12 @@ static func _request_ok(request: Dictionary) -> bool:
 		and DayResolution._body_decimal(request.battle_id) and request.battle_id != "0" \
 		and request.side in ["att", "def"]
 
-static func _contact_boundary_ok(boundary: Dictionary) -> bool:
-	if boundary.get("stage") != "contact": return false
-	var move := boundary.duplicate(true)
-	move.stage = "move"
-	return BodyMotion._battle_boundary_ok(move)
-
 static func _operation_boundary_ok(request: Dictionary, boundary: Dictionary) -> bool:
-	if request.get("kind") not in ["withdraw", "end", "cancel"]: return _contact_boundary_ok(boundary)
-	if boundary.get("stage") != "advance": return false
+	if request.get("kind") == "begin":
+		return BodyMotion._keys(boundary, ["version", "kind", "abs_day", "sequence"]) and BodyMotion._loco_integer(boundary.version) \
+			and boundary.version == 1 and boundary.kind == "safe" and DayResolution._body_decimal(boundary.abs_day) \
+			and DayResolution._body_decimal(boundary.sequence)
+	if boundary.get("stage") != STAGE_OF.get(request.get("kind"), ""): return false
 	var move := boundary.duplicate(true)
 	move.stage = "move"
 	return BodyMotion._battle_boundary_ok(move)
@@ -59,7 +67,7 @@ static func _plan_ok(plan: Dictionary) -> bool:
 		and plan.basis is Dictionary and BodyMotion._keys(plan.basis, ["source"]) \
 		and plan.basis.source is String and BodyMotion._digest(plan.basis.source) \
 		and plan.motion is Dictionary and plan.motion.is_empty() and plan.contacts is Array and _contacts_ok(plan.contacts) \
-		and (plan.request.kind in ["contacts", "merge"] or plan.contacts.is_empty())
+		and (plan.request.kind in ["contacts", "merge", "round_ready"] or plan.contacts.is_empty())
 
 # Private stages retain the consumed receipt/cursor; only the final publisher consumes an operation.
 static func _seal_private(repo: DataRepository, state: GameState) -> void:
@@ -226,6 +234,7 @@ static func _merge(repo: DataRepository, source: GameState, first_id: int, secon
 	survivor = UnitBodies._battle(staged, sid)
 	gone = UnitBodies._battle(staged, gid)
 	var event := BattleMerge.absorb(repo, staged, survivor, gone, side_map, moved)
+	_canonical_processed(staged)
 	BattleReport.note(survivor, [event])
 	staged.day_resolution.journal.battles.append(event.duplicate(true))
 	return _result("complete", "Staged exact field union", staged, cross.plan)
@@ -297,6 +306,184 @@ static func _terminate(repo: DataRepository, source: GameState, request: Diction
 	return _result("complete", "Staged exact terminal release", staged)
 
 ## A deleted field leaves the exhausted advance queue; processed IDs stay as day history.
+## An absorbed processed ID names its survivor, so no unit resolves twice through an alias.
+static func _canonical_processed(state: GameState) -> void:
+	if not state.day_resolution.has("processed_battle_ids"): return
+	var processed: Array = []
+	for id: Variant in state.day_resolution.processed_battle_ids:
+		var canonical := BattleSystem.canonical(state, int(id))
+		if canonical not in processed: processed.append(canonical)
+	processed.sort()
+	state.day_resolution.processed_battle_ids = processed
+
+## Begin: a fresh candidate day over the safe endpoint, using the accepted march setup.
+static func _begin(repo: DataRepository, source: GameState) -> Dictionary:
+	var count := int(repo.bal("battle_substeps"))
+	if count <= 0: return _result("error", "Invalid tactical slice count")
+	var candidate := UnitBodies._copy(source)
+	var tx := DayResolution.begin(candidate.day, candidate.day >= Calendar.DAYS_PER_TICK, candidate.absolute_day(), count)
+	tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+	tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
+	tx.march_entries = {}
+	tx.march_budgets = {}
+	tx.marching_codes = []
+	for table: Dictionary in [candidate.regiments, candidate.foes]:
+		var codes: Array = table.keys()
+		codes.sort()
+		for code: String in codes:
+			if UnitBodies._naval(candidate, code): continue
+			var entry: Dictionary = table[code]
+			if BattleSystem.may_withdraw(candidate, code): ArmySystem._resume_departure(repo, candidate, code, entry)
+			var budget := ArmySystem.day_walk_budget(repo, candidate, code)
+			tx.march_budgets[code] = budget
+			if entry.get("order") != ArmySystem.ORDER_MARCH: continue
+			var saved: Dictionary = entry.duplicate(true)
+			var here := Vector2i(int(saved.x_m), int(saved.y_m))
+			saved.finish_today = budget >= ceili(MarchRoute.length_from(here, ArmySystem._path_of(saved)))
+			saved.day_walked_m = 0
+			tx.march_entries[code] = saved
+			tx.marching_codes.append(code)
+	tx.body_battle = {"version": "1", "abs_day": str(candidate.absolute_day()), "sequence": "0",
+		"next_substep": "0", "substep_count": str(count), "stage": "move",
+		"battle_ids": [], "battle_index": "0", "processed_units": []}
+	candidate.day_resolution = tx
+	return _result("complete", "Began detached candidate battle day", candidate)
+
+## Exhausted queue: clear both queues and move to the next slice, or complete the day.
+static func _advance(source: GameState) -> Dictionary:
+	var candidate := UnitBodies._copy(source)
+	var tx := candidate.day_resolution
+	tx.battle_ids = []
+	tx.battle_index = 0
+	tx.battle_step = ""
+	tx.substep_battle_ids = []
+	tx.substep_index = int(tx.substep_index) + 1
+	tx.body_battle.battle_ids = []
+	tx.body_battle.battle_index = "0"
+	tx.body_battle.next_substep = str(tx.substep_index)
+	tx.body_battle.stage = "complete" if tx.substep_index == int(tx.substep_count) else "move"
+	return _result("complete", "Advanced the tactical slice", candidate)
+
+static func _acknowledge(source: GameState, request: Dictionary) -> Dictionary:
+	var candidate := UnitBodies._copy(source)
+	var accepted := DayResolution.acknowledge(candidate.day_resolution, request.token, request.choice)
+	if accepted.status != "accepted": return _result("error", "Acknowledgement is " + String(accepted.status))
+	return _result("complete", "Acknowledged the current encounter", candidate)
+
+## Immutable readiness provenance: everything physical, personnel, task, law and party.
+## The administrative outer sequence/receipt is excluded so readiness cannot invalidate itself.
+static func _round_basis(repo: DataRepository, state: GameState) -> String:
+	var saved := state.to_dict()
+	for battle: Dictionary in saved.battles:
+		battle.erase("body_round")
+		battle.erase("pending_round")
+	var projection := {}
+	for key: String in ["regiments", "foes", "military_rosters", "military_cohorts", "army_roster", "battles",
+		"battle_aliases", "unit_tasks", "law_in_force", "law_decree"]: projection[key] = saved.get(key)
+	return BodyMotion._hash([projection, state.military_migration.get("body_battle", {}).get("closed_motion", {}),
+		repo.world_table("political", "diplomacy"), BodyBattleMotion._context(repo, state)])
+
+## Round-ready: a new encounter first blocks on its decision; then the current field's
+## lawful contacts and actions freeze as `body_round` for the CF06 settlement consumer.
+static func _ready(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
+	var tx := source.day_resolution
+	var id := int(request.battle_id)
+	if int(tx.battle_index) >= tx.battle_ids.size() or int(tx.battle_ids[int(tx.battle_index)]) != id:
+		return _result("error", "Readiness names only the current queued field")
+	var battle := UnitBodies._battle(source, id)
+	if battle.is_empty() or BattleSystem.canonical(source, id) != id: return _result("error", "Readiness requires a canonical live field")
+	var candidate := UnitBodies._copy(source)
+	if id in tx.substep_battle_ids and id not in tx.get("acknowledged_encounters", []):
+		DayResolution.block_on_encounter(candidate.day_resolution, id)
+		return _result("complete", "New encounter awaits acknowledgement", candidate, {"contacts": [], "blocked": true})
+	var closed: Dictionary = source.military_migration.get("body_battle", {}).get("closed_motion", {})
+	if closed.is_empty() or closed.get("abs_day") != tx.body_battle.abs_day or closed.get("substep") != tx.body_battle.next_substep:
+		return _result("error", "Readiness requires this slice's closed motion")
+	var contacts: Array = []
+	var actions := {}
+	for side: String in BattleSystem.SIDES:
+		var enemies: Array = battle["def" if side == "att" else "att"].duplicate()
+		for unit: String in battle[side]:
+			actions[unit] = BattleSystem.unit_action(repo, source, battle, unit)
+			if enemies.is_empty(): continue
+			var query := _pairs(repo, UnitBodies._copy(source), battle, unit, enemies.duplicate(), boundary)
+			if query.status != "complete": return _result("error", query.reason)
+			contacts.append_array(query.pairs)
+	contacts.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return UnitBodies._battle_pair_less([a.unit, a.slot, a.target_unit, a.target_slot], [b.unit, b.slot, b.target_unit, b.target_slot]))
+	var round := int(battle.get("rounds", 0)) + 1
+	UnitBodies._battle(candidate, id).body_round = {"version": "1", "token": "bodyround:%d:%s:%d" % [id, tx.body_battle.abs_day, round],
+		"abs_day": tx.body_battle.abs_day, "round": str(round), "motion_receipt": closed.receipt,
+		"contact_digest": BodyMotion._hash(contacts), "basis": _round_basis(repo, source),
+		"contacts": contacts, "unit_actions": actions}
+	return _result("complete", "Round ready for its settlement consumer", candidate, {"contacts": contacts, "blocked": true})
+
+## A published readiness stays blocked until CF06 settles it; a changed basis errors.
+static func _held(repo: DataRepository, source: GameState, battle: Dictionary) -> Dictionary:
+	var checked := UnitBodies.validate_battle_candidate(repo, source, BodyBattleMotion._boundary(source))
+	if checked.status == "error": return _result("error", checked.reason)
+	if checked.reason != FROZEN_ROUND: return _result(checked.status, checked.reason)
+	if battle.body_round.basis != _round_basis(repo, source): return _result("error", "Readiness basis changed before settlement")
+	return _result("blocked", "Round awaits its settlement consumer", UnitBodies._copy(source))
+
+static func _run(repo: DataRepository, source: GameState, request: Dictionary) -> Dictionary:
+	var boundary := BodyBattleMotion._boundary(source)
+	var planned := plan_candidate(repo, source, request, boundary)
+	if planned.status != "complete": return planned
+	return commit_candidate(repo, source, planned.plan, boundary)
+
+## Exactly one control transition of the candidate day. Never ordinary dispatch or damage.
+static func step_candidate(repo: DataRepository, source: GameState) -> Dictionary:
+	if repo == null or source == null or not source.day_resolution.get("body_battle") is Dictionary:
+		return _result("error", "Step requires a candidate battle day")
+	var raw := DayResolution.body_battle_incompatibility_reason(source.day_resolution)
+	if not raw.is_empty(): return _result("error", raw)
+	var tx := source.day_resolution
+	match tx.body_battle.stage:
+		"move":
+			var boundary := BodyBattleMotion._boundary(source)
+			var planned := BodyBattleMotion.plan_candidate(repo, source, boundary)
+			if planned.status != "complete": return planned
+			return BodyBattleMotion.commit_candidate(repo, source, planned.plan, boundary)
+		"contact": return _run(repo, source, {"kind": "contacts"})
+		"round":
+			var battle := UnitBodies._battle(source, int(tx.battle_ids[int(tx.battle_index)]))
+			if battle.has("body_round"): return _held(repo, source, battle)
+			if not tx.pending_decision.is_empty():
+				var checked := UnitBodies.validate_battle_candidate(repo, source, BodyBattleMotion._boundary(source))
+				if checked.status != "complete": return _result(checked.status, checked.reason)
+				return _result("blocked", "Encounter awaits acknowledgement", checked.candidate)
+			return _run(repo, source, {"kind": "round_ready", "battle_id": str(int(battle.id))})
+		"advance":
+			var fields: Array = source.battles.filter(func(b: Dictionary) -> bool: return UnitBodies._live(b))
+			fields.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.id) < int(b.id))
+			for field: Dictionary in fields:
+				if field.att.is_empty() or field.def.is_empty():
+					return _run(repo, source, {"kind": "end", "battle_id": str(int(field.id)), "reason": "A side left the field"})
+			for field: Dictionary in fields:
+				var members: Array = field.att + field.def
+				members.sort()
+				for code: String in members:
+					var entry := UnitBodies._entry(source, code)
+					if not entry.has("battle_retreat") and not entry.has("withdrawal_cause"): continue
+					var left := _run(repo, source, {"kind": "withdraw", "unit": code, "battle_id": str(int(field.id)), "reason": "Received withdrawal"})
+					if left.status != "deferred": return left
+			return _run(repo, source, {"kind": "advance"})
+	return _result("deferred", "Candidate day is complete")
+
+## Begin consumes the next outer operation at the safe boundary; repeating it on a frozen day defers.
+static func begin_candidate(repo: DataRepository, source: GameState) -> Dictionary:
+	if repo == null or source == null: return _result("error", "Begin requires data and source")
+	var outer: Variant = source.military_migration.get("body_battle", {})
+	var sequence: Variant = outer.get("sequence", "") if outer is Dictionary else ""
+	var boundary := {"version": 1, "kind": "safe", "abs_day": str(source.absolute_day()),
+		"sequence": "0" if outer is Dictionary and outer.is_empty() else (str(int(sequence) + 1) if DayResolution._body_decimal(sequence) else "0")}
+	var planned := plan_candidate(repo, source, {"kind": "begin"}, boundary)
+	if planned.status != "complete": return planned
+	var begun := commit_candidate(repo, source, planned.plan, boundary)
+	if begun.status != "complete": return begun
+	return _result("complete", begun.reason, begun.candidate)
+
 static func _unqueue(state: GameState, id: int) -> void:
 	var tx := state.day_resolution
 	var at: int = tx.battle_ids.find(id)
@@ -316,8 +503,9 @@ static func _stage(repo: DataRepository, source: GameState, request: Dictionary,
 	var retreat_error := BattleSystem._retreat_candidate_error(source)
 	if not retreat_error.is_empty(): return _result("error", retreat_error)
 	if checked.status != "complete": return _result(checked.status, checked.reason)
-	if boundary.kind != "battle" or not _operation_boundary_ok(request, boundary): return _result("deferred", "Operation waits for its lifecycle stage")
-	if not source.day_resolution.pending_decision.is_empty(): return _result("deferred", "Pending decision prevents lifecycle operation")
+	if not _operation_boundary_ok(request, boundary): return _result("deferred", "Operation waits for its lifecycle stage")
+	if request.kind != "acknowledge" and not source.day_resolution.get("pending_decision", {}).is_empty():
+		return _result("deferred", "Pending decision prevents lifecycle operation")
 	if BodyBattleMotion._context(repo, source).is_empty(): return _result("error", "Missing accepted battle context")
 	var candidate: GameState = checked.candidate
 	if candidate.military_migration.has("body_motion"):
@@ -326,7 +514,19 @@ static func _stage(repo: DataRepository, source: GameState, request: Dictionary,
 		candidate = closed.candidate
 	var contacts: Array = []
 	var starts: Array = []
-	if request.kind in ["end", "cancel"]:
+	var blocked := false
+	if request.kind in ["begin", "advance", "acknowledge", "round_ready"]:
+		var done: Dictionary
+		match request.kind:
+			"begin": done = _begin(repo, candidate)
+			"advance": done = _advance(candidate)
+			"acknowledge": done = _acknowledge(candidate, request)
+			"round_ready": done = _ready(repo, candidate, request, boundary)
+		if done.status != "complete": return done
+		candidate = done.candidate
+		contacts = done.plan.get("contacts", [])
+		blocked = done.plan.get("blocked", false)
+	elif request.kind in ["end", "cancel"]:
 		var ended := _terminate(repo, candidate, request, boundary)
 		if ended.status != "complete": return ended
 		candidate = ended.candidate
@@ -377,7 +577,7 @@ static func _stage(repo: DataRepository, source: GameState, request: Dictionary,
 	var plan := {"version": 1, "request": request.duplicate(true), "boundary": boundary.duplicate(true),
 		"basis": {"source": BodyMotion._hash([source.to_dict(), request, boundary, BodyBattleMotion._context(repo, source)])},
 		"motion": {}, "contacts": contacts}
-	return _result("complete", "Planned physical enrollment", candidate, plan)
+	return _result("complete", "Planned physical enrollment", candidate, plan if not blocked else plan.merged({"blocked": true}))
 
 static func _queue(state: GameState, starts: Array) -> void:
 	var tx := state.day_resolution
@@ -409,26 +609,36 @@ static func _queue(state: GameState, starts: Array) -> void:
 static func plan_candidate(repo: DataRepository, source: GameState, request: Dictionary, boundary: Dictionary) -> Dictionary:
 	var staged := _stage(repo, source, request, boundary)
 	if staged.status != "complete": return staged
-	return _result("complete", staged.reason, null, staged.plan)
+	var plan: Dictionary = staged.plan.duplicate(true)
+	plan.erase("blocked")
+	return _result("complete", staged.reason, null, plan)
 
 static func commit_candidate(repo: DataRepository, source: GameState, proposed: Dictionary, boundary: Dictionary) -> Dictionary:
 	if repo == null or source == null or not _plan_ok(proposed) or BodyMotion._hash(proposed.boundary) != BodyMotion._hash(boundary):
 		return _result("error", "Invalid enrollment plan/boundary")
-	if not source.day_resolution.get("body_battle") is Dictionary: return _result("error", "Enrollment replay requires its saved day")
+	if proposed.request.kind != "begin" and not source.day_resolution.get("body_battle") is Dictionary:
+		return _result("error", "Enrollment replay requires its saved day")
 	var raw_error := UnitBodies._battle_raw_error(source)
 	if not raw_error.is_empty(): return _result("error", raw_error)
 	var receipt := BodyMotion._hash(proposed)
 	var outer: Variant = source.military_migration.get("body_battle", {})
+	var kind: String = proposed.request.kind
 	if outer is Dictionary and outer.get("sequence") == boundary.get("sequence"):
+		if not source.day_resolution.get("body_battle") is Dictionary: return _result("error", "Invalid/stale enrollment replay")
+		var control: Dictionary = source.day_resolution.body_battle
 		var checked := UnitBodies.validate_battle_candidate(repo, source, BodyBattleMotion._boundary(source))
-		if checked.status != "complete" or not _metadata_error(source).is_empty() or outer.receipt != receipt \
-			or boundary.abs_day != str(source.absolute_day()) \
-			or boundary.substep != source.day_resolution.body_battle.next_substep \
-			or source.day_resolution.body_battle.stage not in (["round", "advance"] if proposed.request.kind == "contacts" else (["advance"] if proposed.request.kind in ["withdraw", "end", "cancel"] else ["contact"])):
+		var after: Array = {"contacts": ["round", "advance"], "begin": ["move"], "advance": ["move", "complete"],
+			"round_ready": ["round"], "acknowledge": ["round"]}.get(kind, [STAGE_OF.get(kind, "")])
+		var slice: String = "0" if kind == "begin" else (str(int(boundary.substep) + 1) if kind == "advance" else boundary.substep)
+		if not _published(checked, kind) or not _metadata_error(source).is_empty() or outer.receipt != receipt \
+			or boundary.abs_day != str(source.absolute_day()) or control.next_substep != slice or control.stage not in after:
 			return _result("error", "Invalid/stale enrollment replay")
-		return _result("complete", "Already committed enrollment", checked.candidate, BodyMotion._canonical(proposed))
+		var same: GameState = checked.candidate if checked.candidate != null else UnitBodies._copy(source)
+		return _result("blocked" if kind == "round_ready" else "complete", "Already committed enrollment", same, BodyMotion._canonical(proposed))
 	var staged := _stage(repo, source, proposed.request, boundary)
 	if staged.status != "complete": return staged
+	var blocked: bool = staged.plan.get("blocked", false)
+	staged.plan.erase("blocked")
 	if BodyMotion._hash(staged.plan) != receipt: return _result("error", "Stale or modified enrollment plan")
 	var candidate: GameState = staged.candidate
 	candidate.day_resolution.body_battle.sequence = str(int(boundary.sequence) + 1)
@@ -436,5 +646,10 @@ static func commit_candidate(repo: DataRepository, source: GameState, proposed: 
 		"receipt": receipt, "result": "", "closed_motion": candidate.military_migration.get("body_battle", {}).get("closed_motion", {}).duplicate(true)}
 	candidate.military_migration.body_battle.result = UnitBodies._battle_result_hash(repo, candidate)
 	var final := UnitBodies.validate_battle_candidate(repo, candidate, BodyBattleMotion._boundary(candidate))
-	if final.status != "complete": return _result("error", final.reason)
-	return _result("complete", "Committed exact body enrollment", final.candidate, staged.plan)
+	if not _published(final, kind): return _result("error", final.reason)
+	var published: GameState = final.candidate if final.candidate != null else candidate
+	return _result("blocked" if blocked else "complete", "Committed exact body enrollment", published, staged.plan)
+
+## A published readiness envelope is the one frozen state a commit may legitimately leave.
+static func _published(checked: Dictionary, kind: String) -> bool:
+	return checked.status == "complete" or (kind == "round_ready" and checked.status == "deferred" and checked.reason == FROZEN_ROUND)
