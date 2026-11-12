@@ -30,11 +30,12 @@ func test_the_contract_fixture_inverts_by_hand() -> void:
 	assert_almost_eq(Map3DMarchPhase.phase_after(knots, 0.75, 0.0), 0.75, 1e-12)
 
 
-## At p .5 the next slope is 4 m a phase, so a 1 m/s model speed on a 2 s clip plays
-## 1 / 4 x 2 = .5 (the inverse derivative .25 times the clip); before it, slope 2: 1.
-func test_the_rate_with_no_step_is_the_inverse_slope() -> void:
-	assert_almost_eq(Map3DMarchPhase.rate(knots, 0.5, 1.0, 0.0, 2.0), 0.5, 1e-12)
-	assert_almost_eq(Map3DMarchPhase.rate(knots, 0.4, 1.0, 0.0, 2.0), 1.0, 1e-12)
+## With no step the rate is the loop's mean: a 1 m/s model speed on a 2 s clip over a
+## 3 m loop plays 2 / 3, wherever the figure stands (a near-flat segment's slope
+## would fling the clip).
+func test_the_rate_with_no_step_is_the_loop_mean() -> void:
+	assert_almost_eq(Map3DMarchPhase.rate(knots, 0.5, 1.0, 0.0, 2.0), 2.0 / 3.0, 1e-12)
+	assert_almost_eq(Map3DMarchPhase.rate(knots, 0.4, 1.0, 0.0, 2.0), 2.0 / 3.0, 1e-12)
 	assert_eq(Map3DMarchPhase.rate(knots, 0.4, 0.0, 0.1, 2.0), 0.0, "no speed, no phase")
 
 
@@ -49,8 +50,9 @@ func test_a_malformed_map_is_no_map() -> void:
 		assert_true(Map3DMarchPhase.of_art({"phase_map": text}).is_empty(), text)
 
 
-## A phase-mapped piece plays each figure at its own secant, past anim_max and without
-## jitter. By hand: k 10, 100 world m/s = 10 model m/s, a .05 s step = .5 m. A figure
+## A phase-mapped piece plays each figure at its own secant, unclamped and without
+## jitter. By hand: k 10, a day of 100 x time_day_seconds world m walks 100 world
+## m/s = 10 model m/s, a .05 s step = .5 m. A figure
 ## at phase .25 (F .5) reaches F 1 = .5: .25 of the 2 s clip in .05 s = 10. One at .5
 ## (F 1) reaches F 1.5 = .5 + .5 / 4 = .625: .125 x 2 / .05 = 5.
 func test_keep_pace_drives_each_figure_by_the_map() -> void:
@@ -72,7 +74,7 @@ func test_keep_pace_drives_each_figure_by_the_map() -> void:
 		anims.append(a)
 	var piece := {"node": node, "anims": anims, "clip_s": 2.0, "stride_m": 4.0, "exact_pace": false,
 		"phase_map": knots}
-	var day := {"from": Vector2.ZERO, "to": Vector2(800.0, 0.0), "s0": 0.0}
+	var day := {"from": Vector2.ZERO, "to": Vector2(100.0 * repo.bal("time_day_seconds"), 0.0), "s0": 0.0}
 	Map3DUnitRig.keep_pace(repo, piece, day, 0.1, 1, "R1", 0.05)
 	assert_almost_eq((anims[0] as AnimationPlayer).speed_scale, 10.0, 1e-6)
 	assert_almost_eq((anims[1] as AnimationPlayer).speed_scale, 5.0, 1e-6)

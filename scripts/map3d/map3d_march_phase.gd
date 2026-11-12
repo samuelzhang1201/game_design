@@ -67,15 +67,15 @@ static func phase_after(knots: PackedFloat64Array, z0: float, d: float) -> float
 ## The AnimationPlayer speed_scale that carries a figure now at clip phase `p` (0..1)
 ## over the next `dt` seconds through the phases `model_speed` (model m/s) walks it:
 ## the exact secant of the map over that step, so a frame crossing knots (or loops)
-## keeps its hooves. `clip_s` is the clip's length. With no step (dt or speed 0) it
-## is the map's slope at p.
+## keeps its hooves. `clip_s` is the clip's length. With no step (dt 0, e.g. a
+## step(0.0) refresh) it is the loop's mean rate: the local slope of a near-flat
+## segment (the atlas's 0.75..0.76) would be ~1e9 and fling the clip.
 static func rate(knots: PackedFloat64Array, p: float, model_speed: float, dt: float,
 		clip_s: float) -> float:
 	if model_speed <= 0.0:
 		return 0.0
 	if dt <= 0.0:
-		var i := _segment(knots, p)
-		return model_speed * clip_s * (knots[i + 2] - knots[i]) / (knots[i + 3] - knots[i + 1])
+		return model_speed * clip_s / loop_m(knots)
 	return (phase_after(knots, p, model_speed * dt) - p) * clip_s / dt
 
 
