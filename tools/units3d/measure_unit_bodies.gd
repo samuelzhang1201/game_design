@@ -74,9 +74,9 @@ static func measure(scene: PackedScene, art: Dictionary) -> Dictionary:
 	var model_hash := JSON.stringify(dependencies, "", true).sha256_text() if source != "" else "synthetic"
 	node.free()
 	var r := radius * scale_m * stature
-	# Five files x two ranks; a full body diameter is left as the passing lane.
+	# Five files x two ranks packed nearly shoulder to shoulder (owner R-H 2026-11-13).
 	var bound := ceili(r)
-	var pitch := 4 * bound
+	var pitch := 2 * bound + int(repo.bal("unit_body_gap_m"))
 	return {"status": "ok", "model_hash": model_hash, "scale_inputs": inputs,
 		"radius_m": r, "body_radius_m": ceili(r), "sampled_clips": clips,
 		"all_mesh_radius_m": all_radius * scale_m * stature, "attack_only_vertices": bounds.excluded,

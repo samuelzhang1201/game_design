@@ -92,10 +92,10 @@ func _line_at(f: Dictionary, code: String, at: Vector2i) -> void:
 	entry.x_m = at.x
 	entry.y_m = at.y
 	var rows: Array = f.battle.groups[code]
-	var points := BattleGroups.layout(f.repo, "line", rows.size(), at, 0, 80)
+	# A hand-laid single-rank front facing +x: across is +y, 80 m apart.
 	for i: int in rows.size():
-		rows[i].x_m = points[i].x
-		rows[i].y_m = points[i].y
+		rows[i].x_m = at.x
+		rows[i].y_m = at.y + roundi(80.0 * (i - (rows.size() - 1) / 2.0))
 		rows[i].role = "front"
 	f.battle.group_anchor_m[code] = [at.x, at.y]
 

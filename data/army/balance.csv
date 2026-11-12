@@ -139,3 +139,4 @@ army_run_min_score,100,"Inclusive minimum score for choosing to run in an existi
 task_cell_m,2000,"P6.1a first draft (spec 2026-10-16 battle-system §13.2): whole metres per search-coverage cell (TaskCoverage); a cell counts as covered when its centre is inside the scouting footprint; tune after play review"
 task_max_radius_m,20000,"P6.1b first draft (spec 2026-10-16 battle-system §13.1): the widest circle an area task may draw, whole metres (ArmyTasks.preview); tune after play review"
 army_living_cap_men,1000,Maximum assigned active plus assembling fit and wounded per unit excluding captives
+unit_body_gap_m,90,"owner 2026-11-13 (R-H, spec 2026-10-25-cluster-formations-design §2 rules 1-2): whole metres between neighbouring figures of a unit's fixed 5 x 2 block; unit_footprints.csv pitch_m = 2 x radius_m + this (tools/units3d/measure_unit_bodies.gd)"

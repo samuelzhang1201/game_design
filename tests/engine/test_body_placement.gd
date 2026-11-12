@@ -147,7 +147,7 @@ func test_home_counts_and_identities() -> void:
 	rotated.state.regiments[rotated.code].facing_deg = 90
 	var turned := _call(rotated, _request())
 	if turned.candidate != null:
-		assert_eq(turned.plan.placements[0].path_m, [[51854, 42584]], "90 degrees rotates (-7416,-1854) to (1854,-7416), y down")
+		assert_eq(turned.plan.placements[0].path_m, [[50972, 46112]], "90 degrees rotates (-3888,-972) to (972,-3888), y down")
 	var invalid := _fixture(1)
 	var id: String = invalid.state.military_rosters[invalid.code].cohort_ids.back()
 	invalid.state.military_cohorts[id].fit = 1001
@@ -418,9 +418,10 @@ func test_all_realms_and_overlapping_rectangles() -> void:
 	var f := _fixture(1)
 	var calibration: Dictionary = f.repo.unit_footprints.infantry
 	assert_eq(int(calibration.radius_m), 927)
-	assert_eq(int(calibration.pitch_m), 3708)
-	assert_eq(int(calibration.width_m), 16686)
-	assert_eq(int(calibration.depth_m), 5562)
+	# pitch = 2 x 927 + unit_body_gap_m 90; width 4 x 1944 + 1854; depth 1944 + 1854.
+	assert_eq(int(calibration.pitch_m), 1944)
+	assert_eq(int(calibration.width_m), 9630)
+	assert_eq(int(calibration.depth_m), 3798)
 	var all := SuiteData.campaign(f.repo, 319)
 	var second := ""
 	var codes := all.regiments.keys()
