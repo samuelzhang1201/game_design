@@ -59,7 +59,17 @@ func _acknowledge(f: Dictionary, state: GameState) -> GameState:
 	assert_eq(plan.status, "complete", plan.reason)
 	var result := BodyBattle.commit_candidate(f.repo, state, plan.plan, boundary)
 	assert_eq(result.status, "complete", result.reason)
+	_assert_replay(f, result.candidate, plan.plan, boundary, "complete")
 	return result.candidate
+
+## The latest exact receipt replays as a no-op, direct and through a JSON save.
+func _assert_replay(f: Dictionary, state: GameState, plan: Dictionary, boundary: Dictionary, status: String) -> void:
+	for source: GameState in [state, _json(state)]:
+		var file := _hash(source)
+		var again := BodyBattle.commit_candidate(f.repo, source, plan, boundary)
+		assert_eq(again.status, status, "%s replay: %s" % [plan.request.kind, again.reason])
+		assert_eq(_hash(source), file)
+		if again.candidate != null: assert_eq(_hash(again.candidate), _hash(state))
 
 ## begin, move, contacts (founds the field), encounter block, acknowledge, round-ready.
 func _to_ready(f: Dictionary, save_each: bool) -> Array:
@@ -99,6 +109,15 @@ func test_mid_slice_round_ready_json_retry() -> void:
 	assert_eq(envelope.contact_digest, BodyMotion._hash(envelope.contacts))
 	# Hand count: only the crown unit's row 0 touches the enemy's one row, both directions.
 	assert_eq(envelope.contacts.size(), 2)
+	# Readiness and the encounter block replay as their latest exact receipts.
+	var acknowledged: GameState = direct[3]
+	var ready_boundary := BodyBattleMotion._boundary(acknowledged)
+	var ready_plan := BodyBattle.plan_candidate(f.repo, acknowledged, {"kind": "round_ready", "battle_id": str(id)}, ready_boundary)
+	assert_eq(ready_plan.status, "complete", ready_plan.reason)
+	var published := BodyBattle.commit_candidate(f.repo, acknowledged, ready_plan.plan, ready_boundary)
+	assert_eq(published.status, "blocked", published.reason)
+	assert_eq(_hash(published.candidate), _hash(ready))
+	_assert_replay(f, ready, ready_plan.plan, ready_boundary, "blocked")
 	var engaged := 0
 	for pair: Dictionary in envelope.contacts:
 		assert_eq(pair.slot, 0)
@@ -123,7 +142,7 @@ func test_mid_slice_round_ready_json_retry() -> void:
 		assert_eq(_hash(held), _hash(ready))
 		assert_eq(held.day_resolution.body_battle.stage, "round")
 	# Changed inputs after readiness error with the input file unchanged.
-	for change: String in ["row", "party", "law", "route", "budget", "policy", "diplomacy"]:
+	for change: String in ["row", "party", "law", "route", "budget", "policy", "radius", "terrain", "diplomacy"]:
 		var changed := _json(ready)
 		var restore: Variant = null
 		match change:
@@ -135,15 +154,24 @@ func test_mid_slice_round_ready_json_retry() -> void:
 			"policy":
 				restore = f.repo.balance.battle_group_contact_m
 				f.repo.balance.battle_group_contact_m = 99
+			"radius":
+				var piece := MapObjects.army_piece(f.repo, changed.army_roster[f.unit])
+				restore = f.repo.unit_footprints[piece].radius_m
+				f.repo.unit_footprints[piece].radius_m = int(restore) - 1
+			"terrain":
+				MarchPath.of_pack(f.repo).closed[21] = 1 # the live 10 km cell under the crown row 0
 			"diplomacy":
 				restore = f.repo.world_table("political", "diplomacy").duplicate(true)
 				f.repo.world_table("political", "diplomacy")["extra"] = {"stance": "war"}
 		var before := _hash(changed)
 		var result: Dictionary = f.engine.step_body_battle_candidate(changed)
 		assert_eq(result.status, "error", change)
+		assert_true(result.reason == "Battle endpoint proof mismatch" or change == "radius", "%s: %s" % [change, result.reason])
 		assert_null(result.candidate)
 		assert_eq(_hash(changed), before)
 		if change == "policy": f.repo.balance.battle_group_contact_m = restore
+		if change == "radius": f.repo.unit_footprints[MapObjects.army_piece(f.repo, changed.army_roster[f.unit])].radius_m = restore
+		if change == "terrain": MarchPath.of_pack(f.repo).closed[21] = 0
 		if change == "diplomacy":
 			var table: Dictionary = f.repo.world_table("political", "diplomacy")
 			table.erase("extra")
@@ -237,6 +265,13 @@ func test_begin_runs_a_quiet_day_to_complete_and_then_defers() -> void:
 		for stage: String in ["move", "contact", "advance"]:
 			assert_eq(state.day_resolution.body_battle.stage, stage, "slice %d" % slice)
 			assert_eq(state.day_resolution.body_battle.next_substep, str(slice))
+			if slice == 0 and stage == "advance":
+				var boundary := BodyBattleMotion._boundary(state)
+				var plan := BodyBattle.plan_candidate(f.repo, state, {"kind": "advance"}, boundary)
+				var stepped := _step(f, state, "complete")
+				_assert_replay(f, stepped, plan.plan, boundary, "complete")
+				state = stepped
+				continue
 			state = _step(f, state, "complete")
 	assert_eq(state.day_resolution.body_battle.stage, "complete")
 	assert_eq(state.day_resolution.body_battle.next_substep, "10")

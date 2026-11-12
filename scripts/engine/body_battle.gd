@@ -379,7 +379,7 @@ static func _round_basis(repo: DataRepository, state: GameState) -> String:
 		battle.erase("pending_round")
 	var projection := {}
 	for key: String in ["regiments", "foes", "military_rosters", "military_cohorts", "army_roster", "battles",
-		"battle_aliases", "unit_tasks", "law_in_force", "law_decree"]: projection[key] = saved.get(key)
+		"battle_aliases", "unit_tasks", "law_in_force"]: projection[key] = saved.get(key)
 	return BodyMotion._hash([projection, state.military_migration.get("body_battle", {}).get("closed_motion", {}),
 		repo.world_table("political", "diplomacy"), BodyBattleMotion._context(repo, state)])
 
@@ -455,6 +455,8 @@ static func step_candidate(repo: DataRepository, source: GameState) -> Dictionar
 				return _result("blocked", "Encounter awaits acknowledgement", checked.candidate)
 			return _run(repo, source, {"kind": "round_ready", "battle_id": str(int(battle.id))})
 		"advance":
+			var admitted := UnitBodies.validate_battle_candidate(repo, source, BodyBattleMotion._boundary(source))
+			if admitted.status != "complete": return _result(admitted.status, admitted.reason)
 			var fields: Array = source.battles.filter(func(b: Dictionary) -> bool: return UnitBodies._live(b))
 			fields.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.id) < int(b.id))
 			for field: Dictionary in fields:
@@ -469,6 +471,8 @@ static func step_candidate(repo: DataRepository, source: GameState) -> Dictionar
 					var left := _run(repo, source, {"kind": "withdraw", "unit": code, "battle_id": str(int(field.id)), "reason": "Received withdrawal"})
 					if left.status != "deferred": return left
 			return _run(repo, source, {"kind": "advance"})
+	var done := UnitBodies.validate_battle_candidate(repo, source, BodyBattleMotion._boundary(source))
+	if done.status != "complete": return _result(done.status, done.reason)
 	return _result("deferred", "Candidate day is complete")
 
 ## Begin consumes the next outer operation at the safe boundary; repeating it on a frozen day defers.
