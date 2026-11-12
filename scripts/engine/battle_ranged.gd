@@ -206,10 +206,12 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 	if battle.is_empty() or opponents.is_empty() or side == "": return _fire_failure(own_id, unit, "Fire unit is not a live battle member")
 	var friendly := side if other_id == own_id else BattleSystem._side_for(state, opponents, unit)
 	var other := "def" if friendly == "att" else "att"
-	var foes: Array = opponents[other].duplicate() if target == "" else [target]
+	var foes: Array = opponents[other].filter(func(code: String) -> bool: return ArmySystem._body_enemies(repo, state, unit, code)) \
+		if target == "" else [target]
 	foes.sort()
 	for foe: String in foes:
-		if foe not in opponents[other]: return _fire_failure(own_id, unit, "Fire target is not an opposing member of that field")
+		if foe not in opponents[other] or not ArmySystem._body_enemies(repo, state, unit, foe):
+			return _fire_failure(own_id, unit, "Fire target is not a hostile opposing member of that field")
 	var fit := MilitaryRoster.fit(state, unit)
 	var result := {"status": "complete", "reason": "", "error": "", "battle_id": own_id, "unit": unit,
 		"fit": fit, "firing": 0, "melee": 0, "pairs": []}
@@ -223,14 +225,17 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 	var task := BattleTaskSystem.current(state, unit)
 	var designated := String(task.get("request", {}).get("target_unit", "")) if String(action.get("task_id", "")) != "" else ""
 	var sight := int(repo.bal("ai_sight_km" if ArmySystem.is_foe(state, unit) else "player_sight_km") * 1000)
-	# Contact with ANY opponent of its own field (or the queried field) suppresses fire.
-	var nearby: Array = battle["def" if side == "att" else "att"].duplicate()
+	# PHYSICAL contact with ANY hostile opponent of its own field (or the queried field) suppresses
+	# fire, even where the law bars attacking that opponent; the lawful query gives the melee pairs.
+	var nearby: Array = battle["def" if side == "att" else "att"].filter(func(code: String) -> bool: return ArmySystem._body_enemies(repo, state, unit, code))
 	for foe: String in foes:
 		if foe not in nearby: nearby.append(foe)
 	nearby.sort()
+	var touching := BodyBattleContact.exposure_candidate(repo, source, own_id, unit, nearby, boundary)
+	if touching.status != "complete": return _fire_failure(own_id, unit, touching.reason)
 	var close := BodyBattleContact.query_candidate(repo, source, own_id, unit, nearby, boundary)
 	if close.status != "complete": return _fire_failure(own_id, unit, close.reason)
-	if int(close.engaged) > 0:
+	if int(touching.engaged) > 0:
 		# Close defence (a received retreat stays retreat). Outside self-defence against an
 		# attacking foe, the designated target and local sight still restrict the pair.
 		if action.kind == "retreat":
@@ -240,7 +245,8 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 		for pair: Dictionary in close.pairs:
 			if pair.target_unit not in foes or int(pair.count) <= 0 or int(pair.target_count) <= 0: continue
 			var foe_field := opponents if pair.target_unit in opponents[other] else battle
-			var defending: bool = BattleSystem.unit_action(repo, state, foe_field, pair.target_unit).kind == "attack"
+			var foe_action := BattleSystem.unit_action(repo, state, foe_field, pair.target_unit)
+			var defending: bool = foe_action.kind == "attack" or bool(foe_action.get("close_defence", false))
 			var seen := BattleSystem._at_m(repo, state, pair.target_unit) - BattleSystem._at_m(repo, state, unit)
 			if seen.length_squared() > sight * sight: continue
 			if not defending and designated != "" and designated != pair.target_unit: continue

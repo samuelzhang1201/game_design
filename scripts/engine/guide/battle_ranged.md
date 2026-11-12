@@ -89,11 +89,12 @@ trigger a ranged merge; geometry without a firing action cannot.
 is CF06's fire query on an admitted body world, with the closed result
 `{status,reason,error,battle_id,unit,fit,firing,melee,pairs}` (pairs sorted by
 unit/slot/target/target slot/kind, kind `fire` or `melee`). `opposing_battle_id`
-0 is the same field; `target` "" is every opponent there. Physical surface
-contact through the lawful `BodyBattleContact` query with ANY opponent of the
-unit's own field (or the queried one) is close defence and suppresses fire; its
-melee pairs keep only queried, positive rows, and outside self-defence against
-an attacking foe the designated target and local sight still restrict them; otherwise only an attacking ranged-equipped unit fires (a
+0 is the same field; `target` "" is every hostile opponent there. Physical surface
+contact (`BodyBattleContact.exposure_candidate`, no law filter) with ANY hostile
+opponent of the unit's own field or the queried one suppresses fire, even where
+the law bars attacking that opponent; the melee pairs come from the lawful query,
+keep only queried, positive rows, and outside self-defence against an attacking
+(or close-defending) foe the designated target and local sight still restrict them; otherwise only an attacking ranged-equipped unit fires (a
 received retreat, an uncommitted reserve, capture or incapacity fire nothing).
 Each row shoots through `clear_shot`'s production geometry: reach and contact as
 surface gaps beyond both measured radii (`battle_ranged_reach_m` stays 400; with

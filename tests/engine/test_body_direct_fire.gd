@@ -236,6 +236,17 @@ func test_contact_with_any_opponent_suppresses_fire_at_the_named_target() -> voi
 	f.state.battles[0].actions.def = {"kind": "attack", "reason": "Received advance plan"}
 	assert_eq(_fire(f).melee, 100, "self-defence against an attacking foe")
 
+func test_touching_a_protected_opponent_still_suppresses_fire() -> void:
+	# `other` touches the shooter but is protected by a ceasefire; the enemy is a clear target.
+	var f := _field()
+	_put(f, f.other, 0, 10000 - 2 * R - 50, 10000)
+	var term := {"policy": "protect", "scope": "battle", "until_day": 0, "end_condition": "battle_end", "conditions": {}}
+	f.state.battles[0].parley = {"battle_id": 8, "agreed": {"ceasefire": term}, "parties": {"att": [f.unit], "def": [f.other]}}
+	var result := _fire(f, "", f.enemy)
+	assert_eq(result.firing, 0, "physical contact, not permission, suppresses fire")
+	assert_eq(result.melee, 0, "and no lawful melee arises against the protected foe")
+	assert_true(String(result.reason).contains("fire suppressed"), result.reason)
+
 func test_real_radius_bodies_fire_across_an_open_surface_gap() -> void:
 	# Production radii (archers 932, cavalry 804) and reach 400 measured as a surface gap (#248):
 	# centres 1736 + 300 apart fire; + 401 do not.
