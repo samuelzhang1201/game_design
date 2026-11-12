@@ -3,7 +3,7 @@
 The artillery has no model of its own yet: `assets/3D/units/army_models.tres` binds it to the
 infantry's `scenes/models/units/infantry.tscn`. `certificate.json` is the infantry's provider and
 config (`../infantry/`) certified at the artillery's own footprint radius (875 m,
-`data/army/unit_footprints.csv`) and scale (`docs/reviews/cluster-formations/evidence/cf01/measurements.json`),
+`data/army/unit_footprints.csv`, `cf01/measurements.json`) with the infantry's scale (same model, same `size`),
 status **NUMERIC_PASS**. Any real gun model voids it.
 
 | Quantity | Total (sampled + margin) | Bound |
@@ -19,7 +19,9 @@ status **NUMERIC_PASS**. Any real gun model voids it.
 spearman's `stride_m` 1.1 with `exact_pace` 0, while its figure plays the infantry's MARCH. Stride
 is measured off the clip, never tuned (`tools/CLAUDE.md`), so the row now takes the infantry's
 measurement of that same clip: `stride_m` 1.765 (`game_export._march_measure`, the planted foot's
-median travel per frame x 35 frames) and `exact_pace` 1. With the old 1.1 the MARCH slide is not
+median travel per frame x 35 frames), `exact_pace` 1 and `steps` 0.26;0.77 (the footfall shares, so the halt into
+GARRISON lands on a footfall). `exact_pace` also gives each man his own stature
+(`Map3DMarchLag.stature`), as it does the infantry's. With the old 1.1 the MARCH slide is not
 the certified one.
 
 **Consumer requirement**, as the infantry's: stop, start and hold only at MARCH phase 25/28,
@@ -28,4 +30,6 @@ the hold being that MARCH pose; the pivot pose for any turn from `Map3DInfantryL
 **Real-window review (R-C):** the pivots and MARCH are the infantry's own clips and provider,
 reviewed in `../infantry/README.md` (two critic rounds, no taste-principle break). The artillery
 draws the same figure at the same size (`army_art.csv` `size` 0.62 for both); what changes is the
-MARCH pace, which now matches the ground as the infantry's does.
+MARCH pace, which now matches the ground, and the per-man stature, both as the infantry's.
+`certificate.json`'s `visual_review` field stays PENDING as the infantry's does; the review is
+recorded in the READMEs.
