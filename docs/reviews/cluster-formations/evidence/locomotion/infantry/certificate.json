@@ -362,7 +362,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "45eb5f0f70fb90088d032aec59a2db06df74e6e838f18b17b36f5dca80cb0b4a",
+  "sha256": "5f7a6318f5d28ee8d0fa125a61946ba8614ec3a3ddade7072891bb03b9b4d6e8",
   "uniform": 512
  },
  "config": {
@@ -393,98 +393,11 @@
   "march_stop_phases": [
    0.8928571428571429
   ],
-  "note": "LOCO-CERT-INF. Provider Map3DInfantryLocomotion: the coupled pivot plan expanded for each grid turn and re-solved by Map3DInfantryPivot (the shipped clips are its +/-90 solve). Pivots enter and leave MARCH at 25/28 only; the hold is MARCH frozen at 25/28 (the consumer's admitted phases, recorded here as a consumer requirement). Pivot stance = the plan's authored stance intervals; MARCH stance = the lower sole patch. turn_q 400000 is the contract's example value (contact does not depend on duration); LOCO-POLICY installs the real row.",
+  "note": "LOCO-CERT-INF. Provider Map3DInfantryLocomotion: the coupled pivot plan expanded for each grid turn and re-solved by Map3DInfantryPivot (the shipped clips are its +/-90 solve), the body above the legs scaled by |turn|/90. Pivots enter and leave MARCH at 25/28 only and the hold is MARCH frozen at 25/28 (owner ruling A, recorded as a consumer requirement). Stance comes from the certifier's per-foot planting band (#291). turn_q 400000 is the contract's example value: contact does not depend on duration, but the certificate binds turn_q, so a LOCO-POLICY row with another turn_q means re-running this certificate.",
   "patch_band_m": 0.005,
   "provider": "scripts/map3d/map3d_infantry_locomotion.gd",
   "radius_m": 927,
   "scene": "scenes/models/units/infantry.tscn",
-  "stance": {
-   "MARCH": "lowest:1",
-   "PIVOT_LEFT": {
-    "l": [
-     [
-      0.12,
-      0.24
-     ],
-     [
-      0.36,
-      0.48
-     ],
-     [
-      0.6,
-      0.72
-     ],
-     [
-      0.84,
-      0.9
-     ]
-    ],
-    "r": [
-     [
-      0.0,
-      0.12
-     ],
-     [
-      0.24,
-      0.36
-     ],
-     [
-      0.48,
-      0.6
-     ],
-     [
-      0.72,
-      0.84
-     ],
-     [
-      0.9,
-      1.0
-     ]
-    ]
-   },
-   "PIVOT_RIGHT": {
-    "l": [
-     [
-      0.12,
-      0.24
-     ],
-     [
-      0.36,
-      0.48
-     ],
-     [
-      0.6,
-      0.72
-     ],
-     [
-      0.84,
-      0.9
-     ]
-    ],
-    "r": [
-     [
-      0.0,
-      0.12
-     ],
-     [
-      0.24,
-      0.36
-     ],
-     [
-      0.48,
-      0.6
-     ],
-     [
-      0.72,
-      0.84
-     ],
-     [
-      0.9,
-      1.0
-     ]
-    ]
-   }
-  },
   "stride_m": 1.765,
   "turn_q": 400000
  },
@@ -531,11 +444,11 @@
    "MARCH"
   ],
   "contact_um": 22769,
-  "digest": "c74d179f2e727a50c0b6b8910de816a4cc37417cb6b2437182471887682bfec4",
+  "digest": "6d926b52562f7a1ccb4ecfc6e0d752588ae9ac41fd341d340a569588b2e36199",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "c74d179f2e727a50c0b6b8910de816a4cc37417cb6b2437182471887682bfec4",
+ "payload_sha256": "6d926b52562f7a1ccb4ecfc6e0d752588ae9ac41fd341d340a569588b2e36199",
  "report": {
   "bounds_um": {
    "contact": 22769,

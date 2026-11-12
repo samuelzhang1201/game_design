@@ -1,7 +1,8 @@
 # Infantry locomotion certificate (LOCO-CERT-INF, 2026-11-13)
 
 `certificate.json` is what `tools/units3d/certify_locomotion.py` writes for
-`certificate.config.json` on main's certifier (the per-foot planting band, #291), status
+`certificate.config.json` on main's certifier (the per-foot planting band, #291) plus this PR's
+dependency-closure fix (a `res://` path ending a comment's sentence), status
 **NUMERIC_PASS**; its digest binds the tool, the config and all 19 inputs (scene, clips, the
 provider, its plan, the helper). The artillery uses the same model and is certified separately
 at its own radius (LOCO-CERT-ART).
@@ -21,7 +22,8 @@ foot barely lifts and shuffles inside the left band; the hover maximum is native
 
 **Consumer requirement** (owner ruling A, recorded in the certificate): stop, start and hold only
 at MARCH phase 25/28, the hold being that MARCH pose; GARRISON / STANDBY holds are not admitted
-until certified separately. The pose for any turn comes from `Map3DInfantryLocomotion` through
+until certified separately. The certificate binds `turn_q` 400000 (the contract's example; contact
+does not depend on duration): a LOCO-POLICY row with another `turn_q` means re-running it. The pose for any turn comes from `Map3DInfantryLocomotion` through
 `Map3DPivotProvider`; scrubbing the 90° clip for another turn is not certified.
 
 ## Real-window review (R-C)
