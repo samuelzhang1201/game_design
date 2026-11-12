@@ -379,8 +379,15 @@ static func _round_basis(repo: DataRepository, state: GameState) -> String:
 		battle.erase("pending_round")
 	var projection := {}
 	for key: String in ["regiments", "foes", "military_rosters", "military_cohorts", "army_roster", "battles",
-		"battle_aliases", "unit_tasks", "law_in_force"]: projection[key] = saved.get(key)
-	return BodyMotion._hash([projection, state.military_migration.get("body_battle", {}).get("closed_motion", {}),
+		"battle_aliases", "unit_tasks"]: projection[key] = saved.get(key)
+	var received := {}   # every unit's received laws, read through the law layer
+	var codes: Array = state.army_roster.keys()
+	codes.sort()
+	var laws: Array = repo.laws.keys()
+	laws.sort()
+	for code: String in codes:
+		received[code] = laws.map(func(law: String) -> Dictionary: return LawSystem.received(repo, state, law, code))
+	return BodyMotion._hash([projection, received, state.military_migration.get("body_battle", {}).get("closed_motion", {}),
 		repo.world_table("political", "diplomacy"), BodyBattleMotion._context(repo, state)])
 
 ## Round-ready: a new encounter first blocks on its decision; then the current field's
