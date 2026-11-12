@@ -1,13 +1,15 @@
 extends SceneTree
-## Real-window frames of the royal pivot (visual review of Map3DRoyalPivot; NEVER --headless).
+## Real-window frames of a horsed pivot (visual review of Map3DRoyalPivot, or with --arm cavalry of
+## Map3DCavalryLocomotion; NEVER --headless).
 ##   Godot --path . -s res://tools/units3d/royal_install/pivot_frames.gd -- --out DIR
-##       [--turn UDEG] [--frames N] [--mode provider|native] [--plan key=value ...] [--yaw DEG]
-## provider: the pivot posed by Map3DRoyalPivot.solve. native: the installed PIVOT clip seeked
+##       [--arm royal|cavalry] [--turn UDEG] [--frames N] [--mode provider|native] [--plan key=value ...] [--yaw DEG]
+## provider: the pivot posed by the arm's provider `solve`. native: the installed PIVOT clip seeked
 ## (the bake-only playback the provider replaces). Either way the node yaws as BodyMotion does
 ## (positive turn = RIGHT, decreasing yaw), on a plane at the seat (the seated plane), lit by
 ## one sun. Frames 0 and N - 1 are the operation's ends; frame -1 is MARCH at the plan's phase.
 
-const Provider = preload("res://scripts/map3d/map3d_royal_pivot.gd")
+const PROVIDERS: Dictionary = {"royal": "res://scripts/map3d/map3d_royal_pivot.gd",
+	"cavalry": "res://scripts/map3d/map3d_cavalry_locomotion.gd"}
 const Shell = preload("res://scripts/map3d/map3d_pivot_provider.gd")
 
 
@@ -16,7 +18,7 @@ func _initialize() -> void:
 
 
 func run() -> void:
-	var args: Dictionary = {"out": "", "turn": "90000000", "frames": "9", "mode": "provider", "yaw": "35"}
+	var args: Dictionary = {"out": "", "arm": "royal", "turn": "90000000", "frames": "9", "mode": "provider", "yaw": "35"}
 	var plan_args: Array[String] = []
 	var user: PackedStringArray = OS.get_cmdline_user_args()
 	var i: int = 0
@@ -27,6 +29,7 @@ func run() -> void:
 		else:
 			args[key] = user[i + 1]
 		i += 2
+	var Provider: GDScript = load(PROVIDERS[args.arm])
 	var plan: Dictionary = Provider.plan().duplicate()
 	for pair: String in plan_args:
 		plan[pair.get_slice("=", 0)] = float(pair.get_slice("=", 1))
@@ -53,7 +56,7 @@ func run() -> void:
 	env.environment.ambient_light_color = Color(0.6, 0.6, 0.6)
 	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	world.add_child(env)
-	var model: Node3D = load("res://scenes/models/units/royal.tscn").instantiate()
+	var model: Node3D = load("res://scenes/models/units/%s.tscn" % args.arm).instantiate()
 	world.add_child(model)
 	var camera := Camera3D.new()
 	world.add_child(camera)
