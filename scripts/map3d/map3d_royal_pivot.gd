@@ -42,9 +42,13 @@ static func pose(player: AnimationPlayer, skeleton: Skeleton3D, request: Diction
 
 
 ## One phase of a `turn_udeg` pivot: {ok, reason, pose: {bone: local Transform3D}}.
-static func solve(player: AnimationPlayer, skeleton: Skeleton3D, _clip: String, turn_udeg: int,
+static func solve(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, turn_udeg: int,
 		phase: float) -> Dictionary:
+	if clip != ("PIVOT_RIGHT" if turn_udeg > 0 else "PIVOT_LEFT"):
+		return {"ok": false, "reason": "clip %s does not turn %d" % [clip, turn_udeg], "pose": {}}
 	var bound: Dictionary = bind(player, skeleton)
+	if not bound.ok:
+		return {"ok": false, "reason": bound.reason, "pose": {}}
 	var march: Dictionary = Provider.locals(player, skeleton, "MARCH",
 		float(plan().march_phase) * player.get_animation("MARCH").length, bound.rest.bones)
 	var out: Dictionary = sample(bound.rest, phase, turn_udeg, march, bound.stand, bound.patches, plan())
@@ -108,7 +112,7 @@ static func contacts_for(march_g: Dictionary, stand_g: Dictionary, hooves: Dicti
 			var finish: float = start + 0.25 / float(steps)
 			var target: Transform3D = end_turn * march_g[hoof] if step == steps - 1 else \
 				Transform3D(Basis(TURN_AXIS, deg_to_rad(turn_deg * float(step + 1) / float(steps))), Vector3.ZERO) * stand_g[hoof]
-			at = _step(segments, at, start, finish, previous, target, float(profile.lift_m))
+			at = _step(segments, at, start, finish, previous, target, float(profile.lift_m), float(profile.lift_share))
 			previous = target
 		if at < 1.0:
 			segments.append(_segment(at, 1.0, "stance", previous, previous))
@@ -117,12 +121,13 @@ static func contacts_for(march_g: Dictionary, stand_g: Dictionary, hooves: Dicti
 
 
 ## Append a stance up to `start`, then a two-part swing over [start, finish] through a point raised
-## by at most lift (never more than 0.4 of the distance travelled). Returns the new end.
-static func _step(segments: Array, at: float, start: float, finish: float, from: Transform3D, to: Transform3D, lift: float) -> float:
+## by at most lift (never more than `share` of the distance travelled). Returns the new end.
+static func _step(segments: Array, at: float, start: float, finish: float, from: Transform3D, to: Transform3D,
+		lift: float, share: float) -> float:
 	if start > at:
 		segments.append(_segment(at, start, "stance", from, from))
 	var high: Transform3D = from.interpolate_with(to, 0.5)
-	high.origin.y += minf(lift, 0.4 * from.origin.distance_to(to.origin))
+	high.origin.y += minf(lift, share * from.origin.distance_to(to.origin))
 	var mid: float = (start + finish) * 0.5
 	segments.append(_segment(start, mid, "swing", from, high))
 	segments.append(_segment(mid, finish, "swing", high, to))
@@ -151,8 +156,6 @@ static func rest_of(skeleton: Skeleton3D, skin: Skin, landmarks: Dictionary) -> 
 	for bone: Dictionary in bones:
 		bind_locals[bone.name] = bone.bind
 	var globals: Dictionary = _Math._fk(bones, bind_locals)
-	for bone: Dictionary in bones:
-		bone.bind_global = globals[bone.name]  # FK of the binds, as the kernel checks
 	var chains: Dictionary = {}
 	for hoof: String in HOOVES:
 		var names: Array = []
@@ -173,9 +176,10 @@ static func rest_of(skeleton: Skeleton3D, skin: Skin, landmarks: Dictionary) -> 
 	return {"version": 1, "turn_axis": TURN_AXIS, "bones": bones, "chains": chains}
 
 
-## A hoof's patch: its body vertices (weight share over 0.8 on the hoof bone) within 5 mm of their
-## lowest at rest — the certifier's material patch — with their packed skin, bound to bone names.
-static func patches(skeleton: Skeleton3D, mesh: MeshInstance3D) -> Dictionary:
+## A hoof's patch: its body vertices (weight share over PLAN.patch_share on the hoof bone) within
+## PLAN.patch_band_m of their lowest at rest — the certifier's material patch, which its config's
+## patch_band_m must match — with their packed skin, bound to bone names.
+static func patches(mesh: MeshInstance3D, profile: Dictionary) -> Dictionary:
 	var names: Array[String] = []
 	var binds: Array[Transform3D] = []
 	for i: int in mesh.skin.get_bind_count():
@@ -202,12 +206,13 @@ static func patches(skeleton: Skeleton3D, mesh: MeshInstance3D) -> Dictionary:
 					row.bones.append(names[bind])
 					row.weights.append(w)
 					row.binds.append(binds[bind])
-				if share > 0.8:
+				if share > float(profile.patch_share):
 					rows.append(row)
 		var low: float = INF
 		for row: Dictionary in rows:
 			low = minf(low, row.v.y)
-		out[hoof] = rows.filter(func(row: Dictionary) -> bool: return row.v.y <= low + 0.005)
+		var band: float = float(profile.patch_band_m)
+		out[hoof] = rows.filter(func(row: Dictionary) -> bool: return row.v.y <= low + band)
 	return out
 
 
@@ -222,12 +227,15 @@ static func lowest(globals: Dictionary, patch: Array) -> float:
 	return low
 
 
-## The stand with every hoof lowered (or raised) by IK until its patch touches the seated plane.
+## The stand with every hoof lowered (or raised) by IK until its patch touches the seated plane;
+## {} when a hoof has no patch or the IK fails.
 static func seat(rest: Dictionary, stand: Dictionary, patches: Dictionary) -> Dictionary:
 	var locals: Dictionary = stand.duplicate()
 	for hoof: String in HOOVES:
 		var chain: Dictionary = rest.chains[hoof]
 		var parent: String = _Math._bone(rest.bones, chain.bones[0]).parent
+		if patches[hoof].is_empty():
+			return {}
 		for i: int in 3:  # the hoof moves rigidly; the cannon-weighted rim needs a second look
 			var globals: Dictionary = _Math._fk(rest.bones, locals)
 			var drop: float = lowest(globals, patches[hoof])
@@ -235,7 +243,8 @@ static func seat(rest: Dictionary, stand: Dictionary, patches: Dictionary) -> Di
 				break
 			var target: Transform3D = Transform3D(Basis.IDENTITY, Vector3(0.0, -drop, 0.0)) * globals[hoof]
 			var solved: Dictionary = _Math._solve(rest, chain, locals, target, globals[parent], Transform3D.IDENTITY, Transform3D.IDENTITY)
-			assert(solved.ok, "royal stand seat: " + hoof)
+			if not solved.ok:
+				return {}
 			for name: String in chain.bones:
 				locals[name] = solved.locals[name]
 	return locals
@@ -254,13 +263,20 @@ static func plan() -> Dictionary:
 	return _plan
 
 
-## Kernel rest, hoof patches and the seated stand of this figure, built once.
+## {ok, reason, rest, patches, stand}: the kernel rest, hoof patches and seated stand of this
+## figure, built once per skeleton. The cache is never evicted and each figure scans its mesh:
+## fine for the certifier; the consumer (CF04c) must key it on the shared skin and mesh instead.
 static func bind(player: AnimationPlayer, skeleton: Skeleton3D) -> Dictionary:
 	var id: int = skeleton.get_instance_id()
 	if not _bound_by_id.has(id):
-		var mesh: MeshInstance3D = skeleton.find_children("*", "MeshInstance3D", true, false)[0]
+		var meshes: Array[Node] = skeleton.find_children("*", "MeshInstance3D", true, false)
+		if meshes.size() != 1:
+			return {"ok": false, "reason": "royal figure must have one skinned mesh"}
+		var mesh: MeshInstance3D = meshes[0]
 		var rest: Dictionary = rest_of(skeleton, mesh.skin, load(SOURCE).landmarks)
-		var hooves: Dictionary = patches(skeleton, mesh)
-		var stand: Dictionary = Provider.locals(player, skeleton, "STANDBY", 0.0, rest.bones)
-		_bound_by_id[id] = {"rest": rest, "patches": hooves, "stand": seat(rest, stand, hooves)}
+		var hooves: Dictionary = patches(mesh, plan())
+		var stand: Dictionary = seat(rest, Provider.locals(player, skeleton, "STANDBY", 0.0, rest.bones), hooves)
+		if stand.is_empty():
+			return {"ok": false, "reason": "royal stand could not be seated"}
+		_bound_by_id[id] = {"ok": true, "reason": "", "rest": rest, "patches": hooves, "stand": stand}
 	return _bound_by_id[id]

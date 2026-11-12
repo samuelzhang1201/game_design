@@ -51,6 +51,7 @@ func test_plan_admits_one_march_phase() -> void:
 	assert_eq(plan.march_phase, 0.4375, "MARCH key 7/16")
 	assert_eq(plan.step_deg, 15.0)
 	assert_eq(plan.support_m, 0.003)
+	assert_eq(plan.patch_band_m, 0.005, "the royal certifier config's patch_band_m")
 	assert_eq(plan.blend, 0.25)
 
 
@@ -62,8 +63,8 @@ func test_leaves_and_rejoins_march_exactly() -> void:
 			var pose: Dictionary = _pose(turn, phase)
 			for name: String in _march:
 				assert_eq(pose[name], _march[name], "%s %s %s" % [turn, phase, name])
-	var mid: Dictionary = _pose(90000000, 0.5)
-	assert_eq(mid["root"], _march["root"], "the root bone is MARCH's mid-turn too")
+	# The solver never rotates the root: mid-turn it is the stand's (MARCH and STANDBY share it).
+	assert_eq(_pose(90000000, 0.5)["root"], _stand["root"])
 
 
 func test_step_count_follows_the_turn() -> void:
@@ -130,3 +131,35 @@ func test_bad_requests_return_no_pose() -> void:
 		var out: Dictionary = Provider.sample(_rest, args[0], args[1], _march, _stand, _patches, Provider.plan())
 		assert_false(out.ok)
 		assert_eq(out.locals, {})
+
+
+func test_every_certifier_grid_turn_solves_through_the_turn() -> void:
+	# tools/units3d/certify_locomotion.py turn_grid(): a failure would fall back to the seeked clip.
+	var turns: Array[int] = [1, -1, 2000000, -2000000, 45000000, -45000000, 90000000, -90000000,
+		135000000, -135000000, 179999999, -179999999, 180000000]
+	for turn: int in turns:
+		var clip: String = "PIVOT_RIGHT" if turn > 0 else "PIVOT_LEFT"
+		for i: int in 25:
+			var out: Dictionary = Provider.solve(_player, _sk, clip, turn, float(i) / 24.0)
+			assert_true(out.ok, "%d at %d/24: %s" % [turn, i, out.reason])
+
+
+func test_contact_schedules_partition_the_operation() -> void:
+	# Every step count: segments start at 0, end at exactly 1 and abut with no gap or overlap.
+	var march_g: Dictionary = Math._fk(_rest.bones, _march)
+	var stand_g: Dictionary = Math._fk(_rest.bones, _stand)
+	for steps: int in range(2, 13):
+		var contacts: Dictionary = Provider.contacts_for(march_g, stand_g, _patches, 15.0 * steps, Provider.plan())
+		for hoof: String in Provider.HOOVES:
+			var segments: Array = contacts[hoof].segments
+			assert_eq(segments[0].start, 0.0)
+			assert_eq(segments[-1].end, 1.0, "%d %s" % [steps, hoof])
+			for k: int in range(1, segments.size()):
+				assert_eq(segments[k].start, segments[k - 1].end, "%d %s %d" % [steps, hoof, k])
+				assert_eq(segments[k].from, segments[k - 1].to)
+
+
+func test_a_clip_that_does_not_match_the_turn_is_refused() -> void:
+	var out: Dictionary = Provider.solve(_player, _sk, "PIVOT_LEFT", 90000000, 0.5)
+	assert_false(out.ok)
+	assert_eq(out.pose, {})
