@@ -51,7 +51,10 @@ func test_plan_admits_one_march_phase() -> void:
 	assert_eq(plan.march_phase, 0.4375, "MARCH key 7/16")
 	assert_eq(plan.step_deg, 15.0)
 	assert_eq(plan.support_m, 0.003)
-	assert_eq(plan.patch_band_m, 0.005, "the royal certifier config's patch_band_m")
+	var config: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(
+		"res://docs/reviews/cluster-formations/evidence/locomotion/royal/provider-check.config.json"))
+	assert_eq(plan.patch_band_m, float(config.patch_band_m), "the royal certifier config's patch_band_m")
+	assert_eq(float(config.entry_phase), plan.march_phase, "the certifier enters MARCH where the pivot leaves it")
 	assert_eq(plan.blend, 0.25)
 	assert_eq(plan.rider_root, "Saddle")
 
@@ -78,8 +81,10 @@ func test_leaves_and_rejoins_march_exactly() -> void:
 			var pose: Dictionary = _pose(turn, phase)
 			for name: String in _march:
 				assert_eq(pose[name], _march[name], "%s %s %s" % [turn, phase, name])
-	# The solver never rotates the root: mid-turn it is the stand's (MARCH and STANDBY share it).
-	assert_eq(_pose(90000000, 0.5)["root"], _stand["root"])
+	# The solver never moves the root: MARCH and STANDBY key it alike, so every eased phase keeps it.
+	assert_eq(_march["root"], _stand["root"])
+	for phase: float in [0.05, 0.2, 0.5, 0.95]:
+		assert_eq(_pose(90000000, phase)["root"], _stand["root"], str(phase))
 
 
 func test_step_count_follows_the_turn() -> void:
