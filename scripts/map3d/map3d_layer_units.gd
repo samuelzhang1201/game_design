@@ -74,6 +74,7 @@ var _candidate_bodies := false
 var _candidate_committed: Dictionary = {}
 var _candidate_samples: Dictionary = {}
 var _candidate_history: Dictionary = {}
+var _frame_dt := 0.0
 
 ## Explicit fixture seam; no ordinary dispatcher opts in before atomic activation.
 func set_candidate_bodies(enabled: bool, committed: Dictionary = {}) -> void:
@@ -243,6 +244,7 @@ func _place(code: String, piece: Dictionary) -> void:
 func step(delta: float) -> bool:
 	if ctx == null or not shown:
 		return false
+	_frame_dt = delta  # a phase-mapped candidate MARCH is paced over this step (Map3DMarchPhase)
 	if _roster_key() != _roster_was:
 		refresh()  # a day turned or a unit came or went: the drawn set follows with the camera still
 	var repo := ctx.repo
@@ -271,7 +273,7 @@ func step(delta: float) -> bool:
 			_track[code] = Map3DUnits.track(_track.get(code, {}), now, want)
 			_place(code, _pieces[code])
 			moved = true
-		Map3DUnitRig.keep_pace(repo, _pieces[code], day, ctx.day_share(), ctx.clock_speed(), code)
+		Map3DUnitRig.keep_pace(repo, _pieces[code], day, ctx.day_share(), ctx.clock_speed(), code, delta)
 		Map3DUnitRig.lag(repo, _pieces[code], code, (want - now) / maxf(delta, 0.0001), delta if ctx.clock_speed() > 0 else 0.0, ctx.height_at)
 		_sync_action(code)
 		# a facing set at the day's end turns the piece without a camera move
@@ -444,7 +446,7 @@ func _sync_action(code: String) -> void:
 func _sync_candidate_action(code: String) -> void:
 	var piece: Dictionary = _pieces[code]
 	CandidateView._animate_candidate(ctx, code, piece, _candidate_samples.get(code, piece["candidate_sample"]),
-		float(_candidate_history.get(code, {}).get("share", 1.0)), blend_s, _battle)
+		float(_candidate_history.get(code, {}).get("share", 1.0)), blend_s, _battle, _frame_dt)
 
 
 ## The fans: one for each crown unit with a piece that is marching with men
