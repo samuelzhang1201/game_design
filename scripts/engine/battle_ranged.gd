@@ -182,3 +182,136 @@ static func incoming_permille(repo: DataRepository, state: GameState, battle: Di
 		active += fit * ((1000 - ranged) * melee / 1000 + ranged * factor / 1000)
 	@warning_ignore("integer_division")
 	return active / total if total > 0 else 1000
+
+
+## CF06 candidate direct fire on an admitted body world: `{status,reason,error,battle_id,unit,
+## fit,firing,melee,pairs}`. Close defence is the lawful physical surface query; otherwise only
+## an attacking ranged-equipped unit fires, with the production reach/cone/contact geometry of
+## `clear_shot`, every positive friendly row of both fields as a measured blocker (only the
+## shooter row excluded) and an open terrain segment. Firing and melee are disjoint unions of
+## row identities. `opposing_battle_id` 0 is the same field; `target` "" is every opponent.
+static func counts_candidate(repo: DataRepository, source: GameState, battle_id: int, unit: String,
+		target: String, opposing_battle_id: int, boundary: Dictionary) -> Dictionary:
+	if repo == null or source == null or battle_id <= 0 or opposing_battle_id < 0:
+		return _fire_failure(battle_id, unit, "Fire requires data, source and live battle IDs")
+	var own_id := BodyBattleContact._canonical_id(source, battle_id)
+	var other_id := own_id if opposing_battle_id == 0 else BodyBattleContact._canonical_id(source, opposing_battle_id)
+	if own_id <= 0 or other_id <= 0: return _fire_failure(battle_id, unit, "Invalid raw fire battle alias")
+	var checked := UnitBodies.validate_battle_candidate(repo, source, boundary)
+	if checked.status != "complete": return _fire_failure(own_id, unit, checked.reason)
+	var state: GameState = checked.candidate
+	var battle := UnitBodies._battle(state, own_id)
+	var opponents := UnitBodies._battle(state, other_id)
+	var side := BattleRules.side_of(battle, unit)
+	if battle.is_empty() or opponents.is_empty() or side == "": return _fire_failure(own_id, unit, "Fire unit is not a live battle member")
+	var friendly := side if other_id == own_id else BattleSystem._side_for(state, opponents, unit)
+	var other := "def" if friendly == "att" else "att"
+	var foes: Array = opponents[other].duplicate() if target == "" else [target]
+	foes.sort()
+	for foe: String in foes:
+		if foe not in opponents[other]: return _fire_failure(own_id, unit, "Fire target is not an opposing member of that field")
+	var fit := MilitaryRoster.fit(state, unit)
+	var result := {"status": "complete", "reason": "", "error": "", "battle_id": own_id, "unit": unit,
+		"fit": fit, "firing": 0, "melee": 0, "pairs": []}
+	if foes.is_empty():
+		result.reason = "No opposing target"
+		return result
+	if not BattleSystem._can_fight(repo, state, unit) or bool(UnitBodies._entry(state, unit).get("captured", false)):
+		result.reason = "Captured or incapable units neither fire nor defend"
+		return result
+	var action := BattleSystem.unit_action(repo, state, battle, unit)
+	var close := BodyBattleContact.query_candidate(repo, source, own_id, unit, foes, boundary)
+	if close.status != "complete": return _fire_failure(own_id, unit, close.reason)
+	if int(close.engaged) > 0:
+		# Physical contact suppresses fire in favour of close defence (a received retreat stays retreat).
+		if action.kind == "retreat":
+			result.reason = "A received retreat neither fires nor defends forward"
+			return result
+		result.melee = int(close.engaged)
+		result.pairs = close.pairs
+		result.reason = "Close defence at physical contact: %d of %d" % [result.melee, fit]
+		return result
+	if action.kind != "attack" or share(repo, state, unit) <= 0:
+		result.reason = "Only an attacking ranged-equipped unit fires (%s)" % action.kind
+		return result
+	if battle.get("reserves", {}).has(unit) and String(action.get("task_id", "")) == "":
+		result.reason = "An uncommitted reserve does not fire"
+		return result
+	var grid := MarchPath.of_pack(repo)
+	if not BodyMotion._loco_grid_ok(grid): return _fire_failure(own_id, unit, "Fire requires valid land terrain")
+	var task := BattleTaskSystem.current(state, unit)
+	var designated := String(task.get("request", {}).get("target_unit", "")) if String(action.get("task_id", "")) != "" else ""
+	var sight := int(repo.bal("ai_sight_km" if ArmySystem.is_foe(state, unit) else "player_sight_km") * 1000)
+	var axis := Vector2i((WarFront.facing_vector(int(battle.get("group_facing", {}).get(unit, 0))) * 1000).round())
+	var radius := int(BattleGroups.piece(repo, state, unit).get("radius_m", -1))
+	var friends: Array = []
+	var fields: Array = [[battle, side]] if other_id == own_id else [[battle, side], [opponents, friendly]]
+	for pair: Array in fields:
+		for member: String in pair[0][pair[1]]:
+			for row: Dictionary in pair[0].groups.get(member, []):
+				if int(row.count) > 0:
+					friends.append({"unit": member, "slot": int(row.slot), "x_m": row.x_m, "y_m": row.y_m,
+						"radius_m": int(BattleGroups.piece(repo, state, member).get("radius_m", -1))})
+	var reasons: Array[String] = []
+	var region := String(action.get("pursuit_region", ""))
+	var pairs: Array = []
+	var firing := 0
+	for row: Dictionary in battle.groups[unit]:
+		if int(row.count) <= 0: continue
+		var from := point(row)
+		var blockers: Array = friends.filter(func(f: Dictionary) -> bool: return not (f.unit == unit and f.slot == int(row.slot)))
+		if region != "" and not MapManors.province_of(repo, MapEconomy.cell_at(repo, ArmySystem.metres_to_pack(repo, from)), state) in region.split("|"):
+			if not "Outside the received pursuit region" in reasons: reasons.append("Outside the received pursuit region")
+			continue
+		var fired := false
+		for foe: String in foes:
+			var why := _fire_barred(repo, state, battle, opponents, side, other, unit, foe, designated, sight)
+			if not why.is_empty():
+				if not why in reasons: reasons.append(why)
+				continue
+			var foe_radius := int(BattleGroups.piece(repo, state, foe).get("radius_m", -1))
+			for enemy: Dictionary in opponents.groups.get(foe, []):
+				if int(enemy.count) <= 0: continue
+				var to := point(enemy)
+				if not clear_shot(repo, from, to, axis, [], radius, foe_radius, blockers): continue
+				var terrain := ArmySystem._body_path_terrain(grid, [[from.x, from.y], [to.x, to.y]], 0)
+				if not terrain.is_empty():
+					if not terrain in reasons: reasons.append(terrain)
+					continue
+				pairs.append({"unit": unit, "slot": int(row.slot), "target_unit": foe, "target_slot": int(enemy.slot),
+					"count": int(row.count), "target_count": int(enemy.count), "kind": "fire",
+					"reason": "Clear direct fire within reach and cone over open ground"})
+				fired = true
+		if fired: firing += int(row.count)
+	pairs.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return UnitBodies._battle_pair_less([a.unit, a.slot, a.target_unit, a.target_slot, a.kind],
+			[b.unit, b.slot, b.target_unit, b.target_slot, b.kind]))
+	result.firing = firing
+	result.pairs = pairs
+	result.reason = "Direct fire: %d of %d fit personnel" % [firing, fit]
+	if not reasons.is_empty(): result.reason += "; " + "; ".join(reasons)
+	return result
+
+
+## The original per-target fire filters, with both fields' (and absorbed sources') party terms.
+static func _fire_barred(repo: DataRepository, state: GameState, battle: Dictionary, opponents: Dictionary,
+		side: String, other: String, unit: String, foe: String, designated: String, sight: int) -> String:
+	if designated != "" and designated != foe: return "A received designated target restricts fire"
+	if not BattleSystem._can_fight(repo, state, foe) or bool(UnitBodies._entry(state, foe).get("captured", false)):
+		return "Captured or incapable targets are not fired upon"
+	var legal := BattleRules.legal_actions(repo, state, int(battle.id), side, unit, foe)
+	for field: Dictionary in [battle, opponents]:
+		if BattleRules._binds(field, "ceasefire", "protect", state.absolute_day(), [unit], foe): legal.erase("attack")
+		if BattleRules._binds(field, "safe_withdrawal", "protect", state.absolute_day(), [unit], foe) \
+			or BattleRules._binds(field, "tactics", "restrained", state.absolute_day(), [unit], foe): legal.erase("pursue")
+	if not "attack" in legal: return "Received law or agreement bars fire"
+	var withdrawing: bool = BattleSystem.unit_action(repo, state, opponents, foe).kind == "retreat"
+	if withdrawing and not "pursue" in legal: return "Protected or unlawful pursuit of a withdrawing target"
+	var seen := BattleSystem._at_m(repo, state, foe) - BattleSystem._at_m(repo, state, unit)
+	if seen.length_squared() > sight * sight: return "Target beyond local sight"
+	return ""
+
+
+static func _fire_failure(battle_id: int, unit: String, reason: String) -> Dictionary:
+	return {"status": "error", "reason": reason, "error": reason, "battle_id": battle_id, "unit": unit,
+		"fit": 0, "firing": 0, "melee": 0, "pairs": []}

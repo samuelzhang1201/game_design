@@ -249,19 +249,23 @@ func test_pending_round_two_towns_friendly_contact_and_incompatible_union_do_not
 	f.state.army_roster[f.c].kingdom_code = f.repo.resolve_realm("player_realm")
 	_assert_unmerged(f, _merge_request(), "Incompatible allegiance union")
 
-func test_ranged_query_unavailable_returns_explicit_dependency() -> void:
+## D-FIRE replaced the explicit dependency with the real fire query: an attacking archer C
+## 6141 m (surface gap) from A, far beyond reach 400, neither merges nor blocks discovery.
+func _assert_out_of_reach_stays_apart(f: Dictionary) -> void:
+	var merge := _run(f, _merge_request())
+	assert_eq(merge.status, "deferred", merge.reason)
+	assert_eq(merge.reason, "No lawful physical cross-field contact or direct fire")
+	var discovery := _run(f, {"kind": "contacts"})
+	assert_eq(discovery.status, "complete", discovery.reason)
+	if discovery.candidate != null: assert_eq(discovery.candidate.battles.size(), 2)
+
+func test_ranged_unit_out_of_reach_does_not_merge() -> void:
 	var f := _fixture("friendly", true)
 	f.state.battles[1].actions.att = {"kind": "attack", "reason": "Received advance plan"}
 	assert_gt(BattleRanged.share(f.repo, f.state, f.c), 0)
-	for request: Dictionary in [_merge_request(), {"kind": "contacts"}]:
-		var before := BodyMotion._hash(f.state.to_dict())
-		var result := _run(f, request)
-		assert_eq(result.status, "deferred", str(request))
-		assert_eq(result.reason, "direct_fire_dependency")
-		assert_null(result.candidate)
-		assert_eq(BodyMotion._hash(f.state.to_dict()), before)
+	_assert_out_of_reach_stays_apart(f)
 
-func test_received_unit_task_attack_alone_still_reports_the_dependency() -> void:
+func test_received_unit_task_attack_alone_is_evaluated_by_the_fire_query() -> void:
 	var f := _fixture("friendly", true)
 	assert_eq(f.state.battles[1].actions.att.kind, "hold", "the side action holds")
 	f.state.foes[f.c].supplies = 1000000
@@ -270,10 +274,7 @@ func test_received_unit_task_attack_alone_still_reports_the_dependency() -> void
 		"request": {"id": "adv9", "unit": f.c, "battle_id": 9, "task": "advance", "formation": "",
 			"target_unit": f.d, "source": "ai", "issuer": "", "max_route_m": 0, "region": ""}}}}}
 	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.state.battles[1], f.c).kind, "attack")
-	for request: Dictionary in [_merge_request(), {"kind": "contacts"}]:
-		var result := _run(f, request)
-		assert_eq(result.status, "deferred", str(request))
-		assert_eq(result.reason, "direct_fire_dependency")
+	_assert_out_of_reach_stays_apart(f)
 
 func test_merge_requests_are_closed_and_forged_plans_reject() -> void:
 	var f := _fixture()

@@ -82,3 +82,23 @@ moves personnel, spends supplies or rolls RNG. `prepare_day` freezes source
 agreements before probing; copied target agreements keep the probe read-only.
 Only an actually attacking ranged-equipped unit's positive firing count can
 trigger a ranged merge; geometry without a firing action cannot.
+
+## Candidate direct fire
+
+`BattleRanged.counts_candidate(repo,source,battle_id,unit,target,opposing_battle_id,boundary)`
+is CF06's fire query on an admitted body world, with the closed result
+`{status,reason,error,battle_id,unit,fit,firing,melee,pairs}` (pairs sorted by
+unit/slot/target/target slot/kind, kind `fire` or `melee`). `opposing_battle_id`
+0 is the same field; `target` "" is every opponent there. Physical surface
+contact through the lawful `BodyBattleContact` query is close defence and
+suppresses fire; otherwise only an attacking ranged-equipped unit fires (a
+received retreat, an uncommitted reserve, capture or incapacity fire nothing).
+Each row shoots through `clear_shot`'s production geometry: reach and contact as
+surface gaps beyond both measured radii (`battle_ranged_reach_m` stays 400; with
+real 749–932 m bodies that is 101–400 m of open gap), the forward cone, every
+positive friendly row of both fields as a measured blocker with only the shooter
+row excluded, and an open terrain segment. The original designated-target, local
+sight, pursuit-region, withdrawal and party rules apply per pair, with both
+fields' terms. Firing and melee are disjoint unions of row identities. The
+candidate merge uses positive firing in place of the old dependency; ordinary
+`counts` and `clear_shot` callers are unchanged.
