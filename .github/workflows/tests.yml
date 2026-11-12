@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -75,6 +76,8 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_BRANCH: ${{ github.head_ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: python3 .codex/hooks/task-handover.py --check-pr
 
   gut-selected:

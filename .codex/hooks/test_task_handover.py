@@ -761,6 +761,65 @@ class HandoverHookTests(unittest.TestCase):
             self.assertEqual(self.pr_problems(branch=prefix + 'x'), [])
         self.assertEqual(self.pr_problems('', branch='feat/x', number=10**6), [])
         self.assertEqual(self.pr_problems('', branch='claude/x', number=hook.FIRST_CHECKED_PR['codex/']), [])
+    @staticmethod
+    def declared(prd_step, wired, approval=''):
+        return f'Summary.\n\nprd_step: {prd_step}\nplayer_outcome: x\nwired: {wired}\n' + (
+            f'owner_approval: {approval}\n' if approval else '')
+    def backlog(self, history, body=None, branch='claude/x', number=None):
+        def read():
+            if history is None:
+                raise AssertionError('history read although the limit cannot bind')
+            return history
+        return hook.backlog_problems(read, body or self.declared('Step 5', 'false'), branch,
+                                     number or hook.FIRST_CHECKED_PR['claude/'])
+    def test_backlog_counts_unwired_pr_bodies_since_a_wired_or_approved_one(self):
+        unwired = self.declared('Step 5', 'false')
+        self.assertEqual(hook.unwired_since_gate([]), 0)
+        self.assertEqual(hook.unwired_since_gate([unwired] * 3), 3)
+        # newest first: the scan stops at the first wired PR, whatever is older
+        self.assertEqual(hook.unwired_since_gate([unwired, self.declared('Step 5', 'true'), unwired, unwired]), 1)
+        self.assertEqual(hook.unwired_since_gate([unwired, self.declared('Step 5', 'false', 'ok #12')] + [unwired] * 4), 1)
+    def test_backlog_skips_harness_and_undeclared_pr_bodies(self):
+        history = [self.declared('harness', 'false'), 'old PR, no fields', '', self.declared('Step 5', 'false')]
+        self.assertEqual(hook.unwired_since_gate(history), 1)
+    def test_the_sixth_unwired_claude_pr_waits_for_the_owner(self):
+        unwired = self.declared('Step 5', 'false')
+        self.assertEqual(self.backlog([unwired] * (hook.MAX_UNWIRED_BACKLOG - 1)), [])
+        refused = self.backlog([unwired] * hook.MAX_UNWIRED_BACKLOG)
+        self.assertEqual(len(refused), 1)
+        self.assertIn('owner_approval', refused[0])
+    def test_a_merged_wired_pr_restarts_the_count(self):
+        unwired = self.declared('Step 5', 'false')
+        self.assertEqual(self.backlog([unwired, unwired, self.declared('Step 5', 'true')] + [unwired] * 9), [])
+    def test_owner_approval_must_name_this_pr_or_its_branch(self):
+        full = [self.declared('Step 5', 'false')] * 9
+        number = hook.FIRST_CHECKED_PR['claude/'] + 3
+        named = self.declared('Step 5', 'false', f'owner said go on #{number}')
+        self.assertEqual(self.backlog(full, named, number=number), [])
+        self.assertEqual(self.backlog(full, self.declared('Step 5', 'false', 'owner said go on claude/x'), number=number), [])
+        for words in ('all of them', f'#{number}0', f'#{number - 1}', 'claude/xy'):
+            self.assertIn('must name', ' '.join(self.backlog(full, self.declared('Step 5', 'false', words), number=number)), words)
+    def test_backlog_binds_only_unwired_nonharness_claude_prs_from_the_cutoff(self):
+        for body, branch, number in (
+                (self.declared('harness', 'false'), 'claude/x', None),
+                (self.declared('Step 5', 'true'), 'claude/x', None),
+                ('no fields at all', 'claude/x', None),
+                (self.declared('Step 5', 'false'), 'codex/x', None),
+                (self.declared('Step 5', 'false'), 'feat/x', None),
+                (self.declared('Step 5', 'false'), 'claude/x', hook.FIRST_CHECKED_PR['claude/'] - 1)):
+            self.assertEqual(self.backlog(None, body, branch, number), [], (body, branch, number))
+    def test_merged_bodies_come_newest_first_and_treat_missing_bodies_as_empty(self):
+        listing = json.dumps([{'body': 'old', 'mergedAt': '2026-11-01T00:00:00Z'},
+                              {'body': None, 'mergedAt': '2026-11-03T00:00:00Z'},
+                              {'body': 'new', 'mergedAt': '2026-11-02T00:00:00Z'}])
+        with patch.object(hook.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, listing, '')) as run:
+            self.assertEqual(hook.merged_bodies(), ['', 'new', 'old'])
+        self.assertIn('merged', run.call_args.args[0])
+    def test_check_pr_fails_closed_when_the_merged_prs_cannot_be_read(self):
+        env = {'PR_BODY': self.declared('Step 5', 'false'), 'PR_BRANCH': 'claude/x',
+               'PR_NUMBER': str(hook.FIRST_CHECKED_PR['claude/']), 'BASE_SHA': 'HEAD'}
+        with patch.dict(os.environ, env), patch.object(hook, 'merged_bodies', side_effect=OSError('no gh')):
+            self.assertEqual(hook.check_pr(), 1)
     def test_check_pr_command_reads_the_real_diff_and_fails_closed(self):
         git = ['git', '-C', str(self.root), '-c', 'user.name=Test', '-c', 'user.email=test@example.com']
         subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
