@@ -77,7 +77,8 @@ static func sample(rest: Dictionary, phase: float, turn_udeg: int, march: Dictio
 		for name: String in march:
 			var w: float = rider_w if rider.has(name) else horse_w
 			var t: float = clampf(minf(phase, 1.0 - phase) / w, 0.0, 1.0)
-			native[name] = (march[name] as Transform3D).interpolate_with(stand[name], t * t * (3.0 - 2.0 * t))
+			native[name] = stand[name] if t == 1.0 else \
+				(march[name] as Transform3D).interpolate_with(stand[name], t * t * (3.0 - 2.0 * t))
 	var op: Dictionary = {"start_heading": 0.0, "end_heading": fposmod(turn, 360.0), "turn_degrees": turn,
 		"duration": 1.0, "phase": phase, "entry_phase": float(profile.march_phase),
 		"exit_phase": float(profile.march_phase)}
