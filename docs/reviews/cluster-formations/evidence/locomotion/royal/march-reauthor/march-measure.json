@@ -822,7 +822,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "e5f54b59631e272bee02a982e394e3806511cefa4ea59521127006ee270a49ad",
+  "sha256": "0fc6fee4f236e06bceb956d48fc8f2cd14674098d3f31ee0bd1967f265836c56",
   "uniform": 512
  },
  "config": {
@@ -900,7 +900,7 @@
   "assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
   "data/army/balance.csv": "85fdd8708b65a4b86a22180c28c356143ab65a7c7871cd1419872e88a77ad033",
   "data/army/unit_footprints.csv": "5d7ebb28d0942802e698284eb42817203d66100ad607debc6cbda895485412de",
-  "data/screens/map3d/army_art.csv": "c839ebaff14a75ac0edc7fe77d257d06eac73fa6f8d99b0455b860b1381d8ff5",
+  "data/screens/map3d/army_art.csv": "269f416f0c3d6a12d182c62bc29986dd65879cc036c47e2c2b351615a6d89ddf",
   "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
@@ -919,11 +919,11 @@
    "MARCH"
   ],
   "contact_um": 29338,
-  "digest": "139a6227cca48c44d9732abc12517f2995b09b43e2db0a5dc4c5d9b78de5b00b",
+  "digest": "3467d36c0b895d57d76dc9fc192d96be2ac745544accb444d0dc74f212e2631a",
   "radius_m": 749,
   "turn_q": 400000
  },
- "payload_sha256": "139a6227cca48c44d9732abc12517f2995b09b43e2db0a5dc4c5d9b78de5b00b",
+ "payload_sha256": "3467d36c0b895d57d76dc9fc192d96be2ac745544accb444d0dc74f212e2631a",
  "report": {
   "bounds_um": {
    "contact": 29338,
