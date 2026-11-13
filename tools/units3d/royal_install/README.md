@@ -50,3 +50,13 @@ little harder.
 * The 20k collapse stair-steps the saddle cloth's gold trim at its rear edge, visible only close
   up in Blender (independent critic 2026-10-06; in game the two are indistinguishable). Pin that
   border in a vertex group (`Decimate.vertex_group`) if the WAR ROOM's close look ever shows it.
+
+## The pivot for any turn
+
+`scripts/map3d/map3d_royal_pivot.gd` (`Map3DRoyalPivot`) poses a royal pivot of any turn that leaves and
+rejoins MARCH at the plan's phase (`assets/3D/units/royal/royal_pivot_plan.json`); `pivot.py`'s baked
+clips stay installed but no provider plays them. To look at it in a real window (never `--headless`):
+
+```bash
+Godot --path . -s res://tools/units3d/royal_install/pivot_frames.gd -- --out DIR --turn 90000000 [--mode native] [--plan lift_m=0.04]
+```
