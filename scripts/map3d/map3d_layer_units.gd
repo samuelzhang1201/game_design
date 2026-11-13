@@ -82,6 +82,7 @@ func set_candidate_bodies(enabled: bool, committed: Dictionary = {}) -> void:
 		_candidate_history.clear()
 		_candidate_samples.clear()
 		_days.clear()
+		for code: String in _pieces: _pieces[code]["action"] = ""  # stopped v2 poses replay their ordinary clip
 	_candidate_bodies = enabled
 	_candidate_committed = committed.duplicate(true) if enabled else {}
 	_roster_was = []

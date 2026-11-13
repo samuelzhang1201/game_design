@@ -1,0 +1,15 @@
+{
+ "arm": "archers",
+ "note": "LOCO-CERT-ARCH. Provider Map3DArcherLocomotion: the installed 180-degree pivot at the operation phase, each foot's world track turned by (|T|/180 - 1) x its native accumulated heading, a two-bone leg IK, the body above the legs eased toward the entry pose by |T|/180. Pivots enter and leave MARCH at phase 0 only; the hold is MARCH frozen at 0 (the consumer's admitted phase, recorded as a consumer requirement). Stance, hover and slide use each foot's planting band inherited from native MARCH. turn_q 400000 is the contract's example value (contact does not depend on duration); LOCO-POLICY installs the real row.",
+ "scene": "scenes/models/units/archers.tscn",
+ "provider": "scripts/map3d/map3d_archer_locomotion.gd",
+ "feet": {"l": ["foot.l", "toes_01.l"], "r": ["foot.r", "toes_01.r"]},
+ "forward": [0, 0, -1],
+ "stride_m": 1.5283,
+ "turn_q": 400000,
+ "radius_m": 932,
+ "hold_clip": "MARCH",
+ "march_stop_phases": [0.0],
+ "march_start_phases": [0.0],
+ "hold_phases": [0.0]
+}

@@ -1,11 +1,13 @@
 # LOCO-ROY-PROVIDER numeric check (royal, 2026-11-13)
 
-`provider-check.json` is what main's certifier (`tools/units3d/certify_locomotion.py`, #291,
-tool sha256 `0959a633…`) writes for `provider-check.config.json` on the royal figure posed by
+`provider-check.json` is what main's certifier (`tools/units3d/certify_locomotion.py`, #291 + #311,
+tool sha256 `efc58b66…`) writes for `provider-check.config.json` on the royal figure posed by
 `Map3DRoyalPivot` (`scripts/map3d/map3d_royal_pivot.gd`) through the shared `Map3DPivotProvider`.
 It is **a check, not the certificate**. LOCO-CERT-ROY certifies, and no policy row is installed.
 Status `FAIL` comes from native MARCH alone (below). Bounds (R-A, k = 20.4518): contact 29338 µm,
 seam 2445 µm. 32030 samples over the certifier's dense turn grid (±1 µdeg … ±180°, wraps).
+Since the recording, #310 changed only `army_art.csv`'s artillery row, so the bound sha256 of
+that file is stale and the royal row it reads is unchanged; LOCO-CERT-ROY re-runs on the final inputs.
 
 Consumer requirement (coordinator ruling 2026-11-11): stop, start and hold only at MARCH 0.4375
 (key 7/16). The pivots leave and rejoin MARCH there, and the hold is MARCH frozen there.

@@ -133,7 +133,7 @@ func test_calibration_is_required_and_simulation_conversion_is_explicit() -> voi
 	var converted: Dictionary = tool.call("measure", _scene(), art)
 	var one := _measure(_scene())
 	assert_almost_eq(float(converted.radius_m), float(one.radius_m) * 20.0, 0.01)
-	assert_eq(converted.slot_pitch_m, int(converted.body_radius_m) * 4)
+	assert_eq(converted.slot_pitch_m, int(converted.body_radius_m) * 2 + 90, "diameter + unit_body_gap_m 90")
 	assert_eq(converted.deploy_min_width_m, int(converted.slot_pitch_m) * 4 + int(converted.body_radius_m) * 2)
 	assert_eq(converted.deploy_min_depth_m, int(converted.slot_pitch_m) + int(converted.body_radius_m) * 2)
 

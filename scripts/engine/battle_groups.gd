@@ -25,17 +25,19 @@ static func saved_size(repo: DataRepository, battle: Dictionary) -> int:
 	return expected
 
 
-## Whole-metre positions of `count` groups around `anchor`. Slot x runs across
+## Whole-metre positions of `count` groups around `anchor`, always the one
+## fixed block of `BattleFormation.DEFAULT` (spec 2026-10-25 §2 rules 1-2: a
+## unit has no internal tactical shape). Slot x runs across
 ## the front, slot y away from the enemy; facing is a WarFront angle (0 = +x,
 ## y down, degrees), so across = the facing turned +90 degrees and back = -facing.
 ## Each position is rounded to whole metres once.
-static func layout(repo: DataRepository, formation: String, count: int, anchor: Vector2i,
+static func layout(repo: DataRepository, count: int, anchor: Vector2i,
 		facing_deg: int, pitch_m := 0) -> Array[Vector2i]:
 	var face := WarFront.facing_vector(facing_deg)
 	var across := Vector2(-face.y, face.x) * float(pitch_m if pitch_m > 0 else repo.bal("battle_group_spacing_m"))
 	var back := -face * float(pitch_m if pitch_m > 0 else repo.bal("battle_group_depth_m"))
 	var out: Array[Vector2i] = []
-	for slot: Vector2 in BattleFormation.slots(formation, count):
+	for slot: Vector2 in BattleFormation.slots(BattleFormation.DEFAULT, count):
 		out.append(anchor + Vector2i((across * slot.x + back * slot.y).round()))
 	return out
 
@@ -97,9 +99,8 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 				sizes[-1] += added
 				left -= added
 			sizes.append_array(counts(left, size))
-			var shape := String(BattleFormation._deployment(battle, side, code).get("current", BattleFormation.DEFAULT))
-			var at := layout(repo, shape, sizes.size(), anchor, face, int(footprint.pitch_m))
-			var slots := BattleFormation.slots(shape, sizes.size())
+			var at := layout(repo, sizes.size(), anchor, face, int(footprint.pitch_m))
+			var slots := BattleFormation.slots(BattleFormation.DEFAULT, sizes.size())
 			var front := 0.0
 			for slot: Vector2 in slots:
 				front = minf(front, slot.y)
@@ -329,10 +330,9 @@ static func _relayout(repo: DataRepository, state: GameState, battle: Dictionary
 			var saved: Variant = battle.get("groups", {}).get(code, [])
 			if not saved is Array: return "Invalid geometry row array: " + code
 			var rows: Array = saved
-			var shape := String(BattleFormation._deployment(battle, side, code).get("current", BattleFormation.DEFAULT))
 			var face: Variant = battle.get("group_facing", {}).get(code)
 			if not _whole(face) or int(face) < 0 or int(face) >= 360: return "Invalid geometry facing: " + code
-			var positions := layout(repo, shape, rows.size(), anchors[code], int(face), int(footprint.pitch_m))
+			var positions := layout(repo, rows.size(), anchors[code], int(face), int(footprint.pitch_m))
 			var total := 0
 			var slots := {}
 			for i: int in rows.size():
@@ -529,7 +529,6 @@ static func deployment(repo: DataRepository, state: GameState, battle: Dictionar
 		for code: String in codes:
 			var footprint := piece(repo, state, code)
 			if not footprint.ok: return {}
-			var shape := String(BattleFormation._deployment(battle, side, code).get("current", BattleFormation.DEFAULT))
 			var face := int(battle.get("group_facing", {}).get(code, WarFront.facing_deg(forward)))
 			var points: Array[Vector2i] = []
 			var anchor := BattleSystem._at_m(repo, state, code)
@@ -537,7 +536,7 @@ static func deployment(repo: DataRepository, state: GameState, battle: Dictionar
 			for row: Dictionary in rows:
 				points.append(Vector2i(int(row.x_m), int(row.y_m)) - anchor)
 			if rows.is_empty():
-				points = layout(repo, shape, counts(ArmySystem.fit_count(repo, state, code), size).size(),
+				points = layout(repo, counts(ArmySystem.fit_count(repo, state, code), size).size(),
 					Vector2i.ZERO, face, int(footprint.pitch_m))
 			if points.is_empty():
 				bounds[code] = {"low": 0.0, "width": 0.0}
@@ -563,9 +562,8 @@ static func deployment(repo: DataRepository, state: GameState, battle: Dictionar
 			if not footprint.ok: return {}
 			var rows: Array = battle.get("groups", {}).get(enemy, []).duplicate(true)
 			if rows.is_empty() and ArmySystem.fit_count(repo, state, enemy) > 0:
-				var shape := String(BattleFormation._deployment(battle, "def" if side == "att" else "att", enemy).get("current", BattleFormation.DEFAULT))
 				var face := int(battle.get("group_facing", {}).get(enemy, WarFront.facing_deg(-forward)))
-				for point: Vector2i in layout(repo, shape, counts(ArmySystem.fit_count(repo, state, enemy), size).size(),
+				for point: Vector2i in layout(repo, counts(ArmySystem.fit_count(repo, state, enemy), size).size(),
 						BattleSystem._at_m(repo, state, enemy), face, int(footprint.pitch_m)):
 					rows.append({"x_m": point.x, "y_m": point.y})
 			for row: Dictionary in rows:
@@ -949,3 +947,24 @@ static func _body_close_front(repo: DataRepository, source: GameState, battle: D
 		if pair.ok and not pair.overlap and pair.in_reach \
 			and ArmySystem._body_path_terrain(MarchPath.of_pack(repo), [point, to], 0).is_empty(): return delta
 	return []
+
+
+## CF06 candidate melee input: `{engaged, fit, reason}` adapted from the admitted lawful
+## physical query at the state's own boundary (its saved battle day, or the safe boundary
+## when no day is open). A rejection is never a legitimate zero: it returns -1 counts and
+## a "Rejected:" reason. No front/reserve fallback.
+static func melee_counts(repo: DataRepository, state: GameState, battle: Dictionary, unit: String, enemies: Array) -> Dictionary:
+	var rejected := {"engaged": -1, "fit": -1, "reason": "Rejected: candidate melee needs an admitted battle boundary"}
+	if repo == null or state == null or not BodyMotion._loco_integer(battle.get("id")): return rejected
+	var boundary: Dictionary
+	if state.day_resolution.get("body_battle") is Dictionary:
+		var raw := DayResolution.body_battle_incompatibility_reason(state.day_resolution)
+		if not raw.is_empty(): return {"engaged": -1, "fit": -1, "reason": "Rejected: " + raw}
+		boundary = BodyBattleMotion._boundary(state)
+	elif state.day_resolution.is_empty(): boundary = BodyBattle.safe_boundary(state)
+	else: return rejected
+	var sorted := enemies.duplicate()
+	sorted.sort()
+	var query := BodyBattleContact.query_candidate(repo, state, int(battle.id), unit, sorted, boundary)
+	if query.status != "complete": return {"engaged": -1, "fit": -1, "reason": "Rejected: " + String(query.reason)}
+	return {"engaged": int(query.engaged), "fit": int(query.fit), "reason": String(query.reason)}

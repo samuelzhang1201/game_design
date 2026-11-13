@@ -209,11 +209,16 @@ static func _merge(repo: DataRepository, source: GameState, first_id: int, secon
 	var cross := _cross_pairs(repo, probe, UnitBodies._battle(probe, first_id), UnitBodies._battle(probe, second_id), boundary)
 	if cross.status != "complete": return cross
 	if cross.plan.contacts.is_empty():
-		for battle: Dictionary in [a, b]:
-			for unit: String in BattleMerge._units(battle):
-				if BattleRanged.share(repo, source, unit) > 0 and BattleSystem.unit_action(repo, source, battle, unit).kind == "attack":
-					return _result("deferred", "direct_fire_dependency")
-		return _result("deferred", "No lawful physical cross-field contact")
+		# An attacking ranged-equipped unit's actual positive firing across the fronts also merges.
+		var fired := false
+		_seal_private(repo, probe)
+		for pair: Array in [[a, b], [b, a]]:
+			for unit: String in BattleMerge._units(pair[0]):
+				if fired or BattleRanged.share(repo, source, unit) <= 0 or BattleSystem.unit_action(repo, source, pair[0], unit).kind != "attack": continue
+				var fire := BattleRanged.counts_candidate(repo, probe, int(pair[0].id), unit, "", int(pair[1].id), boundary)
+				if fire.status != "complete": return _result("error", fire.reason)
+				fired = int(fire.firing) > 0
+		if not fired: return _result("deferred", "No lawful physical cross-field contact or direct fire")
 	var staged := UnitBodies._copy(source)
 	var sid := int(BattleMerge.survivor_of(a, b).id)
 	var gid := first_id if sid == second_id else second_id
@@ -482,13 +487,18 @@ static func step_candidate(repo: DataRepository, source: GameState) -> Dictionar
 	if done.status != "complete": return _result(done.status, done.reason)
 	return _result("deferred", "Candidate day is complete")
 
+## The safe boundary at the next outer operation number; a malformed receipt gives an
+## empty sequence, which admission rejects.
+static func safe_boundary(state: GameState) -> Dictionary:
+	var outer: Variant = state.military_migration.get("body_battle", {})
+	var sequence: Variant = outer.get("sequence", "") if outer is Dictionary else ""
+	return {"version": 1, "kind": "safe", "abs_day": str(state.absolute_day()),
+		"sequence": "0" if outer is Dictionary and outer.is_empty() else (str(int(sequence) + 1) if DayResolution._body_decimal(sequence) else "")}
+
 ## Begin consumes the next outer operation at the safe boundary; repeating it on a frozen day defers.
 static func begin_candidate(repo: DataRepository, source: GameState) -> Dictionary:
 	if repo == null or source == null: return _result("error", "Begin requires data and source")
-	var outer: Variant = source.military_migration.get("body_battle", {})
-	var sequence: Variant = outer.get("sequence", "") if outer is Dictionary else ""
-	var boundary := {"version": 1, "kind": "safe", "abs_day": str(source.absolute_day()),
-		"sequence": "0" if outer is Dictionary and outer.is_empty() else (str(int(sequence) + 1) if DayResolution._body_decimal(sequence) else "0")}
+	var boundary := safe_boundary(source)
 	var planned := plan_candidate(repo, source, {"kind": "begin"}, boundary)
 	if planned.status != "complete": return planned
 	var begun := commit_candidate(repo, source, planned.plan, boundary)
@@ -575,7 +585,6 @@ static func _stage(repo: DataRepository, source: GameState, request: Dictionary,
 					result = _join(repo, candidate, unit, int(field.id), BattleSystem._side_for(candidate, field, unit), boundary)
 				elif own.id != other.id:
 					result = _merge(repo, candidate, mini(int(own.id), int(other.id)), maxi(int(own.id), int(other.id)), boundary)
-					if result.status == "deferred" and result.reason == "direct_fire_dependency": return result
 				else: continue
 				if result.status == "error": return result
 				if result.status != "complete": continue
