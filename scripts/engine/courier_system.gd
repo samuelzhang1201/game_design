@@ -808,21 +808,8 @@ static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, 
 		return out
 	var entry: Dictionary = state.regiments.get(code, {})
 	if action == "BATTLE_FORMATION":
-		var battle := BattleSystem.battle_by_id(state, int(order.get("battle_id", -1)))
-		var side := BattleRules.side_of(battle, code)
-		if side == "":
-			return {"type": "lapsed", "said": "The army has left this battlefield."}
-		BattleFormation.ensure(battle)
-		var change: Dictionary = battle["formations"][side]
-		if int(change["order_id"]) > int(c["id"]) or (int(change["order_id"]) == int(c["id"])
-				and int(change.get("order_sequence", -1)) >= sequence):
-			return {"type": "stale", "said": STALE_SAID}
-		var result := BattleFormation.request(repo, state, int(battle["id"]), side, String(order.get("formation", "")))
-		if result["status"] == "invalid":
-			return {"type": "lapsed", "said": String(result["reason"])}
-		change["order_id"] = int(c["id"])
-		change["order_sequence"] = sequence
-		return {"type": "delivered", "said": String(result["reason"])}
+		# A formation courier from an old save arrives to retired formations (owner R-H).
+		return {"type": "lapsed", "said": BattleFormation.RETIRED}
 	if action == "ARMY_STANCE":
 		return _deliver_stance(repo, state, c, order, entry)
 	if int(entry.get("order_id", 0)) > int(c["id"]):

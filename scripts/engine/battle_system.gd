@@ -106,12 +106,6 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 		factors.append({"source": "camp:defence", "category": "formation_terrain",
 			"permille": CampSystem.defence_factor(repo, state, code), "reason": "Camp at its real saved site"})
 	if not battle.is_empty():
-		var side := BattleRules.side_of(battle, code)
-		if battle.has("formations"):
-			for factor: Dictionary in BattleFormation.effects(repo, state, battle, side, attacking, code)["factors"]:
-				var copy := factor.duplicate(true)
-				copy["category"] = "formation_terrain"
-				factors.append(copy)
 		factors.append_array(BattleEvents.factors(state, battle, code))
 		var contact := BattleGroups.engaged_counts(repo, state, battle, code)
 		var ranged := BattleRanged.share(repo, state, code)
@@ -724,9 +718,7 @@ static func step_battle(repo: DataRepository, state: GameState, battle_id: int) 
 	return {"status": "complete", "events": events}
 
 
-static func finish_day(repo: DataRepository, state: GameState) -> void:
-	for battle: Dictionary in state.battles:
-		BattleFormation.advance(repo, state, battle)
+static func finish_day(_repo: DataRepository, state: GameState) -> void:
 	settle_stances(state)
 
 

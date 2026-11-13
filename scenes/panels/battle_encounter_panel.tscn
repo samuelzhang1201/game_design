@@ -1,7 +1,7 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://6pigp1jcmoim"]
 
 [ext_resource type="Theme" uid="uid://b4xbt0npqul2u" path="res://assets/2D/ui/theme/game_theme.tres" id="1_sodbd"]
-[ext_resource type="Script" path="res://scripts/ui/battle_encounter_panel.gd" id="2_dmdom"]
+[ext_resource type="Script" uid="uid://dwav23njda5pn" path="res://scripts/ui/battle_encounter_panel.gd" id="2_dmdom"]
 [ext_resource type="Texture2D" uid="uid://p1jqgjgkq1pm" path="res://assets/2D/ui/panels/leather_grain_light.png" id="3_kj71f"]
 [ext_resource type="Texture2D" uid="uid://cnctm0nndn0qh" path="res://assets/2D/ui/panels/leather_grain_dark.png" id="4_jishn"]
 [ext_resource type="Script" uid="uid://c44j2v837vlnv" path="res://scripts/ui/vellum_panel_style.gd" id="5_rf7n1"]
@@ -42,7 +42,7 @@ shade_bottom = 0.14
 inner_rule = Color(1, 1, 1, 0)
 
 [node name="BattleEncounterPanel" type="Control" unique_id=1420189153]
-editor_description = "Editor owns layout, scrolling, deployment and formation controls; runtime fills only received battle facts and fits the active map bounds."
+editor_description = "Editor owns layout, scrolling and deployment controls; runtime fills only received battle facts and fits the active map bounds."
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -146,27 +146,6 @@ autowrap_mode = 3
 layout_mode = 2
 theme_type_variation = &"CardText"
 text = "Scroll to review all troops and battlefield agreements."
-autowrap_mode = 3
-
-[node name="FormationOrders" type="HBoxContainer" parent="Center/Window/Body" unique_id=1426484222]
-layout_mode = 2
-
-[node name="FormationChoice" type="OptionButton" parent="Center/Window/Body/FormationOrders" unique_id=116011540]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"CardMenu"
-
-[node name="FormationSend" type="Button" parent="Center/Window/Body/FormationOrders" unique_id=336947913]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"CardCommandSmall"
-text = "Send formation order"
-
-[node name="FormationStatus" type="Label" parent="Center/Window/Body" unique_id=2076798707]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"CardText"
 autowrap_mode = 3
 
 [node name="ResumeHint" type="Label" parent="Center/Window/Body" unique_id=187208084]

@@ -6,7 +6,6 @@ const SuiteData := preload("res://tests/suite_data.gd")
 ## never a production gait.
 
 const FIXTURE := "0:0;0.5:1;1:3"
-const ATLAS := "res://docs/reviews/cluster-formations/evidence/locomotion/cavalry/march-phase.json"
 
 var repo: DataRepository
 var knots: PackedFloat64Array
@@ -82,23 +81,27 @@ func test_keep_pace_drives_each_figure_by_the_map() -> void:
 	assert_eq((anims[0] as AnimationPlayer).speed_scale, 1.0, "at rest it plays as authored")
 
 
-## The installed cavalry map: its stance knots (to .76, where the last hoof lifts) are
-## march-phase.json's all-hoof atlas, its loop is stride_m, and the airborne rest
-## carries the stance's mean travel a phase.
-func test_the_cavalry_map_is_the_contract_atlas() -> void:
-	var art: Dictionary = repo.army_art["cavalry"]
-	var map := Map3DMarchPhase.of_art(art)
-	assert_false(map.is_empty(), "cavalry has a phase_map")
-	var atlas: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ATLAS))["atlas"]
-	var stance: Array = (atlas["knots"] as Array).filter(func(k: Dictionary) -> bool:
-		return float(k["phase_num"]) / float(k["phase_den"]) <= 0.76)
-	assert_eq(map.size(), 2 * stance.size() + 2)
-	for i in stance.size():
-		var k: Dictionary = stance[i]
-		assert_almost_eq(map[2 * i], float(k["phase_num"]) / float(k["phase_den"]), 1e-15)
-		assert_almost_eq(map[2 * i + 1], float(k["distance_num"]) / float(k["distance_den"]), 1e-12)
-	assert_almost_eq(Map3DMarchPhase.loop_m(map), map[map.size() - 3] / 0.76, 1e-12)
-	assert_almost_eq(float(art["stride_m"]), Map3DMarchPhase.loop_m(map), 0.0005)
+## No installed arm needs a map: the re-authored cavalry MARCH (LOCO-CAV-MARCH, owner ruling
+## 2026-11-13) holds each planted hoof at the canter's own constant 2.4 model m a loop, so it is
+## paced by stride_m like every other arm.
+func test_no_installed_arm_carries_a_phase_map() -> void:
+	for piece: String in repo.army_art:
+		assert_true(Map3DMarchPhase.of_art(repo.army_art[piece]).is_empty(), piece)
+	assert_almost_eq(float(repo.army_art["cavalry"]["stride_m"]), 2.4, 1e-9)
+
+
+## The re-keyed cavalry MARCH keeps its dense keys through the import (cavalry.glb.import bakes at
+## animation/fps 240: 129 keys a loop, of which the importer drops the collinear ones; at 30 Godot
+## re-bakes every track to 17 and the planted hooves slide between keys again).
+func test_the_cavalry_march_keeps_its_dense_keys() -> void:
+	var model: Node = load("res://scenes/models/units/cavalry.tscn").instantiate()
+	var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]
+	var march: Animation = player.get_animation("MARCH")
+	var most: int = 0
+	for t: int in march.get_track_count():
+		most = maxi(most, march.track_get_key_count(t))
+	model.free()
+	assert_gt(most, 64, "MARCH keys on its busiest track")
 
 
 ## The candidate consumer's per-figure rate (Map3DUnitRig.mapped_rate): before MARCH is the

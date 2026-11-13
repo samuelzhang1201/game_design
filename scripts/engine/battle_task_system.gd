@@ -295,10 +295,6 @@ static func deliver_task(repo: DataRepository, state: GameState, order_id: Strin
 	if why != "":
 		_transition(state, record, "invalid", why)
 		return record.duplicate(true)
-	if order["formation"] != "":
-		var battle := BattleSystem.battle_by_id(state, int(order["battle_id"]))
-		BattleFormation.request(repo, state, int(order["battle_id"]), BattleRules.side_of(battle, String(order["unit"])),
-			String(order["formation"]), String(order["unit"]))
 	var previous: Dictionary = ledger["orders"].get(String(ledger["current_id"]), {})
 	var kept: Dictionary = {}
 	var kept_bound := ""

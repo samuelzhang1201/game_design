@@ -96,6 +96,14 @@ neighbouring figures is the piece's diameter plus a small gap, `unit_body_gap_m`
 in ordinary play now, ahead of CF07; the internal formations' tactical effects and their order
 controls are retired in ordinary play in the following step (CF07a scope for per-unit formations).
 
+## R-I Cavalry MARCH re-authored (2026-11-13)
+
+Owner, 2026-11-13: "Re-author cavalry MARCH". No phase map can bring the shipped cavalry MARCH under
+the per-vertex slide bound, so the protected cavalry MARCH clip may be re-authored, as an exception
+for that one clip (as for the archer MARCH, #299). The bound does not move: contact 29,273 µm
+(0.60 world m at k = 20.4973). Every other cavalry clip, the mesh, rest, binds, weights, root, seat
+and scale stay as they are.
+
 ## R-J Re-author royal MARCH (2026-11-13)
 
 Owner, relayed by the coordinating session after LOCO-CERT-ROY measured the shipped clip outside
