@@ -22,8 +22,6 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 GLB = "assets/3D/units/cavalry/cavalry.glb"
 SCENE = "scenes/models/units/cavalry.tscn"
-# Custody of the 16-key MARCH as installed before LOCO-CAV-MARCH (2026-11-13) re-keyed it: the frozen
-# GLB digest names that asset, so this checker now refuses the installed GLB by design (historical).
 FROZEN = {
     'native': '30d69f07b6d76d155b7af33f40e62b7a32c774fd413fa76fcdfeb05d67d82308',
     'geometry': '4960509ddaae535d5deabdf687976dbba5a93f64ecc8674541efbac8d45a19bd',
