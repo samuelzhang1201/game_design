@@ -23,7 +23,7 @@
       "reason": "Remaining functional engine/data/story contracts, local determinism and save-format assertions. Expensive content above overrides this fallback.",
       "patterns": ["tests/engine/test_*.gd"]
     },
-    "map3d": {"reason": "Map rendering, asset and interaction contracts; sorted together to preserve hover/picker setup order.", "patterns": ["tests/map3d/test_*.gd"]},
+    "map3d": {"reason": "Map rendering, asset and interaction contracts; sorted together to preserve hover/picker setup order.", "patterns": ["tests/map3d/test_*.gd"], "ci_batches": 3},
     "ui": {"reason": "Screen and Game bridge functional contracts.", "patterns": ["tests/ui/test_*.gd"]},
     "ledger3d": {"reason": "Ledger layout, assets and interaction contracts.", "patterns": ["tests/ledger3d/test_*.gd"]},
     "war_room": {"reason": "War room drawing and interaction contracts.", "patterns": ["tests/war_room/test_*.gd"]}
