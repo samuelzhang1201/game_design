@@ -15,7 +15,7 @@ pivots over the whole turn grid (±1 µdeg … ±180°, with wraps). Bounds (R-A
 |---|---:|---:|
 | Penetration (rendered ground) | 12,936 µm (0 sampled) | 29,338 µm |
 | Stance hover | 3,629 µm | 29,338 µm |
-| Slide per planted sole vertex | 23,104 µm (12,117 sampled; MARCH, fore-left at phase 0.27) | 29,338 µm |
+| Slide per planted sole vertex | 23,104 µm (12,117 sampled; MARCH phase 0.27, vertex 14125) | 29,338 µm |
 | Seams (loop, stop, start, hold, both pivots, every grid turn) | ≤ 367 µm | 2,445 µm |
 | Envelope | 737 simulation m | 749 m (R unchanged) |
 | Skin (R-B), flags introduced over the native seek | 0 | 0 |
@@ -41,8 +41,9 @@ review is recorded here.
   independent critic found nothing blocking: the planted hooves hold the stripes, and it is the same
   gallop.
 - **Pivots:** reviewed in LOCO-ROY-PROVIDER (`provider-review/`, below). An independent critic found
-  nothing blocking. A pivot pose is a function of MARCH(0.4375) and the seated stand only, and the
-  re-keyed MARCH keeps that pose exactly (`march-keys.json` `admitted_phase_pose_native`; the
+  nothing blocking. Besides the rest pose, landmarks and hoof patches (none of which the re-keying
+  touches), a pivot pose depends only on MARCH(0.4375) and the seated stand, and the re-keyed MARCH
+  keeps that pose exactly (`march-keys.json` `admitted_phase_pose_native`; the
   re-keying tool fails otherwise). So those frames are this certificate's pivots.
 - **Not judged here:** pace on the live map (pause, 1x, 4x) belongs to CF04c-VISUAL.
 
