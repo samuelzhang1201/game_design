@@ -1,7 +1,7 @@
 # Cavalry MARCH re-author (LOCO-CAV-MARCH, 2026-11-13)
 
 Owner ruling (via the coordinating session, 2026-11-13): "Re-author cavalry MARCH". This is an explicit
-exception to the protected-source-clip rule, for cavalry MARCH only (`owner-rulings-2026-11-10.md` R-H).
+exception to the protected-source-clip rule, for cavalry MARCH only (`owner-rulings-2026-11-10.md` R-I).
 The bound stays contact 29,273 µm (0.60 world m, k = 20.4973). Every other clip, the mesh, skin, binds,
 rest, root, seat and scale are unchanged.
 
@@ -50,6 +50,10 @@ generator re-run at 16 keys reproduced the shipped MARCH exactly (max matrix dif
   - the old MARCH accessors stay in the BIN, unused.
 - `army_art.csv` cavalry: `stride_m` is now 2.4 (the canter's own loop, `actions.py` `STRIDE`) and
   `phase_map` is empty. The re-authored clip needs no map, so cavalry is paced like every other arm.
+
+- `tools/units3d/check_cavalry_march_capture.py` is left byte-identical (the relative-skin bound pins its
+  digest). Its `FROZEN` GLB digest names the 16-key MARCH installed before this step, so it now refuses
+  the installed GLB by design: it is the historical custody check of the old clip.
 
 ## Godot-native measurement
 

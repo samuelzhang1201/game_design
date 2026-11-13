@@ -525,7 +525,6 @@ static func _snapshot_flank(repo: DataRepository, state: GameState, unit: String
 		var observed := there - Vector2i(int(previous["x_m"]), int(previous["y_m"]))
 		if observed != Vector2i.ZERO:
 			facing = WarFront.facing_deg(Vector2(observed))
-	var shape := BattleFormation.of_unit(state, target)
 	var size := BattleGroups.saved_size(repo, battle) if battle.has("groups") else int(repo.bal("battle_group_size"))
 	if size <= 0: return
 	var n := BattleGroups.counts(ArmySystem.fit_count(repo, state, target), size).size()
@@ -537,8 +536,7 @@ static func _snapshot_flank(repo: DataRepository, state: GameState, unit: String
 		for row: Dictionary in battle.groups[target]:
 			if int(row.count) > 0: positions.append(Vector2i(int(row.x_m), int(row.y_m)))
 	else:
-		positions = BattleGroups.layout(repo, shape if shape != "" else BattleFormation.DEFAULT,
-			n, there, facing, int(footprint.pitch_m))
+		positions = BattleGroups.layout(repo, n, there, facing, int(footprint.pitch_m))
 	var radius := int(footprint.radius_m)
 	for point: Vector2i in positions:
 		radius = maxi(radius, ceili(Vector2(point - there).length()) + int(footprint.radius_m))

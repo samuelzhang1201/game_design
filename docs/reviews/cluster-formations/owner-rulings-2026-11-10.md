@@ -85,7 +85,18 @@ disjoint. Each parallel step builds on merged interfaces only.
 The CF24 targets for a stable, recognizable formation advantage are set before its validation
 seeds run.
 
-## R-H Cavalry MARCH re-authored (2026-11-13)
+## R-H A unit is one tight block (2026-11-13)
+
+Owner, on units scattering when armies face off: a unit's ten figures stand in ONE fixed 5 files x
+2 ranks block, nearly shoulder to shoulder, whatever internal formation it was given (design §2
+rules 1-2: the arrangement shows head count, never a tactical shape). The pitch between
+neighbouring figures is the piece's diameter plus a small gap, `unit_body_gap_m` (90 m) in
+`data/army/balance.csv`; `data/army/unit_footprints.csv` `pitch_m` = 2 x `radius_m` + that gap
+(a full infantry unit 9.63 x 3.80 km, was 16.7 x 5.6 km). Figures still never overlap. This lands
+in ordinary play now, ahead of CF07; the internal formations' tactical effects and their order
+controls are retired in ordinary play in the following step (CF07a scope for per-unit formations).
+
+## R-I Cavalry MARCH re-authored (2026-11-13)
 
 Owner, 2026-11-13: "Re-author cavalry MARCH". No phase map can bring the shipped cavalry MARCH under
 the per-vertex slide bound, so the protected cavalry MARCH clip may be re-authored, as an exception

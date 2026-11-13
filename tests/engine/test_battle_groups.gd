@@ -200,21 +200,42 @@ func test_counts_table() -> void:
 	assert_eq(BattleGroups.counts(1000, 100).size(), 10)
 	assert_eq(BattleGroups.counts(10000, 100).size(), 100)
 
-func test_layout_line_rotated() -> void:
+func test_layout_is_the_fixed_block_rotated() -> void:
 	var repo := SuiteData.repo()
-	# facing 0 (+x): across = +y, back = -x; slots x -1,0,1 at 50 m
-	assert_eq(BattleGroups.layout(repo, "line", 3, Vector2i(0, 0), 0),
-		[Vector2i(0, -50), Vector2i(0, 0), Vector2i(0, 50)] as Array[Vector2i])
-	# facing 90 (+y): across = -x
-	assert_eq(BattleGroups.layout(repo, "line", 3, Vector2i(0, 0), 90),
-		[Vector2i(50, 0), Vector2i(0, 0), Vector2i(-50, 0)] as Array[Vector2i])
-	assert_eq(BattleGroups.layout(repo, "line", 1, Vector2i(10, 20), 0), [Vector2i(10, 20)] as Array[Vector2i])
-
-func test_double_rank_depth_is_behind_the_front() -> void:
-	var repo := SuiteData.repo()
-	# double_rank 3 groups, facing 0: slots (-0.5,0), (-0.5,1), (0.5,0) -> (0,-25), (-40,-25), (0,25)
-	assert_eq(BattleGroups.layout(repo, "double_rank", 3, Vector2i(0, 0), 0),
+	# One fixed block for every unit (owner R-H 2026-11-13): facing 90 (+y): across = -x
+	# at 50 m, back = -y at 40 m; slots (-0.5,0), (-0.5,1), (0.5,0).
+	assert_eq(BattleGroups.layout(repo, 3, Vector2i(0, 0), 90),
+		[Vector2i(25, 0), Vector2i(25, -40), Vector2i(-25, 0)] as Array[Vector2i])
+	assert_eq(BattleGroups.layout(repo, 1, Vector2i(10, 20), 0), [Vector2i(10, 20)] as Array[Vector2i])
+	# Facing 0: across = +y at 50 m, back = -x at 40 m: (0,-25), (-40,-25), (0,25).
+	assert_eq(BattleGroups.layout(repo, 3, Vector2i(0, 0), 0),
 		[Vector2i(0, -25), Vector2i(-40, -25), Vector2i(0, 25)] as Array[Vector2i])
+
+func test_full_infantry_unit_is_a_tight_five_by_two_block() -> void:
+	var repo := SuiteData.repo()
+	var row: Dictionary = repo.unit_footprints["infantry"]
+	# pitch = 2 x 927 + unit_body_gap_m 90 = 1944; facing 0: across = +y, back = -x.
+	assert_eq(int(row.pitch_m), 1944)
+	var at := BattleGroups.layout(repo, 10, Vector2i.ZERO, 0, int(row.pitch_m))
+	assert_eq(at, [Vector2i(0, -3888), Vector2i(-1944, -3888), Vector2i(0, -1944), Vector2i(-1944, -1944),
+		Vector2i(0, 0), Vector2i(-1944, 0), Vector2i(0, 1944), Vector2i(-1944, 1944),
+		Vector2i(0, 3888), Vector2i(-1944, 3888)] as Array[Vector2i])
+	var rows: Array = at.map(func(p: Vector2i) -> Dictionary: return {"x_m": p.x, "y_m": p.y})
+	var bounds := BattleGroupGeometry.envelope(rows, 927)
+	# 4 x 1944 + 2 x 927 = 9630 across; 1944 + 1854 = 3798 deep; neighbours 90 m apart.
+	assert_eq([bounds.depth_m, bounds.width_m], [9630, 3798])
+	# Edge to edge is exactly the 90 m gap: out of reach at 89, in reach at 90.
+	assert_false(BattleGroupGeometry.pair([0, 0], 927, [0, 1944], 927, 0).overlap)
+	assert_false(BattleGroupGeometry.pair([0, 0], 927, [0, 1944], 927, 89).in_reach)
+	assert_true(BattleGroupGeometry.pair([0, 0], 927, [0, 1944], 927, 90).in_reach)
+
+func test_every_footprint_pitch_is_its_diameter_plus_the_gap() -> void:
+	var repo := SuiteData.repo()
+	var gap := int(repo.bal("unit_body_gap_m"))
+	assert_eq(gap, 90)
+	for arm: String in repo.unit_footprints:
+		var row: Dictionary = repo.unit_footprints[arm]
+		assert_eq(int(row.pitch_m), 2 * int(row.radius_m) + gap, arm)
 
 func test_refresh_groups_follow_fit_count() -> void:
 	var f := _fixture()
@@ -464,16 +485,16 @@ func test_physical_rounded_formation_envelope_uses_actual_rows() -> void:
 	var repo := SuiteData.repo()
 	var pitch: int = repo.unit_footprints.infantry.pitch_m
 	var radius: int = repo.unit_footprints.infantry.radius_m
-	# Existing three-slot line at 45 degrees: +/-3708/sqrt(2) rounds to +/-2622.
+	# A three-slot line at 45 degrees: +/-1944/sqrt(2) = +/-1374.6 rounds to +/-1375.
 	var rows: Array = []
 	for slot: Vector2 in BattleFormation.slots("line", 3):
 		var offset := (Vector2(-1, 1).normalized() * slot.x * pitch).round()
 		rows.append({"x_m": int(offset.x), "y_m": int(offset.y)})
-	assert_eq(rows, [{"x_m": 2622, "y_m": -2622}, {"x_m": 0, "y_m": 0},
-		{"x_m": -2622, "y_m": 2622}])
+	assert_eq(rows, [{"x_m": 1375, "y_m": -1375}, {"x_m": 0, "y_m": 0},
+		{"x_m": -1375, "y_m": 1375}])
 	var bounds := Geometry.envelope(rows, radius)
-	assert_eq(bounds.width_m, 7098, "5244 centre extent + 1854 diameter")
-	assert_eq(bounds.depth_m, 7098)
+	assert_eq(bounds.width_m, 4604, "2750 centre extent + 1854 diameter")
+	assert_eq(bounds.depth_m, 4604)
 	assert_true(Geometry.rigid_step(rows, radius, [0, 0], 0, []).allowed)
 	var packed: Array = [{"x_m": 0, "y_m": 0}, {"x_m": 1853, "y_m": 0}]
 	assert_false(Geometry.rigid_step(packed, radius, [0, 0], 0, []).allowed)
@@ -515,8 +536,8 @@ func test_seed_refuses_a_closed_row_even_when_both_anchors_are_dry() -> void:
 	var f := _fixture()
 	f.state.town_seat.clear()
 	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 200)
-	for side: String in BattleSystem.SIDES: f.battle.formations[side].current = "line"
-	var grid := _row_ground(f, Vector2i(9, 20)) # Front at(960,2000); anchor at(1000,2000).
+	# Every unit is the fixed block: front row at the anchor (1000,2000), the rear 80 m behind.
+	var grid := _row_ground(f, Vector2i(10, 19)) # Rear at (1000,1920); anchor at (1000,2000).
 	assert_true(grid.clear(Vector2i(1000, 2000), Vector2i(1000, 2000)))
 	assert_true(grid.clear(Vector2i(1000, 4000), Vector2i(1000, 4000)))
 	var before := SaveLoad.state_hash(f.state)
@@ -660,7 +681,7 @@ func test_overlap_cannot_hide_a_later_closed_rank_during_geometry_migration() ->
 		for code: String in [f.a, f.enemy]:
 			var rows: Array = []
 			var at := BattleSystem._at_m(f.repo, f.state, code)
-			for point: Vector2i in BattleGroups.layout(f.repo, "double_rank", 2, at, int(f.battle.group_facing[code]), 80):
+			for point: Vector2i in BattleGroups.layout(f.repo, 2, at, int(f.battle.group_facing[code]), 80):
 				rows.append({"slot": rows.size(), "count": 100,
 					"role": "front" if rows.is_empty() else "reserve", "x_m": point.x, "y_m": point.y})
 			f.battle.groups[code] = rows

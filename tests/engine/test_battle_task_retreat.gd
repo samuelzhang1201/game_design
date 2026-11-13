@@ -59,17 +59,29 @@ func _fixture() -> Dictionary:
 	state.foes[attacker].facing_deg = face
 	state.regiments[unit].facing_deg = posmod(face + 180, 360)
 	state.regiments[other].facing_deg = posmod(face + 180, 360)
-	battle.unit_formations = {}
-	for side: String in BattleSystem.SIDES:
-		for code: String in battle[side]:
-			var formation: Dictionary = battle.formations[side].duplicate(true)
-			formation.current = "line"
-			formation.target = "line"
-			formation.previous = "line"
-			battle.unit_formations[code] = formation
 	battle.erase("groups")
 	battle.erase("deployment_axis_deg")
+	var placed := {}
+	for code: String in battle.att + battle.def:
+		placed[code] = BattleSystem._at_m(repo, state, code)
 	assert_true(BattleGroups.refresh(repo, state, battle))
+	# Units deploy as one block (owner R-H); these loss fixtures deliberately bypass
+	# that deployment and keep hand-laid single-rank fronts at the placed anchors,
+	# 80 m apart across each facing, as saved rows the engine then reads.
+	for code: String in battle.att + battle.def:
+		var rows: Array = battle.groups[code]
+		var spot: Vector2i = placed[code]
+		var entry := BattleSystem._stored(state, code)
+		entry.x_m = spot.x
+		entry.y_m = spot.y
+		battle.group_anchor_m[code] = [spot.x, spot.y]
+		var anchor := Vector2(spot)
+		var facing := WarFront.facing_vector(int(battle.group_facing[code]))
+		for i: int in rows.size():
+			var point := Vector2i((anchor + Vector2(-facing.y, facing.x) * 80.0 * (i - (rows.size() - 1) / 2.0)).round())
+			rows[i].x_m = point.x
+			rows[i].y_m = point.y
+			rows[i].role = "front"
 	return {"repo": repo, "state": state, "battle": battle, "unit": unit, "other": other, "at": base}
 
 func _issue(f: Dictionary, id: String, task := "retreat") -> void:
