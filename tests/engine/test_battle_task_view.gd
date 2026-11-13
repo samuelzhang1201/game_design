@@ -27,13 +27,13 @@ func test_view_is_empty_off_the_field_and_for_a_foe() -> void:
 	assert_eq(BattlePresentation.task_view(f.repo, f.state, f.enemy), {})
 	assert_eq(BattlePresentation.task_quote(f.repo, f.state, f.spare, "defend").params, {})
 
-func test_view_lists_tasks_opponents_and_formations() -> void:
+func test_view_lists_tasks_and_opponents_but_no_formations() -> void:
 	var f := _fixture()
 	var view := BattlePresentation.task_view(f.repo, f.state, f.a)
 	assert_eq(int(view.battle_id), 944)
 	assert_eq(view.tasks.size(), f.repo.battle_behaviors.size())
 	assert_eq(view.tasks[0], {"id": "charge", "label": "Frontal charge"})
-	assert_eq(view.formations.size(), f.repo.battle_formations.size())
+	assert_false(view.has("formations"), "formations are retired (owner R-H)")
 	assert_eq(view.targets.size(), 1)
 	assert_eq(view.targets[0].code, f.enemy)
 	assert_eq(view.current, {})

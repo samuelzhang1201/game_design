@@ -321,13 +321,6 @@ tooltip_text = "Against"
 theme_type_variation = &"FolioTab"
 fit_to_longest_item = false
 
-[node name="TaskFormation" type="OptionButton" parent="Docket/DockBook/DockPage/DockBody/TaskOrders/TaskPicks" unique_id=1102372723]
-unique_name_in_owner = true
-layout_mode = 2
-tooltip_text = "Formation"
-theme_type_variation = &"FolioTab"
-fit_to_longest_item = false
-
 [node name="TaskQuote" type="Label" parent="Docket/DockBook/DockPage/DockBody/TaskOrders" unique_id=943613534]
 unique_name_in_owner = true
 layout_mode = 2

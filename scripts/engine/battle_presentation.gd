@@ -167,7 +167,7 @@ static func task_view(repo: DataRepository, state: GameState, code: String) -> D
 		if side == "":
 			continue
 		var out := {"battle_id": int(battle["id"]), "place": BattleSystem.place_label(repo, state, battle),
-			"tasks": [], "targets": [], "formations": [], "current": {}, "pending": [], "refused": {}}
+			"tasks": [], "targets": [], "current": {}, "pending": [], "refused": {}}
 		for task: String in repo.battle_behaviors:
 			out.tasks.append({"id": task, "label": String(repo.battle_behaviors[task]["label"])})
 		for enemy: String in battle["def" if side == "att" else "att"]:
@@ -175,8 +175,6 @@ static func task_view(repo: DataRepository, state: GameState, code: String) -> D
 			if not local_unit(repo, state, enemy) or (BattleSystem._can_fight(repo, state, enemy) \
 					and not bool(BattleSystem._stored(state, enemy).get("captured", false))):
 				out.targets.append({"code": enemy, "label": String(ArmySystem.regiment(repo, enemy, state).get("label", enemy))})
-		for shape: String in repo.battle_formations:
-			out.formations.append({"id": shape, "label": String(repo.battle_formations[shape]["label"])})
 		var ledger: Dictionary = state.unit_tasks.get(code, {})
 		var newest := -1
 		for id: String in ledger.get("orders", {}):
