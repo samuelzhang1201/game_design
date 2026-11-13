@@ -64,7 +64,7 @@ the provider's admitted MARCH phase 7/16). It is **not a certificate**: the nati
 
 | Quantity, MARCH | Shipped (stride 2.327 + phase map) | Re-authored (stride 2.4) |
 |---|---:|---:|
-| Per-vertex slide | 79,689 µm | **10,902 µm** (7,468 + 3,434 margin) |
+| Per-vertex slide | 90,653 µm (79,689 at a constant 2.327) | **10,902 µm** (7,468 + 3,434 margin) |
 | Loop seam | 1 µm | 1 µm |
 | Bounds | contact 29,273, seam 2,440 | same |
 
