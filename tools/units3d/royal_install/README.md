@@ -43,8 +43,7 @@ little harder.
 
 ## Open
 
-* `size` 0.72 keeps the horse at the cavalry's scale (the knight has no lance to stand tall by). `stride_m` (`data/screens/map3d/army_art.csv`) is the measured gallop stride times the factor the cavalry and the
-  infantry were tuned by — judge it on a march.
+* `size` 0.72 keeps the horse at the cavalry's scale (the knight has no lance to stand tall by).
 * No `royal_parts.glb`: the folio's Take apart stays hidden for the king. The art kit's
   `specs.json` (`tools/art_kit/extract_specs.py` `UNITS`) does not list the royal model yet.
 * The 20k collapse stair-steps the saddle cloth's gold trim at its rear edge, visible only close
@@ -60,3 +59,47 @@ clips stay installed but no provider plays them. To look at it in a real window 
 ```bash
 Godot --path . -s res://tools/units3d/royal_install/pivot_frames.gd -- --out DIR --turn 90000000 [--mode native] [--plan lift_m=0.04]
 ```
+
+## The re-keyed MARCH (LOCO-ROY-MARCH, owner ruling R-J 2026-11-13)
+
+The delivered gallop's planted hooves slid and its toes broke over into the ground (certifier:
+slide 339,795 µm, penetration 36,419 µm, against contact 29,338 µm). Its hoof chains, and nothing
+else, are re-keyed:
+
+```bash
+git checkout assets/3D/units/royal/royal.glb && Godot --headless --path . --import   # the delivered clip
+Godot --headless --path . -s res://tools/units3d/royal_install/march_reauthor.gd -- --out KEYS.json
+python3 tools/units3d/royal_install/march_transplant.py assets/3D/units/royal/royal.glb KEYS.json
+Godot --headless --path . --import
+```
+
+(numeric only, so `--headless` is safe; the frames below are not). `march_reauthor.gd` samples the
+delivered MARCH at 64 intervals:
+
+* **Stances**: a hoof stands where its sole patch is within 6 mm of the seated plane, until its toe
+  is deepest in the break-over (past it the native toe rises).
+* **Stride**: S is the least-squares ground speed of the planted soles. It is `army_art.csv`
+  `stride_m`, measured off the clip, never tuned.
+* **Planted hoof**: one frame, the native rotation where the patch is flattest, carried back at
+  exactly S. It rolls as the native hoof rolls, about the hull vertex that roll brings lowest (the heel
+  landing, the toe breaking over), which stays put. Its hull (every vertex mostly on the hoof bone)
+  is settled on the plane.
+* **Swing**: the native path, shifted by a correction that eases from lift-off's error to
+  touchdown's. Its first and last three keys blend from the planted motion carried on, so a hoof
+  leaves and meets the ground at zero ground speed. A leg already at full reach takes a scaled
+  correction.
+* **The pivots' admitted phase** (`royal_pivot_plan.json` `march_phase`, the pivots' entry, exit and
+  hold) is the delivered pose exactly. A hoof planted across it passes through its native frame
+  there, seated at that sole's height; one landing on it stands from the next key; one in the air
+  takes no correction there. The R-B skin rule measures every pivot against that pose.
+* Only the 18 hoof-chain rotations change (`Map3DCavalryPivot`'s chain IK). The other bones, every
+  origin and scale, and the other clips are the delivery's. Key 64 is key 0, which closes the hoof
+  chains' 2.3 mm loop seam.
+
+`march_transplant.py` (test: `test_march_transplant.py`) first checks that Godot's bone locals are the
+GLB's own keys. It then appends the 18 channels and repoints their samplers; every original byte is
+kept. `royal.glb.import` imports at `animation/fps` 120: at 30 Godot re-bakes MARCH to the delivered
+17 keys, and at 240 the native-jets proof (`Map3DRoyalNativeJets`) cannot cover the 1e-5 s cut
+before each key (it needs keys at least 5.12 ms apart). `royal_locomotion_source.tres` pins the new
+digests; its observations stay those of the delivered clip. Evidence:
+`docs/reviews/cluster-formations/evidence/locomotion/royal/march-reauthor/`.

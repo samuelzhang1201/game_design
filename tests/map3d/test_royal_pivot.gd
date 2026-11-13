@@ -73,6 +73,20 @@ func test_only_the_rider_eases_over_the_long_blend() -> void:
 	assert_eq(_pose(90000000, 0.3)["R_Chest"], _stand["R_Chest"])
 
 
+func test_the_rekeyed_march_survives_the_import() -> void:
+	# LOCO-ROY-MARCH re-keys the hoof chains at 64 intervals; royal.glb.import's animation/fps 120 keeps
+	# them (at 30, Godot re-bakes MARCH back to the shipped 17 keys and the hooves slide again).
+	var march: Animation = _player.get_animation("MARCH")
+	var counted: int = 0
+	for t: int in march.get_track_count():
+		var bone: String = str(march.track_get_path(t)).get_slice(":", 1)
+		for hoof: String in Provider.HOOVES:
+			if march.track_get_type(t) == Animation.TYPE_ROTATION_3D and _rest.chains[hoof].bones.has(bone):
+				assert_gt(march.track_get_key_count(t), 17, bone)
+				counted += 1
+	assert_eq(counted, 18, "every hoof-chain bone's rotation track")
+
+
 func test_leaves_and_rejoins_march_exactly() -> void:
 	# The certifier's seams MARCH(7/16) -> pivot(0) and pivot(1) -> MARCH(7/16) are exact,
 	# and the root is never moved (the body's yaw stays BodyMotion's).

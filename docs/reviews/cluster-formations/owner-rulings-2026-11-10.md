@@ -96,6 +96,15 @@ neighbouring figures is the piece's diameter plus a small gap, `unit_body_gap_m`
 in ordinary play now, ahead of CF07; the internal formations' tactical effects and their order
 controls are retired in ordinary play in the following step (CF07a scope for per-unit formations).
 
+## R-J Re-author royal MARCH (2026-11-13)
+
+Owner, relayed by the coordinating session after LOCO-CERT-ROY measured the shipped clip outside
+contact 29,338 µm (native MARCH slide 339,795 µm, penetration 36,419 µm): "Re-author royal MARCH".
+An exception to the protected-source-clip rule for royal MARCH only (LOCO-ROY-MARCH): its hoof
+contacts are re-keyed so a planted hoof holds the ground; the turns stay with `Map3DRoyalPivot`.
+The bound stays contact 29,338 µm. Every other royal clip, the mesh, skin, binds, root and seat are
+unchanged.
+
 ## Unchanged
 
 The envelope and radius gate: if a sampled envelope crosses an arm's radius, the radius in the
