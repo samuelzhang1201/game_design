@@ -19,10 +19,10 @@ MARCH at 7/16, the hold is MARCH frozen there). Bounds: contact 29273 µm, seam 
 | skin (R-B), introduced | 0 | pass |
 | stance coverage | | pass |
 
-Overall status `FAIL` is native MARCH alone (slide 79.7 mm here, measured on this branch's
-constant `stride_m`; 90.7 mm with the phase map of #302/#311). No phase map can pass it under the
-per-vertex band (sampled floor about 29.0 mm before margin): that is LOCO-CAV-MARCH, which waits
-for the owner's ruling. No policy row is installed.
+Overall status `FAIL` is native MARCH alone: slide 90.7 mm with the installed phase map (#302,
+applied by the certifier since #311; 79.7 mm at the constant `stride_m`). No phase map can pass it
+under the per-vertex band (sampled floor about 29.0 mm before margin): that is LOCO-CAV-MARCH
+(#316, owner ruling R-I), which re-keys MARCH; this check is re-run once it lands. No policy row is installed.
 
 Why 7/16: at 8/16 (three hooves down) the left hind is 151 mm up and flexed; its swing to the
 seated stand dragged the toe through the 0.5 mm band (pivot slide 196 mm). At 7/16 the right

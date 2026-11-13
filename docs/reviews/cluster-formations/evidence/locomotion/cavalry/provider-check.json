@@ -1974,7 +1974,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "0bc8d8b82e17a3889a359fb88d946ab99008caedb2a143898cc5d96f93ebdacf",
+  "sha256": "8bd37d71aa23ddbb5ff9155cfdb9c9147dbcbab59e7c00d80172acc2841b9dac",
   "uniform": 512
  },
  "config": {
@@ -2011,6 +2011,96 @@
   ],
   "note": "LOCO-CAV-PROVIDER numeric check, NOT a certificate (LOCO-CERT-CAV certifies, after LOCO-CAV-MARCH). Provider Map3DCavalryLocomotion (the royal solver Map3DRoyalPivot.sample bound to the cavalry rig) through the shared Map3DPivotProvider shell; pivots leave and rejoin MARCH at 7/16 and the hold is MARCH frozen there (coordinator ruling 2026-11-11). Stances: MARCH lowest:2 (native, judged by LOCO-CAV-MARCH / LOCO-CERT-CAV), pivots lowest:3. turn_q 400000 placeholder; no policy row.",
   "patch_band_m": 0.005,
+  "phase_map": [
+   [
+    0.0,
+    0.0
+   ],
+   [
+    0.0625,
+    0.151034774458
+   ],
+   [
+    0.125,
+    0.303481198282
+   ],
+   [
+    0.137,
+    0.332766262719
+   ],
+   [
+    0.18749999301508105,
+    0.45662995439
+   ],
+   [
+    0.25,
+    0.609784337837
+   ],
+   [
+    0.26,
+    0.633578970897
+   ],
+   [
+    0.27,
+    0.653921668126
+   ],
+   [
+    0.31,
+    0.731528083089
+   ],
+   [
+    0.3124999930150811,
+    0.735142647514
+   ],
+   [
+    0.3749999860301621,
+    0.885739334626
+   ],
+   [
+    0.4374999790452432,
+    1.036286673785
+   ],
+   [
+    0.45,
+    1.066501353455
+   ],
+   [
+    0.5,
+    1.170697416935
+   ],
+   [
+    0.562499993015081,
+    1.323561291269
+   ],
+   [
+    0.57,
+    1.341980430714
+   ],
+   [
+    0.58,
+    1.355686986844
+   ],
+   [
+    0.6249999860301622,
+    1.47422494189
+   ],
+   [
+    0.6874999790452432,
+    1.623587678962
+   ],
+   [
+    0.7499999720603242,
+    1.768403956192
+   ],
+   [
+    0.76,
+    1.768403956203
+   ],
+   [
+    1.0,
+    2.326847310793421
+   ]
+  ],
   "provider": "scripts/map3d/map3d_cavalry_locomotion.gd",
   "radius_m": 804,
   "scene": "scenes/models/units/cavalry.tscn",
@@ -2056,8 +2146,9 @@
   "assets/3D/units/royal/royal_royal_atlas_mr.jpg.import": "ce415cba84687cbd3bf659d4dec769d6a054d6d9462172e3b45a0f0f8c5bed92",
   "assets/3D/units/royal/royal_royal_atlas_n.jpg": "87dae2d5426bf52b5f4dd43676ce6a2bf92b9ff22e922e1ba98a8628caffe2ed",
   "assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
-  "data/army/balance.csv": "c91faaef284442c03ae8e36d1269ec4ad0c401536d90c26d08ca857b1e559ae3",
-  "data/army/unit_footprints.csv": "3f4b06c876ac881377d9a4e387ffb89b7f9fdfad6e5d21d714dea6b84d386fc7",
+  "data/army/balance.csv": "85fdd8708b65a4b86a22180c28c356143ab65a7c7871cd1419872e88a77ad033",
+  "data/army/unit_footprints.csv": "5d7ebb28d0942802e698284eb42817203d66100ad607debc6cbda895485412de",
+  "data/screens/map3d/army_art.csv": "e74861d7f822d7e813b291309726b73a44392d25612345822d0c89eccb732f4f",
   "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
   "scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
@@ -2071,7 +2162,7 @@
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
  "locomotion_certificate": null,
- "payload_sha256": "f5e9a8c55393033fb1bfd65823fa6eb7d4923f582404ebfa65bb716875575b6e",
+ "payload_sha256": "844828da4fbbaf130f4a61f307340c6dcd11f20e049f3e947c617cf268bae595",
  "report": {
   "bounds_um": {
    "contact": 29273,
@@ -2898,8 +2989,8 @@
      "bound_um": 29273,
      "margin_um": 12623,
      "pass": false,
-     "sampled_um": 67066,
-     "total_um": 79689,
+     "sampled_um": 78031,
+     "total_um": 90653,
      "witness": {
       "clip": "MARCH",
       "mesh": "cavalry",
@@ -2945,8 +3036,8 @@
    },
    "margin_um": 12623,
    "pass": false,
-   "sampled_um": 67066,
-   "total_um": 79689,
+   "sampled_um": 78031,
+   "total_um": 90653,
    "witness": {
     "clip": "MARCH",
     "mesh": "cavalry",
@@ -3071,6 +3162,6 @@
  },
  "schema": 1,
  "status": "FAIL",
- "tool_sha256": "b5e098eef99072a42143cd9347f102d3d4156cf89d7caf937901c4b7b0984db9",
+ "tool_sha256": "efc58b6634fbd5e0866e1d931d09feb2e3cb8b457c817c104030bb6e9211ef18",
  "visual_review": "PENDING: R-C requires the real-window review after this numeric pass"
 }
