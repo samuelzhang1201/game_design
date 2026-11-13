@@ -3,7 +3,9 @@
 
 A `codex/` or `claude/` PR declares `prd_step`, `player_outcome` and `wired` as standalone body lines, and a
 `claude/` PR that would be the sixth unwired one in a row also needs an `owner_approval:` line. See the product
-gate in cicd_procedure.md. The environment supplies PR_BODY, PR_BRANCH, PR_NUMBER, BASE_SHA (and GH_TOKEN for `gh`)."""
+gate in cicd_procedure.md. A `claude/` PR that changes more than `MAX_SUBSYSTEMS` folders under
+`scripts/` also needs a `scope_reason:` line (one step, one PR).
+The environment supplies PR_BODY, PR_BRANCH, PR_NUMBER, BASE_SHA (and GH_TOKEN for `gh`)."""
 import json
 import os
 import re
@@ -20,6 +22,8 @@ HARNESS_PATHS = ('.gitignore', '.superpowers/session-handovers', '.claude/agents
                  'tools/check_pr_gate.py', 'tools/test_check_pr_gate.py')
 # The first PR checked on each branch prefix; earlier PRs finish under their existing declaration.
 FIRST_CHECKED_PR = {'codex/': 279, 'claude/': 294}
+MAX_SUBSYSTEMS = 2
+FIRST_SCOPE_CHECKED_PR = 306
 
 
 def is_harness_file(name):
@@ -96,6 +100,17 @@ def backlog_problems(history, body, branch, number):
     return []
 
 
+def scope_problems(body, branch, number, files):
+    """A `claude/` PR touching more than MAX_SUBSYSTEMS `scripts/<name>/` folders says why in a `scope_reason:` line."""
+    if not branch.startswith('claude/') or number < FIRST_SCOPE_CHECKED_PR:
+        return []
+    subsystems = sorted({name.split('/')[1] for name in files if name.startswith('scripts/') and name.count('/') >= 2})
+    if len(subsystems) <= MAX_SUBSYSTEMS or re.search(r'^(?:- )?scope_reason:[ \t]*\S', body, re.M):
+        return []
+    return [f'this PR changes {len(subsystems)} subsystems under scripts/ ({", ".join(subsystems)}; limit {MAX_SUBSYSTEMS}). '
+            'Split it into one PR per step, or add a "scope_reason: <why this is one step>" body line.']
+
+
 def merged_bodies():
     """Bodies of the latest merged PRs on main, newest first (needs `gh` and GH_TOKEN, as in CI)."""
     out = subprocess.run(['gh', 'pr', 'list', '--state', 'merged', '--base', 'main', '--limit', '60',
@@ -108,7 +123,8 @@ def check_pr():
     diff = subprocess.run(['git', 'diff', '--name-only', '--no-renames', '-z', os.environ['BASE_SHA'], '--'],
                           capture_output=True, text=True, check=True).stdout
     body, branch, number = os.environ.get('PR_BODY', ''), os.environ['PR_BRANCH'], int(os.environ['PR_NUMBER'])
-    problems = pr_body_problems(body, branch, number, [name for name in diff.split('\0') if name])
+    files = [name for name in diff.split('\0') if name]
+    problems = pr_body_problems(body, branch, number, files) + scope_problems(body, branch, number, files)
     try:
         problems += backlog_problems(merged_bodies, body, branch, number)
     except (OSError, ValueError, subprocess.SubprocessError) as error:

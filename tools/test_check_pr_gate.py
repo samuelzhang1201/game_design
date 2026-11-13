@@ -54,6 +54,15 @@ class PrGateTests(unittest.TestCase):
             self.assertEqual(self.pr_problems(branch=prefix + 'x'), [])
         self.assertEqual(self.pr_problems('', branch='feat/x', number=10**6), [])
         self.assertEqual(self.pr_problems('', branch='claude/x', number=gate.FIRST_CHECKED_PR['codex/']), [])
+    def test_a_claude_pr_spread_over_many_subsystems_needs_a_scope_reason(self):
+        n, three = gate.FIRST_SCOPE_CHECKED_PR, ['scripts/engine/a.gd', 'scripts/ui/b.gd', 'scripts/map3d/c.gd', 'data/x.csv']
+        self.assertEqual(gate.scope_problems('', 'claude/x', n, three[:2] + ['scripts/engine/d.gd', 'tests/e.gd']), [])
+        self.assertIn('engine, map3d, ui', ' '.join(gate.scope_problems('', 'claude/x', n, three)))
+        self.assertEqual(gate.scope_problems('x\nscope_reason: one rename across the bridge\n', 'claude/x', n, three), [])
+        self.assertNotEqual(gate.scope_problems('scope_reason:   \n', 'claude/x', n, three), [])
+        self.assertEqual(gate.scope_problems('', 'claude/x', n - 1, three), [])
+        self.assertEqual(gate.scope_problems('', 'codex/x', n, three), [])
+        self.assertEqual(gate.scope_problems('', 'claude/x', n, ['scripts/a.gd', 'scripts/b.gd', 'scripts/c.gd']), [])
     @staticmethod
     def declared(prd_step, wired, approval=''):
         return f'Summary.\n\nprd_step: {prd_step}\nplayer_outcome: x\nwired: {wired}\n' + (
