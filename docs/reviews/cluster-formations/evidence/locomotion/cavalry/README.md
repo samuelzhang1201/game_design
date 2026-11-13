@@ -33,7 +33,18 @@ binds the tool, the config and every input (scene, GLB, textures, provider, pivo
 Forward+/Metal window at 1200x900, frames 0..12 of +90°, −45°, +180° and +1 µdeg. Each sheet puts the
 provider on the pre-#316 MARCH (before, top) over the same provider on the certified MARCH (after,
 bottom). `*_feet.png` crop the hooves; `provider_90000000_body.png` shows whole frames 0, 6 and 12.
-The independent critic's findings are in the PR.
+`certificate.json`'s `visual_review` field stays PENDING, as the tool writes it; this section is the
+R-C review.
+
+An independent critic, given only the sheets, `taste.md` and the rubric, found no defect that breaks a
+principle: no hoof sinks, slides or pops, and no legs pass through each other. +90° is near identical, with
+a slightly longer hind stride in "after"; −45°, +180° and +1 µdeg cannot be told apart, and +1 µdeg holds
+one pose over all 13 frames. One point, not blocking: at +90° and +180° frame 12 a hind hoof is in
+the air. That is the MARCH 7/16 pose the turn rejoins, so the gait carries on from it (seam 1 µm).
+The shield's back face and a seam on the horse's neck by the reins show in both rows and are not
+part of this step.
+
+The provider's GUT is `tests/map3d/test_cavalry_locomotion.gd` (#314); it passes on the certified MARCH.
 
 `march-native-contact.json`, `march-native-reacquired.json` and `march-phase.json` are the
 LOCO-CAV-PHASE inputs (the distance-to-phase atlas, see `cavalry-march-contact-prerequisite.md`).
@@ -63,7 +74,7 @@ Why 7/16: at 8/16 (three hooves down) the left hind is 151 mm up and flexed; its
 seated stand dragged the toe through the 0.5 mm band (pivot slide 196 mm). At 7/16 the right
 fore and left hind are only 4.5 and 10.8 mm up, so their first and last steps are short and flat.
 
-## Real-window review
+## Provider-check real-window review
 
 `provider-review/`: `tools/units3d/royal_install/pivot_frames.gd --arm cavalry` at 1200x900,
 frames 0..12 of +90 (body, and feet), +180 feet, +1 µdeg, and the installed clip at +90 for
