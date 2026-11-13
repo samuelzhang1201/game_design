@@ -57,4 +57,18 @@ transplanted clip.
 
 `../provider-check.json` (LOCO-ROY-PROVIDER) measured the delivered clip and stays as that record.
 
-**Real-window review.** See the PR.
+**Real-window review** (`visual-review`; principle "a walking figure's feet hold the ground").
+`tools/units3d/royal_install/march_frames.gd` (never `--headless`) renders the figure walking one MARCH
+loop over ground striped every 0.25 m, the camera still. It shoots the delivered clip at its old
+stride 5.5 and the re-keyed one at 3.3122, from the side near and far and from the front-quarter
+near (`review/`: before/after sheets, phases 0..14/16). Independent critic, with no defect blocking:
+- **Before:** every planted hoof skates about one stripe every two frames.
+- **After:** the planted hooves stay put, apart from a few px of creep at lift-off that reads as
+  rolling over the toe.
+- **Unchanged:** the same gallop (leg order, suspension, head, rider, tail), with no sinking,
+  floating, overextended leg or hoof flip.
+- **Mild:**
+  - the leading fore hoof creeps about 10 px at the end of its stance (frames 11→12);
+  - the tail hangs stiff at frame 4, which the delivered clip already did.
+- **Not judged:** the shorter stride makes the legs cycle about 1.66× faster at the same ground
+  speed. Its pace on the live map (pause, 1x, 4x) is not judged here; that belongs to CF04c-VISUAL.

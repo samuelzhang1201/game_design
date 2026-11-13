@@ -4,15 +4,17 @@ extends SceneTree
 ##   Godot --headless --path . -s res://tools/units3d/royal_install/march_reauthor.gd -- --out KEYS.json
 ## then  python3 tools/units3d/royal_install/march_transplant.py assets/3D/units/royal/royal.glb KEYS.json
 ##
-## Samples the installed MARCH at KEYS intervals and finds each hoof's stance: the run of samples
-## whose lowest patch vertex (Map3DRoyalPivot.patches) is within STANCE_M of the seated plane.
-## The clip's own stride S is the planted hooves' mean ground speed over the middle of their
-## stances (model metres per loop). In stance a hoof is held at ONE frame: the native rotation
-## where its patch is flattest, its sole on the seated plane, carried back at exactly S (so it
-## stands still on the ground the piece walks over at S per loop). In swing the native path is kept,
-## shifted by a correction that eases (smoothstep) from the liftoff error to the next touchdown's.
-## Only the hoof chains' rotations change (Map3DCavalryPivot's chain IK); every other bone, every
-## origin and scale, and the loop seam (key KEYS = key 0) are the native clip's.
+## Samples the installed MARCH at KEYS intervals. A hoof stands where its sole patch
+## (Map3DRoyalPivot.patches) is within STANCE_M of the seated plane, until its toe is deepest in the
+## break-over. The stride S is the least-squares ground speed of the planted soles. In stance a hoof is
+## ONE frame (the native rotation where its patch is flattest) carried back at exactly S, rolled as
+## the native hoof rolls about the hull vertex that roll brings lowest; its hull is settled on the
+## plane. In swing the native path is kept, shifted by a correction easing from lift-off's error to
+## touchdown's, its first and last SETTLE keys blended from the planted motion (zero ground speed).
+## At the pivots' admitted phase (Map3DRoyalPivot's march_phase) the pose is the native one exactly,
+## or the tool fails. Only the hoof chains' rotations change (Map3DCavalryPivot's chain IK); every
+## other bone, origin and scale is the native clip's; key KEYS is key 0, which closes the chains' seam.
+## Rules and evidence: tools/units3d/royal_install/README.md ("The re-keyed MARCH").
 
 const Provider = preload("res://scripts/map3d/map3d_royal_pivot.gd")
 const Shell = preload("res://scripts/map3d/map3d_pivot_provider.gd")
@@ -102,6 +104,10 @@ func run() -> void:
 		# pivots were certified and reviewed from that pose, and the R-B skin rule measures against it.
 		if run_of[0] == entry_key:
 			run_of = run_of.slice(1)
+			if run_of.is_empty() or int(flats[hoof]) == 0:
+				push_error("%s stands only at the admitted phase: no stance left to hold" % hoof)
+				quit(1)
+				return
 			landing[hoof] = entry_key
 			flats[hoof] = maxi(0, int(flats[hoof]) - 1)
 		runs[hoof] = run_of
@@ -263,6 +269,10 @@ func run() -> void:
 	for name: String in native[entry_key]:
 		entry_same = entry_same and keyed[entry_key][name] == native[entry_key][name]
 	report["admitted_phase_pose_native"] = entry_same
+	if not entry_same:
+		push_error("the pose at the pivots' admitted phase is not the native one")
+		quit(1)
+		return
 
 	var bones: Dictionary = {}
 	var chain_bones: Array[String] = []
@@ -327,9 +337,7 @@ static func _spread(globals: Dictionary, patch: Array) -> float:
 	return high - low
 
 
-## The patch's lowest vertex with the hoof bone (and its weighted share) moved to `frame`, the other
-## bones as they are: the first guess of the seated height; the solve then settles the rest.
-## The hull vertex (held position) that `roll` about the hull's centre brings lowest.
+## The hull vertex (held position) that `roll` brings lowest.
 static func _contact(globals: Dictionary, held: Transform3D, roll: Basis, hoof: String, hull: Array) -> Vector3:
 	var moved: Dictionary = globals.duplicate()
 	moved[hoof] = held
@@ -362,6 +370,8 @@ static func _centroid(globals: Dictionary, patch: Array) -> Vector3:
 	return sum / float(points.size())
 
 
+## The patch's lowest vertex with the hoof bone (and its weighted share) moved to `frame`, the other
+## bones as they are: the first guess of the seated height; the solve then settles the rest.
 static func _lowest_rigid(globals: Dictionary, frame: Transform3D, hoof: String, patch: Array) -> float:
 	var moved: Dictionary = globals.duplicate()
 	moved[hoof] = frame

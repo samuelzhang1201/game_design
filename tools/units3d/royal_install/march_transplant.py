@@ -69,7 +69,8 @@ def transplant(shipped, keys):
             checked += 1
             if min(np.abs(native[k] - q).max(), np.abs(native[k] + q).max()) > TOL:
                 mismatched.append((name, round(float(at), 4)))
-    # The 30 fps import resamples a few keys (one FrontForearm.R key by ~11 degrees); most must match.
+    # Godot's import moves a few keys (up to ~6 degrees at one FrontForearm.R key); a wrongly mapped bone
+    # misses every key, so more than 1 in 20 missing fails.
     if not checked or len(mismatched) * 20 > checked:
         raise ValueError(f'Godot bone locals are not the GLB rotations: {mismatched[:5]} of {checked}')
     original_json = json.dumps(gl, sort_keys=True)

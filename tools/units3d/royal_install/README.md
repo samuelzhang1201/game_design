@@ -92,8 +92,10 @@ delivered MARCH at 64 intervals:
   hold) is the delivered pose exactly. A hoof planted across it passes through its native frame
   there, seated at that sole's height; one landing on it stands from the next key; one in the air
   takes no correction there. The R-B skin rule measures every pivot against that pose.
-* Only the 18 hoof-chain rotations change (`Map3DCavalryPivot`'s chain IK). The other bones, every
-  origin and scale, and the other clips are the delivery's. Key 64 is key 0, which closes the hoof
+* Only the 18 hoof-chain rotations change (`Map3DCavalryPivot`'s chain IK). In the GLB, the other
+  bones, every origin and scale, and the other clips are the delivery's, byte for byte. The 120 fps import
+  re-samples every clip's playback, and the certifier's pivots, hold and skin checks read that
+  playback. Key 64 is key 0, which closes the hoof
   chains' 2.3 mm loop seam.
 
 `march_transplant.py` (test: `test_march_transplant.py`) first checks that Godot's bone locals are the

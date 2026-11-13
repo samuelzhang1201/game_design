@@ -102,8 +102,8 @@ Owner, relayed by the coordinating session after LOCO-CERT-ROY measured the ship
 contact 29,338 µm (native MARCH slide 339,795 µm, penetration 36,419 µm): "Re-author royal MARCH".
 An exception to the protected-source-clip rule for royal MARCH only (LOCO-ROY-MARCH): its hoof
 contacts are re-keyed so a planted hoof holds the ground; the turns stay with `Map3DRoyalPivot`.
-The bound stays contact 29,338 µm. Every other royal clip, the mesh, skin, binds, root and seat are
-unchanged.
+The bound stays contact 29,338 µm. In `royal.glb` every other clip, the mesh, skin, binds, root and
+seat are unchanged byte for byte. The import now samples every clip at 120 fps, which MARCH's new keys need.
 
 ## Unchanged
 
