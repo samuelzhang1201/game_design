@@ -1,4 +1,54 @@
-# LOCO-ROY-PROVIDER numeric check (royal, 2026-11-13)
+# Royal locomotion certificate (LOCO-CERT-ROY, 2026-11-14)
+
+`certificate.json` is what main's certifier (`tools/units3d/certify_locomotion.py`, tool sha256 `efc58b66…`)
+writes for `certificate.config.json`. Status: **NUMERIC_PASS**. Certificate digest `639941a1…`. It
+binds the tool, the config and all 24 inputs:
+- the scene and `royal.glb` with its re-keyed MARCH (LOCO-ROY-MARCH, owner ruling R-J);
+- the provider `Map3DRoyalPivot`, its plan and its helpers;
+- `army_art.csv`, `unit_footprints.csv` and the balance tables.
+
+No policy row is installed (LOCO-POLICY). The certifier sampled 32,410 poses: dense MARCH, and both
+pivots over the whole turn grid (±1 µdeg … ±180°, with wraps). Bounds (R-A, k = 20.4518): contact
+29,338 µm, seam 2,445 µm.
+
+| Quantity | Total (sampled + margin) | Bound |
+|---|---:|---:|
+| Penetration (rendered ground) | 12,936 µm (0 sampled) | 29,338 µm |
+| Stance hover | 3,629 µm | 29,338 µm |
+| Slide per planted sole vertex | 23,104 µm (12,117 sampled; MARCH, fore-left at phase 0.27) | 29,338 µm |
+| Seams (loop, stop, start, hold, both pivots, every grid turn) | ≤ 367 µm | 2,445 µm |
+| Envelope | 737 simulation m | 749 m (R unchanged) |
+| Skin (R-B), flags introduced over the native seek | 0 | 0 |
+
+**Planting band**, inherited from the shipped MARCH, i.e. the re-keyed one. H is −4.2 mm (fl),
+−0.6 mm (fr), −0.7 mm (hl) and −2.3 mm (hr), so every band is 0.5 mm.
+
+**Consumer requirement**, recorded in the certificate (coordinator ruling 2026-11-11): stop, start
+and hold only at MARCH phase 0.4375 (7/16), the hold being that MARCH pose. GARRISON and STANDBY
+holds are not admitted until they are certified separately.
+
+The certificate binds `turn_q` 400000, the contract's example value: a LOCO-POLICY row with another
+`turn_q` means re-running it. The pose for any turn comes from `Map3DRoyalPivot` through
+`Map3DPivotProvider`; the installed PIVOT clips (STANDBY → STANDBY) are never played. MARCH is
+paced by `army_art.csv` `stride_m` 3.3122, the clip's own stride.
+
+## Real-window review (R-C)
+
+`certificate.json`'s `visual_review` field stays PENDING, as the infantry's and artillery's do; the
+review is recorded here.
+
+- **MARCH:** reviewed in LOCO-ROY-MARCH (`march-reauthor/README.md`, `march-reauthor/review/`). An
+  independent critic found nothing blocking: the planted hooves hold the stripes, and it is the same
+  gallop.
+- **Pivots:** reviewed in LOCO-ROY-PROVIDER (`provider-review/`, below). An independent critic found
+  nothing blocking. A pivot pose is a function of MARCH(0.4375) and the seated stand only, and the
+  re-keyed MARCH keeps that pose exactly (`march-keys.json` `admitted_phase_pose_native`; the
+  re-keying tool fails otherwise). So those frames are this certificate's pivots.
+- **Not judged here:** pace on the live map (pause, 1x, 4x) belongs to CF04c-VISUAL.
+
+---
+
+## LOCO-ROY-PROVIDER numeric check (the delivered MARCH, 2026-11-13)
 
 `provider-check.json` is what main's certifier (`tools/units3d/certify_locomotion.py`, #291 + #311,
 tool sha256 `efc58b66…`) writes for `provider-check.config.json` on the royal figure posed by
