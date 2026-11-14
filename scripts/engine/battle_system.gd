@@ -546,6 +546,14 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 	var garrisons: Dictionary = {}   # the town each of mine garrisons ("" none), read once
 	for pc: Variant in mine:
 		garrisons[pc] = ArmyGround.garrison_town(repo, state, String(pc))
+	# Read fresh: a column halted in a town's reach today is its garrison now.
+	# Only a contact ACTED on (a start or a join halts columns) changes what a
+	# pair reads, so the town reads are kept until one is and forgotten then:
+	# the scan runs every tactical substep over every pair, and the town check
+	# per pair was most of a quiet day.
+	var now: Dictionary = garrisons.duplicate()   # p -> the town it garrisons NOW
+	var touch: Dictionary = {}                    # "town|f" -> town_contact
+	var at: Dictionary = {}                       # code -> where it stands, metres
 	for fc: Variant in theirs:
 		var f := String(fc)
 		var held_off := siege_town_of(repo, state, f)
@@ -553,10 +561,21 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 			var p := String(pc)
 			if held_off != "" and String(garrisons[pc]) == held_off:
 				continue    # a besieged town's garrison waits for the assault
-			# read fresh: a column halted in a town's reach today is its garrison now
-			var town := town_contact(repo, state, ArmyGround.garrison_town(repo, state, p), f)
-			if town == "" and not _within(_at_m(repo, state, f), _at_m(repo, state, p), reach):
-				continue
+			if not now.has(pc):
+				now[pc] = ArmyGround.garrison_town(repo, state, p)
+			var town := String(now[pc])
+			if town != "":
+				var key := town + "|" + f
+				if not touch.has(key):
+					touch[key] = town_contact(repo, state, town, f)
+				town = String(touch[key])
+			if town == "":
+				if not at.has(fc):
+					at[fc] = _at_m(repo, state, f)
+				if not at.has(pc):
+					at[pc] = _at_m(repo, state, p)
+				if not _within(at[fc], at[pc], reach):
+					continue
 			var bf := battle_of(state, f)
 			var bp := battle_of(state, p)
 			var at_town := _battle_at(state, town) if town != "" else {}
@@ -571,6 +590,11 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 				_join_event(repo, state, bp, f, events)
 			elif bp.is_empty():
 				_join_event(repo, state, bf, p, events)
+			else:
+				continue    # both already fight: nothing moved, the reads stand
+			now.clear()
+			touch.clear()
+			at.clear()
 
 
 static func _join_event(repo: DataRepository, state: GameState, b: Dictionary, code: String, events: Array) -> void:
