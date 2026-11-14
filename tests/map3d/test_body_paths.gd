@@ -716,8 +716,7 @@ func test_v2_stops_turns_and_walks_only_at_admitted_phases() -> void:
 		layer.step(0.0)
 		assert_true(child.node.is_visible_in_tree(), String(piece.get("candidate_error", "")))
 		assert_eq(child.action, "v2:" + item[1], str(item[0]))
-		assert_false(anim.is_playing(), "posed with the player stopped: no crossfade can hang at speed_scale 0")
-		assert_eq(anim.speed_scale, 0.0)
+		assert_eq(anim.speed_scale, 0.0, "posed from the op time: no frame delta advances the clip")
 		var shown := _bones(skeleton)
 		var clip := Map3DUnits.clip_named(anim, item[1])
 		Map3DPivotProvider.seek(anim, skeleton, clip, float(item[2]) * anim.get_animation(clip).length)
@@ -728,7 +727,7 @@ func test_v2_stops_turns_and_walks_only_at_admitted_phases() -> void:
 		assert_almost_eq((child.node as Node3D).global_position.x, xz.x, 0.0001)
 		assert_almost_eq((child.node as Node3D).global_position.z, xz.y, 0.0001)
 	assert_eq(Stub.calls, [["PIVOT_RIGHT", 90000000, 0.75], ["PIVOT_LEFT", -90000000, 0.75]], "pivot poses come from the provider")
-	# Leaving the candidate seam replays the ordinary clip on the stopped figure.
+	# Leaving the candidate seam replays the ordinary clip on the frozen figure.
 	layer.set_candidate_bodies(false)
 	layer.step(0.0)
 	var after: Dictionary = layer.built_piece(f.code)

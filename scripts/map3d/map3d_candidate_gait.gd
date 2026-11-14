@@ -5,13 +5,15 @@ extends RefCounted
 ## admitted phase; a leg walks a whole number of MARCH loops whose stride stays within the
 ## policy's contact_um of the native stride; a pivot's pose comes from the policy's turn ->
 ## pose provider (Map3DPivotProvider). Every pose is scrubbed from the committed operation
-## time with the player stopped, so there is no crossfade and no frame-delta playback.
+## time (MARCH held at speed 0 and sought, a pivot posed by the provider), so there is no
+## crossfade and no frame-delta playback.
 ## GARRISON/STANDBY are not admitted until certified. Anything missing refuses the unit.
 
 const Provider = preload("res://scripts/map3d/map3d_pivot_provider.gd")
 const KEYS: Array[String] = ["march_stop_phases", "march_start_phases", "hold_clip", "hold_phases", "stride_m", "contact_um", "provider"]
 
 static var _cache: Dictionary = {}  ## [arm, certificate hash] -> policy(); the certificate is read-only data
+static var _solved: Dictionary = {}  ## [arm, clip, turn, phase] -> the provider's solve (one per pose, shared by figures)
 
 
 ## The consumer's slice of the arm's installed policy: {phase, stride_m, contact_um, solve}, or {error}.
@@ -109,16 +111,28 @@ static func pose(ctx: Map3DContext, piece: Dictionary, child: Dictionary, row: D
 		clip = "PIVOT_RIGHT" if int(op.turn_udeg) > 0 else "PIVOT_LEFT"
 	elif op.kind == "move":
 		march = fposmod(rule.phase + strides(model_length(ctx, piece, child, op), rule.stride_m, rule.contact_um) * phase, 1.0)
+	var entering := not String(child.get("action", "")).begins_with("v2:")
 	for anim: AnimationPlayer in child["anims"]:
 		var skeleton := _skeleton(anim)
 		if skeleton == null: continue
 		var name := Map3DUnits.clip_named(anim, clip)
-		Map3DClipChain.stop(anim)
+		if entering: Map3DClipChain.stop(anim)
 		anim.speed_scale = 0.0
 		if op.kind == "pivot":
-			Provider.apply(rule.solve, anim, skeleton, {"clip": name, "time_s": null, "phase": phase, "turn_udeg": int(op.turn_udeg)})
+			# Provider.apply per figure, with the solve shared: every figure of a rig at one
+			# (clip, turn, phase) gets the same pose, and a provider solve costs milliseconds.
+			var key := [String(piece.get("model", "")), name, int(op.turn_udeg), phase]
+			if not _solved.has(key):
+				if _solved.size() > 64: _solved.clear()
+				_solved[key] = rule.solve.call(anim, skeleton, name, int(op.turn_udeg), phase)
+			Provider.seek(anim, skeleton, name, phase * anim.get_animation(name).length)
+			var result: Dictionary = _solved[key]
+			if result.ok: Provider.set_pose(skeleton, result.pose)
+			else: push_error("pivot provider %s %s: %s" % [name, op.turn_udeg, result.reason])
 		else:
-			Provider.seek(anim, skeleton, name, march * anim.get_animation(name).length)
+			# The clip held at speed 0 and sought: no frame delta advances it, no crossfade (blend 0).
+			if not anim.is_playing() or anim.current_animation != name: anim.play(name, 0.0)
+			anim.seek(march * anim.get_animation(name).length, true)
 	return "v2:" + clip  # never equal to an ordinary action, so leaving v2 always replays
 
 
