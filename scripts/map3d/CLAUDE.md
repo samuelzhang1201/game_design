@@ -63,6 +63,8 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 
 - **Saved physical battle groups** (`Map3DBattleGroups`, `Map3DLayerUnits`): after ordinary sight admission, each valid saved group draws one existing figure at its exact integer-metre point converted through pack pixels to built-world XZ. Only copied count/role/position/optional slot and the unit's saved group facing enter the view. Present malformed or personnel-mismatched groups are invalid; absent legacy groups, nonbattle units and ghosts retain their ordinary presentation. The physical aggregate remains one unit for picks, signals, camps, sound and WAR ROOM anchor exports; its child boxes union into that unit's hit box. Group roots stand upright, independent of march interpolation, lag, slope tilt and camera facing. Figures and camps retain the ordinary reference scale; saved battle spacing/depth never resizes miniatures. Optional slots retain models/clip phase identities; same-day row/facing changes refresh without a camera event. `group_geometry()` measures the instantiated admitted nodes for developer captures only, never simulation state or a new player overlay.
 
+- **Entering a battle the figures WALK in** (`Map3DBattleGroups._walk`/`eased`): each group's figure goes from where the block's figure stood to its saved point over `map3d_battle_walk_s` real seconds (stopped clock too), playing MARCH; view-only.
+
 - The near reader includes group version/size and admitted active fit in its cache
   key. Frozen legacy rows use their saved size without a new-size truncation;
   migrated rows retain their exact saved points and slots. Ghosts retain generic

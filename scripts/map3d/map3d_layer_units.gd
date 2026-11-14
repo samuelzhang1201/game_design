@@ -89,7 +89,6 @@ func set_candidate_bodies(enabled: bool, committed: Dictionary = {}) -> void:
 	refresh()
 
 
-
 func apply_snapshot(snapshot: Dictionary) -> void:
 	_camps.apply_snapshot(snapshot)
 	refresh()
@@ -255,11 +254,11 @@ func step(delta: float) -> bool:
 		if not _shown_xz.has(code) or code.begins_with(Sighting.GHOST_CODE):
 			continue  # a ghost stands where it was last known
 		if _pieces[code].get("layout", "") == "physical_groups":
-			if _candidate_bodies and _pieces[code].get("candidate_bodies", false):
+			var bodies: bool = _candidate_bodies and _pieces[code].get("candidate_bodies", false)
+			if bodies or BattleGroupsView.tick(_pieces[code], delta):  # its figures walk to their battle points
 				_place(code, _pieces[code])
-				moved = moved or bool(_pieces[code].get("candidate_moving", false))
-			else:
-				_sync_action(code)
+				moved = moved or bool(_pieces[code].get("candidate_moving", false)) or bool(_pieces[code].get("easing", false))
+			if not bodies: _sync_action(code)
 			continue
 		if _candidate_bodies:
 			_shown_xz[code] = _target_xz(ArmySystem.regiment(repo, code, ctx.state()))
@@ -364,8 +363,9 @@ func _piece_of(code: String) -> Dictionary:
 		return {}
 	if sampled["mode"] in ["groups", "bodies"]:
 		if _pieces.get(code, {}).get("layout", "") != "physical_groups":
+			var starts := BattleGroupsView.starts_of(_pieces.get(code, {}))  # read before the block is dropped
 			if _pieces.has(code): _drop(code)
-			var built := BattleGroupsView.build(ctx.repo, reg, sampled)
+			var built := BattleGroupsView.build(ctx.repo, reg, sampled, starts)
 			add_child(built["node"])
 			_pieces[code] = built
 		elif _pieces[code].get("sample_key", []) != sampled["key"]:
@@ -432,11 +432,11 @@ func _sync_action(code: String) -> void:
 	if _pieces[code].get("candidate_bodies", false):
 		_sync_candidate_action(code)
 		return
-	var walking: bool = _pieces[code].get("layout", "") != "physical_groups" and _days.has(code) and Map3DUnits.walking(_days[code], ctx.day_share())
+	var walking: bool = _pieces[code].get("layout", "") != "physical_groups" and _days.has(code) and Map3DUnits.walking(_days[code], ctx.day_share()) and ctx.clock_speed() > 0
 	var st := ctx.state()
 	var order := ArmySystem.order_of(ctx.repo, st, code) if st != null else ArmySystem.ORDER_STANDBY
 	var row: Dictionary = ctx.repo.battle_stances.get(BattleSystem.stance_of(st, code), {}) if st != null else {}
-	var action := _battle.action_for(code, Map3DUnitRig.action_for(walking and ctx.clock_speed() > 0, order, row))
+	var action := _battle.action_for(code, Map3DUnitRig.action_for(walking or bool(_pieces[code].get("easing", false)), order, row))
 	var piece: Dictionary = _pieces[code]
 	if String(piece.get("action", "")) == action:
 		_settle.cancel(code, piece)  # marching on: a held halt is dropped
