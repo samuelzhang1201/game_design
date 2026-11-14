@@ -69,6 +69,7 @@ var _days: Dictionary = {}  ## code -> {key, from, to, s0}: its day's march (Map
 var _moves := 0
 var _roster_was: Array = []  ## the state the drawn set was last cut for (_roster_key)
 var _live: Array = []  ## the codes drawn, in roster order
+var _same_state := false  ## the drawn set was last cut from the state it was cut from before
 
 var _candidate_bodies := false
 var _candidate_committed: Dictionary = {}
@@ -92,7 +93,6 @@ func set_candidate_bodies(enabled: bool, committed: Dictionary = {}) -> void:
 func apply_snapshot(snapshot: Dictionary) -> void:
 	_camps.apply_snapshot(snapshot)
 	refresh()
-
 
 func apply_battle_snapshot(snapshot: Dictionary) -> void:
 	_battle.apply_snapshot(snapshot)
@@ -146,6 +146,7 @@ func refresh() -> void:
 		return  # out of the tree: a view handed between screens (the title's)
 	var key := _roster_key()
 	if key != _roster_was:
+		_same_state = not _roster_was.is_empty() and _roster_was[0] == key[0]  # a loaded state walks nobody in
 		_roster_was = key
 		_roster()
 	_rects.clear()
@@ -363,7 +364,7 @@ func _piece_of(code: String) -> Dictionary:
 		return {}
 	if sampled["mode"] in ["groups", "bodies"]:
 		if _pieces.get(code, {}).get("layout", "") != "physical_groups":
-			var starts := BattleGroupsView.starts_of(_pieces.get(code, {}))  # read before the block is dropped
+			var starts := BattleGroupsView.starts_of(_pieces.get(code, {})) if _same_state else []  # read before the block is dropped
 			if _pieces.has(code): _drop(code)
 			var built := BattleGroupsView.build(ctx.repo, reg, sampled, starts)
 			add_child(built["node"])
