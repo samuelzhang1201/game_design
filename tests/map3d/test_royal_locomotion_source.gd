@@ -176,17 +176,19 @@ func test_native_geometry_keys_and_interpolation_at_every_key_midpoint_and_seam(
 	assert_lte(max_local, .00001, "unchanged native/kernel precision, full locals")
 	assert_lte(max_skin, .00001, "every vertex incl mixed skin and gear")
 	print("ROYAL_NATIVE_EQUIVALENCE phases=", times.size(), " local_max=", max_local, " skin_max=", max_skin)
+	# The recorded .73 witness (-.0593 m, 23.27 mm under the flat seat) is of the MARCH before owner
+	# ruling R-J; the re-keyed clip (LOCO-ROY-MARCH) seats that hoof on the plane there instead.
 	var at073: Dictionary = Source.sample(_source, _source.identity, .73)
 	for native_vertex: int in _calibration.observations.native_flat.native_vertices:
 		assert_eq(_source.surfaces[0].arrays[Mesh.ARRAY_VERTEX][native_vertex], _calibration.observations.native_flat.bind_position)
-		assert_almost_eq(at073.positions[0][native_vertex].y, -.0592770278453827, .000001)
+		assert_gt(at073.positions[0][native_vertex].y, _calibration.observations.native_flat.model_y + .02,
+			"the re-keyed MARCH no longer drives the .73 witness vertex under the seat")
 	var measurement: Dictionary = Source.plane_observation(at073.positions[0], {
 		"surface_kind": "independent_plane", "model_to_world": Transform3D(Basis.IDENTITY, Vector3(0, .0360048115253448, 0)),
 		"ground": Vector3.ZERO, "normal": Vector3.UP, "provenance": "Frozen flat-seat native query; not actual Terrain3D"})
 	assert_true(measurement.ok)
 	assert_eq(measurement.vertex_count, 23774)
-	assert_gte(measurement.penetration_m, .023271, "all-mode whole mesh retains .73 witness")
-	assert_false(measurement.activation_pass)
+	assert_lt(measurement.penetration_m, .001, "the re-keyed .73 pose stays above the flat seat")
 
 
 func _affine_distance(a: Transform3D, b: Transform3D) -> float:

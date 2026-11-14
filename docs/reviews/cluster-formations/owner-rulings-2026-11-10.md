@@ -104,6 +104,15 @@ for that one clip (as for the archer MARCH, #299). The bound does not move: cont
 (0.60 world m at k = 20.4973). Every other cavalry clip, the mesh, rest, binds, weights, root, seat
 and scale stay as they are.
 
+## R-J Re-author royal MARCH (2026-11-13)
+
+Owner, relayed by the coordinating session after LOCO-CERT-ROY measured the shipped clip outside
+contact 29,338 µm (native MARCH slide 339,795 µm, penetration 36,419 µm): "Re-author royal MARCH".
+An exception to the protected-source-clip rule for royal MARCH only (LOCO-ROY-MARCH): its hoof
+contacts are re-keyed so a planted hoof holds the ground; the turns stay with `Map3DRoyalPivot`.
+The bound stays contact 29,338 µm. In `royal.glb` every other clip, the mesh, skin, binds, root and
+seat are unchanged byte for byte. The import now samples every clip at 120 fps, which MARCH's new keys need.
+
 ## Unchanged
 
 The envelope and radius gate: if a sampled envelope crosses an arm's radius, the radius in the
