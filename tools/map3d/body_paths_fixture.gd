@@ -2,9 +2,12 @@ extends SceneTree
 ## Explicit isolated CF04c window driver. No production clock or state publication.
 ## Godot --path . -s res://tools/map3d/body_paths_fixture.gd -- --map ID
 ## --case opposing|crossing|detour|turn|arms --fit 1000 --speed 1 --quality high
-## --resolution WxH --zoom near|mid|far --out DIR [--baseline] [--bench] [--pan]
+## --resolution WxH --zoom near|mid|far --out DIR [--baseline] [--bench] [--pan] [--v2]
+## [--follow INDEX] [--every N] [--pivots] (keep the camera on one unit; capture every N frames,
+## and every frame that unit pivots)
 ## Use Godot --write-movie FILE.avi --fixed-fps N for continuous real-window evidence.
-## It commits v1 paths: a leg off saved facing is refused and hidden; v2 driving lands with CF04c-VISUAL.
+## Without --v2 it commits v1 paths (a leg off saved facing is refused and hidden); --v2 commits
+## stop/pivot/MARCH locomotion under the installed unit_locomotion.csv policies (CF04c-VISUAL).
 
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 var _bench_settings: GDScript
@@ -27,6 +30,8 @@ var _centre := Vector2i.ZERO
 var _frames: Array = []
 var _running := false
 var _failed := false
+var _v2 := false
+var _strides: Dictionary = {}  ## unit -> stride in sim metres (v2)
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -75,6 +80,7 @@ func _run() -> void:
 		_fail("Speed must be 0, 1 or 4")
 		return
 	_baseline = OS.get_cmdline_user_args().has("--baseline")
+	_v2 = OS.get_cmdline_user_args().has("--v2")
 	_state = GameState.new_campaign(_repo, 319)
 	var view_script: GDScript = load("res://scripts/map3d/map3d_view.gd")
 	_view = view_script.create(_repo)
@@ -108,7 +114,9 @@ func _run() -> void:
 	for i: int in 30: await process_frame
 	await _capture("before-motion")
 	if OS.get_cmdline_user_args().has("--bench"):
+		_running = true  # priced while the slice clock runs: the figures move and turn
 		await _bench()
+		_running = false
 		if _failed: return
 	else:
 		_running = true
@@ -116,7 +124,11 @@ func _run() -> void:
 		for frame: int in count:
 			await process_frame
 			if _failed: return
-			if frame in [0, count / 4, count / 2, count * 3 / 4, count - 1]: await _capture("frame-%05d" % frame)
+			if _arg("--follow") != "": _follow(int(_arg("--follow")))
+			var every := int(_arg("--every", "0"))
+			var pivoting := _arg("--follow") != "" and OS.get_cmdline_user_args().has("--pivots") \
+				and String(_layer.built_piece(_codes[int(_arg("--follow"))]).get("groups", [{}])[0].get("piece", {}).get("action", "")).begins_with("v2:PIVOT")
+			if frame in [0, count / 4, count / 2, count * 3 / 4, count - 1] or (every > 0 and frame % every == 0) or pivoting: await _capture("frame-%05d" % frame)
 		_running = false
 	if _case == "arms":
 		for distance: int in [1500, 5000]:
@@ -230,12 +242,20 @@ func _stage() -> bool:
 	return true
 
 func _commit_slice() -> bool:
+	if _v2 and _strides.is_empty():
+		# Stage each axis leg as whole strides of its arm, so no slice is left with a stub.
+		for code: String in _codes:
+			var stride := _stride_sim(code)
+			for row: Dictionary in UnitBodies.rows(_repo, _state, code):
+				var key := JSON.stringify([code, row.slot])
+				var target: Array = _targets[key]
+				_targets[key] = [row.x_m + roundi(roundf((target[0] - row.x_m) / stride) * stride), row.y_m + roundi(roundf((target[1] - row.y_m) / stride) * stride)]
 	var intents: Array = []
 	for code: String in _codes:
 		for row: Dictionary in UnitBodies.rows(_repo, _state, code):
 			var path: Array = [[row.x_m, row.y_m]]
 			var target: Array = _targets[JSON.stringify([code, row.slot])]
-			if _case == "turn":
+			if _case == "turn" and not _v2:
 				# Explicit fixture pose input; the following plan/commit validates its full radius.
 				for saved: Dictionary in _state.regiments[code].body_groups:
 					if saved.slot == row.slot:
@@ -243,6 +263,7 @@ func _commit_slice() -> bool:
 			if _case in ["detour", "turn"] and code == _codes[0]: path.append([target[0], row.y_m])
 			path.append(target)
 			intents.append({"unit": code, "slot": row.slot, "path_m": path, "budget_m": 8000, "hostile": false})
+	if _v2: return _commit_v2(intents)
 	var plan := BodyMotion.plan(_repo, _state, intents, _state.absolute_day(), _slice)
 	if plan.cursor.is_empty():
 		_fail("Planner rejected fixture: " + str(plan.reasons))
@@ -259,6 +280,82 @@ func _commit_slice() -> bool:
 	_layer.set_candidate_bodies(not _baseline, _envelope)
 	return true
 
+func _commit_v2(intents: Array) -> bool:
+	# The driver's job: v2 executes only complete affordable waypoint prefixes, so each slice
+	# requests the longest prefix whose pivots and moves the row's own timeline completes.
+	for intent: Dictionary in intents:
+		var row: Dictionary = UnitBodies.rows(_repo, _state, intent.unit).filter(func(r: Dictionary) -> bool: return r.slot == intent.slot)[0]
+		var piece := MapObjects.army_piece(_repo, _state.army_roster[intent.unit])
+		var body := {"unit": intent.unit, "slot": int(intent.slot), "start": [int(row.x_m), int(row.y_m)], "start_yaw_udeg": int(row.facing_deg) * BodyMotion.LOCOMOTION_Q,
+			"final_facing_deg": int(row.facing_deg), "budget_m": int(intent.budget_m)}
+		var turn_q := int(_repo.unit_footprints[piece].locomotion_certificate.turn_q)
+		var low := 0
+		var high := mini(BodyMotion._length(intent.path_m), int(intent.budget_m))
+		var best: Array = [intent.path_m[0]]
+		while low <= high:
+			@warning_ignore("integer_division")
+			var middle: int = low + (high - low) / 2
+			var prefix := BodyMotion._loco_prefix(intent.path_m, middle)
+			var move := BodyMotion._loco_timeline(body, prefix, turn_q)
+			if not move.is_empty() and move.end == prefix.back():
+				best = prefix
+				low = middle + 1
+			else: high = middle - 1
+		intent.path_m = _whole_strides(intent.path_m, best, _stride_sim(intent.unit))
+	# A body the planner trims to a collision-clear prefix is re-requested as whole strides of
+	# that prefix until every requested leg runs complete (lengths only shrink, so it settles).
+	var plan := {}
+	for attempt: int in 8:
+		plan = BodyMotion.plan_locomotion_candidate(_repo, _state, intents, _state.absolute_day(), _slice)
+		if plan.get("version") != 2:
+			_fail("Locomotion planner rejected fixture: " + str(plan.get("reason", plan.get("reasons", plan))))
+			return false
+		if plan.reasons.is_empty(): break
+		for intent: Dictionary in intents:
+			for move: Dictionary in plan.moves:
+				if move.unit == intent.unit and move.slot == intent.slot and move.end != intent.path_m.back():
+					intent.path_m = _whole_strides(intent.path_m, BodyMotion._loco_path(move), _stride_sim(intent.unit))
+	if not plan.reasons.is_empty():
+		_fail("Whole-stride re-plan did not settle: " + str(plan.reasons))
+		return false
+	var result := BodyMotion.commit_locomotion_candidate(_repo, _state, plan)
+	if result.status != "complete":
+		_fail("Locomotion commit rejected fixture: " + result.reason)
+		return false
+	_state = result.candidate
+	_envelope = {"cursor": {"version": 2, "abs_day": plan.cursor.abs_day, "substep": plan.cursor.substep, "receipt": BodyMotion._hash(plan)}}
+	FileAccess.open(_out.path_join("slice-%02d.json" % _slice), FileAccess.WRITE).store_string(JSON.stringify({"plan": plan, "state": _state.to_dict()}, "\t"))
+	_layer.set_candidate_bodies(not _baseline, _envelope)
+	return true
+
+## One certified MARCH stride of this unit's figures in sim metres (the consumer's
+## sim -> model scale, at its fixed reference camera); cached per unit.
+func _stride_sim(code: String) -> float:
+	if _strides.has(code): return _strides[code]
+	if _layer.built_piece(code).is_empty(): _layer.step(0.0)
+	var piece := _layer.built_piece(code)
+	# --baseline draws ordinary pieces; their reference height and size give the same scale.
+	var child: Dictionary = piece.groups[0].piece if piece.has("groups") else {"reference_height_m": piece.get("reference_height_m", piece.get("height_m", 0.0)),
+		"size": piece.get("reference_size", piece.get("size", 1.0))}
+	var model := Map3DCandidateGait.model_length(_ctx, piece, child, {"a": [0, 0], "b": [1000000, 0]})
+	_strides[code] = float(_repo.unit_footprints[MapObjects.army_piece(_repo, _state.army_roster[code])].locomotion_certificate.stride_m) * 1000000.0 / model
+	return _strides[code]
+
+## The consumer walks a leg only as whole strides, so the driver hands it whole strides:
+## a partial last leg stops where the distance left to its waypoint is a whole number of
+## strides (the staged targets are, so a leg is never left with a stub).
+func _whole_strides(path: Array, prefix: Array, stride: float) -> Array:
+	if prefix.size() < 2 or path.has(prefix.back()): return prefix
+	var from: Array = prefix[prefix.size() - 2]
+	var to: Array = path[prefix.size() - 1]
+	var left := BodyMotion._distance_ceil(from, to)
+	var steps := floori(float(BodyMotion._distance_ceil(from, prefix.back())) / stride)
+	var out := prefix.slice(0, prefix.size() - 1)
+	if steps == 0: return out
+	var rest := roundf((roundf(left / stride) - steps) * stride) / left
+	out.append([int(to[0]) + roundi((int(from[0]) - int(to[0])) * rest), int(to[1]) + roundi((int(from[1]) - int(to[1])) * rest)])
+	return out
+
 func _process(delta: float) -> bool:
 	if not _running: return false
 	_share += delta * _speed * DayResolution.DEFAULT_SUBSTEP_COUNT / _repo.bal("time_day_seconds")
@@ -270,6 +367,14 @@ func _process(delta: float) -> bool:
 			_share = 0.0
 			_commit_slice()
 	return false
+
+## Keeps the camera on unit `index`'s drawn figures (--follow), at its current distance.
+func _follow(index: int) -> void:
+	var groups: Array = _layer.group_geometry().get(_codes[index], [])
+	if groups.is_empty(): return
+	var sum := Vector2.ZERO
+	for group: Dictionary in groups: sum += Vector2(group.xz_world[0], group.xz_world[1])
+	_view.look_at_pack(_ctx.to_pack(sum / groups.size()), _ctx.distance)
 
 func _force_physical() -> void:
 	# This consumer fixture prices physical figures even at strategic overview distance.
@@ -292,7 +397,8 @@ func _capture(label: String) -> void:
 		"camera": {"distance": _ctx.distance, "target": [_ctx.target.x, _ctx.target.y], "yaw": _ctx.yaw,
 			"transform": var_to_str(_ctx.camera.global_transform), "fov": _ctx.camera.fov,
 			"view_size": [_ctx.view_size.x, _ctx.view_size.y], "viewport": [_view.viewport().size.x, _view.viewport().size.y]},
-		"geometry": _layer.group_geometry()})
+		"geometry": _layer.group_geometry(),
+		"refusals": _codes.map(func(code: String) -> String: return String(_layer.built_piece(code).get("candidate_error", "")))})
 
 func _stats(values: Array) -> Dictionary:
 	values.sort()
@@ -349,10 +455,10 @@ func _write_manifest() -> void:
 	OS.execute("git", ["rev-parse", "HEAD"], revision)
 	var inputs := {}
 	for path: String in ["res://scripts/map3d/map3d_battle_groups.gd", "res://scripts/map3d/map3d_candidate_bodies.gd", "res://scripts/map3d/map3d_layer_units.gd",
-		"res://scripts/map3d/map3d_formation.gd", "res://tools/map3d/body_paths_fixture.gd", "res://data/army/unit_footprints.csv",
+		"res://scripts/map3d/map3d_formation.gd", "res://tools/map3d/body_paths_fixture.gd", "res://data/army/unit_footprints.csv", "res://data/army/unit_locomotion.csv", "res://scripts/map3d/map3d_candidate_gait.gd",
 		_repo.map3d_dir().path_join("manifest.json")]: inputs[path] = FileAccess.get_sha256(path)
 	FileAccess.open(_out.path_join("manifest.json"), FileAccess.WRITE).store_string(JSON.stringify({
 		"head": str(revision).strip_edges(), "inputs": inputs, "command": OS.get_cmdline_args(),
 		"map": _repo.map_id, "world": _repo.map3d_scene(), "case": _case, "baseline": _baseline,
-		"physical_all_zooms": true, "quality": _tier, "resolution": [root.size.x, root.size.y], "speed": _speed,
+		"physical_all_zooms": true, "v2": _v2, "quality": _tier, "resolution": [root.size.x, root.size.y], "speed": _speed,
 		"args": OS.get_cmdline_user_args(), "frames": _frames, "final_state": _state.to_dict()}, "\t"))
