@@ -187,3 +187,68 @@ func test_physical_sources_and_union_power() -> void:
 	assert_eq(BattleSystem.candidate_sources(f.repo, f.state, 8, f.unit, f.boundary).sources, [])
 	f.repo.balance.battle_strength_factor_min_permille = 500
 	assert_eq(BattleSystem.candidate_power(f.repo, f.state, 8, f.unit, true, [], f.boundary).power, 0)
+
+func test_context_rejects_duplicate_hostility_and_empty_sources() -> void:
+	var f := _world()
+	# P6: C3/Cr2 gives R666 straight from BattleRanged.share, not 667.
+	_unit(f.repo, f.state, f.a, {"archers": 2, "infantry": 1}, 3)
+	assert_eq(BattleRanged.share(f.repo, f.state, f.a), 666)
+	_unit(f.repo, f.state, f.d, {"infantry": 1}, 1)
+	var battle := {"id": 8, "att": [f.a, f.d], "def": [f.b], "actions": {}}
+	var p6 := {"code": f.a, "melee": 0, "firing": 3, "impact": 0}
+	var nonparty := {"code": f.d, "melee": 1, "firing": 0, "impact": 0}
+	assert_eq(BattleSystem.candidate_context(f.repo, f.state, battle, f.b, [p6, nonparty]).exposure, 749)
+	# Duplicate rows cannot raise W (P6: [p6, p6, nonparty] would read 713); they are rejected.
+	assert_true(BattleSystem.candidate_context(f.repo, f.state, battle, f.b, [p6, p6, nonparty]).has("error"))
+	# A zero row would dilute exposure like a remote source; a friendly code is not a source.
+	assert_true(BattleSystem.candidate_context(f.repo, f.state, battle, f.b, [p6, {"code": f.d, "melee": 0, "firing": 0, "impact": 0}]).has("error"))
+	var mine: Array = f.state.regiments.keys()
+	mine.sort()
+	assert_true(BattleSystem.candidate_context(f.repo, f.state, battle, f.b, [{"code": mine[1], "melee": 1, "firing": 0, "impact": 0}]).has("error"))
+	assert_true(BattleSystem.candidate_context(f.repo, f.state, battle, f.b, [{"code": f.d, "melee": 1, "firing": 0, "impact": 2}]).has("error"), "impact is melee personnel")
+
+func test_earned_impact_only_through_the_production_charge_target() -> void:
+	var f := _physical()
+	var types: Array = f.repo.world_table("military", "unit_types").keys()
+	for arm: String in types:
+		f.state.army_roster[f.enemy][arm] = "0"
+	f.state.army_roster[f.enemy].cavalry = "50"
+	var entry := UnitBodies._entry(f.state, f.enemy)
+	entry.supplies = 1000000
+	entry.charge = {"phase": "impact", "target": f.unit, "origin_x_m": 0, "origin_y_m": 0, "x_m": 0, "y_m": 0,
+		"runup_m": 300, "impact_day": f.state.absolute_day(), "heading_deg": 180}
+	assert_eq(BattleCharge.target(f.repo, f.state, f.state.battles[0], f.enemy), f.unit)
+	var earned := BattleSystem.candidate_sources(f.repo, f.state, 8, f.unit, f.boundary)
+	assert_eq(earned.sources[0].impact, 100)
+	assert_eq(BattleSystem.candidate_context(f.repo, f.state, f.state.battles[0], f.unit, earned.sources).kind, "shock")
+	# A received flank task earns no impact: no second charge factor beside the flank's own.
+	f.state.unit_tasks = {f.enemy: {"current_id": "fl", "received_sequence": 1, "orders": {"fl": {
+		"sequence": 1, "status": "received", "reason": "Received", "history": [],
+		"request": {"id": "fl", "unit": f.enemy, "battle_id": 8, "task": "flank", "formation": "",
+			"target_unit": f.unit, "source": "ai", "issuer": "", "max_route_m": 0, "region": ""}}}}}
+	var flank := BattleSystem.candidate_sources(f.repo, f.state, 8, f.unit, f.boundary)
+	assert_eq(flank.sources.size(), 1)
+	assert_eq(flank.sources[0].impact, 0)
+	# A saved impact on another day is not earned either.
+	f.state.unit_tasks = {}
+	entry.charge.impact_day = f.state.absolute_day() - 1
+	assert_eq(BattleSystem.candidate_sources(f.repo, f.state, 8, f.unit, f.boundary).sources[0].impact, 0)
+
+func test_every_contact_category_factor_is_refused() -> void:
+	var f := _physical()
+	var other: Array[Dictionary] = [{"source": "custom:participation", "category": "contact", "permille": 100, "reason": "Renamed"}]
+	assert_true(BattleSystem.candidate_power(f.repo, f.state, 8, f.unit, true, other, f.boundary).has("error"))
+	var fine: Array[Dictionary] = [{"source": "ground:height", "category": "formation_terrain", "permille": 1000, "reason": "Flat"}]
+	assert_false(BattleSystem.candidate_power(f.repo, f.state, 8, f.unit, true, fine, f.boundary).has("error"))
+
+func test_sources_from_another_live_field_are_admitted() -> void:
+	# D-FIRE's cross-field world: archer C (field 9) fires 100 at A (field 8); B (A's
+	# opponent in field 8) has no eligible pair, so I(A) = {C}.
+	var helper: GutTest = load("res://tests/engine/test_body_direct_fire.gd").new()
+	var f: Dictionary = helper.call("_cross")
+	helper.free()
+	var sources := BattleSystem.candidate_sources(f.repo, f.state, 8, f.a, BodyBattleMotion._boundary(f.state))
+	assert_false(sources.has("error"), str(sources.get("error", "")))
+	assert_eq(sources.sources.map(func(s: Dictionary) -> String: return s.code), [f.c])
+	assert_eq(sources.sources[0].firing, 100)
+	assert_eq(sources.sources[0].melee, 0)

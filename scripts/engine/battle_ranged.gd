@@ -306,7 +306,7 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 			continue
 		var fired := false
 		for foe: String in foes:
-			var why := _fire_barred(repo, state, battle, opponents, side, other, unit, foe, designated, sight)
+			var why := _fire_barred(repo, state, battle, opponents, side, other, unit, foe, designated, sight, String(action.get("pursuit_target", "")))
 			if not why.is_empty():
 				if not why in reasons: reasons.append(why)
 				continue
@@ -339,7 +339,7 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 
 ## The original per-target fire filters, with both fields' (and absorbed sources') party terms.
 static func _fire_barred(repo: DataRepository, state: GameState, battle: Dictionary, opponents: Dictionary,
-		side: String, other: String, unit: String, foe: String, designated: String, sight: int) -> String:
+		side: String, other: String, unit: String, foe: String, designated: String, sight: int, pursuit_target := "") -> String:
 	if designated != "" and designated != foe: return "A received designated target restricts fire"
 	if not BattleSystem._can_fight(repo, state, foe) or bool(UnitBodies._entry(state, foe).get("captured", false)):
 		return "Captured or incapable targets are not fired upon"
@@ -351,6 +351,7 @@ static func _fire_barred(repo: DataRepository, state: GameState, battle: Diction
 	if not "attack" in legal: return "Received law or agreement bars fire"
 	var withdrawing: bool = BattleSystem.unit_action(repo, state, opponents, foe).kind == "retreat"
 	if withdrawing and not "pursue" in legal: return "Protected or unlawful pursuit of a withdrawing target"
+	if withdrawing and pursuit_target != "" and pursuit_target != foe: return "Received pursuit names another target"
 	var seen := BattleSystem._at_m(repo, state, foe) - BattleSystem._at_m(repo, state, unit)
 	if seen.length_squared() > sight * sight: return "Target beyond local sight"
 	return ""
