@@ -626,8 +626,8 @@ func test_v2_pivot_needs_the_arms_clip_else_refuses_the_unit() -> void:
 	assert_false(layer.screen_rects().has(f.code))
 
 
-## The consumer's certified-gait fields, added after the commit (the engine's strict policy
-## check predates them; LOCO-POLICY installs them for real).
+## The consumer's certified-gait fields on the fixture's test certificate (test values, not the
+## installed unit_locomotion.csv row), added after the commit.
 func _install_gait(f: Dictionary, stride_m: float, provider: String = STUB) -> void:
 	var piece := MapObjects.army_piece(f.repo, f.state.army_roster[f.code])
 	var cert: Dictionary = f.repo.unit_footprints[piece].locomotion_certificate
@@ -664,6 +664,12 @@ func test_whole_strides_hand_computed_against_contact_bound() -> void:
 	assert_eq(Map3DCandidateGait.admitted_phase(["*", "*", "*"]), 0.0)
 	for bad: Variant in [null, "", 5, "x"]:
 		assert_eq(Map3DCandidateGait.admitted_phase([bad, [PHASE], [PHASE]]), -1.0, "malformed %s is no wildcard" % str(bad))
+
+func test_every_installed_arm_has_a_consumer_gait() -> void:
+	var repo := SuiteData.repo()
+	for arm: String in ["infantry", "archers", "cavalry", "artillery", "royal"]:
+		var gait := Map3DCandidateGait.policy(repo, arm)
+		assert_false(gait.has("error"), "%s: %s" % [arm, gait.get("error", "")])
 
 func test_v2_without_certified_gait_refuses_the_unit() -> void:
 	for case: Array in [["", "lacks march_stop_phases"], ["res://tests/fixtures/missing.gd", "no turn -> pose provider"]]:

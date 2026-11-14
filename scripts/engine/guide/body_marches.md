@@ -86,9 +86,11 @@ V1 loading is unchanged; a frozen v1 boundary cannot acquire v2 timing.
 Policy is unsupported unless both per-arm `body_locomotion_<arm>_turn_q` and
 `body_locomotion_<arm>_contact_um` rows match an explicit footprint
 `locomotion_certificate={digest,turn_q,contact_um,radius_m,clips,all_turns}`.
-This candidate accepts a certificate supplied by its caller's repository; it
-does not load, create or certify one. Test-injected certificates are fixtures,
-never installed arm support. Actual certification/installation remains separate.
+`DataRepository` loads each arm's installed certificate from `army/unit_locomotion.csv`;
+`_loco_policy` admits the consumer's fields beside it (`march_stop_phases`,
+`march_start_phases`, `hold_clip`, `hold_phases`, `stride_m`, `provider`), refuses any
+other key, and returns and hashes only the six engine fields. Test-injected
+certificates are fixtures, never installed arm support.
 All timed operations, including stationary pivots and tails, share one continuous
 sweep. Translated measured circles and stationary circles must fit the land grid.
 

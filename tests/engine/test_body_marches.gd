@@ -911,6 +911,7 @@ func test_locomotion_march_long_leg_lost_pivot_time_never_returns() -> void:
 func test_locomotion_march_unsupported_and_frozen_v1_not_converted() -> void:
 	if not _loco_api(): return
 	var f := _fixture([100])
+	for arm: String in f.repo.unit_footprints: f.repo.unit_footprints[arm].erase("locomotion_certificate")
 	var before: Dictionary = f.state.to_dict()
 	_assert_candidate_error(TickEngine.new(f.repo).call("begin_locomotion_march_candidate", f.state))
 	assert_eq(f.state.to_dict(), before, "no installed policy is an explicit unsupported result")

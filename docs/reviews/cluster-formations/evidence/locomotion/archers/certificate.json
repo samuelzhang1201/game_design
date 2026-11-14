@@ -329,7 +329,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "17ef2c92c23368d67a79b9186656de1acbaf6cd0b2c012d43d45bd7de3fcc275",
+  "sha256": "5323fe1c162bcac0334129ecb17bdead24ae7de86f81de2a05c80318bdb54c81",
   "uniform": 512
  },
  "config": {
@@ -360,6 +360,7 @@
    0.0
   ],
   "note": "LOCO-CERT-ARCH. Provider Map3DArcherLocomotion: the installed 180-degree pivot at the operation phase, each foot's world track turned by (|T|/180 - 1) x its native accumulated heading, a two-bone leg IK, the body above the legs eased toward the entry pose by |T|/180. Pivots enter and leave MARCH at phase 0 only; the hold is MARCH frozen at 0 (the consumer's admitted phase, recorded as a consumer requirement). Stance, hover and slide use each foot's planting band inherited from native MARCH. turn_q 400000 is the contract's example value (contact does not depend on duration); LOCO-POLICY installs the real row.",
+  "phase_map": null,
   "provider": "scripts/map3d/map3d_archer_locomotion.gd",
   "radius_m": 932,
   "scene": "scenes/models/units/archers.tscn",
@@ -408,8 +409,9 @@
   "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg.import": "3d1b0b7a807b6798161b3ad06e9b4fc9d38f151661dcfd68ad84fa847080348f",
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg.import": "c8dc15fa86145c123bff4e26fef8300d719dfc5d946d22be712cf4d478ce9067",
-  "data/army/balance.csv": "c91faaef284442c03ae8e36d1269ec4ad0c401536d90c26d08ca857b1e559ae3",
-  "data/army/unit_footprints.csv": "3f4b06c876ac881377d9a4e387ffb89b7f9fdfad6e5d21d714dea6b84d386fc7",
+  "data/army/balance.csv": "09c376c4f530a4f30217e600f08f705ffa8919b8926b58d552c5c13166e10700",
+  "data/army/unit_footprints.csv": "5d7ebb28d0942802e698284eb42817203d66100ad607debc6cbda895485412de",
+  "data/screens/map3d/army_art.csv": "269f416f0c3d6a12d182c62bc29986dd65879cc036c47e2c2b351615a6d89ddf",
   "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
   "scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
@@ -425,11 +427,11 @@
    "MARCH"
   ],
   "contact_um": 28474,
-  "digest": "25b74e2414b7217404638e079ce7cd00b7109479773c8d4a0abce4b98e8cbbbc",
+  "digest": "2f3d0aabd3725706b3ca446e04cde30a95d09735d4b1fc4206ecd9ee18785c4d",
   "radius_m": 932,
   "turn_q": 400000
  },
- "payload_sha256": "25b74e2414b7217404638e079ce7cd00b7109479773c8d4a0abce4b98e8cbbbc",
+ "payload_sha256": "2f3d0aabd3725706b3ca446e04cde30a95d09735d4b1fc4206ecd9ee18785c4d",
  "report": {
   "bounds_um": {
    "contact": 28474,
@@ -1369,6 +1371,6 @@
  },
  "schema": 1,
  "status": "NUMERIC_PASS",
- "tool_sha256": "b5e098eef99072a42143cd9347f102d3d4156cf89d7caf937901c4b7b0984db9",
+ "tool_sha256": "e3b2de36f443b4d3b5a0fab1bee396433b6c951473f38be03922561bf3960231",
  "visual_review": "PENDING: R-C requires the real-window review after this numeric pass"
 }

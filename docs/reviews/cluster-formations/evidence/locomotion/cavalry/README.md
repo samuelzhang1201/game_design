@@ -4,7 +4,7 @@
 
 `certificate.json` is main's `tools/units3d/certify_locomotion.py` run on `certificate.config.json`
 against main's assets: the re-authored cavalry MARCH (#316, ruling R-I; `cavalry.glb` `0dac618d…`) and
-the provider `Map3DCavalryLocomotion` (#314). Status **NUMERIC_PASS**, digest `56b1c287…`. The digest
+the provider `Map3DCavalryLocomotion` (#314). Status **NUMERIC_PASS**, digest `16d5cdde…`. The digest
 binds the tool, the config and every input (scene, GLB, textures, provider, pivot plan, data).
 
 | Quantity | Total (sampled + margin) | Bound |
@@ -79,3 +79,7 @@ fore and left hind are only 4.5 and 10.8 mm up, so their first and last steps ar
 `provider-review/`: `tools/units3d/royal_install/pivot_frames.gd --arm cavalry` at 1200x900,
 frames 0..12 of +90 (body, and feet), +180 feet, +1 µdeg, and the installed clip at +90 for
 comparison; independent critic (sheets and `taste.md` only), see the PR.
+
+## Re-issued for LOCO-POLICY (2026-11-14)
+
+Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `data/army/balance.csv` (the new `body_locomotion_*` rows) and, for some arms, other hashed inputs had changed since the first issue. The status is still NUMERIC_PASS and the measured totals and bounds are unchanged; only the digest moved. The installed row is `data/army/unit_locomotion.csv`.
