@@ -1394,3 +1394,96 @@ static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: Str
 	b["report_outcome"] = {"why": why, "winner": winner, "town": String(b["town"])}
 	BattleReport.note(b, events)
 	BattleReport.snapshot(repo, state, int(b["id"]))
+
+
+## CF06 candidate incoming context of `target` from its admitted lawful sources I(t), each
+## `{code, melee, firing, impact}` (target-scoped M_t, J_t and earned contacting impact).
+## Withdrawal/rout first (pursuit when any lawful source reaches it), else ranged by the
+## arm-by-arm crew classification, else shock by earned impact, else melee; then the
+## simultaneous exposure once, then the target's authored event exposures in saved order.
+static func candidate_context(repo: DataRepository, state: GameState, battle: Dictionary, target: String, sources: Array) -> Dictionary:
+	var rows: Array = []
+	var ranged := 0
+	var crew := 0
+	var mounted := 0
+	var heads := 0
+	var types: Dictionary = repo.world_table("military", "unit_types")
+	for raw: Variant in sources:
+		if not raw is Dictionary or not raw.get("code") is String: return {"error": "Invalid context source"}
+		var source: Dictionary = raw
+		for key: String in ["melee", "firing", "impact"]:
+			if not source.get(key) is int or int(source[key]) < 0: return {"error": "Context source needs nonnegative integer " + key}
+		var fit := ArmySystem.fit_count(repo, state, source.code)
+		var reg := ArmySystem.regiment(repo, source.code, state)
+		rows.append({"fit": fit, "ranged_share": BattleRanged.share(repo, state, source.code), "melee": source.melee, "firing": source.firing})
+		for arm: String in types:
+			var people := int(reg.get(arm, 0)) * int(types[arm]["crew"])
+			crew += people
+			if String(types[arm]["type"]) in ["ranged", "machinery"] and fit > 0:
+				@warning_ignore("integer_division")
+				ranged += people * int(source.firing) / fit
+		heads += fit
+		@warning_ignore("integer_division")
+		mounted += int(source.impact) * BattleCharge.mounted_share(repo, state, source.code) / 1000
+	var weighted := BattleStrength.exposure(rows)
+	if weighted.has("error"): return weighted
+	var threshold := int(repo.bal("battle_context_arm_threshold_permille"))
+	var kind := "melee"
+	var side := BattleRules.side_of(battle, target)
+	if BattleOrders.kind(battle, side) == "retreat" or bool(_stored(state, target).get("battle_retreat", false)) \
+		or String(battle.get("routed_side", "")) == side:
+		kind = "pursuit" if not sources.is_empty() else "withdrawal"
+	elif crew > 0 and ranged * 1000 >= crew * threshold:
+		kind = "ranged"
+	elif heads > 0 and mounted * 1000 >= heads * threshold:
+		kind = "shock"
+	var scale := 1000 if kind == "melee" else int(repo.bal("battle_context_" + kind + "_permille"))
+	@warning_ignore("integer_division")
+	scale = scale * int(weighted.exposure) / 1000
+	for modifier: Dictionary in battle.get("event_modifiers", []):
+		if modifier.unit == target and int(modifier.until_day) >= state.absolute_day():
+			@warning_ignore("integer_division")
+			scale = scale * int(modifier.exposure_permille) / 1000
+	return {"kind": kind, "loss_permille": scale, "exposure": int(weighted.exposure),
+		"reason": "Incoming %s casualties from %d lawful sources at exposure %d" % [kind, sources.size(), weighted.exposure]}
+
+
+## CF06 candidate sources of `target`: every hostile opposing member's target-scoped physical
+## melee and fire (`BattleRanged.counts_candidate`), kept only with H > 0, C > 0 and a positive
+## eligible equipped numerator. Earned impact counts that source's melee against this target.
+static func candidate_sources(repo: DataRepository, source: GameState, battle_id: int, target: String, boundary: Dictionary) -> Dictionary:
+	var battle := battle_by_id(source, battle_id)
+	var side := BattleRules.side_of(battle, target)
+	if battle.is_empty() or side == "": return {"error": "Context target is not a live battle member"}
+	var types: Dictionary = repo.world_table("military", "unit_types")
+	var out: Array = []
+	var others: Array = battle["def" if side == "att" else "att"].duplicate()
+	others.sort()
+	for code: String in others:
+		var query := BattleRanged.counts_candidate(repo, source, battle_id, code, target, 0, boundary)
+		if query.status != "complete": return {"error": query.reason}
+		var reg := ArmySystem.regiment(repo, code, source)
+		var guards := PrisonerBurden.guard_count(repo, source, code)
+		var numerator := 0
+		var capacity := 0
+		for arm: String in types:
+			var people := int(reg.get(arm, 0)) * int(types[arm]["crew"])
+			capacity += people
+			numerator += people * (int(query.melee) + int(query.firing) if String(types[arm]["type"]) in ["ranged", "machinery"] else int(query.melee))
+		if int(query.fit) - guards <= 0 or capacity <= 0 or numerator <= 0: continue
+		var charge: Dictionary = _stored(source, code).get("charge", {})
+		var impact := int(query.melee) if charge.get("phase", "") == "impact" and int(charge.get("impact_day", -1)) == source.absolute_day() \
+			and String(charge.get("target", "")) == target else 0
+		out.append({"code": code, "melee": int(query.melee), "firing": int(query.firing), "impact": impact})
+	return {"sources": out}
+
+
+## CF06 candidate outgoing power: the source's union of eligible melee and fire over every
+## target, through the original equipment chain once. No legacy contact participation factor.
+static func candidate_power(repo: DataRepository, source: GameState, battle_id: int, code: String,
+		attacking: bool, extra_factors: Array[Dictionary], boundary: Dictionary) -> Dictionary:
+	var query := BattleRanged.counts_candidate(repo, source, battle_id, code, "", 0, boundary)
+	if query.status != "complete": return {"error": query.reason}
+	for factor: Dictionary in extra_factors:
+		if String(factor.get("source", "")).begins_with("contact:"): return {"error": "Candidate power takes no legacy contact factor"}
+	return BattleStrength.unit(repo, source, code, attacking, extra_factors, int(query.melee), int(query.firing))
