@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import struct
 import sys
@@ -45,6 +46,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import generate as gen  # noqa: E402  (shared ComfyUI helpers)
+
+# The Mac holds no ComfyUI models (owner 2026-11-13: 以后所有美术资源都用desktop跑),
+# so cut-outs go to the Windows desktop, which has birefnet; COMFYUI_URL overrides.
+if not os.environ.get("COMFYUI_URL"):
+    gen._use_server(gen.ZIMAGE_SERVER)
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE / "post_cutout_template.json"
