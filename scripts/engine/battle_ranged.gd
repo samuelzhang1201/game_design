@@ -264,6 +264,9 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 			var seen := BattleSystem._at_m(repo, state, pair.target_unit) - BattleSystem._at_m(repo, state, unit)
 			if seen.length_squared() > sight * sight: continue
 			if not defending and designated != "" and designated != pair.target_unit: continue
+			# A received pursuit names its target: it never pursues another withdrawing foe.
+			var pursuit := String(action.get("pursuit_target", ""))
+			if pursuit != "" and pursuit != pair.target_unit and foe_action.kind == "retreat": continue
 			if not defending and melee_region != "":
 				var own_row: Dictionary = battle.groups[unit].filter(func(r: Dictionary) -> bool: return int(r.slot) == int(pair.slot))[0]
 				var cell := MapEconomy.cell_at(repo, ArmySystem.metres_to_pack(repo, point(own_row)))

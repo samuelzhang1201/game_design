@@ -252,3 +252,39 @@ func test_sources_from_another_live_field_are_admitted() -> void:
 	assert_eq(sources.sources.map(func(s: Dictionary) -> String: return s.code), [f.c])
 	assert_eq(sources.sources[0].firing, 100)
 	assert_eq(sources.sources[0].melee, 0)
+
+func test_outgoing_union_spans_fields_without_double_counting() -> void:
+	var helper: GutTest = load("res://tests/engine/test_body_direct_fire.gd").new()
+	var f: Dictionary = helper.call("_cross")
+	helper.free()
+	var boundary := BodyBattleMotion._boundary(f.state)
+	# C (field 9) fires 100 only across the fronts at A (field 8): the union carries that J.
+	var union := BattleSystem.candidate_union(f.repo, f.state, 9, f.c, boundary)
+	assert_eq([union.melee, union.firing], [0, 100])
+	var power := BattleSystem.candidate_power(f.repo, f.state, 9, f.c, true, [], boundary)
+	assert_false(power.has("error"), str(power.get("error", "")))
+	assert_gt(int(power.base), 0, "an admitted cross-field source has its real union power")
+
+func test_classification_order_denominators_and_events_after_exposure() -> void:
+	var f := _world()
+	var today: int = f.state.absolute_day()
+	var battle := {"id": 8, "att": [f.a, f.d], "def": [f.b], "actions": {}}
+	# Both qualify: ranged 1000*1000 >= 2000*500 and shock (cavalry crew 2) 1000*1000 >= 2000*500.
+	_unit(f.repo, f.state, f.a, {"archers": 1000}, 1000)
+	_unit(f.repo, f.state, f.d, {"cavalry": 500}, 1000)
+	var both := [{"code": f.a, "melee": 0, "firing": 1000, "impact": 0}, {"code": f.d, "melee": 1000, "firing": 0, "impact": 1000}]
+	assert_eq(BattleSystem.candidate_context(f.repo, f.state, battle, f.b, both).kind, "ranged", "ranged precedes shock")
+	f.state.regiments[f.b].battle_retreat = true
+	assert_eq(BattleSystem.candidate_context(f.repo, f.state, battle, f.b, both).kind, "pursuit", "withdrawal precedes both")
+	f.state.regiments[f.b].erase("battle_retreat")
+	# Crew denominator: archers 400 (C400), F1000, J600 -> trunc(400*600/1000) = 240;
+	# 240*1000 >= 400*500 is ranged; a fit denominator (1000*500) would wrongly say melee.
+	_unit(f.repo, f.state, f.a, {"archers": 400}, 1000)
+	var crew := BattleSystem.candidate_context(f.repo, f.state, battle, f.b, [{"code": f.a, "melee": 0, "firing": 600, "impact": 0}])
+	assert_eq([crew.kind, crew.exposure], ["ranged", 600])
+	# Events after exposure: F1000 J667 -> exposure 667, ranged 800*667/1000 = 533, event 1250 -> 666
+	# (the other order would give 667).
+	_unit(f.repo, f.state, f.a, {"archers": 1000}, 1000)
+	battle.event_modifiers = [{"unit": f.b, "until_day": today, "exposure_permille": 1250}]
+	var ordered := BattleSystem.candidate_context(f.repo, f.state, battle, f.b, [{"code": f.a, "melee": 0, "firing": 667, "impact": 0}])
+	assert_eq([ordered.kind, ordered.exposure, ordered.loss_permille], ["ranged", 667, 666])

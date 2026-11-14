@@ -1429,6 +1429,7 @@ static func candidate_context(repo: DataRepository, state: GameState, battle: Di
 		heads += fit
 		@warning_ignore("integer_division")
 		mounted += int(source.impact) * BattleCharge.mounted_share(repo, state, source.code) / 1000
+	if BattleRules.side_of(battle, target) == "": return {"error": "Context target is not a battle member"}
 	var weighted := BattleStrength.exposure(rows.map(func(r: Dictionary) -> Dictionary:
 		return {"fit": r.fit, "ranged_share": r.ranged_share, "melee": r.melee, "firing": r.firing}))
 	if weighted.has("error"): return weighted
@@ -1459,6 +1460,8 @@ static func candidate_context(repo: DataRepository, state: GameState, battle: Di
 ## the source's melee against this target only when its saved impact today is still earned
 ## by `BattleCharge.target` (a flank task, pursuit, no supplies or no attack earn none).
 static func candidate_sources(repo: DataRepository, source: GameState, battle_id: int, target: String, boundary: Dictionary) -> Dictionary:
+	var admitted := BodyBattleContact.exposure_candidate(repo, source, battle_id, target, [], boundary)
+	if admitted.status != "complete": return {"error": admitted.reason}
 	var battle := battle_by_id(source, battle_id)
 	var side := BattleRules.side_of(battle, target)
 	if battle.is_empty() or side == "": return {"error": "Context target is not a live battle member"}
@@ -1505,9 +1508,35 @@ static func _candidate_numerator(repo: DataRepository, state: GameState, code: S
 ## target, through the original equipment chain once. No legacy contact participation factor.
 static func candidate_power(repo: DataRepository, source: GameState, battle_id: int, code: String,
 		attacking: bool, extra_factors: Array[Dictionary], boundary: Dictionary) -> Dictionary:
-	var query := BattleRanged.counts_candidate(repo, source, battle_id, code, "", 0, boundary)
-	if query.status != "complete": return {"error": query.reason}
 	for factor: Dictionary in extra_factors:
 		if String(factor.get("category", "")) == "contact" or String(factor.get("source", "")).begins_with("contact:"):
 			return {"error": "Candidate power takes no contact participation factor: E already is the participation"}
-	return BattleStrength.unit(repo, source, code, attacking, extra_factors, int(query.melee), int(query.firing))
+	var union := candidate_union(repo, source, battle_id, code, boundary)
+	if union.has("error"): return union
+	return BattleStrength.unit(repo, source, code, attacking, extra_factors, int(union.melee), int(union.firing))
+
+
+## A source's outgoing union over every eligible target of its own field and of every other
+## live field: each (unit, slot) once, with close contact anywhere taking precedence over fire.
+static func candidate_union(repo: DataRepository, source: GameState, battle_id: int, code: String, boundary: Dictionary) -> Dictionary:
+	var own := battle_by_id(source, battle_id)
+	if own.is_empty() or BattleRules.side_of(own, code) == "": return {"error": "Power source is not a live battle member"}
+	var melee := {}
+	var firing := {}
+	var fields: Array = source.battles.filter(func(b: Dictionary) -> bool:
+		return not bool(b.get("ended", false)) and not bool(b.get("finished", false)))
+	fields.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return int(x.id) < int(y.id))
+	for field: Dictionary in fields:
+		var same := int(field.id) == int(own.id)
+		if not same and not (field.att + field.def).any(func(other: String) -> bool: return _candidate_hostile(repo, source, code, other)):
+			continue
+		var query := BattleRanged.counts_candidate(repo, source, int(own.id), code, "", 0 if same else int(field.id), boundary)
+		if query.status != "complete": return {"error": query.reason}
+		for pair: Dictionary in query.pairs:
+			(melee if pair.kind == "melee" else firing)[int(pair.slot)] = int(pair.count)
+	if not melee.is_empty(): firing = {}   # a unit in close contact anywhere fires nowhere
+	var m := 0
+	for count: int in melee.values(): m += count
+	var j := 0
+	for count: int in firing.values(): j += count
+	return {"melee": m, "firing": j}
