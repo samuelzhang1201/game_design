@@ -67,6 +67,7 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 	if candidate and (firing < 0 or melee + firing > all_fit):
 		return {"error": "Eligible melee and fire exceed fit personnel: " + code}
 	var fit := all_fit - guards
+	if candidate and capacity < 0: return {"error": "Invalid equipment or crew row: " + code}
 	var quality := MilitaryQuality.profile(repo, state, code)
 	var development := DevelopmentSystem.arm_permille(repo, state, ArmySystem.realm_of(repo, code, state))
 	var equipment := 0

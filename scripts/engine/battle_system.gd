@@ -1477,11 +1477,16 @@ static func candidate_sources(repo: DataRepository, source: GameState, battle_id
 			if not _candidate_hostile(repo, source, code, target): continue
 			var query := BattleRanged.counts_candidate(repo, source, int(field.id), code, target, 0 if same else int(battle.id), boundary)
 			if query.status != "complete": return {"error": query.reason}
-			if _candidate_numerator(repo, source, code, int(query.melee), int(query.firing)) <= 0: continue
+			# Per-target counts are subsets of the source's round union: close contact in ANY
+			# field suppresses its fire at every target.
+			var union := candidate_union(repo, source, int(field.id), code, boundary)
+			if union.has("error"): return union
+			var firing := 0 if int(union.melee) > 0 else int(query.firing)
+			if _candidate_numerator(repo, source, code, int(query.melee), firing) <= 0: continue
 			var charge: Dictionary = _stored(source, code).get("charge", {})
 			var earned: bool = charge.get("phase", "") == "impact" and int(charge.get("impact_day", -1)) == source.absolute_day() \
 				and String(charge.get("target", "")) == target and BattleCharge.target(repo, source, field, code) == target
-			out.append({"code": code, "melee": int(query.melee), "firing": int(query.firing), "impact": int(query.melee) if earned else 0})
+			out.append({"code": code, "melee": int(query.melee), "firing": firing, "impact": int(query.melee) if earned else 0})
 	return {"sources": out}
 
 
@@ -1508,6 +1513,7 @@ static func _candidate_numerator(repo: DataRepository, state: GameState, code: S
 ## target, through the original equipment chain once. No legacy contact participation factor.
 static func candidate_power(repo: DataRepository, source: GameState, battle_id: int, code: String,
 		attacking: bool, extra_factors: Array[Dictionary], boundary: Dictionary) -> Dictionary:
+	if not attacking: return {"error": "Defence keeps its full personnel chain; candidate power is outgoing only"}
 	for factor: Dictionary in extra_factors:
 		if String(factor.get("category", "")) == "contact" or String(factor.get("source", "")).begins_with("contact:"):
 			return {"error": "Candidate power takes no contact participation factor: E already is the participation"}

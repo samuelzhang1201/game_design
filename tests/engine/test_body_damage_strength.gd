@@ -264,6 +264,33 @@ func test_outgoing_union_spans_fields_without_double_counting() -> void:
 	var power := BattleSystem.candidate_power(f.repo, f.state, 9, f.c, true, [], boundary)
 	assert_false(power.has("error"), str(power.get("error", "")))
 	assert_gt(int(power.base), 0, "an admitted cross-field source has its real union power")
+	assert_true(BattleSystem.candidate_power(f.repo, f.state, 9, f.c, false, [], boundary).has("error"), "defence is not this path")
+
+func test_contact_in_another_field_suppresses_per_target_fire() -> void:
+	# C (field 9) shoots D in its own field 9 (D 300 m of open gap ahead); its contact with A
+	# of field 8 is invisible to that same-field query. Close contact anywhere means no fire:
+	# with A touching C, J_t for D is 0 and C is not one of D's sources.
+	var helper: GutTest = load("res://tests/engine/test_body_direct_fire.gd").new()
+	var f: Dictionary = helper.call("_cross")
+	helper.call("_put", f, f.d, 0, 10340, 10000, 1)
+	f.state.battles[1].group_anchor_m[f.d] = [10340, 10000]
+	helper.call("_put", f, f.a, 0, 10000, 30000, 0)
+	f.state.battles[0].group_anchor_m[f.a] = [10000, 30000]
+	f.state.battles[0].actions.att = {"kind": "attack", "reason": "Received advance plan"}
+	BodyBattle._seal_private(f.repo, f.state)
+	var boundary := BodyBattleMotion._boundary(f.state)
+	var free := BattleSystem.candidate_sources(f.repo, f.state, 9, f.d, boundary)
+	assert_eq(free.sources.map(func(s: Dictionary) -> String: return s.code), [f.c], "baseline: C fires at D")
+	assert_eq(free.sources[0].firing, 100)
+	helper.call("_put", f, f.a, 0, 10000 - 2 * 20 - 50, 10000, 0)
+	f.state.battles[0].group_anchor_m[f.a] = [10000 - 2 * 20 - 50, 10000]
+	BodyBattle._seal_private(f.repo, f.state)
+	helper.free()
+	boundary = BodyBattleMotion._boundary(f.state)
+	var union := BattleSystem.candidate_union(f.repo, f.state, 9, f.c, boundary)
+	assert_eq(union.firing, 0)
+	assert_gt(int(union.melee), 0, "close defence against the attacking A")
+	assert_eq(BattleSystem.candidate_sources(f.repo, f.state, 9, f.d, boundary).sources, [])
 
 func test_classification_order_denominators_and_events_after_exposure() -> void:
 	var f := _world()
