@@ -822,7 +822,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "a7b91203a3b1e13167a759d31855809cc65b885a6b487d311a4936934ccd9dc5",
+  "sha256": "4bdfd99ee0e856eb501e2a68a3194f61baafc7a6aee993ddf3517b200d6119fd",
   "uniform": 512
  },
  "config": {
@@ -898,7 +898,7 @@
   "assets/3D/units/royal/royal_royal_atlas_mr.jpg.import": "ce415cba84687cbd3bf659d4dec769d6a054d6d9462172e3b45a0f0f8c5bed92",
   "assets/3D/units/royal/royal_royal_atlas_n.jpg": "87dae2d5426bf52b5f4dd43676ce6a2bf92b9ff22e922e1ba98a8628caffe2ed",
   "assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
-  "data/army/balance.csv": "85fdd8708b65a4b86a22180c28c356143ab65a7c7871cd1419872e88a77ad033",
+  "data/army/balance.csv": "09c376c4f530a4f30217e600f08f705ffa8919b8926b58d552c5c13166e10700",
   "data/army/unit_footprints.csv": "5d7ebb28d0942802e698284eb42817203d66100ad607debc6cbda895485412de",
   "data/screens/map3d/army_art.csv": "269f416f0c3d6a12d182c62bc29986dd65879cc036c47e2c2b351615a6d89ddf",
   "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
@@ -919,11 +919,11 @@
    "MARCH"
   ],
   "contact_um": 29338,
-  "digest": "639941a1ce2a416cd4b8008e09d2a493443dbc2dadd5af4b160c63d1e395a7cb",
+  "digest": "000db95b81cff383c7f79be27c44d7e431fea7d8a763dd2e3203e776c6eaa25c",
   "radius_m": 749,
   "turn_q": 400000
  },
- "payload_sha256": "639941a1ce2a416cd4b8008e09d2a493443dbc2dadd5af4b160c63d1e395a7cb",
+ "payload_sha256": "000db95b81cff383c7f79be27c44d7e431fea7d8a763dd2e3203e776c6eaa25c",
  "report": {
   "bounds_um": {
    "contact": 29338,
@@ -1923,6 +1923,6 @@
  },
  "schema": 1,
  "status": "NUMERIC_PASS",
- "tool_sha256": "efc58b6634fbd5e0866e1d931d09feb2e3cb8b457c817c104030bb6e9211ef18",
+ "tool_sha256": "e3b2de36f443b4d3b5a0fab1bee396433b6c951473f38be03922561bf3960231",
  "visual_review": "PENDING: R-C requires the real-window review after this numeric pass"
 }

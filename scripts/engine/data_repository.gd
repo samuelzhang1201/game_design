@@ -1168,6 +1168,23 @@ func _load(dir: String) -> bool:
 					row[key] = int(r[key])
 				unit_footprints[String(r.arm)] = row):
 		return false
+	# unit_locomotion.csv: each arm's installed locomotion certificate (LOCO-POLICY), read by
+	# BodyMotion._loco_policy and Map3DCandidateGait.policy as footprint.locomotion_certificate.
+	var bad: Array[String] = []
+	var seen: Dictionary = {}
+	if not _load_if_present(table_path(dir, "unit_locomotion"), LOCOMOTION_COLUMNS,
+			func(r):
+				var arm := String(r.arm)
+				var row := _locomotion_row(r)
+				if not unit_footprints.has(arm) or seen.has(arm) or row.is_empty():
+					bad.append(arm)
+				else:
+					seen[arm] = true
+					unit_footprints[arm].locomotion_certificate = row):
+		return false
+	if not bad.is_empty():
+		DataRepository.last_error = "unit_locomotion.csv rows unknown, repeated or malformed: %s" % ", ".join(bad)
+		return false
 	if not _load_if_present(table_path(dir, "army_clearance"), ["arm", "clear_m"],
 			func(r): army_clearance[String(r["arm"])] = int(r["clear_m"])):
 		return false
@@ -1589,6 +1606,31 @@ func _load_if_present(path: String, required_cols: Array, sink: Callable) -> boo
 	for r in rows:
 		sink.call(r)
 	return true
+
+const LOCOMOTION_COLUMNS: Array[String] = ["arm", "digest", "turn_q", "contact_um", "radius_m", "clips",
+	"all_turns", "march_stop_phases", "march_start_phases", "hold_clip", "hold_phases", "stride_m", "provider"]
+
+## One unit_locomotion.csv row as the certificate Dictionary the engine and the consumer read:
+## integers stay int, phase lists are `;`-separated floats, the provider becomes a res:// path.
+## {} when a number or flag does not parse (a typo must not read as phase 0.0).
+static func _locomotion_row(r: Dictionary) -> Dictionary:
+	var numbers: Array[String] = [String(r.stride_m)]
+	for col: String in ["march_stop_phases", "march_start_phases", "hold_phases"]:
+		numbers.append_array(String(r[col]).split(";", false))
+	for t: String in numbers:
+		if not t.is_valid_float(): return {}
+	for col: String in ["turn_q", "contact_um", "radius_m"]:
+		if not String(r[col]).is_valid_int(): return {}
+	if not ["true", "false"].has(String(r.all_turns)): return {}
+	var phases := func(text: String) -> Array:
+		return Array(text.split(";", false)).map(func(t: String) -> float: return t.to_float())
+	return {"digest": String(r.digest), "turn_q": int(r.turn_q), "contact_um": int(r.contact_um),
+		"radius_m": int(r.radius_m), "clips": Array(String(r.clips).split(";", false)),
+		"all_turns": String(r.all_turns) == "true",
+		"march_stop_phases": phases.call(String(r.march_stop_phases)),
+		"march_start_phases": phases.call(String(r.march_start_phases)),
+		"hold_clip": String(r.hold_clip), "hold_phases": phases.call(String(r.hold_phases)),
+		"stride_m": String(r.stride_m).to_float(), "provider": "res://" + String(r.provider)}
 
 ## An order row's `key=value|key=value` params as a Dictionary of strings.
 static func _order_params(text: String) -> Dictionary:

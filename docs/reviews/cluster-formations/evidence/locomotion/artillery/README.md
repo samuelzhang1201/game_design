@@ -33,3 +33,7 @@ draws the same figure at the same size (`army_art.csv` `size` 0.62 for both); wh
 MARCH pace, which now matches the ground, and the per-man stature, both as the infantry's.
 `certificate.json`'s `visual_review` field stays PENDING as the infantry's does; the review is
 recorded in the READMEs.
+
+## Re-issued for LOCO-POLICY (2026-11-14)
+
+Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `data/army/balance.csv` (the new `body_locomotion_*` rows) and, for some arms, other hashed inputs had changed since the first issue. The status is still NUMERIC_PASS and the measured totals and bounds are unchanged; only the digest moved. The installed row is `data/army/unit_locomotion.csv`.

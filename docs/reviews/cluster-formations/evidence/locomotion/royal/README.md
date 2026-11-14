@@ -1,7 +1,7 @@
 # Royal locomotion certificate (LOCO-CERT-ROY, 2026-11-14)
 
 `certificate.json` is what main's certifier (`tools/units3d/certify_locomotion.py`, tool sha256 `efc58b66…`)
-writes for `certificate.config.json`. Status: **NUMERIC_PASS**. Certificate digest `639941a1…`. It
+writes for `certificate.config.json`. Status: **NUMERIC_PASS**. Certificate digest `000db95b…`. It
 binds the tool, the config and all 24 inputs:
 - the scene and `royal.glb` with its re-keyed MARCH (LOCO-ROY-MARCH, owner ruling R-J);
 - the provider `Map3DRoyalPivot`, its plan and its helpers;
@@ -87,3 +87,7 @@ nothing blocking. Its notes, all mild:
 - a crease at the gaskin around p2/12;
 - an elbow stretch around p11/12;
 - the blade crossing the helmet line mid-turn, which is the installed STANDBY pose.
+
+## Re-issued for LOCO-POLICY (2026-11-14)
+
+Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `data/army/balance.csv` (the new `body_locomotion_*` rows) and, for some arms, other hashed inputs had changed since the first issue. The status is still NUMERIC_PASS and the measured totals and bounds are unchanged; only the digest moved. The installed row is `data/army/unit_locomotion.csv`.
