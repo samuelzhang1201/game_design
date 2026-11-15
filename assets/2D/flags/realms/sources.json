@@ -1,0 +1,65 @@
+[
+  {
+    "country": "Kelvarn",
+    "motif": "Lion",
+    "model": "qwen2512desk4",
+    "seed": 954159537,
+    "source": "F-01_kelvarn_flags_all_realms_qwen2512desk4_s954159537.png",
+    "installed_file": "kelvarn.png",
+    "installed_sha256": "600f86f218560a39fed41360c67307b30c2fd08fe4e9d52d5607769cb5f40a27"
+  },
+  {
+    "country": "Irongate",
+    "motif": "Gate",
+    "model": "qwen2512desk4",
+    "seed": 954159538,
+    "source": "F-02_irongate_flags_all_realms_qwen2512desk4_s954159538.png",
+    "installed_file": "irongate.png",
+    "installed_sha256": "d2bc49272d2eb6f26266527c2cd3759f53f5bff26da7658a80e71ec173906007"
+  },
+  {
+    "country": "Corwyn",
+    "motif": "Eagle",
+    "model": "qwen2512desk4",
+    "seed": 954159537,
+    "source": "F-03_corwyn_flags_all_realms_qwen2512desk4_s954159537.png",
+    "installed_file": "corwyn.png",
+    "installed_sha256": "64e60ff5af0f651ca0836141074bba151b57099a793ce558ea1c3ed9ed82dfc1"
+  },
+  {
+    "country": "Farhold",
+    "motif": "Griffin",
+    "model": "qwen2512desk4",
+    "seed": 954159537,
+    "source": "F-04_farhold_flags_all_realms_qwen2512desk4_s954159537.png",
+    "installed_file": "farhold.png",
+    "installed_sha256": "1a7b9e8fac144babb8cdba8fbcc13b6e5cbc9157d824ad37870880feebb7fb75"
+  },
+  {
+    "country": "Brackmoor",
+    "motif": "Oak",
+    "model": "qwen2512desk4",
+    "seed": 954159537,
+    "source": "F-05_brackmoor_flags_all_realms_qwen2512desk4_s954159537.png",
+    "installed_file": "brackmoor.png",
+    "installed_sha256": "6263c33e4954d5a80a488417631e4f592a8fbf2c1d80ef7b6e7799d4d65b806f"
+  },
+  {
+    "country": "Yorwald",
+    "motif": "Stag",
+    "model": "qwen2512desk4",
+    "seed": 954159537,
+    "source": "F-06_yorwald_flags_all_realms_qwen2512desk4_s954159537.png",
+    "installed_file": "yorwald.png",
+    "installed_sha256": "026d60907af143eb7549d35229ae26906219bc4e3c86cc81955366478ddac10f"
+  },
+  {
+    "country": "Valmoor",
+    "motif": "Heron",
+    "model": "qwen2512desk4",
+    "seed": 954159538,
+    "source": "F-07_valmoor_flags_all_realms_qwen2512desk4_s954159538.png",
+    "installed_file": "valmoor.png",
+    "installed_sha256": "65896c35fd52b685bc2fdd2e0ea4af4eef84255936075c28207599735dfdf192"
+  }
+]

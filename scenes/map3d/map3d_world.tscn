@@ -27,12 +27,15 @@
 [ext_resource type="Script" uid="uid://826sps2k5kcg" path="res://scripts/map3d/map3d_layer_precip.gd" id="22_px01h"]
 [ext_resource type="PackedScene" path="res://scenes/models/signals/refusal_flag.tscn" id="23_68dnv"]
 [ext_resource type="Material" uid="uid://btf3lxc1xv1rp" path="res://scenes/map3d/materials/precip_fall.tres" id="23_toxxw"]
+[ext_resource type="PackedScene" uid="uid://dwljj31tvtiqn" path="res://scenes/models/flags/national_standard.tscn" id="23_vevsm"]
+[ext_resource type="Resource" uid="uid://ccaa78d4uuxsi" path="res://assets/2D/flags/realms/national_flags.tres" id="24_1wqa2"]
 [ext_resource type="PackedScene" uid="uid://cg1tl0kqfsvyj" path="res://scenes/models/units/courier.tscn" id="24_hisku"]
 [ext_resource type="Material" uid="uid://bhsqih8uox5ar" path="res://scenes/map3d/materials/precip_drop_rain.tres" id="24_kme1k"]
 [ext_resource type="Script" uid="uid://d0j1615g26j72" path="res://scripts/map3d/map3d_precip_kind.gd" id="25_3tcq2"]
 [ext_resource type="Material" uid="uid://hbcsw3occqy0" path="res://scenes/map3d/materials/precip_drop_snow.tres" id="26_tkhf4"]
 [ext_resource type="Script" uid="uid://dhabdrg0que1d" path="res://scripts/map3d/map3d_king.gd" id="30_qhspj"]
 [ext_resource type="PackedScene" uid="uid://pa5wk7nmifln" path="res://scenes/models/characters/king.tscn" id="31_jxnve"]
+[ext_resource type="Script" uid="uid://dr8olypfhyuiu" path="res://scripts/map3d/map3d_city_flags.gd" id="43_bftpa"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_qhspj"]
 material = ExtResource("24_kme1k")
@@ -84,12 +87,13 @@ extra_cull_margin = 16384.0
 [node name="Markers" type="Node3D" parent="." unique_id=1753765991]
 script = ExtResource("12_1hxxb")
 
-[node name="Houses" type="Node3D" parent="." unique_id=1359289226 node_paths=PackedStringArray("aprons")]
+[node name="Houses" type="Node3D" parent="." unique_id=1359289226 node_paths=PackedStringArray("aprons", "national_flags")]
 script = ExtResource("13_tgy70")
 wall_tints = PackedColorArray(1, 1, 1, 1, 0.96862745, 0.9137255, 0.8235294, 1, 0.9019608, 0.8901961, 0.8627451, 1, 0.95686275, 0.8784314, 0.7529412, 1, 0.92156863, 0.827451, 0.627451, 1, 0.8666667, 0.7490196, 0.57254905, 1, 0.9411765, 0.8117647, 0.6431373, 1, 0.8862745, 0.79607844, 0.65882355, 1, 0.85490197, 0.87058824, 0.8745098, 1, 0.78431374, 0.8, 0.8, 1, 0.9019608, 0.9019608, 0.87058824, 1, 0.74509805, 0.7607843, 0.7490196, 1, 0.9411765, 0.8235294, 0.76862746, 1, 0.8980392, 0.7490196, 0.6745098, 1, 0.9529412, 0.87058824, 0.8235294, 1, 0.85490197, 0.7372549, 0.65882355, 1)
 roof_tints = PackedColorArray(1, 1, 1, 1, 1, 0.9019608, 0.84705883, 1, 0.9490196, 0.83137256, 0.7529412, 1, 0.9254902, 0.9019608, 0.87058824, 1, 0.85490197, 0.80784315, 0.7607843, 1, 0.79607844, 0.75686276, 0.7176471, 1, 1, 0.9372549, 0.8235294, 1, 0.9647059, 0.8745098, 0.7058824, 1, 1, 0.85490197, 0.6666667, 1, 0.92156863, 0.7372549, 0.6431373, 1, 0.85882354, 0.6666667, 0.57254905, 1, 0.9490196, 0.79607844, 0.7137255, 1)
 trim_tints = PackedColorArray(1, 1, 1, 1, 0.91764706, 0.8745098, 0.8156863, 1, 0.8235294, 0.74509805, 0.6431373, 1, 0.7372549, 0.6509804, 0.54901963, 1, 0.95686275, 0.91764706, 0.85882354, 1, 0.8627451, 0.8039216, 0.72156864, 1)
 aprons = NodePath("../Aprons")
+national_flags = NodePath("../NationalFlags")
 
 [node name="Aprons" type="Node3D" parent="." unique_id=645220186]
 script = ExtResource("14_4rkuw")
@@ -143,6 +147,8 @@ camp_size_ratio = 0.3
 scout_rings = 32
 scout_spokes = 96
 scout_lift_m = 8.0
+national_standard = ExtResource("23_vevsm")
+realm_flags = ExtResource("24_1wqa2")
 battle_refusal_flag = ExtResource("23_68dnv")
 battle_herald = ExtResource("24_hisku")
 
@@ -185,3 +191,9 @@ sway = 0.12
 [node name="King" type="Node3D" parent="." unique_id=1176897414]
 script = ExtResource("30_qhspj")
 model = ExtResource("31_jxnve")
+
+[node name="NationalFlags" type="Node3D" parent="." unique_id=64709228]
+script = ExtResource("43_bftpa")
+flag_scene = ExtResource("23_vevsm")
+realm_flags = ExtResource("24_1wqa2")
+flag_scale = 8.0

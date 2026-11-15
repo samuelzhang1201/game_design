@@ -14,6 +14,8 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 - `scripts/map3d/guide/king_and_camps.md` — the independent king, field-camp stages, physical courier origins (`Map3DKing`, `Map3DUnitCamps`, `Map3DCourierPalace`, `Map3DLayerUnits`, `Map3DView`)
 - `scripts/map3d/guide/pivots.md` — pivots for any turn and each arm's provider and certificate (`Map3DPivotProvider`, `Map3DInfantryLocomotion`, `Map3DArcherLocomotion`, `Map3DRoyalPivot`, `Map3DCavalryLocomotion`)
 
+- `scripts/map3d/guide/national_flags.md` — realm textures, city roof standards and one existing standard bearer per admitted land unit (`Map3DNationalFlag`, `Map3DCityFlags`, `Map3DUnitStandard`, `Map3DStandardBearer`)
+
 ## Shape and ownership
 
 - **`Map3DContext` is what every piece shares** (repository, the build's `map3d_world` meta, camera and pose, terrain, live state, every scale). NO script here may touch the `Game` autoload — `map3d_view.gd` is the one exception (a test scans `scripts/map3d/*.gd` for `Game.`) — so a layer draws in the editor from a pack alone; orders live in `scripts/ui/`, the view only signals.

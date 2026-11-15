@@ -45,6 +45,7 @@ extends Node3D
 @export_group("")
 ## The aprons at the houses' feet (World/Aprons), fed every settlement shown; none, no aprons.
 @export var aprons: Map3DLayerAprons
+@export var national_flags: Map3DCityFlags
 
 ## Test seam: the baked houses, in place of the build's own houses.csv.
 var houses_override: Dictionary = {}
@@ -86,6 +87,7 @@ func bind(p_ctx: Map3DContext) -> void:
 	if not ctx.camera_moved.is_connected(_on_camera_moved):
 		ctx.camera_moved.connect(_on_camera_moved)
 	if aprons: aprons.bind(ctx, self)
+	if national_flags: national_flags.bind(ctx, self)
 
 
 ## Cut once per camera pose, never per frame — the rig's own ground target,
@@ -127,6 +129,7 @@ func set_preview(on: bool) -> void:
 		_built_at = Vector2.INF
 		Map3DPreview.clear_generated(self)
 		if aprons: aprons.clear()
+		if national_flags: national_flags.clear()
 	Map3DPreview.sync_viewport(self)
 
 
@@ -158,6 +161,7 @@ func build() -> void:
 	_built_at = Vector2.INF
 	_built = true
 	if aprons: aprons.clear()
+	if national_flags: national_flags.clear()
 	ctx.houses()
 	_wall_tints = Map3DHouses.tints_of(wall_tints)
 	_roof_tints = Map3DHouses.tints_of(roof_tints)
@@ -221,6 +225,7 @@ func refresh(camera_xz: Vector2) -> bool:
 		_transforms[type] = xforms
 		_variants[type] = picks
 	if aprons: aprons.show_burgs(shown, houses, _aabbs)
+	if national_flags: national_flags.sync(shown, houses)
 	return true
 
 
