@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://dwljj31tvtiqn"]
+
+[ext_resource type="Script" uid="uid://btvbjraguj5lp" path="res://scripts/map3d/map3d_national_flag.gd" id="1_lhfen"]
+[ext_resource type="Shader" uid="uid://bpe61n6mkgqjg" path="res://scripts/map3d/national_flag.gdshader" id="2_lepic"]
+[ext_resource type="Texture2D" uid="uid://b6q8t5gx6xhn7" path="res://assets/2D/flags/realms/kelvarn.png" id="3_14jgg"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6onvr"]
+albedo_color = Color(0.34901962, 0.25882354, 0.17254902, 1)
+roughness = 0.92
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_5t4ck"]
+top_radius = 0.018
+bottom_radius = 0.026
+height = 3.4
+radial_segments = 8
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_lhfen"]
+resource_local_to_scene = true
+render_priority = 0
+shader = ExtResource("2_lepic")
+shader_parameter/flag_texture = ExtResource("3_14jgg")
+shader_parameter/wave_amplitude = 0.12
+shader_parameter/sag = 0.14
+shader_parameter/cloth_width = 1.4
+shader_parameter/wave_speed = 1.8
+shader_parameter/wave_frequency = 8.0
+
+[sub_resource type="QuadMesh" id="QuadMesh_2s0xx"]
+size = Vector2(1.4, 0.933333)
+subdivide_width = 24
+subdivide_depth = 12
+
+[node name="NationalStandard" type="Node3D" unique_id=1844333390 node_paths=PackedStringArray("cloth")]
+script = ExtResource("1_lhfen")
+cloth = NodePath("Cloth")
+
+[node name="Pole" type="MeshInstance3D" parent="." unique_id=245799282]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7, 0)
+material_override = SubResource("StandardMaterial3D_6onvr")
+mesh = SubResource("CylinderMesh_5t4ck")
+
+[node name="Cloth" type="MeshInstance3D" parent="." unique_id=86167169]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72, 2.85, 0)
+material_override = SubResource("ShaderMaterial_lhfen")
+mesh = SubResource("QuadMesh_2s0xx")

@@ -37,6 +37,8 @@ const MARCH := "MARCH"
 @export var scout_lift_m := 4.0
 @export var scout_redrape_m := 150.0
 @export var scout_redrape_deg := 3.0
+@export var national_standard: PackedScene
+@export var realm_flags: ArtTable
 @export var battle_refusal_flag: PackedScene
 @export var battle_herald: PackedScene
 @export var battle_signal_height_ratio := 1.0
@@ -173,6 +175,8 @@ func _roster() -> void:
 		var piece := _piece_of(code)
 		if piece.is_empty():
 			continue
+		Map3DUnitStandard.sync(piece, Map3DNationalFlag.texture_for(ctx.repo, realm_flags,
+			String(reg.get("kingdom_code", ""))), national_standard)
 		live[code] = true
 		if not _shown_xz.has(code):
 			_shown_xz[code] = _target_xz(reg)

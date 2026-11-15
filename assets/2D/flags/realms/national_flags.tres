@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://ccaa78d4uuxsi"]
+
+[ext_resource type="Texture2D" uid="uid://b6q8t5gx6xhn7" path="res://assets/2D/flags/realms/kelvarn.png" id="1_0c2hi"]
+[ext_resource type="Texture2D" uid="uid://cs88x83nfaj8f" path="res://assets/2D/flags/realms/irongate.png" id="2_t50to"]
+[ext_resource type="Texture2D" uid="uid://cnc1x6hry2t5s" path="res://assets/2D/flags/realms/corwyn.png" id="3_oj38y"]
+[ext_resource type="Texture2D" uid="uid://cmoax1xgl14j2" path="res://assets/2D/flags/realms/farhold.png" id="4_2d1xr"]
+[ext_resource type="Texture2D" uid="uid://cfi0ut3ixu3lc" path="res://assets/2D/flags/realms/brackmoor.png" id="5_6hxm2"]
+[ext_resource type="Texture2D" uid="uid://b3p4quad8f5ka" path="res://assets/2D/flags/realms/yorwald.png" id="6_y6038"]
+[ext_resource type="Texture2D" uid="uid://cwvb2ir77k0ju" path="res://assets/2D/flags/realms/valmoor.png" id="7_wyjfx"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="8_a8rka"]
+
+[resource]
+script = ExtResource("8_a8rka")
+art = Dictionary[String, Resource]({
+"coast_realm": ExtResource("7_wyjfx"),
+"empire_realm": ExtResource("4_2d1xr"),
+"highland_realm": ExtResource("6_y6038"),
+"march_realm": ExtResource("2_t50to"),
+"neighbor_realm": ExtResource("5_6hxm2"),
+"player_realm": ExtResource("1_0c2hi"),
+"raider_realm": ExtResource("3_oj38y")
+})
