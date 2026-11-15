@@ -1,14 +1,10 @@
 @tool
 class_name Map3DLayerUnits
 extends Node3D
-## MILITARY's PIECES: the player's regiments as animated wargame models
-## standing on the ground (owner 2026-09-22, "把这两个兵棋人应用到游戏中去").
-## One .glb figure per configured fit group (at most ten per regiment),
-## each posed by its own AnimationPlayer — the one layer that cannot be a MultiMesh.
-## THE SIZE IS NOT THE MODEL'S SIZE: a miniature's, one world size at every
-## near zoom, with no mark over it. The view hides this layer in symbol mode. That rule,
-## the facing, seating, measuring and screen box are Map3DUnits, the pure half.
-## Takes everything from Map3DContext, never the Game autoload (a test scans).
+## Admitted regiments: one animated GLB per configured fit group (at most ten).
+## Each figure has its own AnimationPlayer; the view hides them in symbol mode.
+## Fixed miniature world size, facing, seating and hit boxes belong to Map3DUnits.
+## Uses Map3DContext; only the view may read the Game autoload (a test scans).
 
 @export var preview := false: set = set_preview  ## the regiments from the pack alone
 

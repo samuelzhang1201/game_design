@@ -19,6 +19,11 @@ chooses the first surviving group. No extra person, personnel change, moved slot
 new save field, or hidden-state query is involved. The existing model bounds and
 reference scale are measured before attaching its standard.
 
+The royal carrier's source gate pins the roster's flag helpers as executable
+dependencies. A decorated figure remains outside its unmodified native-MARCH
+proof domain: the scripted grip/standard must reject as `unproved_source_script`.
+Adding a flag does not grant or extend a locomotion certificate.
+
 `Map3DStandardBearer` modifies only the carrier's right arm and hand after its
 ordinary animation. ARP's independent stretch joints require explicit global
 joint placement. The pole's scene origin is one grip height below the right hand;

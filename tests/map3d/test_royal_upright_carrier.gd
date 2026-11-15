@@ -543,18 +543,33 @@ func test_shortcut_radius_box_touch_remains_unavailable() -> void:
 	assert_false(result.ok,"touching the shortcut comparison is not strict branch separation")
 	assert_eq(result.get("reason"),"native_shortcut_rounding_cut")
 
-func test_current_domain_rejects_stale_loaded_army_writer_and_recovers_after_restore() -> void:
+func test_standard_bearer_cannot_retain_the_unmodified_native_source_receipt() -> void:
+	var c := _carrier()
+	if c == null: return
+	var input := _royal_input()
+	add_child(input.child.node.get_parent())
+	assert_true(c.extract(input.ctx,input.child,input.model).ok)
+	var flags := load("res://assets/2D/flags/realms/national_flags.tres") as ArtTable
+	var scene := load("res://scenes/models/flags/national_standard.tscn") as PackedScene
+	Map3DUnitStandard.sync(input.child,flags.of("player_realm"),scene)
+	var rejected: Dictionary = c.extract(input.ctx,input.child,input.model)
+	assert_false(rejected.ok,"the grip changes loaded bones beyond native MARCH")
+	assert_eq(rejected.get("reason"),"unproved_source_script")
+	assert_false(rejected.has("packet"))
+
+func test_current_domain_rejects_stale_loaded_writers_and_recovers_after_restore() -> void:
 	var c := _carrier()
 	if c == null: return
 	var repo := SuiteData.repo()
 	assert_eq(c._domain_source(repo).status, "BOUND_GEOMETRIC_SUPERSET")
-	var path := "res://scripts/engine/army_system.gd"
-	var writer: GDScript = load(path)
-	var original := writer.source_code
-	writer.source_code = original + "\n# Deliberately stale loaded writer for the domain boundary test.\n"
-	var refused: Dictionary = c._domain_source(repo)
-	writer.source_code = original
-	assert_eq(refused.status, "UNAVAILABLE")
-	assert_eq(refused.get("reason"), "domain_source_changed")
-	assert_eq(refused.get("path"), path)
-	assert_eq(c._domain_source(repo).status, "BOUND_GEOMETRIC_SUPERSET")
+	for path: String in ["res://scripts/engine/army_system.gd",
+		"res://scripts/map3d/map3d_unit_standard.gd","res://scripts/map3d/map3d_national_flag.gd"]:
+		var writer: GDScript = load(path)
+		var original := writer.source_code
+		writer.source_code = original + "\n# Deliberately stale loaded writer for the domain boundary test.\n"
+		var refused: Dictionary = c._domain_source(repo)
+		writer.source_code = original
+		assert_eq(refused.status, "UNAVAILABLE")
+		assert_eq(refused.get("reason"), "domain_source_changed")
+		assert_eq(refused.get("path"), path)
+		assert_eq(c._domain_source(repo).status, "BOUND_GEOMETRIC_SUPERSET")
