@@ -1,0 +1,44 @@
+{
+ "arm": "cavalry",
+ "note": "LOCO-CAV-PROVIDER numeric check, NOT a certificate (LOCO-CERT-CAV certifies, after LOCO-CAV-MARCH). Provider Map3DCavalryLocomotion (the royal solver Map3DRoyalPivot.sample bound to the cavalry rig) through the shared Map3DPivotProvider shell; pivots leave and rejoin MARCH at 7/16 and the hold is MARCH frozen there (coordinator ruling 2026-11-11). Stances: MARCH lowest:2 (native, judged by LOCO-CAV-MARCH / LOCO-CERT-CAV), pivots lowest:3. turn_q 400000 placeholder; no policy row.",
+ "scene": "scenes/models/units/cavalry.tscn",
+ "provider": "scripts/map3d/map3d_cavalry_locomotion.gd",
+ "feet": {
+  "fl": [
+   "FrontHoof.L"
+  ],
+  "fr": [
+   "FrontHoof.R"
+  ],
+  "hl": [
+   "HindHoof.L"
+  ],
+  "hr": [
+   "HindHoof.R"
+  ]
+ },
+ "patch_band_m": 0.005,
+ "forward": [
+  0,
+  0,
+  -1
+ ],
+ "stride_m": 2.327,
+ "turn_q": 400000,
+ "entry_phase": 0.4375,
+ "stance": {
+  "MARCH": "lowest:2",
+  "PIVOT_LEFT": "lowest:3",
+  "PIVOT_RIGHT": "lowest:3"
+ },
+ "hold_clip": "MARCH",
+ "march_stop_phases": [
+  0.4375
+ ],
+ "march_start_phases": [
+  0.4375
+ ],
+ "hold_phases": [
+  0.4375
+ ]
+}

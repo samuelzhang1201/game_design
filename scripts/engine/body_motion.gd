@@ -590,13 +590,25 @@ static func _loco_duration(amount: int, rate: int, divisor: int) -> int:
 	var product := amount * rate
 	return product / divisor + (1 if product % divisor else 0)
 
+const LOCO_ENGINE_KEYS: Array[String] = ["digest", "turn_q", "contact_um", "radius_m", "clips", "all_turns"]
+const LOCO_CONSUMER_KEYS: Array[String] = ["march_stop_phases", "march_start_phases", "hold_clip", "hold_phases", "stride_m", "provider"]
+
+## The arm's admitted policy: the certificate's engine fields (canonical) when its balance rows and
+## certificate agree, else {}. Only the engine fields are returned and hashed into a plan.
 static func _loco_policy(repo: DataRepository, piece: String) -> Dictionary:
 	var turn: Variant = repo.balance.get("body_locomotion_" + piece + "_turn_q")
 	var contact: Variant = repo.balance.get("body_locomotion_" + piece + "_contact_um")
 	var raw: Variant = repo.unit_footprints.get(piece, {}).get("locomotion_certificate")
 	if not _loco_integer(turn) or turn <= 0 or _loco_duration(180000000, int(turn), LOCOMOTION_TURN) < 0 \
 		or not _loco_integer(contact) or contact <= 0 or not raw is Dictionary: return {}
-	if not _keys(raw, ["digest", "turn_q", "contact_um", "radius_m", "clips", "all_turns"]) \
+	var engine := {}
+	for key: String in LOCO_ENGINE_KEYS:
+		if raw.has(key): engine[key] = raw[key]
+	# The consumer's presentation fields ride along in the installed certificate; any other key refuses.
+	for key: Variant in raw.keys():
+		if not engine.has(key) and not LOCO_CONSUMER_KEYS.has(key): return {}
+	raw = engine
+	if not _keys(raw, LOCO_ENGINE_KEYS) \
 		or not raw.digest is String or not _digest(raw.digest) or not _loco_integer(raw.turn_q) \
 		or not _loco_integer(raw.contact_um) or raw.turn_q != turn or raw.contact_um != contact \
 		or not _loco_integer(raw.radius_m) or raw.radius_m <= 0 or raw.radius_m > LOCAL_LIMIT or raw.radius_m != repo.unit_footprints[piece].radius_m \

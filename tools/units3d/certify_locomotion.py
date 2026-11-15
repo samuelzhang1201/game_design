@@ -691,12 +691,19 @@ func run() -> void:
 '''
 
 
+# The data a certificate binds by hash, beside the scene/provider closure.
+HASHED_DATA = ('docs/reviews/cluster-formations/evidence/cf01/measurements.json', 'data/screens/map3d/balance.csv',
+               'data/screens/map3d/army_art.csv', 'data/army/unit_footprints.csv', 'data/army/balance.csv')
+# Never hashed: unit_locomotion.csv stores the certificates' digests, so binding it would be circular.
+UNHASHED = frozenset({'data/army/unit_locomotion.csv'})
+
+
 def closure(paths):
-    """res:// dependency closure of the scene (and provider), with .import sidecars."""
+    """res:// dependency closure of the scene (and provider), with .import sidecars; never UNHASHED."""
     seen, todo = set(), list(paths)
     while todo:
         rel = todo.pop()
-        if rel in seen or rel.startswith('.godot/'):
+        if rel in seen or rel in UNHASHED or rel.startswith('.godot/'):
             continue
         source = ROOT / rel
         if not source.is_file():
@@ -852,9 +859,7 @@ def main(argv=None):
     missing = check_coverage(dump, extra)
     if missing:
         raise SystemExit(f'sampling gap: {missing[:3]}')
-    for rel in ('docs/reviews/cluster-formations/evidence/cf01/measurements.json', 'data/screens/map3d/balance.csv',
-                'data/screens/map3d/army_art.csv',
-                'data/army/unit_footprints.csv', 'data/army/balance.csv'):
+    for rel in HASHED_DATA:
         inputs[rel] = sha(ROOT / rel)
     scale = arm_scale(config['arm'])
     cert = certificate(config, measure(dump, config, scale), scale, inputs, capture_sha, dump)

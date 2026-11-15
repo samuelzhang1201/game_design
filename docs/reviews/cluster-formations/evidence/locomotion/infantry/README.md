@@ -39,3 +39,7 @@ body and feet crops; an independent critic per round.
    +45 ≥ +90 > +180 > +1 µdeg ≈ −2°. Recorded, not blocking: near-zero turns still mark time
    in place (needed: the entry/exit MARCH pose has the left foot in swing); the +180 shield
    sweep is theatrical but clear of the body; the sword point comes near the forward boot.
+
+## Re-issued for LOCO-POLICY (2026-11-14)
+
+Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `data/army/balance.csv` (the new `body_locomotion_*` rows) and, for some arms, other hashed inputs had changed since the first issue. The status is still NUMERIC_PASS and the measured totals and bounds are unchanged; only the digest moved. The installed row is `data/army/unit_locomotion.csv`.

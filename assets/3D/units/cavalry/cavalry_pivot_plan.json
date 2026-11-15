@@ -1,0 +1,12 @@
+{
+ "note": "Map3DCavalryLocomotion (LOCO-CAV-PROVIDER), read by the royal solver Map3DRoyalPivot.sample; same keys and meaning as royal_pivot_plan.json. march_phase: the one MARCH phase a cavalry pivot leaves and rejoins MARCH at, which is also the hold pose (coordinator ruling 2026-11-11): key 7/16, the left fore and right hind down (-5.9, -6.3 mm), the right fore and left hind barely up (4.5, 10.8 mm). At 8/16 (three hooves down) the left hind is 151 mm up and flexed, and its swing to the stand dragged the toe through the planting band (pivot slide 196 mm); at 7/16 the pivots slide 15 mm. The other values are the royal piece's.",
+ "march_phase": 0.4375,
+ "step_deg": 15.0,
+ "lift_m": 0.06,
+ "support_m": 0.003,
+ "blend": 0.25,
+ "rider_root": "Saddle",
+ "lift_share": 0.4,
+ "patch_share": 0.8,
+ "patch_band_m": 0.005
+}

@@ -362,7 +362,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "bae35f5e277fe0db35e73e9ff62694e77255f0789b8ce3f991e706eb31e4638c",
+  "sha256": "e9e882ef837f421de277e5aefa3109a28847e748a9a8bf3ebffb727982965368",
   "uniform": 512
  },
  "config": {
@@ -395,6 +395,7 @@
   ],
   "note": "LOCO-CERT-ART. The artillery is the infantry's knight until the guns have their own model (army_models.tres binds it to infantry.tscn), so this is the infantry's provider and config at the artillery's footprint radius 875 and its own scale; stride_m 1.765 is the infantry's MARCH measurement, now the artillery row's too. Map3DInfantryLocomotion re-solves the coupled pivot plan for each grid turn. Pivots enter and leave MARCH at 25/28 only and the hold is MARCH frozen at 25/28 (owner ruling A, a consumer requirement). Stance comes from the certifier's per-foot planting band. turn_q 400000 is the contract's example value: a LOCO-POLICY row with another turn_q means re-running this certificate. Any real gun model voids it.",
   "patch_band_m": 0.005,
+  "phase_map": null,
   "provider": "scripts/map3d/map3d_infantry_locomotion.gd",
   "radius_m": 875,
   "scene": "scenes/models/units/infantry.tscn",
@@ -425,8 +426,9 @@
   "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "0b311e0f6b2b2759b6cd25ef2fb644f10db26cac49e893725e6bc3730a6e0a3e",
   "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg.import": "e3202dc6386dc16015feb870d65b5a0c7accc35ecb758b57de6f209d835055e6",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "b47bf73d4c4dac10bd9ae1fde6b8de6971dc357aa553b0348038ff1b59bc146f",
-  "data/army/balance.csv": "c91faaef284442c03ae8e36d1269ec4ad0c401536d90c26d08ca857b1e559ae3",
-  "data/army/unit_footprints.csv": "3f4b06c876ac881377d9a4e387ffb89b7f9fdfad6e5d21d714dea6b84d386fc7",
+  "data/army/balance.csv": "09c376c4f530a4f30217e600f08f705ffa8919b8926b58d552c5c13166e10700",
+  "data/army/unit_footprints.csv": "5d7ebb28d0942802e698284eb42817203d66100ad607debc6cbda895485412de",
+  "data/screens/map3d/army_art.csv": "269f416f0c3d6a12d182c62bc29986dd65879cc036c47e2c2b351615a6d89ddf",
   "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
   "scenes/models/units/infantry.tscn": "69256e86dfd2d93050522bdcef422afa3ce3d4c2472d063752b7b085da848921",
@@ -444,11 +446,11 @@
    "MARCH"
   ],
   "contact_um": 22769,
-  "digest": "987ca93147a0b28182379b9fb0fe7cbf70fbfbd09b15c34eaf62d94721fb1097",
+  "digest": "0d3e9ef3e53361cd62d11669a306c2a15f975c163e9e88f4bdaa1df207b3b50d",
   "radius_m": 875,
   "turn_q": 400000
  },
- "payload_sha256": "987ca93147a0b28182379b9fb0fe7cbf70fbfbd09b15c34eaf62d94721fb1097",
+ "payload_sha256": "0d3e9ef3e53361cd62d11669a306c2a15f975c163e9e88f4bdaa1df207b3b50d",
  "report": {
   "bounds_um": {
    "contact": 22769,
@@ -1388,6 +1390,6 @@
  },
  "schema": 1,
  "status": "NUMERIC_PASS",
- "tool_sha256": "b5e098eef99072a42143cd9347f102d3d4156cf89d7caf937901c4b7b0984db9",
+ "tool_sha256": "e3b2de36f443b4d3b5a0fab1bee396433b6c951473f38be03922561bf3960231",
  "visual_review": "PENDING: R-C requires the real-window review after this numeric pass"
 }

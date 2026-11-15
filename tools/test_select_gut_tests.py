@@ -192,13 +192,20 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(len(body_batches), 3)
         self.assertEqual(len(set(body_batches.values())), 3)
         self.assertEqual(len(files), len(set(files)))
+        manifest = json.loads(Path('tests/categories.json').read_text())['categories']
         for job in jobs:
             if job['category'] != 'engine-military':
-                self.assertEqual(job['batch'], 1)
+                count = manifest[job['category']].get('ci_batches', 1)
+                self.assertLessEqual(job['batch'], count)
                 selected = json.loads(subprocess.check_output([
                     'python3', 'tools/select_gut_tests.py', '--category', job['category'],
-                    '--batch', '1']))
-                self.assertEqual(selected['files'], self.catalog[job['category']])
+                    '--batch', str(job['batch'])]))
+                self.assertEqual(selected['files'], self.catalog[job['category']][job['batch'] - 1::count])
+        for name, spec in manifest.items():  # every batched category's batches cover it exactly once
+            count = spec.get('ci_batches', 1)
+            batches = [job['batch'] for job in jobs if job['category'] == name]
+            if batches:
+                self.assertEqual(batches, list(range(1, count + 1)), name)
         self.assertNotIn('simulation', [job['category'] for job in jobs])
 
     def test_real_runner_batch_count_offline_and_failure_propagation(self):

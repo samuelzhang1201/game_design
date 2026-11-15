@@ -996,3 +996,48 @@ func test_real_frozen_boundary_plan_commit_and_json_retry() -> void:
 	tamper.moves[0].path_m.back()[0] += 1
 	assert_eq(BodyMotion.commit(f.repo, restored, tamper, boundary).status, "error")
 	assert_eq(restored.to_dict(), after)
+
+const ARMS: Array[String] = ["infantry", "archers", "cavalry", "artillery", "royal"]
+
+## LOCO-POLICY: unit_locomotion.csv and the balance rows admit every arm, and the installed row is
+## exactly its certificate (engine block, consumer requirements, stride and provider).
+func test_installed_policies_are_the_certificates() -> void:
+	var repo := SuiteData.repo()
+	for arm: String in ARMS:
+		var path := "res://docs/reviews/cluster-formations/evidence/locomotion/%s/certificate.json" % arm
+		var certificate: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
+		assert_eq(certificate.status, "NUMERIC_PASS", arm)
+		var policy := BodyMotion._loco_policy(repo, arm)
+		assert_eq(policy, BodyMotion._canonical(certificate.locomotion_certificate), arm + " engine block")
+		var installed: Dictionary = repo.unit_footprints[arm].locomotion_certificate
+		for key: String in ["march_stop_phases", "march_start_phases", "hold_clip", "hold_phases"]:
+			assert_eq(installed[key], certificate.consumer_requirements[key], "%s %s" % [arm, key])
+		assert_eq(installed.stride_m, float(certificate.config.stride_m), arm + " stride")
+		assert_eq(installed.provider, "res://" + String(certificate.config.provider), arm + " provider")
+		assert_eq(int(repo.balance["body_locomotion_%s_turn_q" % arm]), int(certificate.locomotion_certificate.turn_q))
+		assert_eq(int(repo.balance["body_locomotion_%s_contact_um" % arm]), int(certificate.locomotion_certificate.contact_um))
+
+## The consumer's fields ride along without entering the engine's policy (or its plan hash);
+## any other extra key, or a balance row that disagrees, refuses the arm.
+func test_policy_admits_consumer_fields_only() -> void:
+	var repo := SuiteData.repo()
+	var installed: Dictionary = repo.unit_footprints.infantry.locomotion_certificate
+	assert_eq(BodyMotion._loco_policy(repo, "infantry").keys().size(), 6)
+	assert_false(BodyMotion._loco_policy(repo, "infantry").has("stride_m"))
+	installed.extra = 1
+	assert_true(BodyMotion._loco_policy(repo, "infantry").is_empty(), "unknown key refuses")
+	installed.erase("extra")
+	repo.balance.body_locomotion_infantry_contact_um += 1
+	assert_true(BodyMotion._loco_policy(repo, "infantry").is_empty(), "balance row must equal the certificate")
+
+
+func test_locomotion_row_refuses_typos() -> void:
+	var good := {"arm": "archers", "digest": "d", "turn_q": "400000", "contact_um": "1", "radius_m": "2",
+		"clips": "MARCH", "all_turns": "true", "march_stop_phases": "0.0", "march_start_phases": "0.0",
+		"hold_clip": "MARCH", "hold_phases": "0.0", "stride_m": "1.5", "provider": "p.gd"}
+	assert_eq(DataRepository._locomotion_row(good).provider, "res://p.gd")
+	assert_eq(DataRepository._locomotion_row(good).hold_phases, [0.0])
+	for col: String in ["hold_phases", "stride_m", "turn_q", "all_turns"]:
+		var bad := good.duplicate()
+		bad[col] = "abc"
+		assert_true(DataRepository._locomotion_row(bad).is_empty(), "%s typo refuses" % col)

@@ -145,6 +145,7 @@ func test_hand_computed_world_points_and_facing() -> void:
 	var repo := SuiteData.repo()
 	repo.map_info["distance_unit"] = "km"
 	repo.map_info["distance_scale"] = "0.01"
+	repo.balance["map3d_battle_walk_s"] = 0.0   # the points and facing themselves, not the walk to them
 	var ctx := Map3DContext.new(repo, {"pack_origin": [-100, 50], "m_per_px": 2.0})
 	ctx.height_fn = func(xz: Vector2) -> float: return xz.x * 0.1
 	var reg: Dictionary = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))[0]

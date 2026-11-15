@@ -2,7 +2,7 @@
 
 `certificate.json` is the output of main's `tools/units3d/certify_locomotion.py` (per-foot planting band, #291)
 for `certificate.config.json`. It runs on main's assets, with the re-authored archer MARCH from #299
-(`archers.glb` `f7112ff7…`), and its status is **NUMERIC_PASS**. Its digest (`25b74e24…`) binds the tool,
+(`archers.glb` `f7112ff7…`), and its status is **NUMERIC_PASS**. Its digest (`2f3d0aab…`) binds the tool,
 the config and every input: scene, GLB, textures and the provider.
 
 | Quantity | Total (sampled + margin) | Bound |
@@ -86,3 +86,7 @@ Three points were recorded, none blocking:
   map-zoom sheets are in `march-reauthor/`.
 
 The MARCH foot views and map-zoom sheets are in `march-reauthor/` (#299).
+
+## Re-issued for LOCO-POLICY (2026-11-14)
+
+Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `data/army/balance.csv` (the new `body_locomotion_*` rows) and, for some arms, other hashed inputs had changed since the first issue. The status is still NUMERIC_PASS and the measured totals and bounds are unchanged; only the digest moved. The installed row is `data/army/unit_locomotion.csv`.

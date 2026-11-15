@@ -64,13 +64,97 @@ static func sample(ctx: Map3DContext, code: String) -> Dictionary:
 	result["key"].append_array([version, size])
 	return result
 
-static func build(repo: DataRepository, reg: Dictionary, sampled: Dictionary) -> Dictionary:
+const FILE_OUT := 0.4  ## the last lane sets off this share of the walk after the first
+
+## `starts` (starts_of the piece it replaces): where each group's figure walks in from.
+static func build(repo: DataRepository, reg: Dictionary, sampled: Dictionary, starts: Array = []) -> Dictionary:
 	var piece := {"node": Node3D.new(), "layout": "physical_groups", "groups": [], "anims": [],
 		"figures": 0, "height_m": 0.0, "extent": Vector2.ZERO, "half_w_m": 0.0,
 		"model": MapObjects.army_piece(repo, reg), "candidate_bodies": sampled.get("mode", "") == "bodies"}
 	(piece["node"] as Node3D).top_level = true
 	sync(repo, reg, piece, sampled)
+	if not starts.is_empty() and not piece["candidate_bodies"]:
+		piece["starts"] = starts   # paired to the groups at their first placing (lanes)
 	return piece
+
+
+## Which start each target walks from, per target: both sorted along the
+## battle front (`across`) and paired in order, so the lanes never cross and
+## the figures do not knot up (critic 2026-11-14); fewer starts are shared
+## out. The lanes FILE out: the rider furthest along the unit's way sets off
+## first, each behind him `delay` (a share of the walk) later, so neighbours
+## turned to walk never overlap nose to tail, and none step off as clones.
+static func lanes(starts: Array, targets: Array, across: Vector2) -> Array:
+	var along := func(rows: Array) -> Array:
+		var order := range(rows.size())
+		order.sort_custom(func(a: int, b: int) -> bool: return (rows[a]["xz"] as Vector2).dot(across) < (rows[b]["xz"] as Vector2).dot(across))
+		return order
+	var from: Array = along.call(starts)
+	var to: Array = along.call(targets)
+	var out: Array = []
+	out.resize(targets.size())
+	var way := Vector2.ZERO   # the unit's mean way, start to target
+	for k in to.size():
+		way += (targets[to[k]]["xz"] as Vector2) - (starts[from[k * starts.size() / maxi(to.size(), 1)]]["xz"] as Vector2)
+	var order := range(to.size())   # lanes, the one furthest along the way first
+	var lead := func(k: int) -> float: return (starts[from[k * starts.size() / maxi(to.size(), 1)]]["xz"] as Vector2).dot(way) \
+		+ (targets[to[k]]["xz"] as Vector2).dot(way) * 0.001
+	order.sort_custom(func(a: int, b: int) -> bool: return lead.call(a) > lead.call(b))
+	for rank in order.size():
+		var k: int = order[rank]
+		var start: Dictionary = (starts[from[k * starts.size() / maxi(to.size(), 1)]] as Dictionary).duplicate()
+		start["delay"] = FILE_OUT * rank / maxf(order.size() - 1, 1.0)
+		out[to[k]] = start
+	return out
+
+
+## Where an ordinary piece's figures stand as drawn, [{xz, yaw}] in figure order; [] for one never seated.
+static func starts_of(old: Dictionary) -> Array:
+	if not old.has("seat_key") or not old.has("figs"):
+		return []
+	return (old["figs"] as Array).map(func(fig: Node3D) -> Dictionary:
+		return {"xz": Vector2(fig.global_position.x, fig.global_position.z), "yaw": fig.global_rotation.y})
+
+
+## A figure on its walk from where it stood to a new saved point, {xz, yaw} at
+## share `t` 0..1: it turns into its way over the first fifth and out to its
+## saved facing over the last; one already on its point only turns.
+static func eased(from_xz: Vector2, from_yaw: float, to_xz: Vector2, to_yaw: float, t: float, stand_deg := 0.0) -> Dictionary:
+	if t >= 1.0:
+		return {"xz": to_xz, "yaw": to_yaw}
+	t = maxf(t, 0.0)
+	if from_xz.is_equal_approx(to_xz):
+		return {"xz": to_xz, "yaw": lerp_angle(from_yaw, to_yaw, t)}
+	var way := Map3DUnits.facing_yaw(to_xz - from_xz, stand_deg)
+	return {"xz": from_xz.lerp(to_xz, t), "yaw": lerp_angle(from_yaw, way, t / 0.2) if t < 0.2
+		else (way if t < 0.8 else lerp_angle(way, to_yaw, (t - 0.8) / 0.2))}
+
+
+## The walks' own clock: true (and `delta` counted) while a figure of `piece` is on its way.
+static func tick(piece: Dictionary, delta: float) -> bool:
+	if not piece.get("easing", false):
+		return false
+	piece["clock"] = float(piece.get("clock", 0.0)) + delta
+	return true
+
+
+## Where a group's figure is DRAWN now: on its saved point, or walking to it
+## over `map3d_battle_walk_s` from where it last stood (owner 2026-11-14:
+## 进入对峙的动画非常突兀). View-only; the saved point is never moved.
+static func _walk(repo: DataRepository, piece: Dictionary, child: Dictionary, xz: Vector2, yaw: float) -> Dictionary:
+	var to := {"xz": xz, "yaw": yaw}
+	var at: Dictionary = child.get("at", to)
+	var walk: Dictionary = child.get("walk", {})
+	if walk.get("to", {}) != to:
+		walk = {"from": at, "to": to, "t0": float(piece.get("clock", 0.0))}
+		child["walk"] = walk
+	var walk_s := repo.bal("map3d_battle_walk_s")
+	var wait := float(walk["from"].get("delay", 0.0))   # a lane sets off this share of the walk late
+	var t := 1.0 if walk_s <= 0.0 or walk["from"]["xz"] == xz and walk["from"]["yaw"] == yaw \
+		else ((float(piece.get("clock", 0.0)) - float(walk["t0"])) / walk_s - wait) / (1.0 - wait)
+	child["at"] = eased(walk["from"]["xz"], walk["from"]["yaw"], xz, yaw, t, child["stand_deg"]) if t < 1.0 else to
+	child["walking"] = t < 1.0
+	return child["at"]
 
 ## Optional saved slots retain their model and animation player across removal/refresh.
 static func sync(repo: DataRepository, reg: Dictionary, piece: Dictionary, sampled: Dictionary) -> void:
@@ -130,18 +214,27 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 	var has_box := false
 	var extent := Vector2.ZERO
 	var height := 0.0
+	var easing := false
+	if piece.has("starts"):
+		var targets: Array = piece["groups"].map(func(group: Dictionary) -> Dictionary: return _target(ctx, piece, group))
+		var heading := WarFront.facing_vector(int(piece["facing_deg"]))
+		var paired := lanes(piece["starts"], targets, Vector2(-heading.y, heading.x))
+		for i in paired.size():
+			piece["groups"][i]["piece"]["at"] = paired[i]
+		piece.erase("starts")
 	for group: Dictionary in piece["groups"]:
 		var child: Dictionary = group["piece"]
 		var node: Node3D = child["node"]
-		var pack_px := Vector2(group["x_m"], group["y_m"]) / float(ArmySystem.metres_per_pack_px(repo)) if piece.get("candidate_bodies", false) \
-			else ArmySystem.metres_to_pack(repo, Vector2i(group["x_m"], group["y_m"]))
-		var xz := ctx.to_world(pack_px)
 		var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
 			child["reference_height_m"], child["size"])
-		# A v2 sample carries the committed fractional yaw (pack microdegrees); else the saved facing.
-		var heading := Vector2.from_angle(deg_to_rad(float(group.yaw_udeg) / BodyMotion.LOCOMOTION_Q)) if group.has("yaw_udeg") \
-			else WarFront.facing_vector(int(group.get("facing_deg", piece["facing_deg"])))
-		var yaw := Map3DUnits.facing_yaw(heading, child["stand_deg"])
+		var saved := _target(ctx, piece, group)
+		var xz: Vector2 = saved["xz"]
+		var yaw: float = saved["yaw"]
+		if not piece.get("candidate_bodies", false):
+			var drawn := _walk(repo, piece, child, xz, yaw)
+			xz = drawn["xz"]
+			yaw = drawn["yaw"]
+			easing = easing or bool(child["walking"])
 		var y := ctx.height_at(xz)
 		for offset: Vector2 in Map3DUnits.footprint(child["extent"], yaw, k, int(repo.bal("map3d_unit_seat_ring"))):
 			y = maxf(y, ctx.height_at(xz + offset))
@@ -173,8 +266,20 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 	piece["extent"] = extent
 	piece["half_w_m"] = maxf(extent.x, extent.y)
 	piece["ground"] = root.position
+	piece["easing"] = easing
 	Map3DUnits.show_piece(piece, not (piece["groups"] as Array).is_empty())
 	return box
+
+## A group's saved point in world XZ and its saved facing as a yaw.
+static func _target(ctx: Map3DContext, piece: Dictionary, group: Dictionary) -> Dictionary:
+	var repo := ctx.repo
+	var pack_px := Vector2(group["x_m"], group["y_m"]) / float(ArmySystem.metres_per_pack_px(repo)) if piece.get("candidate_bodies", false) \
+		else ArmySystem.metres_to_pack(repo, Vector2i(group["x_m"], group["y_m"]))
+	# A v2 sample carries the committed fractional yaw (pack microdegrees); else the saved facing.
+	var heading := Vector2.from_angle(deg_to_rad(float(group.yaw_udeg) / BodyMotion.LOCOMOTION_Q)) if group.has("yaw_udeg") \
+		else WarFront.facing_vector(int(group.get("facing_deg", piece["facing_deg"])))
+	return {"xz": ctx.to_world(pack_px), "yaw": Map3DUnits.facing_yaw(heading, group["piece"]["stand_deg"])}
+
 
 static func evidence(piece: Dictionary) -> Array:
 	var out: Array = []

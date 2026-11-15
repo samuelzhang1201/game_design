@@ -6,8 +6,8 @@
 script = ExtResource("1_k4oyw")
 scene_path = "res://scenes/models/units/royal.tscn"
 source_hashes = Dictionary[String, String]({
-"res://assets/3D/units/royal/royal.glb": "265cefc8aabb9860b7ad18b036d158fd255943b96127fdead127574ec349fe0f",
-"res://assets/3D/units/royal/royal.glb.import": "5c17fddf7820092f51bdafa47e9c80eb614f98f899316db040aaa89fabde4f7c",
+"res://assets/3D/units/royal/royal.glb": "93c66032437fc27ec2688ae498759ea9942ac40e2d3c23102963ef71c9d9125a",
+"res://assets/3D/units/royal/royal.glb.import": "07b6d67c710ecbcabb271b8ff2c17d411ad222e51eab946751b6bb73ce400c23",
 "res://scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
 "res://tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
 })
@@ -30,6 +30,7 @@ provenance = {
 "visual/sequence-lowland/manifest.json": "cb8b63d1f7a6b47c948a0d07bec369d49db36a6828531c68711c65bdeb271840"
 },
 "joint_limits": "UNRESOLVED: diagnostic PI limits are not anatomical authorization.",
+"march_reauthored": "Owner ruling R-J 2026-11-13 (LOCO-ROY-MARCH): the MARCH hoof chains were re-keyed (tools/units3d/royal_install/march_reauthor.gd, march_transplant.py; GLB 265cefc8... -> 93c66032..., import fps 30 -> 120). The observations, adverse values and evidence_sha256 here are of the MARCH BEFORE it, kept as its record; the re-keyed clip is measured by tools/units3d/certify_locomotion.py (docs/reviews/cluster-formations/evidence/locomotion/royal/march-reauthor/).",
 "native_probe_precision": "Finite original-precision equivalence, not a continuous interpolation bound or motion certificate.",
 "physical_budget": "UNRESOLVED: contact_um, turn_q and capture/skinning/terrain/arithmetic uncertainties absent. Reconstruction EPS is not a budget.",
 "retained_20k_blend_sha256": "7f506320d1df4a5a4ae82c456832691d78dfa07bc6fd359c22e43e914e321f8d",
@@ -583,4 +584,4 @@ observations = {
 support_intervals = Array[Dictionary]([])
 airborne_intervals = Array[Dictionary]([])
 contact_authority = "UNRESOLVED"
-calibration_sha256 = "aa82d08948b58de39c09ef97cf3e86ce4126892fa2d7a47f7f8c001ffb02fdd2"
+calibration_sha256 = "395f83711a48b4ba55c79b2b32d92c15526876f7582aa3390919c97af00ade2d"

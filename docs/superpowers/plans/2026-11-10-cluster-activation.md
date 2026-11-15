@@ -255,7 +255,7 @@ VR = needs real-window visual review (`visual-review` skill, local session). OR 
 | LOCO-CERT-CAV | Certify cavalry | CAV-PHASE, CERT-TOOL | cavalry evidence | S | other certs | VR |
 | LOCO-ROY-PROVIDER | Royal MARCH<->pivot transition provider from arbitrary native phase (PHASE/JETS/CARRIER/BOUNDARY/R2 collapsed into one step under R-C; 5-6 PRs without it); R bump if the envelope exceeds 749 | R0 | royal-boundary-phase-contract, #235 | M (L without R-C) | other arms | VR |
 | LOCO-CERT-ROY | Certify royal | ROY-PROVIDER, CERT-TOOL | royal evidence | S | other certs | VR |
-| LOCO-POLICY | Install `turn_q` + `contact_um` rows per arm in `data/army/balance.csv`, bound to certificate digests (5 tiny serial PRs) | each CERT, LOCO-MARCH (merged) | none | S x5 | - | - |
+| LOCO-POLICY | Install `turn_q` + `contact_um` rows per arm in `data/army/balance.csv` and each certificate in the new `data/army/unit_locomotion.csv` (replaces the contract's "no new table": no source.json exists, data/ is CSV-only, and unit_footprints.csv is hashed by every certificate); one PR for all five | each CERT, LOCO-MARCH (merged) | none | S | - | - |
 | CF04c-CONSUMER | Rework #201 into the v2 consumer: stop-pivot-move timeline, PIVOT_LEFT/RIGHT selection, `sample_locomotion_candidate`; resolves R1 (no transverse walking with fixed facing) | R0 (handover), LOCO-MARCH | #201 (render consumers, test, fixture) | M | everything above | - |
 | CF04c-VISUAL | Real-window near/far, pause/1x/4x, crossing/turn and FPS acceptance with the real policies | CONSUMER, LOCO-POLICY (all 5) | #201 fixture | M | engine branch | VR |
 

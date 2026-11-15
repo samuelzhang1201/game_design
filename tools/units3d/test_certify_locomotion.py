@@ -4,7 +4,10 @@ import copy
 import hashlib
 import json
 import math
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
 import numpy as np
 
@@ -110,10 +113,9 @@ class MarchTravel(unittest.TestCase):
             with self.assertRaises(ValueError):
                 cert.march_travel(bad, 1.0)
 
-    def test_cavalry_reads_its_army_art_map(self):
-        m = cert.army_phase_map('cavalry')
-        self.assertEqual(m[0], [0.0, 0.0])
-        self.assertEqual(m[-1][0], 1.0)
+    def test_an_arm_without_a_map_reads_none(self):
+        # the re-authored cavalry MARCH (LOCO-CAV-MARCH) is paced by stride_m, like the infantry
+        self.assertIsNone(cert.army_phase_map('cavalry'))
         self.assertIsNone(cert.army_phase_map('infantry'))
 
 
@@ -231,6 +233,17 @@ class Pieces(unittest.TestCase):
         for rel in ('scripts/map3d/map3d_infantry_pivot.gd', 'scripts/map3d/guide/infantry_pivot.md',
                     'assets/3D/units/infantry/infantry_pivot_plan.json'):
             self.assertIn(rel, files)
+
+    def test_unit_locomotion_csv_is_never_hashed(self):
+        # It stores the certificates' digests: binding it would make every certificate circular.
+        self.assertNotIn('data/army/unit_locomotion.csv', cert.HASHED_DATA)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'data/army').mkdir(parents=True)
+            (root / 'data/army/unit_locomotion.csv').write_text('arm\n')
+            (root / 'p.gd').write_text('const T = "res://data/army/unit_locomotion.csv"\n')
+            with mock.patch.object(cert, 'ROOT', root):
+                self.assertEqual(cert.closure(['p.gd']), ['p.gd'])
 
 
 class Fixture(unittest.TestCase):

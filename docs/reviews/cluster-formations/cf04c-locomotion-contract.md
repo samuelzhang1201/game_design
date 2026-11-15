@@ -485,8 +485,14 @@ parallel work.
    digest field itself; define the signed source payload before certification
    so binding does not recursively invalidate itself. Preserve evidence of the
    certification inputs and rerun affected policy acceptance. These steps
-   serialize on the CSV/test file, not five simultaneous claims. No new table,
-   data/tables.csv or footprint edit is needed.
+   serialize on the CSV/test file, not five simultaneous claims. Amended at
+   LOCO-POLICY (2026-11-14, coordinator ruling): the five landed as one step, and
+   the certificates are installed through ONE new table, `data/army/unit_locomotion.csv`
+   (registered in data/tables.csv), loaded into each footprint's
+   `locomotion_certificate`. The per-arm `source.json` no longer exists; data/ holds
+   CSV only; and `unit_footprints.csv` is hashed whole by every certificate, so a
+   footprint edit would void all five. The certifier never hashes the new table,
+   which stores the digests.
 6. `LOCO-CONSUMER`: after LOCO-MARCH and all five policies/certificates, and
    **only after the PR201 registration blocker above is legally resolved**.
    Exact proposed files are `scripts/map3d/map3d_battle_groups.gd`,
