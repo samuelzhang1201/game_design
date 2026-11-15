@@ -107,3 +107,13 @@ func test_distant_conquest_does_not_hide_city_flag_after_zooming_back() -> void:
 	flags._process(0.0)
 	assert_true(flags.visible)
 	assert_true((flags._flags[code] as Node3D).visible, "admitted flag returns without panning")
+
+func test_same_realm_flags_share_the_cloth_material() -> void:
+	var scene := load("res://scenes/models/flags/national_standard.tscn") as PackedScene
+	var flags := load("res://assets/2D/flags/realms/national_flags.tres") as ArtTable
+	var first := scene.instantiate() as Map3DNationalFlag
+	var second := scene.instantiate() as Map3DNationalFlag
+	add_child_autofree(first); add_child_autofree(second)
+	first.set_texture(flags.of("player_realm"))
+	second.set_texture(flags.of("player_realm"))
+	assert_same(first.cloth.material_override, second.cloth.material_override)

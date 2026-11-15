@@ -5,6 +5,7 @@ extends SkeletonModifier3D
 @export var grip_height := 1.05
 var standard: Map3DNationalFlag
 var figure: Node3D
+var animation: AnimationPlayer
 var _hand := -1
 var _upper := -1
 var _forearm := -1
@@ -28,6 +29,7 @@ static func _bone(skel: Skeleton3D, names: Array) -> int:
 func _process_modification() -> void:
 	var skel := get_skeleton()
 	if skel == null or _hand < 0 or not is_instance_valid(standard): return
+	if not standard.is_visible_in_tree() or (animation != null and not animation.active): return
 	if _upper >= 0 and _forearm >= 0:
 		_hold(skel)
 	for bone: int in _weapons:

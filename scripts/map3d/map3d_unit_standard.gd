@@ -32,6 +32,7 @@ static func sync(piece: Dictionary, texture: Texture2D, scene: PackedScene) -> v
 		old = Map3DStandardBearer.new()
 		old.name = "StandardBearerGrip"
 		old.figure = fig
+		old.animation = Map3DUnits.find_anim(fig)
 		old.standard = standard
 		skel.add_child(old)
 		piece["standard_bearer"] = old
