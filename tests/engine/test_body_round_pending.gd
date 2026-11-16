@@ -185,3 +185,34 @@ func test_readiness_holds_a_law_barred_attack() -> void:
 	var result := _plan(f, f.ready)
 	assert_eq(result.status, "complete", result.reason)
 	if result.candidate != null: assert_eq(result.candidate.battles[0].pending_round.costs, [])
+
+func test_an_uncommitted_reserve_adds_no_attack_power() -> void:
+	# The attacking enemy sits in reserve with no task: like production side_power, its side
+	# adds no power (odds 0 against the holding crown unit) and pays no attack food.
+	var f := _ready_world()
+	var reserved := UnitBodies._copy(f.ready)
+	reserved.battles[0].reserves = {f.enemy: {"reason": "Held back"}}
+	BodyBattle._seal_private(f.repo, reserved)
+	# The reserve changes the basis: readiness must be re-earned, so plan from a fresh ready day.
+	assert_eq(_plan(f, reserved).status, "error", "a reserve set after readiness changes the basis")
+	var helper: GutTest = load("res://tests/engine/test_body_battle_motion.gd").new()
+	var g: Dictionary = helper.call("_world", 1000)
+	UnitBodies._entry(g.state, g.enemy).supplies = 1000000
+	var state: GameState = g.engine.begin_body_battle_candidate(g.state).candidate
+	state = helper.call("_step", g, state, "complete")
+	state = helper.call("_step", g, state, "complete")
+	var field: Dictionary = state.battles[0]
+	var enemy_side := "att" if g.enemy in field.att else "def"
+	field.actions[enemy_side] = {"kind": "attack", "reason": "Received advance plan"}
+	field.reserves = {g.enemy: {"reason": "Held back"}}
+	BodyBattle._seal_private(g.repo, state)
+	state = helper.call("_step", g, state, "blocked")
+	state = helper.call("_acknowledge", g, state)
+	state = helper.call("_step", g, state, "blocked")
+	helper.free()
+	var result := BodyBattleRounds.plan_candidate(g.repo, state, int(state.battles[0].id), BodyBattleMotion._boundary(state))
+	assert_eq(result.status, "complete", result.reason)
+	if result.candidate == null: return
+	var pending: Dictionary = result.candidate.battles[0].pending_round
+	assert_eq(pending[enemy_side + "_power"], 0)
+	assert_eq(pending.costs, [])

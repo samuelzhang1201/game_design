@@ -195,8 +195,10 @@ current queued round-ready field once. It admits the frozen readiness (the
 whole-world validator's frozen-round deferral after every raw and endpoint check),
 requires an unchanged `body_round.basis` and its closed motion, then works on a
 private probe without the envelope (resealed) so the physical queries can run.
-Attacking units contribute `BattleSystem.candidate_power`, the others the full
-defence chain, with the existing non-contact factors (height, defence stance and
+Every participant's live `unit_action` must equal its frozen action (else error;
+the queries never use a reselected one). Attacking units contribute
+`BattleSystem.candidate_power` (an uncommitted reserve adds none, as in
+`side_power`) and pay the attack food once each, the others the full defence chain, with the existing non-contact factors (height, defence stance and
 camp, events, frozen order). One `rng.randi_range(0, 999)` gives the roll, then
 `odds_permille`, `eff_permille` and `tier_of`; every participant's rate and
 morale exposure come from `candidate_sources` / `candidate_context`. The

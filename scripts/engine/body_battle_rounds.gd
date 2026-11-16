@@ -46,12 +46,19 @@ static func plan_candidate(repo: DataRepository, source: GameState, battle_id: i
 	var probe_boundary := BodyBattleMotion._boundary(probe)
 	var field := UnitBodies._battle(probe, battle_id)
 	var actions: Dictionary = battle.body_round.unit_actions
+	# The physical queries derive actions live; they must equal the frozen ones or nothing runs.
+	for side: String in BattleSystem.SIDES:
+		for code: String in field[side]:
+			if BattleSystem.unit_action(repo, probe, field, code) != actions.get(code, {}):
+				return _result("error", "Live action diverges from the frozen action: " + code)
 	var powers := {"att": 0, "def": 0}
 	var costs: Array = []
 	for side: String in BattleSystem.SIDES:
 		var enemies: Array = field["def" if side == "att" else "att"]
 		for code: String in field[side]:
 			var attacking: bool = actions.get(code, {}).get("kind", "") == "attack"
+			# As production side_power: an uncommitted reserve's attack adds no power.
+			if attacking and field.get("reserves", {}).has(code) and String(actions[code].get("task_id", "")) == "": continue
 			var factors := _factors(repo, probe, field, code, attacking, enemies, actions.get(code, {}))
 			var power: Dictionary = BattleSystem.candidate_power(repo, probe, battle_id, code, true, factors, probe_boundary) \
 				if attacking else BattleStrength.unit(repo, probe, code, false, factors)
