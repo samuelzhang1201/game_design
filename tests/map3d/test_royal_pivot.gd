@@ -23,6 +23,9 @@ func before_all() -> void:
 	_rest = bound.rest
 	_patches = bound.patches
 	_stand = bound.stand
+	# As the provider seeks it: from the rest pose after a PIVOT clip (MARCH lacks some constant tracks).
+	_sk.reset_bone_poses()
+	Shell.seek(_player, _sk, "PIVOT_RIGHT", 0.0)
 	_march = _native("MARCH", Provider.plan().march_phase)
 
 
@@ -200,12 +203,28 @@ func test_a_clip_that_does_not_match_the_turn_is_refused() -> void:
 
 
 func test_the_cached_solve_is_the_uncached_sample_bit_for_bit() -> void:
-	# solve() keeps the MARCH locals, riders and contact plan per figure and turn; sample() derives
-	# them again. Another pose on the skeleton between calls must not reach the cache.
-	for turn: int in [1, -45000000, 90000000, -179999999, 180000000]:
+	# solve() keeps the MARCH pose, riders and contact plan per figure and turn; sample() derives them
+	# again. The MARCH pose is the one seeked from the rest pose after the turn's PIVOT clip (the
+	# import drops MARCH's constant Saddle, Sword and Chest tracks), whatever the figure showed before.
+	for turn: int in [37000000, -101000000, 3, -179999998]:  # off the certifier grid: cache misses
+		var clip: String = "PIVOT_RIGHT" if turn > 0 else "PIVOT_LEFT"
+		_sk.reset_bone_poses()
+		Shell.seek(_player, _sk, clip, 0.0)
+		var march: Dictionary = _native("MARCH", Provider.plan().march_phase)
 		for phase: float in [0.0, 0.13, 0.5, 0.871, 1.0]:
 			Shell.seek(_player, _sk, "ATTACK", 0.3)
+			Shell.set_pose(_sk, _stand)
 			var cached: Dictionary = _pose(turn, phase)
-			var plain: Dictionary = Provider.sample(_rest, phase, turn, _march, _stand, _patches, Provider.plan())
+			var plain: Dictionary = Provider.sample(_rest, phase, turn, march, _stand, _patches, Provider.plan())
 			assert_true(plain.ok)
 			assert_eq(cached, plain.locals, "%d at %s" % [turn, phase])
+	# A figure bound and first turned after another pose solves the same pose.
+	var other: Node3D = load("res://scenes/models/units/royal.tscn").instantiate()
+	add_child(other)
+	var sk: Skeleton3D = other.find_children("*", "Skeleton3D", true, false)[0]
+	var player: AnimationPlayer = other.find_children("*", "AnimationPlayer", true, false)[0]
+	Shell.seek(player, sk, "ATTACK", 0.3)
+	Shell.set_pose(sk, _pose(90000000, 0.4))
+	var out: Dictionary = Provider.solve(player, sk, "PIVOT_RIGHT", 90000000, 0.4)
+	assert_eq(out.pose, _pose(90000000, 0.4))
+	other.free()
