@@ -120,3 +120,22 @@ func test_a_clip_that_does_not_match_the_turn_is_refused() -> void:
 	var out: Dictionary = Loco.solve(_player, _sk, "PIVOT_LEFT", 90000000, 0.5)
 	assert_false(out.ok)
 	assert_eq(out.pose, {})
+
+
+func test_the_per_turn_cache_gives_the_shared_solver_pose_bit_for_bit() -> void:
+	# LOCO-CAV-SOLVE-PERF: solve prepares each turn once; every phase must still be exactly
+	# Map3DRoyalPivot.sample on this binding (the certified pose), the endpoints included.
+	for turn: int in [1, 45000000, -90000000, 180000000]:
+		for phase: float in [0.0, 0.07, 0.4375, 0.5, 0.93, 1.0]:
+			var expected: Dictionary = Horse.sample(_rest, phase, turn, _march, _stand, _patches, Loco.plan())
+			assert_true(expected.ok, "%s %s" % [turn, phase])
+			assert_eq(var_to_bytes(_pose(turn, phase)), var_to_bytes(expected.locals), "%s %s" % [turn, phase])
+
+
+func test_a_prepared_turn_refuses_another_turn_and_a_bad_request() -> void:
+	var bound: Dictionary = Loco.bind(_player, _sk)
+	var turn: Dictionary = Loco.prepared(_player, _sk, bound, 90000000)
+	var op: Dictionary = turn.op.duplicate()
+	op.turn_degrees = 45.0
+	assert_false(Horse._Pivot.sample_prepared(turn.kernel, _march, op).ok, "another turn's operation")
+	assert_false(Loco.solve(_player, _sk, "PIVOT_RIGHT", 90000000, 1.5).ok, "phase out of range")
