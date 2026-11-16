@@ -131,6 +131,17 @@ func test_unrelated_staged_changes_and_bad_provenance_reject() -> void:
 	assert_false(MilitaryRoster.transfer_units(f.repo, f.state, "battle:%d:round:1:personnel" % f.id,
 		[{"unit_code": f.unit, "from": "fit", "to": "released", "count": 1}], "Not a casualty").has("error"))
 	assert_true(_reconcile(f).reason.contains("casualty"))
+	# A change with no whole positive count is not a casualty movement.
+	f = _frozen()
+	_lose(f, {f.unit: 1})
+	var event: Dictionary = f.state.military_events["battle:%d:round:1:personnel" % f.id]
+	event.result.changes[0].erase("count")
+	assert_true(_reconcile(f).reason.contains("casualty"))
+	# The field must be the current queued one.
+	f = _frozen()
+	_lose(f, {f.unit: 1})
+	f.state.day_resolution.battle_ids = [f.id + 1]
+	assert_eq(_reconcile(f).status, "error")
 	# The round's own event touching a non-participant.
 	f = _frozen()
 	_lose(f, {f.unit: 1, f.other: 1})

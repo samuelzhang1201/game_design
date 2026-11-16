@@ -894,12 +894,14 @@ static func transfer_battle_candidate(repo: DataRepository, source: GameState, u
 ## round's personnel event `battle:<id>:round:<n>:personnel` has applied. Provenance is checked
 ## (round-stage boundary on the saved control, canonical live field, body_round and pending_round
 ## of that round with its receipt, the event touching only the round's participants). Each
-## participant whose bodies exceed its fit keeps its first rows by slot order, identity and
-## position, with canonical counts; the rest retire and the slot counter's high water stays.
+## participant whose bodies exceed its fit keeps its first rows in stored order (the order the
+## canonical counts follow) with identity and position, and canonical counts; the rest retire and the slot counter's high water stays.
 ## Growth, unrelated staged changes or any invalid world reject. The round stays open.
 ## Only the CF06 settlement may call this, on the stage it produced itself after proving the
 ## round's body_round.basis on its admitted pre-settlement world: "complete" certifies the
-## personnel part, never a standalone provenance of arbitrary staged state.
+## personnel part, never a standalone provenance of arbitrary staged state. A retry and an
+## unrelated change that happens to offset the round's numbers look alike here; only that
+## basis proof separates them.
 static func reconcile_round_candidate(repo: DataRepository, source: GameState, proposed: Dictionary, boundary: Dictionary) -> Dictionary:
 	if repo == null or source == null: return _failure("Round reconciliation requires data and source")
 	if not BodyMotion._keys(proposed, ["battle_id", "round"]) or not BodyMotion._loco_integer(proposed.battle_id) \
@@ -933,9 +935,12 @@ static func reconcile_round_candidate(repo: DataRepository, source: GameState, p
 		return _failure("Round reconciliation requires the round's applied personnel event")
 	var participants: Array = pending.att + pending.def
 	for change: Variant in event.result.changes:
-		if not change is Dictionary or change.get("from") != "fit" or change.get("to") not in ["wounded", "dead", "captured_current"]:
+		if not change is Dictionary or change.get("from") != "fit" or change.get("to") not in ["wounded", "dead", "captured_current"] \
+			or not _whole(change.get("count")) or int(change.count) <= 0:
 			return _failure("A round personnel change must move fit personnel to a casualty status")
-		var unit: Variant = source.military_cohorts.get(change.get("cohort_id"), {}).get("unit_code")
+		var cohort: Variant = source.military_cohorts.get(change.get("cohort_id"))
+		if not cohort is Dictionary: return _failure("Round personnel change names no cohort")
+		var unit: Variant = cohort.get("unit_code")
 		if unit not in participants: return _failure("Round personnel event touches a non-participant")
 	var size := int(repo.bal("battle_group_size"))
 	var candidate := _copy(source)
