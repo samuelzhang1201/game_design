@@ -1,7 +1,12 @@
-"""Install build: the ARP knight as THE infantry piece (docs/superpowers/specs/2026-10-19-infantry-arp-knight-design.md).
+"""Install build: the ARP short-sword + round-shield soldier as THE infantry piece
+(docs/superpowers/specs/2026-11-16-infantry-arp-shortsword-design.md; the knight before it:
+2026-10-19-infantry-arp-knight-design.md).
 
-exec() in the owner's Blender with soldier_knight_arp.blend open, then install(ROOT) with ROOT the
-checkout to write into. Works on copies; reopen the saved blend afterwards (nothing is saved).
+Source (git-ignored): assets/3D/model_wip/blender_output/infantry/infantry_shortsword_shield.blend
+(rig `rig`, body `Infantry_body`, gear `Weapon` / `Shield` bone-parented to cc_weapon.r / .l).
+Headless, nothing saved:
+  Blender -b -y SOURCE.blend --python tools/units3d/infantry_arp/game_export.py -- ROOT [OUT.json]
+or exec() in a Blender with the file open, then install(ROOT). Works on copies.
 For a complete pivot build, pass the solved sample JSON and its reference seconds (4.0) as
 install(ROOT, pivot_samples=PATH, pivot_seconds=SECONDS). The samples come from the coupled author
 mapping: pivot_native.gd captures MARCH, pivot_mapping.py builds the cases, pivot_solve.gd solves
@@ -9,13 +14,13 @@ them (the committed solve is in tests/fixtures/infantry_pivot_mapping.json; test
 re-bakes it onto the installed GLB byte for byte, so no Blender is needed for a pivot-only change).
 The pivot bake never changes the original five clips or binds.
 
-What the map needs of the knight's GLB (a plain export of the rig does not give it):
+What the map needs of the infantry GLB (a plain export of the rig does not give it):
 - the node names infantry.tscn overrides: armature `inf_rig`, one skinned mesh `infantry`;
 - ONE material on a 2048 atlas whose files keep the infantry's names
   (`infantry_infantry_atlas{,_mr,_n}.jpg`): the body in the lower-left 3/4, the sword and the shield
   in the right-hand strip; the gear merged into the mesh, wholly on its socket bone;
 - rest = the guard stance (GARRISON's first frame): the map sizes a piece from its rest mesh;
-- the looping clips closed (last frame = first), ATTACK_VAR1's lunge taken out (in place);
+- the looping clips closed (last frame = first), ATTACK_VAR1's and ATTACK_2's lunges taken out (in place);
 - the measured `stride_m` and `steps` of the MARCH for army_art.csv (returned).
 """
 import json
@@ -26,10 +31,27 @@ import bpy
 import numpy as np
 from mathutils import Matrix, Vector
 
-GAME = {"WALK": "MARCH", "IDLE": "GARRISON", "ATTACK": "ATTACK", "SLASH": "SLASH",
-        "ATTACK_VAR1": "ATTACK_VAR1"}
-LOOPS = {"WALK", "IDLE"}
-IN_PLACE = {"ATTACK_VAR1"}
+# Shipped clips (owner 2026-11-16). The other batch-2 clips (BLOCK*, HIT*, DEATH*, TURN_*, RUN*,
+# ADVANCE*, GARRISON_2, DEFEND_2/3) wait for their runtime hooks; helper actions never ship.
+GAME = {"WALK": "MARCH", "IDLE": "GARRISON", "STANDBY": "STANDBY", "DEFEND": "DEFEND",
+        "ATTACK": "ATTACK", "SLASH": "SLASH", "ATTACK_VAR1": "ATTACK_VAR1", "ATTACK_2": "ATTACK_2",
+        "SLASH_2": "SLASH_2", "SLASH_3": "SLASH_3"}
+LOOPS = {"WALK", "IDLE", "STANDBY", "DEFEND"}
+IN_PLACE = {"ATTACK_VAR1", "ATTACK_2"}   # Mixamo lunges: 1.82 m forward / 2.17 m forward-left
+# Foot locking (owner 2026-11-16: re-author MARCH's ground contacts, as the archers' and cavalry's
+# were): in the retargeted in-place walk a planted sole does not travel back at one speed (the
+# right toe slid 48 mm through its push-off), which the locomotion certifier fails. Each frame the
+# deepest sole vertices of a foot in stance are made to travel straight back at the walk's own
+# median planted speed; the foot is moved by the accumulated difference (its orientation kept), the
+# thigh and shin follow by two-bone IK in their own bend plane, and the offset eases back to zero
+# through the swing. A foot in the first half of its swing is also lifted until its lowest point clears `clear_m` (the
+# retargeted walk drags the right toe forward through its push-off and skims the ground in early
+# swing), the lift eased over neighbouring frames. The upper body, arms and gear are untouched.
+LOCK = {"WALK": {"legs": [(s, "thigh_twist" + s, "thigh_stretch" + s, "leg_stretch" + s, "leg_twist" + s,
+                           "foot" + s, "toes_01" + s) for s in (".l", ".r")],
+                 "stance_m": 0.004, "deep_m": 0.002, "clear_m": 0.005, "ease_frames": 3, "min_knee_deg": 2.0}}
+BODY = "Infantry_body"
+GEAR = {"sword": "Weapon", "shield": "Shield"}
 REST = ("IDLE", 1)                       # the guard stance, GARRISON's first frame
 RENAME = {"head.x": "head"}
 ATLAS = 2048
@@ -37,7 +59,7 @@ ATLAS = 2048
 REGION = {"body": (0.0, 0.0, 0.75, 0.75), "sword": (0.75, 0.0, 0.25, 0.5),
           "shield": (0.75, 0.5, 0.25, 0.5)}
 SOCKET = {"sword": "cc_weapon.r", "shield": "cc_weapon.l"}
-SEAM_FRAMES = 6                          # a loop's last frames blended to its first
+SEAM_FRAMES = 6                          # a loop's last frames that absorb its seam residual
 # The game atlas's metallic (B) as a share of the authored map: on the map's light a near-pure metal
 # mirrors the dark ground and woods round it and reads black; x0.45 keeps the steel lit grey with
 # its sheen (bracketed x0.3 / x0.45 / x0.6 in real-window shots, 2026-10-19; the old knight sat at 0.27).
@@ -103,7 +125,7 @@ def _region_uv(obj, part):
 def _mesh(src, rig):
     """The body posed into the rest pose (its armature applied), the gear set where it hangs."""
     vl = bpy.context.view_layer
-    body0 = bpy.data.objects["Soldier_body"]
+    body0 = bpy.data.objects[BODY]
     body = body0.copy(); body.data = body0.data.copy()
     bpy.context.scene.collection.objects.link(body)
     for o in bpy.context.selected_objects:
@@ -115,7 +137,7 @@ def _mesh(src, rig):
     body.matrix_world = Matrix.Identity(4)
     _region_uv(body, "body")
     parts = [body]
-    for part, name in (("sword", "Sword"), ("shield", "Shield")):
+    for part, name in GEAR.items():
         g0 = bpy.data.objects[name]
         g = g0.copy(); g.data = g0.data.copy()
         bpy.context.scene.collection.objects.link(g)
@@ -159,16 +181,16 @@ def _pixels(img, w, h):
 def _atlases(mat, out_dir):
     """Colour, metal-rough (G roughness, B metallic) and normal atlases, written as the infantry's
     files and wired into the one material (the GLB embeds them; the scene's override uses the files)."""
-    def src(name, label):
+    def src(name, suffix):
+        # every source map is <part>_{base,mr,normal}.png (body: the authored body_*.png, README)
         m = bpy.data.objects[name].data.materials[0]
-        return next(n.image for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.label == label)
-    sources = {
-        "albedo": {"body": src("Soldier_body", "BASE COLOR"), "sword": src("Sword", "BASE COLOR"),
-                   "shield": src("Shield", "BASE COLOR")},
-        "mr": {"body": src("Soldier_body", "metal_rough"), "sword": src("Sword", "METALLIC ROUGHNESS"),
-               "shield": src("Shield", "METALLIC ROUGHNESS")},
-        "n": {"body": None, "sword": src("Sword", "NORMAL MAP"), "shield": src("Shield", "NORMAL MAP")},
-    }
+        found = [n.image for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.image
+                 and Path(n.image.filepath).stem.endswith("_" + suffix)]
+        assert len(found) == 1, (name, suffix, found)
+        return found[0]
+    parts = {"body": BODY, **GEAR}
+    sources = {kind: {part: src(obj, suffix) for part, obj in parts.items()}
+               for kind, suffix in (("albedo", "base"), ("mr", "mr"), ("n", "normal"))}
     files = {}
     for kind, parts in sources.items():
         atlas = np.zeros((ATLAS, ATLAS, 4), np.float32)
@@ -219,6 +241,154 @@ def _atlases(mat, out_dir):
     return {k: str(Path(out_dir) / ("infantry_" + v.name + ".jpg")) for k, v in files.items()}
 
 
+LOCKED = {}
+
+
+def _foot_points(src, foot, toe):
+    """Each vertex skinned mostly to the foot or toe bone, in that bone's rest frame (rigid)."""
+    body = bpy.data.objects[BODY]
+    groups = {g.index: g.name for g in body.vertex_groups}
+    out = []
+    for v in body.data.vertices:
+        if not v.groups:
+            continue
+        g = max(v.groups, key=lambda e: e.weight)
+        name = groups.get(g.group)
+        if name in (foot, toe):
+            out.append((name, src.data.bones[name].matrix_local.inverted() @ v.co))
+    return out
+
+
+def _turn(a, b):
+    """The shortest rotation taking direction a to direction b, as a 4x4 matrix."""
+    return a.normalized().rotation_difference(b.normalized()).to_matrix().to_4x4()
+
+
+def _lock_feet(src, clip, poses):
+    cfg = LOCK.get(clip)
+    if not cfg:
+        return {}
+    n = len(poses) - 1                    # unique frames (the last is the first again)
+    report = {}
+    legs = []
+    for side, hip, hip2, knee, knee2, foot, toe in cfg["legs"]:
+        pts = _foot_points(src, foot, toe)
+        world = [np.array([list(poses[f][b] @ c) for b, c in pts]) for f in range(n)]
+        low = min(w[:, 2].min() for w in world)
+        legs.append((side, hip, hip2, knee, knee2, foot, toe, world, low))
+    # the walk's own planted speed: median back-travel of the deepest vertices of a planted foot
+    speeds = []
+    for *_, world, low in legs:
+        for f in range(n):
+            a, b = world[f], world[(f + 1) % n]
+            if a[:, 2].min() <= low + cfg["stance_m"] and b[:, 2].min() <= low + cfg["stance_m"]:
+                deep = a[:, 2] <= a[:, 2].min() + cfg["deep_m"]
+                speeds.append(float(np.median(b[deep, 1] - a[deep, 1])))
+    v = float(np.median(speeds))
+    for side, hip, hip2, knee, knee2, foot, toe, world, low in legs:
+        # in stance: near the ground and travelling back at least half the walk speed (the right toe
+        # drags forward through its push-off, and the early swing skims the ground)
+        def back(f):
+            a, b = world[f], world[(f + 1) % n]
+            deep = a[:, 2] <= a[:, 2].min() + cfg["deep_m"]
+            return float(np.mean(b[deep, 1] - a[deep, 1])) > 0.5 * v
+        stance = [world[f][:, 2].min() <= low + cfg["stance_m"] and back(f) and back((f - 1) % n)
+                  for f in range(n)]
+        # offset[f]: what the foot must move by at frame f (x, y), integrated through each stance
+        off = [Vector((0.0, 0.0, 0.0)) for _ in range(n)]
+        start = next(f for f in range(n) if stance[f] and not stance[f - 1])
+        acc = Vector((0.0, 0.0, 0.0))
+        for k in range(1, n + 1):
+            f, prev = (start + k) % n, (start + k - 1) % n
+            if stance[f] and stance[prev]:
+                a, b = world[prev], world[f]
+                deep = a[:, 2] <= a[:, 2].min() + cfg["deep_m"]
+                d = b[deep].mean(axis=0) - a[deep].mean(axis=0)
+                acc = acc + Vector((-d[0], v - d[1], 0.0))
+            elif not stance[f]:
+                acc = Vector((0.0, 0.0, 0.0))
+            off[f] = acc.copy() if stance[f] else None
+        # ease each stance's final offset back to zero through the swing that follows
+        f = start
+        for _ in range(n):
+            if off[f] is None:
+                a = (f - 1) % n
+                while off[a] is None:
+                    a = (a - 1) % n
+                z = f
+                while off[z % n] is None:
+                    z += 1
+                span = z - a
+                for g in range(a + 1, z):
+                    u = (g - a) / span
+                    off[g % n] = off[a] * (1 - (u * u * (3 - 2 * u)))
+                f = z % n
+            f = (f + 1) % n
+        # swing lift: each swing frame raised to clear_m, spread to its neighbours on a cos^2 falloff
+        # only the first half of each swing (toe-off and early swing): a landing foot is left alone
+        early = [False] * n
+        f = start
+        for _ in range(n):
+            if not stance[f] and stance[(f - 1) % n]:
+                run = [f]
+                while not stance[(run[-1] + 1) % n]:
+                    run.append((run[-1] + 1) % n)
+                for g in run[:(len(run) + 1) // 2]:
+                    early[g] = True
+            f = (f + 1) % n
+        need = [max(0.0, cfg["clear_m"] - float(world[f][:, 2].min())) if early[f] else 0.0 for f in range(n)]
+        e = cfg["ease_frames"]
+        for f in range(n):
+            if stance[f]:
+                continue
+            lift = 0.0
+            for g in range(n):
+                k = min((f - g) % n, (g - f) % n)
+                if need[g] > 0 and k <= e:
+                    lift = max(lift, need[g] * math.cos(0.5 * math.pi * k / (e + 1)) ** 2)
+            off[f] = off[f] + Vector((0.0, 0.0, lift))
+        report[side + "_max_lift_m"] = round(max(o.z for o in off), 4)
+        worst = pull = 0.0
+        for f in range(n):
+            d = off[f]
+            if d.length < 1e-9:
+                continue
+            worst = max(worst, d.length)
+            pose = poses[f]
+            h = pose[hip].translation.copy()
+            k0 = pose[knee].translation.copy()
+            a0 = pose[foot].translation.copy()
+            a1 = a0 + d
+            l1, l2 = (k0 - h).length, (a0 - k0).length
+            # the new knee: same bend plane side, lengths kept. A pinned target past the leg's
+            # reach is pulled back to it, the knee kept bent at least min_knee_deg: a clamped
+            # straight knee left the foot up to 3 mm off the shin and the leg on its singular pose.
+            axis = (a1 - h)
+            reach = math.sqrt(l1 * l1 + l2 * l2 + 2 * l1 * l2 * math.cos(math.radians(cfg["min_knee_deg"])))
+            dist = min(axis.length, reach)
+            axis.normalize()
+            pull = max(pull, (a1 - (h + axis * dist)).length)
+            a1 = h + axis * dist
+            d = a1 - a0
+            bend = (k0 - h) - axis * (k0 - h).dot(axis)
+            bend.normalize()
+            along = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist)
+            k1 = h + axis * along + bend * math.sqrt(max(l1 * l1 - along * along, 0.0))
+            r1 = Matrix.Translation(h) @ _turn(k0 - h, k1 - h) @ Matrix.Translation(-h)
+            r2 = Matrix.Translation(k1) @ _turn(a0 - k0, a1 - k1) @ Matrix.Translation(-k0)
+            for b in (hip, hip2):
+                pose[b] = r1 @ pose[b]
+            for b in (knee, knee2):
+                pose[b] = r2 @ pose[b]
+            for b in (foot, toe):
+                pose[b] = Matrix.Translation(d) @ pose[b]
+        report[side] = {"max_offset_m": round(worst, 4), "max_reach_pullback_m": round(pull, 4)}
+    for b in poses[0]:
+        poses[-1][b] = poses[0][b].copy()
+    report["speed_m_per_frame"] = round(v, 6)
+    return report
+
+
 def _poses(src, keep, clip):
     scn = bpy.context.scene
     act = _set_action(src, clip)
@@ -235,11 +405,16 @@ def _poses(src, keep, clip):
             for m in p.values():
                 m.translation -= shift
     if clip in LOOPS:
+        # Close the loop by spreading only the seam residual (first pose vs last) over the last
+        # frames: these clips already end on their first pose (WALK 0.8 mm, IDLE 0.7 deg apart), so
+        # lerping whole frames toward frame 1 would drag a planted foot across its touchdown.
         n = len(poses)
+        fix = {b: poses[0][b] @ poses[-1][b].inverted() for b in poses[0]}
         for k in range(SEAM_FRAMES):
             i = n - SEAM_FRAMES + k
             w = (k + 1) / SEAM_FRAMES
-            poses[i] = {b: m.lerp(poses[0][b], w) for b, m in poses[i].items()}
+            poses[i] = {b: Matrix.Identity(4).lerp(fix[b], w) @ m for b, m in poses[i].items()}
+    LOCKED[clip] = _lock_feet(src, clip, poses)
     return poses
 
 
@@ -247,7 +422,7 @@ def _key(rig, keep, poses, game):
     rig.animation_data_create()
     act = bpy.data.actions.new("game_" + game)
     rig.animation_data.action = act
-    for frame, pose in enumerate(poses, 1):
+    for frame, pose in enumerate(poses):  # from 0: the clip starts on its first key (no held frame)
         for pb in rig.pose.bones:
             src_name = next(k for k in keep if RENAME.get(k, k) == pb.name)
             rest = pb.bone.matrix_local
@@ -261,7 +436,7 @@ def _key(rig, keep, poses, game):
                 pb.keyframe_insert(path, frame=frame, group=pb.name)
     track = rig.animation_data.nla_tracks.new()
     track.name = game
-    track.strips.new(game, 1, act)
+    track.strips.new(game, 0, act)
     rig.animation_data.action = None
 
 
@@ -309,6 +484,7 @@ def install(root, pivot_samples=None, pivot_seconds=None):
                                "loop": clip in LOOPS, "in_place": clip in IN_PLACE}
         if clip == "WALK":
             info["march"] = _march_measure(src, poses, keep)
+            info["march"]["lock"] = LOCKED.get(clip)
     rig.rotation_euler.z = math.pi           # Blender -Y -> glTF +Z; the game's figures face -Z
     bpy.context.view_layer.update()
     for o in bpy.context.selected_objects:
@@ -338,3 +514,13 @@ def install(root, pivot_samples=None, pivot_seconds=None):
     lo = min(v.co.z for v in me.vertices); hi = max(v.co.z for v in me.vertices)
     info.update(tris=len(me.loop_triangles), bones=len(rig.data.bones), height_m=round(hi - lo, 3))
     return info
+
+
+if __name__ == "__main__":
+    import sys
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    result = install(argv[0])
+    text = json.dumps(result, indent=1, default=str)
+    if len(argv) > 1:
+        Path(argv[1]).write_text(text)
+    print("INFANTRY_EXPORT", text)

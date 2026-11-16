@@ -37,3 +37,12 @@ recorded in the READMEs.
 ## Re-issued for LOCO-POLICY (2026-11-14)
 
 Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `data/army/balance.csv` (the new `body_locomotion_*` rows) and, for some arms, other hashed inputs had changed since the first issue. The status is still NUMERIC_PASS and the measured totals and bounds are unchanged; only the digest moved. The installed row is `data/army/unit_locomotion.csv`.
+
+## Re-issued for the short-sword soldier (2026-11-16)
+
+The figure is now the ARP short-sword + round-shield soldier (`docs/superpowers/specs/2026-11-16-infantry-arp-shortsword-design.md`). Re-certified on it:
+MARCH `stride_m` 1.618 (was 1.765), k 25.8437 world m per model m, R-A bounds contact 23217 µm /
+seam 1935 µm, measured penetration 7469, hover 4330, slide 13604, seam 1 µm, sim envelope 481 m,
+0 introduced skin flags: NUMERIC_PASS. The consumer now stops, starts and holds at MARCH 13/14
+(0.9285714285714286; the knight's was 25/28), the same passing frame of the walk. The visual review
+of the new figure (map and close-up, before/after, independent critic) is recorded in the spec.

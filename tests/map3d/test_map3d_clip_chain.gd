@@ -70,9 +70,10 @@ func test_the_infantry_answers_every_action_and_strikes_once() -> void:
 	var anim := Map3DUnits.find_anim(root)
 	assert_eq(Map3DUnits.clip_named(anim, "MARCH"), "MARCH")
 	for action: String in ["GARRISON", "STANDBY", "DEFEND"]:
-		assert_eq(Map3DUnits.clip_named(anim, action), "GARRISON", action + " stands the guard")
+		assert_eq(Map3DUnits.clip_named(anim, action), action, action + " is its own authored loop")
+		assert_eq(anim.get_animation(action).loop_mode, Animation.LOOP_LINEAR, action + " loops")
 	var chains := Map3DClipChain.of_art(repo.army_art["infantry"])
-	assert_eq(chains.get("ATTACK", []), ["ATTACK", "SLASH", "ATTACK_VAR1"])
+	assert_eq(chains.get("ATTACK", []), ["ATTACK", "SLASH", "ATTACK_VAR1", "ATTACK_2", "SLASH_2", "SLASH_3"])
 	for clip: String in chains["ATTACK"]:
 		var named := Map3DUnits.clip_named(anim, clip)
 		assert_eq(named, clip, clip + " is in the model")

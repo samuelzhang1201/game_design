@@ -83,3 +83,7 @@ comparison; independent critic (sheets and `taste.md` only), see the PR.
 ## Re-issued for LOCO-POLICY (2026-11-14)
 
 Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `data/army/balance.csv` (the new `body_locomotion_*` rows) and, for some arms, other hashed inputs had changed since the first issue. The status is still NUMERIC_PASS and the measured totals and bounds are unchanged; only the digest moved. The installed row is `data/army/unit_locomotion.csv`.
+
+## Re-issued for the short-sword infantry (2026-11-16)
+
+Only hashed inputs moved (`army_art.csv`, `data/army/balance.csv` and the cf01 `measurements.json`, for the new infantry figure); this arm measures as before (NUMERIC_PASS, same totals and bounds), only the digest moved.

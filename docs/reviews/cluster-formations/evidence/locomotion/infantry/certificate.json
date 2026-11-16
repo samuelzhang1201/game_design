@@ -39,12 +39,11 @@
      1.06666672229767,
      1.10000002384186,
      1.13333332538605,
-     1.16666662693024,
-     1.20000004768372
+     1.16666662693024
     ],
-    "length_s": 1.20000004768372,
+    "length_s": 1.16666662693024,
     "loop_mode": 1,
-    "tracks": 126
+    "tracks": 54
    },
    "PIVOT_LEFT": {
     "key_times": [
@@ -196,7 +195,7 @@
     ],
     "length_s": 4.0,
     "loop_mode": 0,
-    "tracks": 207
+    "tracks": 210
    },
    "PIVOT_RIGHT": {
     "key_times": [
@@ -348,7 +347,7 @@
     ],
     "length_s": 4.0,
     "loop_mode": 0,
-    "tracks": 207
+    "tracks": 210
    }
   },
   "godot": {
@@ -362,12 +361,12 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "e4407de3b88c742d8414edd358ed72342830e165e3a121c73a327704b3d38099",
+  "sha256": "379b3f72c58889cf18e24f27eb0253c0fb0dacc4e5359c970134e3e4351ad152",
   "uniform": 512
  },
  "config": {
   "arm": "infantry",
-  "entry_phase": 0.8928571428571429,
+  "entry_phase": 0.9285714285714286,
   "feet": {
    "l": [
     "foot.l",
@@ -385,55 +384,55 @@
   ],
   "hold_clip": "MARCH",
   "hold_phases": [
-   0.8928571428571429
+   0.9285714285714286
   ],
   "march_start_phases": [
-   0.8928571428571429
+   0.9285714285714286
   ],
   "march_stop_phases": [
-   0.8928571428571429
+   0.9285714285714286
   ],
-  "note": "LOCO-CERT-INF. Provider Map3DInfantryLocomotion: the coupled pivot plan expanded for each grid turn and re-solved by Map3DInfantryPivot (the shipped clips are its +/-90 solve), the body above the legs scaled by |turn|/90. Pivots enter and leave MARCH at 25/28 only and the hold is MARCH frozen at 25/28 (owner ruling A, recorded as a consumer requirement). Stance comes from the certifier's per-foot planting band (#291). turn_q 400000 is the contract's example value: contact does not depend on duration, but the certificate binds turn_q, so a LOCO-POLICY row with another turn_q means re-running this certificate.",
+  "note": "LOCO-CERT-INF. Provider Map3DInfantryLocomotion: the coupled pivot plan expanded for each grid turn and re-solved by Map3DInfantryPivot (the shipped clips are its +/-90 solve), the body above the legs scaled by |turn|/90. Pivots enter and leave MARCH at 13/14 only and the hold is MARCH frozen at 13/14 (owner ruling A, recorded as a consumer requirement). Stance comes from the certifier's per-foot planting band (#291). turn_q 400000 is the contract's example value: contact does not depend on duration, but the certificate binds turn_q, so a LOCO-POLICY row with another turn_q means re-running this certificate. Re-issued 2026-11-16 for the short-sword soldier (new infantry.glb, MARCH stride 1.618, k 25.8437, contact 23217 um).",
   "patch_band_m": 0.005,
   "phase_map": null,
   "provider": "scripts/map3d/map3d_infantry_locomotion.gd",
   "radius_m": 927,
   "scene": "scenes/models/units/infantry.tscn",
-  "stride_m": 1.765,
+  "stride_m": 1.618,
   "turn_q": 400000
  },
  "consumer_requirements": {
   "hold_clip": "MARCH",
   "hold_phases": [
-   0.8928571428571429
+   0.9285714285714286
   ],
   "march_start_phases": [
-   0.8928571428571429
+   0.9285714285714286
   ],
   "march_stop_phases": [
-   0.8928571428571429
+   0.9285714285714286
   ],
   "rule": "stop, start and hold only at these MARCH phases; a MARCH hold resumes at the phase it holds"
  },
  "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
  "input_sha256": {
-  "assets/3D/units/infantry/infantry.glb": "1d3bcb4214ace7721d912e52ace904336b48449129334a3b7ac7238ce3cba758",
-  "assets/3D/units/infantry/infantry.glb.import": "30053b147d2096e1a8e72b6927e7d1ec74ec8e3c7c894975991ac2b4af7a1341",
-  "assets/3D/units/infantry/infantry_infantry_atlas.jpg": "91fb05c250db5b07559e942bfbb374cf9947a8034b39c12ac1011c9b855f3c7d",
-  "assets/3D/units/infantry/infantry_infantry_atlas.jpg.import": "21810c4ac8df48a472e97a8ae199e7e9dc72da3a83a8c69e99adf08178fc6118",
-  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg": "1bc292fff0198978e0d0dba7b612f6485cb41f9111eba49a1876e24ff603415d",
-  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg.import": "90857ba1a82322b4911384fcc4b115c3cc6bd7bcc870bc28a87ca75e0f674fa5",
-  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "0b311e0f6b2b2759b6cd25ef2fb644f10db26cac49e893725e6bc3730a6e0a3e",
-  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg.import": "e3202dc6386dc16015feb870d65b5a0c7accc35ecb758b57de6f209d835055e6",
-  "assets/3D/units/infantry/infantry_pivot_plan.json": "b47bf73d4c4dac10bd9ae1fde6b8de6971dc357aa553b0348038ff1b59bc146f",
-  "data/army/balance.csv": "09c376c4f530a4f30217e600f08f705ffa8919b8926b58d552c5c13166e10700",
+  "assets/3D/units/infantry/infantry.glb": "64fa155dcd442212ef805b970ea85f7bb81f0299a9261469cf74e900cdf31bb5",
+  "assets/3D/units/infantry/infantry.glb.import": "622a873cecde657eefd5ffac2281e66d1d98554ac85c6cfc0fad6d367c25cc65",
+  "assets/3D/units/infantry/infantry_infantry_atlas.jpg": "7ed7347bb4ac9a02e507d2487b93d1950dce16a8997ef44d1dd0d5d759db053d",
+  "assets/3D/units/infantry/infantry_infantry_atlas.jpg.import": "65b0d38a1e3924845ff34d7573044882c2979137752976875f9dd3738afb6cdf",
+  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg": "e2718a467b720147753a015225b6d58f1f427de6706b207a9d674194aa9379fd",
+  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg.import": "10683c75afd68a9fac6405b1265fa0c7b87ac7011a6ceaeb4122bf8f85c29f38",
+  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "1cf66f0cf486df64ae79fa6dce85c913b652845b06bafd04f1d602d58af751c0",
+  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg.import": "ebdd21fbd6ba04057c20541b8397b3888698c0274d3de747bd5ff99ac807f4de",
+  "assets/3D/units/infantry/infantry_pivot_plan.json": "1069ff9e0c74d7397d1acea461447fee063b90001df6465e4f7b882a351d6db7",
+  "data/army/balance.csv": "161958b363556cc8d1980517612d61f21434349a6ea7c9a367e9bffdfae24277",
   "data/army/unit_footprints.csv": "5d7ebb28d0942802e698284eb42817203d66100ad607debc6cbda895485412de",
-  "data/screens/map3d/army_art.csv": "269f416f0c3d6a12d182c62bc29986dd65879cc036c47e2c2b351615a6d89ddf",
-  "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
+  "data/screens/map3d/army_art.csv": "13800130980b3f1c3cbe81bcbf6c61e1edd6681519f83443896312e4d3798865",
+  "data/screens/map3d/balance.csv": "4fa9c734808e35238ad305fab60679857c12a03f46f246d44e508513dea8112e",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "604609f8a8086cf06443bba02ea268cdd6b0170fb1cf5ac6b485b8d781432d92",
   "scenes/models/units/infantry.tscn": "69256e86dfd2d93050522bdcef422afa3ce3d4c2472d063752b7b085da848921",
   "scripts/map3d/guide/infantry_pivot.md": "eecc824eff4da2e5ccc0d536749eeeace3d43e184b34ba6fba69fcbaf90a264a",
-  "scripts/map3d/map3d_infantry_locomotion.gd": "0e664ba2072072e594e3826a8103555ca7b64abc5c065d1846f915cf30045d83",
+  "scripts/map3d/map3d_infantry_locomotion.gd": "b5ab0bfa95ce6a4cf6e676df09c9872ea438638216f89070bf93dc9ba5f9d419",
   "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
@@ -445,43 +444,43 @@
    "PIVOT_RIGHT",
    "MARCH"
   ],
-  "contact_um": 22769,
-  "digest": "4f0a769943dc1be5f7ec877f9667d340d49ce1d67a6be3b5d3e58138b0ef5569",
+  "contact_um": 23217,
+  "digest": "7c82bacc759c692cab661d48650a3fcf0040ddc30f33a127b1e6824d622e9c3c",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "4f0a769943dc1be5f7ec877f9667d340d49ce1d67a6be3b5d3e58138b0ef5569",
+ "payload_sha256": "7c82bacc759c692cab661d48650a3fcf0040ddc30f33a127b1e6824d622e9c3c",
  "report": {
   "bounds_um": {
-   "contact": 22769,
-   "seam": 1898
+   "contact": 23217,
+   "seam": 1935
   },
   "envelope": {
    "footprint_radius_m": 927,
-   "margin_um": 11044,
+   "margin_um": 9949,
    "pass": true,
-   "radius_model_um": 892460,
-   "radius_simulation_m": 477,
+   "radius_model_um": 919477,
+   "radius_simulation_m": 481,
    "witness": {
     "clip": "MARCH",
     "mesh": "infantry",
-    "phase": 0.222222224981696,
+    "phase": 0.171428579821879,
     "surface": 0,
     "turn_udeg": null,
-    "vertex": 5775
+    "vertex": 3532
    }
   },
   "hover": {
-   "bound_um": 22769,
-   "margin_um": 3245,
+   "bound_um": 23217,
+   "margin_um": 3832,
    "pass": true,
-   "sampled_um": 2750,
-   "total_um": 5995,
+   "sampled_um": 498,
+   "total_um": 4330,
    "witness": {
-    "clip": "MARCH",
+    "clip": "PIVOT_RIGHT",
     "foot": "l",
-    "phase": 0.51953125,
-    "turn_udeg": null
+    "phase": 0.33203125,
+    "turn_udeg": 2000000
    }
   },
   "pass": true,
@@ -491,87 +490,87 @@
      {
       "mesh": "infantry",
       "surface": 0,
-      "vertex": 2138
+      "vertex": 55
      },
      {
       "mesh": "infantry",
       "surface": 0,
-      "vertex": 2140
+      "vertex": 56
      },
      {
       "mesh": "infantry",
       "surface": 0,
-      "vertex": 2141
+      "vertex": 57
      },
      {
       "mesh": "infantry",
       "surface": 0,
-      "vertex": 2235
+      "vertex": 311
      }
     ],
-    "vertices": 502
+    "vertices": 314
    },
    "r": {
     "first": [
      {
       "mesh": "infantry",
       "surface": 0,
-      "vertex": 1606
+      "vertex": 0
      },
      {
       "mesh": "infantry",
       "surface": 0,
-      "vertex": 1607
+      "vertex": 1
      },
      {
       "mesh": "infantry",
       "surface": 0,
-      "vertex": 1608
+      "vertex": 2
      },
      {
       "mesh": "infantry",
       "surface": 0,
-      "vertex": 1609
+      "vertex": 3
      }
     ],
-    "vertices": 509
+    "vertices": 307
    }
   },
   "penetration": {
-   "bound_um": 22769,
-   "margin_um": 7509,
+   "bound_um": 23217,
+   "margin_um": 7469,
    "pass": true,
    "sampled_um": 0,
-   "total_um": 7509,
+   "total_um": 7469,
    "witness": {
     "clip": "PIVOT_LEFT",
     "mesh": "infantry",
     "phase": 0.0,
     "surface": 0,
     "turn_udeg": -1,
-    "vertex": 13161
+    "vertex": 7122
    }
   },
   "planting_band": {
    "feet": {
     "l": {
-     "H_m": 0.0022558146438436356,
-     "band_m": 0.0027558146438436356
+     "H_m": -0.005572438657519274,
+     "band_m": 0.0005
     },
     "r": {
-     "H_m": -0.0018430571020956834,
+     "H_m": -0.0025611656129060447,
      "band_m": 0.0005
     }
    },
    "inherited_from": "shipped native MARCH",
    "rule": "per foot: b_f = max(0.5 mm, H_f + 0.5 mm); H_f = highest of the foot's per-stance minimum sole heights, stances = runs among the lower half of the feet; a vertex belongs to the foot whose bone carries its largest skin weight (ties: lower bone index); vertices of no foot are never planted"
   },
-  "sample_count": 18458,
+  "sample_count": 18460,
   "seam": {
-   "bound_um": 1898,
+   "bound_um": 1935,
    "boundaries": [
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -588,11 +587,11 @@
        0.0
       ],
       "turn_udeg": null,
-      "vertex": 16402
+      "vertex": 3532
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -600,7 +599,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -609,11 +608,11 @@
        0.0
       ],
       "turn_udeg": -1,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -621,7 +620,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -630,11 +629,11 @@
        0.0
       ],
       "turn_udeg": -2000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -642,7 +641,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -651,11 +650,11 @@
        0.0
       ],
       "turn_udeg": -45000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -663,7 +662,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -672,11 +671,11 @@
        0.0
       ],
       "turn_udeg": -90000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -684,7 +683,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -693,11 +692,11 @@
        0.0
       ],
       "turn_udeg": -135000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -705,7 +704,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -714,11 +713,11 @@
        0.0
       ],
       "turn_udeg": -179999999,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -732,14 +731,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": -1,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -753,14 +752,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": -2000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -774,14 +773,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": -45000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -795,14 +794,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": -90000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -816,14 +815,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": -135000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -837,14 +836,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": -179999999,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -852,7 +851,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -861,11 +860,11 @@
        0.0
       ],
       "turn_udeg": 1,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -873,7 +872,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -882,11 +881,11 @@
        0.0
       ],
       "turn_udeg": 2000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -894,7 +893,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -903,11 +902,11 @@
        0.0
       ],
       "turn_udeg": 45000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -915,7 +914,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -924,11 +923,11 @@
        0.0
       ],
       "turn_udeg": 90000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -936,7 +935,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -945,11 +944,11 @@
        0.0
       ],
       "turn_udeg": 135000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -957,7 +956,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -966,11 +965,11 @@
        0.0
       ],
       "turn_udeg": 179999999,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -978,7 +977,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -987,11 +986,11 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -999,7 +998,7 @@
      "witness": {
       "from": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "mesh": "infantry",
       "surface": 0,
@@ -1008,11 +1007,11 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -1026,14 +1025,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": 1,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -1047,14 +1046,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": 2000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -1068,14 +1067,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": 45000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -1089,14 +1088,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": 90000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -1110,14 +1109,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": 135000000,
-      "vertex": 17512
+      "vertex": 216
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -1131,14 +1130,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": 179999999,
-      "vertex": 17512
+      "vertex": 172
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -1152,14 +1151,14 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": 180000000,
-      "vertex": 17512
+      "vertex": 172
      }
     },
     {
-     "bound_um": 1898,
+     "bound_um": 1935,
      "margin_um": 0,
      "pass": true,
      "sampled_um": 1,
@@ -1173,10 +1172,10 @@
       "surface": 0,
       "to": [
        "MARCH",
-       0.8928571428571429
+       0.9285714285714286
       ],
       "turn_udeg": 180000000,
-      "vertex": 17512
+      "vertex": 172
      }
     }
    ],
@@ -1193,10 +1192,10 @@
     "surface": 0,
     "to": [
      "MARCH",
-     0.8928571428571429
+     0.9285714285714286
     ],
     "turn_udeg": 180000000,
-    "vertex": 17512
+    "vertex": 172
    }
   },
   "skin": {
@@ -1208,72 +1207,72 @@
   },
   "slide": {
    "band_m": {
-    "l": 0.0027558146438436356,
+    "l": 0.0005,
     "r": 0.0005
    },
-   "bound_um": 22769,
+   "bound_um": 23217,
    "by_clip": {
     "MARCH": {
-     "bound_um": 22769,
-     "margin_um": 2274,
+     "bound_um": 23217,
+     "margin_um": 1727,
      "pass": true,
-     "sampled_um": 8946,
-     "total_um": 11219,
+     "sampled_um": 11817,
+     "total_um": 13543,
      "witness": {
       "clip": "MARCH",
       "mesh": "infantry",
-      "phase": 0.328125,
+      "phase": 0.771428577267394,
       "surface": 0,
-      "touchdown_phase": 0.30078125,
+      "touchdown_phase": 0.73828125,
       "turn_udeg": null,
-      "vertex": 13147
+      "vertex": 7680
      }
     },
     "PIVOT_LEFT": {
-     "bound_um": 22769,
-     "margin_um": 5704,
+     "bound_um": 23217,
+     "margin_um": 1788,
      "pass": true,
-     "sampled_um": 9265,
-     "total_um": 14969,
+     "sampled_um": 1950,
+     "total_um": 3737,
      "witness": {
       "clip": "PIVOT_LEFT",
       "mesh": "infantry",
-      "phase": 0.419999986886978,
+      "phase": 0.955078125,
       "surface": 0,
-      "touchdown_phase": 0.108749996870756,
+      "touchdown_phase": 0.89343748986721,
       "turn_udeg": -1,
-      "vertex": 2294
+      "vertex": 7122
      }
     },
     "PIVOT_RIGHT": {
-     "bound_um": 22769,
-     "margin_um": 5493,
+     "bound_um": 23217,
+     "margin_um": 1641,
      "pass": true,
-     "sampled_um": 13803,
-     "total_um": 19295,
+     "sampled_um": 1950,
+     "total_um": 3590,
      "witness": {
       "clip": "PIVOT_RIGHT",
       "mesh": "infantry",
-      "phase": 0.88671875,
+      "phase": 0.94140625,
       "surface": 0,
-      "touchdown_phase": 0.109375,
-      "turn_udeg": 2000000,
-      "vertex": 3707
+      "touchdown_phase": 0.89343748986721,
+      "turn_udeg": 1,
+      "vertex": 7122
      }
     }
    },
-   "margin_um": 5704,
+   "margin_um": 1788,
    "pass": true,
-   "sampled_um": 13803,
-   "total_um": 19506,
+   "sampled_um": 11817,
+   "total_um": 13604,
    "witness": {
-    "clip": "PIVOT_RIGHT",
+    "clip": "MARCH",
     "mesh": "infantry",
-    "phase": 0.88671875,
+    "phase": 0.771428577267394,
     "surface": 0,
-    "touchdown_phase": 0.109375,
-    "turn_udeg": 2000000,
-    "vertex": 3707
+    "touchdown_phase": 0.73828125,
+    "turn_udeg": null,
+    "vertex": 7680
    }
   },
   "stance": {
@@ -1383,10 +1382,10 @@
  },
  "ruling": "docs/reviews/cluster-formations/owner-rulings-2026-11-10.md R-A R-B R-C",
  "scale": {
-  "k": 26.3519187631584,
-  "lift_model_m": 0.02406241893768315,
-  "model_height_m": 1.60416126251221,
-  "simulation_scale": 527.038375263168
+  "k": 25.8437468293282,
+  "lift_model_m": 0.0245355641841888,
+  "model_height_m": 1.63570427894592,
+  "simulation_scale": 516.874936586564
  },
  "schema": 1,
  "status": "NUMERIC_PASS",
