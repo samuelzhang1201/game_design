@@ -906,6 +906,7 @@ static func reconcile_round_candidate(repo: DataRepository, source: GameState, p
 	if not raw_error.is_empty(): return _failure(raw_error)
 	var control: Variant = source.day_resolution.get("body_battle")
 	if not control is Dictionary or not BodyMotion._keys(boundary, ["version", "kind", "abs_day", "substep", "sequence", "stage"]) \
+		or not BodyMotion._loco_integer(boundary.version) or boundary.version != 1 \
 		or boundary.kind != "battle" or boundary.stage != "round" or boundary.stage != control.get("stage") \
 		or boundary.abs_day != control.get("abs_day") or boundary.substep != control.get("next_substep") \
 		or boundary.sequence != control.get("sequence") or int(boundary.abs_day) != source.absolute_day():
@@ -916,14 +917,21 @@ static func reconcile_round_candidate(repo: DataRepository, source: GameState, p
 	var round_error := _battle_round_error(battle)
 	if not round_error.is_empty(): return _failure(round_error)
 	var pending: Dictionary = battle.get("pending_round", {})
-	if not battle.has("body_round") or pending.is_empty() or int(battle.body_round.round) != int(proposed.round):
+	if not battle.has("body_round") or pending.is_empty() or int(battle.body_round.round) != int(proposed.round) \
+		or battle.body_round.abs_day != boundary.abs_day:
 		return _failure("Round reconciliation requires that frozen round")
+	var tx := source.day_resolution
+	if int(tx.battle_index) >= tx.battle_ids.size() or int(tx.battle_ids[int(tx.battle_index)]) != id:
+		return _failure("Round reconciliation requires the current queued field")
 	var event: Variant = source.military_events.get("battle:%d:round:%d:personnel" % [id, int(proposed.round)])
-	if not event is Dictionary or not event.get("result") is Dictionary or not event.result.get("changes") is Array:
-		return _failure("Round reconciliation requires the round's settled personnel event")
+	if not event is Dictionary or not event.get("request") is Dictionary or event.request.get("kind") != "transfer_units" \
+		or not event.get("result") is Dictionary or event.result.get("status") != "applied" or not event.result.get("changes") is Array \
+		or event.result.changes.is_empty():
+		return _failure("Round reconciliation requires the round's applied personnel event")
 	var participants: Array = pending.att + pending.def
 	for change: Variant in event.result.changes:
-		if not change is Dictionary: return _failure("Invalid round personnel change")
+		if not change is Dictionary or change.get("from") != "fit" or change.get("to") not in ["wounded", "dead", "captured_current"]:
+			return _failure("A round personnel change must move fit personnel to a casualty status")
 		var unit: Variant = source.military_cohorts.get(change.get("cohort_id"), {}).get("unit_code")
 		if unit not in participants: return _failure("Round personnel event touches a non-participant")
 	var size := int(repo.bal("battle_group_size"))
@@ -942,8 +950,10 @@ static func reconcile_round_candidate(repo: DataRepository, source: GameState, p
 		var total := 0
 		for row: Dictionary in rows: total += int(row.count)
 		var fit := MilitaryRoster.fit(candidate, code)
-		if fit == total: continue
 		if fit > total: return _failure("Round settlement cannot grow bodies: " + code)
+		if fit == total: continue   # already reconciled: a retry is a no-op
+		# Otherwise the bodies must be exactly the fit before THIS round's event: no other staged loss.
+		if total != _frozen_fit(candidate, code, battle): return _failure("Bodies do not match the round's own losses: " + code)
 		var partition := BattleGroups.counts(fit, size)
 		var kept: Array[Dictionary] = []
 		for i: int in partition.size():

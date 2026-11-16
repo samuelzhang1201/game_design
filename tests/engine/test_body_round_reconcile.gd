@@ -86,12 +86,23 @@ func test_partial_loss_keeps_every_row_and_rewrites_counts() -> void:
 		for key: String in ["slot", "home_slot", "x_m", "y_m", "facing_deg"]:
 			assert_eq(after[i][key], rows[i][key])
 
-func test_no_loss_is_an_exact_no_op() -> void:
+func test_retry_capture_and_json_are_exact() -> void:
 	var f := _frozen()
-	f.state.military_events["battle:%d:round:1:personnel" % f.id] = {"result": {"changes": []}}
-	var result := _reconcile(f)
-	assert_eq(result.status, "complete", result.reason)
-	if result.candidate != null: assert_eq(BodyMotion._hash(result.candidate.to_dict()), BodyMotion._hash(f.state.to_dict()))
+	# A capture is a loss like a death: fit 901 -> 900.
+	assert_false(MilitaryRoster.transfer_units(f.repo, f.state, "battle:%d:round:1:personnel" % f.id,
+		[{"unit_code": f.unit, "from": "fit", "to": "captured_current", "count": 1}], "Round captures").has("error"))
+	var first := _reconcile(f)
+	assert_eq(first.status, "complete", first.reason)
+	if first.candidate == null: return
+	assert_eq(first.candidate.battles[0].groups[f.unit].size(), 9)
+	var second := _reconcile(f)
+	assert_eq(BodyMotion._hash(second.candidate.to_dict()), BodyMotion._hash(first.candidate.to_dict()), "two calls agree")
+	# A retry on the reconciled stage (direct and through a JSON save) is an exact no-op.
+	var json: GameState = GameState.from_dict(JSON.parse_string(JSON.stringify(first.candidate.to_dict())), false)
+	for stage: GameState in [first.candidate, json]:
+		var again := UnitBodies.reconcile_round_candidate(f.repo, stage, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(stage))
+		assert_eq(again.status, "complete", again.reason)
+		if again.candidate != null: assert_eq(BodyMotion._hash(again.candidate.to_dict()), BodyMotion._hash(first.candidate.to_dict()))
 
 func test_unrelated_staged_changes_and_bad_provenance_reject() -> void:
 	# A loss outside the round's event: `other` is no participant and its bodies now disagree.
@@ -102,6 +113,22 @@ func test_unrelated_staged_changes_and_bad_provenance_reject() -> void:
 	var unrelated := _reconcile(f)
 	assert_eq(unrelated.status, "error")
 	assert_true(unrelated.reason.contains("validation"), unrelated.reason)
+	# A participant's extra loss outside the round's event is not the round's result.
+	f = _frozen()
+	_lose(f, {f.unit: 1})
+	assert_false(MilitaryRoster.transfer_units(f.repo, f.state, "unrelated:2",
+		[{"unit_code": f.unit, "from": "fit", "to": "dead", "count": 100}], "Elsewhere").has("error"))
+	var extra := _reconcile(f)
+	assert_eq(extra.status, "error")
+	assert_true(extra.reason.contains("round's own losses"), extra.reason)
+	# A forged receipt (empty changes, a healing direction) is not an applied round event.
+	f = _frozen()
+	f.state.military_events["battle:%d:round:1:personnel" % f.id] = {"request": {"kind": "transfer_units"}, "result": {"status": "applied", "changes": []}}
+	assert_eq(_reconcile(f).status, "error")
+	f = _frozen()
+	assert_false(MilitaryRoster.transfer_units(f.repo, f.state, "battle:%d:round:1:personnel" % f.id,
+		[{"unit_code": f.unit, "from": "fit", "to": "released", "count": 1}], "Not a casualty").has("error"))
+	assert_true(_reconcile(f).reason.contains("casualty"))
 	# The round's own event touching a non-participant.
 	f = _frozen()
 	_lose(f, {f.unit: 1, f.other: 1})
@@ -119,8 +146,10 @@ func test_unrelated_staged_changes_and_bad_provenance_reject() -> void:
 	assert_eq(UnitBodies.reconcile_round_candidate(f.repo, stripped, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(stripped)).status, "error")
 	# The boundary must be the saved round boundary.
 	var boundary := BodyBattleMotion._boundary(f.state)
-	boundary.stage = "advance"
-	assert_eq(UnitBodies.reconcile_round_candidate(f.repo, f.state, {"battle_id": f.id, "round": 1}, boundary).status, "error")
+	for key: String in ["stage", "abs_day", "substep", "sequence", "version"]:
+		var bad := BodyBattleMotion._boundary(f.state)
+		bad[key] = 2 if key == "version" else ("advance" if key == "stage" else "9")
+		assert_eq(UnitBodies.reconcile_round_candidate(f.repo, f.state, {"battle_id": f.id, "round": 1}, bad).status, "error", key)
 	assert_eq(UnitBodies.reconcile_round_candidate(null, f.state, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(f.state)).status, "error")
 
 func test_growth_is_never_a_round_result() -> void:
