@@ -822,7 +822,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "0cc53234eb7234594cec05050a52fefb4933936cf90bd4cc7736a34702f12195",
+  "sha256": "15bc7298cbbaf51fa7fc718d00313bb3ba2718c51669182dd3976f374033fb3f",
   "uniform": 512
  },
  "config": {
@@ -904,8 +904,8 @@
   "data/screens/map3d/balance.csv": "4fa9c734808e35238ad305fab60679857c12a03f46f246d44e508513dea8112e",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "604609f8a8086cf06443bba02ea268cdd6b0170fb1cf5ac6b485b8d781432d92",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
-  "scripts/map3d/map3d_cavalry_pivot.gd": "567a68683f34d51ada2105a4bd6d1ec67ecf9cf474efbaf9a2ce0840b516129c",
-  "scripts/map3d/map3d_cavalry_pivot_math.gd": "66538405f1a76a0e11f1c62ae8f15ebef889557486bb70eff721c603ad5bbcca",
+  "scripts/map3d/map3d_cavalry_pivot.gd": "b210d21b965ff11830e290d81b526eb7e713b9ddf2c285467b9838e27a96197d",
+  "scripts/map3d/map3d_cavalry_pivot_math.gd": "0c9ae12d36755d2d9b5928d6343c7a6c4bdb871aa62d7c6e0013c729d65911e1",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
   "scripts/map3d/map3d_royal_locomotion_source.gd": "b4301e3953e92676cdb0386bf4324c9e779687c665dfd9c9433a0083d3e827e7",
   "scripts/map3d/map3d_royal_pivot.gd": "2c94e0b6d7cf6269634cd5c854238cd3b5707aeefa367393b8b9034019e9ad6d",
@@ -919,11 +919,11 @@
    "MARCH"
   ],
   "contact_um": 29338,
-  "digest": "961627c024e6061942355f2cbe15a9d5667a95ada646532fe971b5a48c4bb9e8",
+  "digest": "27d7b12af49173b2c0342df9756920cd98faf4a557b22d199095ce7b1a4c8cd0",
   "radius_m": 749,
   "turn_q": 400000
  },
- "payload_sha256": "961627c024e6061942355f2cbe15a9d5667a95ada646532fe971b5a48c4bb9e8",
+ "payload_sha256": "27d7b12af49173b2c0342df9756920cd98faf4a557b22d199095ce7b1a4c8cd0",
  "report": {
   "bounds_um": {
    "contact": 29338,
