@@ -161,6 +161,7 @@ static func _walk(repo: DataRepository, piece: Dictionary, child: Dictionary, xz
 	child["walking"] = t < 1.0
 	if t >= 1.0:
 		child.erase("step_facing")  # a later walk to a new saved point turns into its way again
+		child.erase("step_up")
 	return child["at"]
 
 ## Optional saved slots retain their model and animation player across removal/refresh.
@@ -234,6 +235,7 @@ static func fall_swap(previous: Dictionary, plan: Array) -> Array:
 		if faller != removed and previous.has(faller):
 			bodies.append(previous[faller])
 			previous[faller] = previous[removed]
+			(previous[faller] as Dictionary)["step_up"] = true  # its walk up turns into its way (Map3DDuelDriver._aim)
 		else:
 			bodies.append(previous[removed])
 		previous.erase(removed)

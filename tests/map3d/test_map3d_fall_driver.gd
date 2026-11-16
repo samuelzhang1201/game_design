@@ -34,7 +34,7 @@ func test_a_loss_drops_a_duellist_and_the_tail_steps_up() -> void:
 	var c := {0: {"n": 0}, 1: {"n": 1}, 2: {"n": 2}, 5: {"n": 5}}
 	var bodies := Map3DBattleGroups.fall_swap(c, [{"removed": 5, "faller": 1}])
 	assert_eq(bodies, [{"n": 1}], "the duellist's figure is the body")
-	assert_eq(c, {0: {"n": 0}, 1: {"n": 5}, 2: {"n": 2}}, "the tail's figure now stands for the duellist's row")
+	assert_eq(c, {0: {"n": 0}, 1: {"n": 5, "step_up": true}, 2: {"n": 2}}, "the tail's figure now stands for the duellist's row")
 
 
 func test_a_figure_with_no_duellist_falls_where_it_stands() -> void:
@@ -88,3 +88,37 @@ func test_no_death_clip_frees_as_today() -> void:
 	var body := _child(["GARRISON"])
 	driver.fall(body, ART, TUNE)
 	assert_true((body["node"] as Node3D).is_queued_for_deletion())
+
+
+## Review 2026-11-17: a duellist that falls as itself must not be released back to its piece's action.
+func test_a_fallen_duellist_stays_down() -> void:
+	var driver := Map3DDuelDriver.new()
+	var body := _child(["GARRISON", "ATTACK", "SLASH", "BLOCK", "HIT", "DEATH"])
+	var fig_a := {"key": "A:1", "code": "A", "slot": 1, "anim": add_child_autofree(_anim(["GARRISON", "ATTACK", "SLASH", "BLOCK", "HIT"])),
+		"child": {}, "xz": Vector2(0, 10), "h": 1.0, "art": ART, "piece": {"action": "ATTACK"}}
+	var fig_b := {"key": "B:0", "code": "B", "slot": 0, "anim": body["anims"][0], "child": body, "xz": Vector2(0, -10),
+		"h": 1.0, "art": ART, "piece": {"action": "ATTACK"}}
+	driver.run([{"id": 1, "rounds": 1, "across": Vector2(1, 0), "a": [fig_a], "b": [fig_b]}], 0.05, true, TUNE)
+	driver.fall(body, ART, TUNE)
+	driver.run([{"id": 1, "rounds": 1, "across": Vector2(1, 0), "a": [fig_a], "b": []}], 0.05, true, TUNE)
+	assert_eq((body["anims"][0] as AnimationPlayer).current_animation, "DEATH", "the body keeps falling")
+	assert_false(driver.is_duelling(fig_a["anim"]), "its opponent is released")
+
+
+## Review 2026-11-17: the figure stepping up from the tail turns into its way, never slides across the block.
+func test_the_step_up_walker_turns_into_its_way() -> void:
+	var driver := Map3DDuelDriver.new()
+	var walker := {"step_up": true}
+	var a := [{"key": "A:1", "code": "A", "slot": 1, "anim": add_child_autofree(_anim(["GARRISON", "ATTACK", "SLASH", "BLOCK", "HIT"])),
+		"child": walker, "xz": Vector2(0, 10), "h": 1.0, "art": ART, "piece": {}}]
+	var b := [{"key": "B:0", "code": "B", "slot": 0, "anim": add_child_autofree(_anim(["GARRISON", "ATTACK", "SLASH", "BLOCK", "HIT"])),
+		"child": {}, "xz": Vector2(0, -10), "h": 1.0, "art": ART, "piece": {}}]
+	driver.run([{"id": 1, "rounds": 1, "across": Vector2(1, 0), "a": a, "b": b}], 0.05, true, TUNE)
+	assert_false(walker.get("step_facing", false), "its long walk up is an ordinary walk")
+	assert_true(b[0]["child"].get("step_facing", false), "its opponent's short step still faces it")
+
+
+func test_the_swap_marks_the_walker() -> void:
+	var c := {1: {"n": 1}, 5: {"n": 5}}
+	Map3DBattleGroups.fall_swap(c, [{"removed": 5, "faller": 1}])
+	assert_true(c[1].get("step_up", false))

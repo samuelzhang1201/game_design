@@ -68,6 +68,7 @@ func fall(child: Dictionary, art: Dictionary, _tune: Dictionary) -> void:
 		(child["node"] as Node3D).queue_free()
 		return
 	anim.set_meta("duel", true)  # nothing else plays a body
+	anim.set_meta("fallen", true)  # nor does a release give it back its piece's action
 	Map3DClipChain.stop(anim)
 	anim.speed_scale = 1.0
 	anim.play(clip, 0.1)
@@ -190,8 +191,8 @@ static func _release(f: Dictionary, tune: Dictionary) -> bool:
 	(f["child"] as Dictionary).erase("duel_offset")
 	(f["child"] as Dictionary).erase("duel_yaw")
 	(f["child"] as Dictionary)["step_facing"] = true  # it steps back facing its foe
-	if not is_instance_valid(f["anim"]):
-		return false  # freed with its piece (e.g. a refresh under the pause menu)
+	if not is_instance_valid(f["anim"]) or (f["anim"] as AnimationPlayer).has_meta("fallen"):
+		return false  # freed with its piece (e.g. a refresh under the pause menu), or a body falling
 	var anim: AnimationPlayer = f["anim"]
 	anim.remove_meta("duel")
 	anim.speed_scale = 1.0
@@ -222,7 +223,8 @@ static func _aim(figs: Array, tune: Dictionary) -> bool:
 				or not is_equal_approx(float(child["duel_yaw"]), yaw):
 			child["duel_offset"] = offset
 			child["duel_yaw"] = yaw
-			child["step_facing"] = true  # it steps in facing its foe, never turned to its way
+			if not child.get("step_up", false):  # a figure walking up from the tail turns into its way
+				child["step_facing"] = true  # it steps in facing its foe, never turned to its way
 			changed = true
 	return changed
 
