@@ -163,3 +163,27 @@ it does not create that transaction or certify battle law, departure or contact.
 Saved outer endpoint digests are checked against the full save and the unchanged
 terrain/footprint/balance/policy/diplomacy context before admission. No movement,
 day driver, lifecycle, damage, production activation or visual acceptance is added.
+
+## Candidate round reconciliation
+
+`BodyRoundReconcile.reconcile_round_candidate(repo, source, {battle_id, round}, boundary)` (its own file: `unit_bodies.gd` is a SHA-256-pinned premise of the royal carrier proof, `Map3DRoyalCarrierSource._SOURCES`, so it stays unedited)
+brings a frozen round's settled personnel losses to its bodies inside the CF06
+settlement's private stage. It checks provenance first: the saved round-stage
+boundary, a canonical live field, that round's `body_round` and `pending_round`
+with the matching receipt, and the round's personnel event
+(`battle:<id>:round:<n>:personnel`) touching only the round's participants.
+Each participant whose rows exceed its fit keeps its first rows in stored order
+(the order canonical counts follow) with their identity, home, position, path and
+facing, and canonical counts, and no row ever holds more than before; the
+rest retire, an empty store keeps its owner, and `group_next_slot` keeps its
+high water so a retired slot is never reused. Growth, a non-participant in the
+event, an unrelated staged personnel change (the whole-world body/fit check) or
+an invalid world reject. The event must be the applied
+`transfer_units` receipt moving fit personnel to wounded, dead or captured, on the
+current queued field at the saved boundary; each participant's bodies must equal
+its fit before that event (or already its fit: a retry is a no-op), so another
+staged loss on a participant rejects unless it exactly offsets the round's own
+numbers, which only the settlement's basis proof can catch. It returns UnitBodies' five-field result, leaves the round
+open (the envelope and payload stay) and draws no RNG. Non-personnel staging
+(rows, tasks, laws) is the caller's to prove: the settlement checks the round's
+`body_round.basis` on its admitted pre-settlement world before applying the event.
