@@ -261,3 +261,24 @@ sequence and receipt are not in it) and returns `blocked`. It draws no RNG and
 applies no damage or cost. Until the CF06 consumer settles it, every step returns
 `blocked` on an identical basis and errors on a changed one. A merge
 canonicalizes `processed_battle_ids`, so no unit resolves twice through an alias.
+
+## Candidate power and incoming exposure
+
+CF06's candidate arithmetic (`docs/reviews/cluster-formations/cf06-power-contract.md`).
+`BattleSystem.candidate_power` takes a source's union of eligible melee (M) and
+direct-fire (J) personnel from `BattleRanged.counts_candidate` and runs the
+ORIGINAL equipment chain once through `BattleStrength.unit(..., melee, firing)`:
+each arm uses E = M (ranged/machinery E = M + J) in
+`BattleStrength.arm_power` (m0 = trunc(N·E·H·1000/(C·F)), one arm-base and one
+upward development rounding per arm), quality on the summed equipment, then the
+usual categories. With E = F it equals the full-personnel path; zero eligible
+personnel is zero before any clamp, and a legacy `contact:` factor is refused,
+since E already is the participation. Defence keeps the full H chain.
+`BattleSystem.candidate_sources` admits, per target, only opposing units with a
+positive eligible equipped numerator (H > 0, C > 0), so remote, protected or
+blocked opponents neither create nor dilute exposure. `BattleStrength.exposure`
+is trunc(Σ(1000·M_t + R·J_t)/ΣF) over those sources (0 when none) and
+`BattleSystem.candidate_context` classifies withdrawal/pursuit, then ranged by the
+arm-by-arm crew numerator, then shock by earned impact, then melee, applies the
+exposure once and the target's authored event exposures in order;
+`BattleStrength.loss_rate` freezes trunc(tier loss · context / 1000).

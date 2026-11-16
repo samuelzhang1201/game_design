@@ -49,14 +49,25 @@ static func combine(base: int, factors: Array[Dictionary]) -> Dictionary:
 	return {"base": base, "power": power, "factors": ordered, "steps": steps}
 
 ## Battle-only equipment pipeline: old ArmySystem.power already applies several of these factors.
+## CF06 candidate outgoing power passes the source's union of eligible melee (`melee`, M) and
+## direct-fire (`firing`, J) personnel: every arm uses E = M (ranged/machinery E = M + J) in
+## m0 = trunc(N * E * H * 1000 / (C * F)), one per-arm rounding chain, H = F - guards. With
+## E = F this is the original full-personnel chain; `melee` < 0 keeps that original path.
 static func unit(repo: DataRepository, state: GameState, code: String,
-		attacking: bool, extra_factors: Array[Dictionary] = []) -> Dictionary:
+		attacking: bool, extra_factors: Array[Dictionary] = [], melee := -1, firing := 0) -> Dictionary:
 	var reg := ArmySystem.regiment(repo, code, state)
 	var entry := ArmySystem.state_of(repo, state, code)
 	if reg.is_empty() or entry.is_empty():
 		return {"error": "Unknown battle unit: " + code}
 	var capacity := ArmySystem.personnel_capacity(repo, reg)
-	var fit := ArmySystem.fit_count(repo, state, code) - PrisonerBurden.guard_count(repo, state, code)
+	var all_fit := ArmySystem.fit_count(repo, state, code)
+	var guards := PrisonerBurden.guard_count(repo, state, code)
+	var candidate := melee >= 0
+	if candidate and (guards < 0 or guards > all_fit): return {"error": "Guards exceed fit personnel: " + code}
+	if candidate and (firing < 0 or melee + firing > all_fit):
+		return {"error": "Eligible melee and fire exceed fit personnel: " + code}
+	var fit := all_fit - guards
+	if candidate and capacity < 0: return {"error": "Invalid equipment or crew row: " + code}
 	var quality := MilitaryQuality.profile(repo, state, code)
 	var development := DevelopmentSystem.arm_permille(repo, state, ArmySystem.realm_of(repo, code, state))
 	var equipment := 0
@@ -69,13 +80,20 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 			var count := int(float(reg.get(arm, 0)))
 			if count <= 0:
 				continue
-			@warning_ignore("integer_division")
-			var milli := count * fit * 1000 / capacity
-			@warning_ignore("integer_division")
-			milli = milli * ArmySystem._arm_base(repo, code, arm, state.tick) / 1000
 			var dev := maxi(0, int(development.get(arm, 1000)))
-			@warning_ignore("integer_division")
-			var power := (milli * dev + 999999) / 1000000
+			var power := 0
+			if candidate:
+				var ranged: bool = String(repo.world_table("military", "unit_types")[arm]["type"]) in ["ranged", "machinery"]
+				var eligible := melee + firing if ranged else melee
+				if eligible <= 0 or all_fit <= 0: continue
+				power = arm_power(count, eligible, fit, all_fit, capacity, ArmySystem._arm_base(repo, code, arm, state.tick), dev)[2]
+			else:
+				@warning_ignore("integer_division")
+				var milli := count * fit * 1000 / capacity
+				@warning_ignore("integer_division")
+				milli = milli * ArmySystem._arm_base(repo, code, arm, state.tick) / 1000
+				@warning_ignore("integer_division")
+				power = (milli * dev + 999999) / 1000000
 			equipment += power
 			terrain_weight += power * ArmySystem.terrain_factor(repo, terrain, arm, stance, works)
 	@warning_ignore("integer_division")
@@ -100,3 +118,40 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 		factor["min_permille"] = int(repo.bal("battle_strength_factor_min_permille"))
 		factor["max_permille"] = int(repo.bal("battle_strength_factor_max_permille"))
 	return combine(base, factors)
+
+
+## One arm's candidate rounding chain, [m0, m1, p]: m0 = trunc(N*E*H*1000/(C*F)),
+## m1 = trunc(m0*base/1000), p = ceil(m1*max(0,dev)/1000000). Exactly one rounding each.
+static func arm_power(n: int, e: int, h: int, fit: int, capacity: int, base: int, dev: int) -> Array:
+	if fit <= 0 or capacity <= 0: return [0, 0, 0]
+	@warning_ignore("integer_division")
+	var m0 := n * e * h * 1000 / (capacity * fit)
+	@warning_ignore("integer_division")
+	var m1 := m0 * base / 1000
+	@warning_ignore("integer_division")
+	return [m0, m1, (m1 * maxi(0, dev) + 999999) / 1000000]
+
+
+## CF06 simultaneous incoming exposure of one target over its admitted lawful sources I(t):
+## trunc(sum(1000 * M_t + R * J_t) / sum(F)), each row `{fit, ranged_share, melee, firing}`.
+## Empty I(t) is 0, never 1000; R is the truncated `BattleRanged.share`, applied once.
+static func exposure(sources: Array) -> Dictionary:
+	var weighted := 0
+	var fit := 0
+	for raw: Variant in sources:
+		if not raw is Dictionary: return {"error": "Invalid exposure source"}
+		var row: Dictionary = raw
+		for key: String in ["fit", "ranged_share", "melee", "firing"]:
+			if not row.get(key) is int or int(row[key]) < 0: return {"error": "Exposure needs nonnegative integer " + key}
+		if int(row.ranged_share) > 1000 or int(row.melee) + int(row.firing) > int(row.fit) or int(row.fit) <= 0:
+			return {"error": "Exposure source counts disagree with its fit"}
+		weighted += 1000 * int(row.melee) + int(row.ranged_share) * int(row.firing)
+		fit += int(row.fit)
+	@warning_ignore("integer_division")
+	return {"exposure": weighted / fit if fit > 0 else 0}
+
+
+## The frozen per-unit loss rate: trunc(tier loss * target context / 1000).
+static func loss_rate(tier_loss_permille: int, context_permille: int) -> int:
+	@warning_ignore("integer_division")
+	return tier_loss_permille * context_permille / 1000
