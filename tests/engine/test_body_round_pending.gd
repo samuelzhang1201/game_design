@@ -8,10 +8,10 @@ func after_each() -> void:
 	MarchPath.forget()
 	RoadGraph.forget()
 
-func _ready_world() -> Dictionary:
+func _ready_world(supplies: int = 1000000, ceasefire: bool = false) -> Dictionary:
 	var helper: GutTest = load("res://tests/engine/test_body_battle_motion.gd").new()
 	var f: Dictionary = helper.call("_world", 1000)
-	UnitBodies._entry(f.state, f.enemy).supplies = 1000000
+	UnitBodies._entry(f.state, f.enemy).supplies = supplies
 	var state: GameState = f.engine.begin_body_battle_candidate(f.state).candidate
 	state = helper.call("_step", f, state, "complete")   # move
 	state = helper.call("_step", f, state, "complete")   # contacts found the field
@@ -19,6 +19,10 @@ func _ready_world() -> Dictionary:
 	var field: Dictionary = state.battles[0]
 	var enemy_side := "att" if f.enemy in field.att else "def"
 	field.actions[enemy_side] = {"kind": "attack", "reason": "Received advance plan"}
+	if ceasefire:
+		var term := {"policy": "protect", "scope": "battle", "until_day": 0, "end_condition": "battle_end", "conditions": {}}
+		field.parley.agreed = {"ceasefire": term}
+		field.parley.parties = {"att": field.att.duplicate(), "def": field.def.duplicate()}
 	BodyBattle._seal_private(f.repo, state)
 	state = helper.call("_step", f, state, "blocked")    # encounter decision
 	state = helper.call("_acknowledge", f, state)
@@ -76,6 +80,10 @@ func test_one_draw_frozen_with_exact_payload_and_effects() -> void:
 	# Costs: the attacking enemy's extra food once, ceil(day bite x extra permille / 1000).
 	assert_eq(pending.costs.size(), 1)
 	assert_eq(pending.costs[0].code, f.enemy)
+	var reg := ArmySystem.regiment(f.repo, f.enemy, f.ready)
+	var bite := ArmySystem.day_bite(ArmySystem.supply_use(f.repo, reg, f.ready), f.ready.day)
+	assert_eq(pending.costs[0].supplies, (bite * int(f.repo.battle_orders.attack.extra_supply_permille) + 999) / 1000)
+	assert_eq(pending.costs[0].reason, "Additional supplies for an actual all-out attack day")
 	# Effects from the existing personnel planner: the crown unit loses trunc(1000 x rate / 1000).
 	var plan: Dictionary = result.plan
 	assert_eq(plan.pending, pending)
@@ -88,6 +96,9 @@ func test_one_draw_frozen_with_exact_payload_and_effects() -> void:
 	assert_eq(lost, int(split.lost))
 	assert_eq(plan.effects.unit_results[f.unit].dead + plan.effects.unit_results[f.unit].wounded, int(split.lost))
 	if int(split.lost) > 0: assert_true(("battle:%d:round:1:%s" % [f.id, f.unit]) in plan.effects.family_event_ids)
+	assert_true(plan.effects.unit_results.has(f.enemy))
+	assert_eq(plan.effects.charge_units, [])
+	assert_true(String(pending.reason).contains("attacker "), pending.reason)
 	# The wrapper, the outer round_pending operation and no personnel change yet.
 	assert_eq(live.body_round_plan.receipt, BodyMotion._hash(plan))
 	assert_eq(live.body_round, battle.body_round)
@@ -140,9 +151,37 @@ func test_changed_basis_tampering_and_wrong_field_reject() -> void:
 			"plan": bad.battles[0].body_round_plan.plan.effects.charge_units = ["forged"]
 			"rng": bad.rng.randi_range(0, 9)
 		assert_eq(_plan(f, bad).status, "error", tamper)
+	# Resealed forgeries: the endpoint hash no longer catches them, the saved-plan checks do.
+	for forge: String in ["pending", "stale_receipt", "consistent", "basis"]:
+		var bad := _json(published)
+		var live: Dictionary = bad.battles[0]
+		match forge:
+			"pending": live.pending_round.eff += 1
+			"stale_receipt": live.body_round_plan.plan.effects.charge_units = ["forged"]
+			"consistent":
+				live.pending_round.roll += 1
+				live.body_round_plan.plan.pending.roll += 1
+				live.body_round_plan.receipt = BodyMotion._hash(live.body_round_plan.plan)
+			"basis": live.groups[f.unit][5].y_m += 1
+		BodyBattle._seal_private(f.repo, bad)
+		var forged := _plan(f, bad)
+		assert_eq(forged.status, "error", forge)
+		assert_null(forged.candidate)
 	# Only the current queued field, with real inputs.
 	assert_eq(BodyBattleRounds.plan_candidate(f.repo, f.ready, f.id + 1, BodyBattleMotion._boundary(f.ready)).status, "error")
 	assert_eq(BodyBattleRounds.plan_candidate(null, f.ready, f.id, BodyBattleMotion._boundary(f.ready)).status, "error")
 	var wrong := BodyBattleMotion._boundary(f.ready)
 	wrong.stage = "advance"
 	assert_eq(BodyBattleRounds.plan_candidate(f.repo, f.ready, f.id, wrong).status, "error")
+
+func test_readiness_holds_a_law_barred_attack() -> void:
+	# Production's side fallback runs before the freeze: a side attack the frozen agreement bars
+	# is frozen as hold, so planning never prices or powers an unlawful attack.
+	var f := _ready_world(1000000, true)
+	var battle: Dictionary = f.ready.battles[0]
+	assert_eq(battle.body_round.unit_actions[f.enemy].kind, "hold")
+	var enemy_side := "att" if f.enemy in battle.att else "def"
+	assert_true(String(battle.actions[enemy_side].reason).contains("barred"), str(battle.actions[enemy_side]))
+	var result := _plan(f, f.ready)
+	assert_eq(result.status, "complete", result.reason)
+	if result.candidate != null: assert_eq(result.candidate.battles[0].pending_round.costs, [])

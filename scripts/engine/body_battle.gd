@@ -412,12 +412,28 @@ static func _ready(repo: DataRepository, source: GameState, request: Dictionary,
 	var closed: Dictionary = source.military_migration.get("body_battle", {}).get("closed_motion", {})
 	if closed.is_empty() or closed.get("abs_day") != tx.body_battle.abs_day or closed.get("substep") != tx.body_battle.next_substep:
 		return _result("error", "Readiness requires this slice's closed motion")
+	# Production's side-level fallback before freezing: a law-barred attack, or an all-out attack
+	# a member cannot afford (no fit personnel or carried food), holds instead.
+	var live := UnitBodies._battle(candidate, id)
+	for side: String in BattleSystem.SIDES:
+		if BattleOrders.kind(live, side) != "attack": continue
+		if not "attack" in BattleRules.legal_actions(repo, candidate, id, side):
+			live.actions[side] = {"kind": "hold", "reason": "Attack is barred by current laws or the frozen agreement"}
+			continue
+		for unit: String in live[side]:
+			var own := BattleTaskSystem.combat_action(repo, candidate, live, unit)
+			if own.task_id != "" or own.kind != "attack": continue
+			var reg := ArmySystem.regiment(repo, unit, candidate)
+			var bite := ArmySystem.day_bite(ArmySystem.supply_use(repo, reg, candidate), candidate.day)
+			if ArmySystem.fit_count(repo, candidate, unit) <= 0 or int(BattleSystem._stored(candidate, unit).get("supplies", 0)) < bite + BattleSystem._attack_supply(repo, bite):
+				live.actions[side] = {"kind": "hold", "reason": "Attack falls back to hold: insufficient personnel or carried supplies"}
+				break
 	var contacts: Array = []
 	var actions := {}
 	for side: String in BattleSystem.SIDES:
 		var enemies: Array = battle["def" if side == "att" else "att"].duplicate()
 		for unit: String in battle[side]:
-			actions[unit] = BattleSystem.unit_action(repo, source, battle, unit)
+			actions[unit] = BattleSystem.unit_action(repo, candidate, live, unit)
 			if enemies.is_empty(): continue
 			var query := _pairs(repo, UnitBodies._copy(source), battle, unit, enemies.duplicate(), boundary)
 			if query.status != "complete": return _result("error", query.reason)
@@ -427,7 +443,7 @@ static func _ready(repo: DataRepository, source: GameState, request: Dictionary,
 	var round := int(battle.get("rounds", 0)) + 1
 	UnitBodies._battle(candidate, id).body_round = {"version": "1", "token": "bodyround:%d:%s:%d" % [id, tx.body_battle.abs_day, round],
 		"abs_day": tx.body_battle.abs_day, "round": str(round), "motion_receipt": closed.receipt,
-		"contact_digest": BodyMotion._hash(contacts), "basis": _round_basis(repo, source),
+		"contact_digest": BodyMotion._hash(contacts), "basis": _round_basis(repo, candidate),
 		"contacts": contacts, "unit_actions": actions}
 	return _result("complete", "Round ready for its settlement consumer", candidate, {"contacts": contacts, "blocked": true})
 

@@ -18,21 +18,25 @@ static func plan_candidate(repo: DataRepository, source: GameState, battle_id: i
 	if repo == null or source == null or battle_id <= 0: return _result("error", "Round planning requires data, source and a field")
 	var admitted := UnitBodies.validate_battle_candidate(repo, source, boundary)
 	if admitted.status == "error": return _result("error", admitted.reason)
-	if admitted.reason != BodyBattle.FROZEN_ROUND: return _result("deferred", "Round planning requires a ready round")
-	if boundary.get("kind") != "battle" or boundary.get("stage") != "round": return _result("deferred", "Round planning waits for the round stage")
+	if boundary.get("kind") != "battle" or boundary.get("stage") != "round": return _result("error", "Round planning requires the round-stage boundary")
 	var tx := source.day_resolution
-	if not tx.pending_decision.is_empty(): return _result("deferred", "A pending decision comes first")
 	if int(tx.battle_index) >= tx.battle_ids.size() or int(tx.battle_ids[int(tx.battle_index)]) != battle_id:
 		return _result("error", "Round planning names only the current queued field")
 	var battle := UnitBodies._battle(source, battle_id)
 	if battle.is_empty() or BattleSystem.canonical(source, battle_id) != battle_id or not battle.has("body_round"):
 		return _result("error", "Round planning requires a canonical round-ready field")
+	if admitted.reason != BodyBattle.FROZEN_ROUND: return _result("deferred", "Round planning requires a ready round")
+	if not tx.pending_decision.is_empty(): return _result("deferred", "A pending decision comes first")
+	if battle.body_round.basis != BodyBattle._round_basis(repo, source):
+		return _result("error", "Readiness basis changed before planning")
 	if battle.has("body_round_plan") or battle.has("pending_round"):
 		var saved_error := _saved_error(battle)
 		if not saved_error.is_empty(): return _result("error", saved_error)
-		return _result("complete", "Already planned frozen round", UnitBodies._copy(source), battle.body_round_plan.plan.duplicate(true))
-	if battle.body_round.basis != BodyBattle._round_basis(repo, source):
-		return _result("error", "Readiness basis changed before planning")
+		var plan: Dictionary = battle.body_round_plan.plan
+		var outer: Dictionary = source.military_migration.get("body_battle", {})
+		if outer.get("sequence") != plan.boundary.get("sequence") or outer.get("receipt") != BodyMotion._hash(_outer(plan, battle.body_round_plan.receipt, battle.body_round)):
+			return _result("error", "The frozen round's outer round_pending receipt does not match")
+		return _result("complete", "Already planned frozen round", UnitBodies._copy(source), plan.duplicate(true))
 	var closed: Dictionary = source.military_migration.get("body_battle", {}).get("closed_motion", {})
 	if closed.get("receipt") != battle.body_round.motion_receipt: return _result("error", "Readiness names another closed motion")
 	# Physical queries need an unfrozen admission: a private probe without the envelope, resealed.
@@ -59,7 +63,9 @@ static func plan_candidate(repo: DataRepository, source: GameState, battle_id: i
 				var extra := BattleSystem._attack_supply(repo, bite)
 				if int(BattleSystem._stored(probe, code).get("supplies", 0)) < bite + extra:
 					return _result("error", "A frozen attack lacks its carried supplies: " + code)
-				costs.append({"code": code, "supplies": extra, "reason": String(actions[code].get("reason", "Actual attack day"))})
+				var by_task := String(actions[code].get("task_id", "")) != ""
+				costs.append({"code": code, "supplies": extra,
+					"reason": String(actions[code].get("reason", "")) if by_task else "Additional supplies for an actual all-out attack day"})
 	var candidate := UnitBodies._copy(source)
 	var odds := BattleSystem.odds_permille(int(powers.att), int(powers.def))
 	var roll := candidate.rng.randi_range(0, 999)
@@ -85,12 +91,14 @@ static func plan_candidate(repo: DataRepository, source: GameState, battle_id: i
 		if not contexts.has(side): contexts[side] = {"kind": "melee", "loss_permille": 0, "reason": "No participant on this side"}
 		tier[key] = BattleStrength.loss_rate(base, int(contexts[side].loss_permille))
 	var round := int(battle.body_round.round)
-	var reason := "%s at %s, battle day %d; physical bodies" % [String(tier.get("tier", "")).replace("_", " "),
-		BattleSystem.place_label(repo, source, battle), round]
+	var reason := "%s at %s, battle day %d; attacker %s, defender %s" % [String(tier.get("tier", "")).replace("_", " "),
+		BattleSystem.place_label(repo, source, battle), round, contexts.att.kind, contexts.def.kind]
 	var pending := {"day": source.absolute_day(), "round": round, "att": battle.att.duplicate(), "def": battle.def.duplicate(),
 		"tier": tier, "att_power": int(powers.att), "def_power": int(powers.def), "odds": odds, "roll": roll, "eff": eff,
 		"contexts": contexts, "reason": reason, "costs": costs, "unit_actions": actions.duplicate(true),
 		"body_round_receipt": BodyMotion._hash(battle.body_round)}
+	# Effects read the FROZEN actions: the planner's unit_action takes them from pending_round.
+	UnitBodies._battle(probe, battle_id).pending_round = pending.duplicate(true)
 	var effects := _effects(repo, probe, battle_id, pending)
 	if effects.has("error"): return _result("error", String(effects.error))
 	var plan := {"version": 1, "battle_id": str(battle_id), "boundary": boundary.duplicate(true),
@@ -100,8 +108,7 @@ static func plan_candidate(repo: DataRepository, source: GameState, battle_id: i
 	live.pending_round = pending.duplicate(true)
 	live.body_round_plan = {"version": "1", "receipt": BodyMotion._hash(plan), "plan": plan.duplicate(true)}
 	# One outer operation seals the draw and the frozen payload together.
-	var outer := {"version": 1, "request": {"kind": "round_pending", "battle_id": str(battle_id), "plan_receipt": live.body_round_plan.receipt},
-		"boundary": boundary.duplicate(true), "basis": {"source": plan.basis.source}, "motion": {}, "contacts": battle.body_round.contacts.duplicate(true)}
+	var outer := _outer(plan, live.body_round_plan.receipt, battle.body_round)
 	candidate.day_resolution.body_battle.sequence = str(int(boundary.sequence) + 1)
 	candidate.military_migration.body_battle = {"version": "1", "sequence": boundary.sequence, "receipt": BodyMotion._hash(outer),
 		"result": "", "closed_motion": closed.duplicate(true)}
@@ -111,6 +118,11 @@ static func plan_candidate(repo: DataRepository, source: GameState, battle_id: i
 	var saved_error := _saved_error(live)
 	if not saved_error.is_empty(): return _result("error", saved_error)
 	return _result("complete", "Planned one frozen round", candidate, plan)
+
+## The outer `round_pending` operation, rebuilt identically for its receipt check.
+static func _outer(plan: Dictionary, plan_receipt: String, ready: Dictionary) -> Dictionary:
+	return {"version": 1, "request": {"kind": "round_pending", "battle_id": String(plan.battle_id), "plan_receipt": plan_receipt},
+		"boundary": plan.boundary.duplicate(true), "basis": {"source": plan.basis.source}, "motion": {}, "contacts": ready.contacts.duplicate(true)}
 
 ## The existing non-contact strength sources (height, defence stance and camp, events, order).
 static func _factors(repo: DataRepository, state: GameState, battle: Dictionary, code: String, attacking: bool,
