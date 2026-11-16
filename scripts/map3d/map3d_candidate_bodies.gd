@@ -68,7 +68,7 @@ static func sample_candidate(ctx: Map3DContext, code: String, committed: Diction
 	if state.military_migration.has("body_motion"):
 		# v2 (stop-pivot-move) carries its whole timed plan; v1 carries only paths.
 		var version := 2 if saved is Dictionary and saved.get("version") == "2" else 1
-		if not (BodyMotion._loco_saved_ok(saved) or BodyMotion._loco_saved_ok(saved, true) if version == 2 else BodyMotion._saved_ok(saved)):
+		if not (_loco_saved_ok(saved) if version == 2 else BodyMotion._saved_ok(saved)):
 			return _candidate_result("invalid", code, "Invalid saved motion control")
 		cursor = {"version": version, "abs_day": int(saved.abs_day), "substep": int(saved.substep), "receipt": saved.receipt}
 	if state.day_resolution.has("body_march"):
@@ -111,6 +111,17 @@ static func sample_candidate(ctx: Map3DContext, code: String, committed: Diction
 		rows[i].budget_m = budget
 		moving = moving or BodyMotion._length(path) > 0
 	return _candidate_result("bodies", code, "", rows, cursor, moving)
+
+## BodyMotion's v2 saved-control check, remembered by the control's native hash: every unit
+## re-samples every frame, and the full plan check costs about a millisecond a unit.
+static var _loco_checked: Dictionary = {}
+static var _timelines: Dictionary = {}  ## moves hash -> admitted by BodyMotion.sample_locomotion_candidate
+static func _loco_saved_ok(saved: Dictionary) -> bool:
+	var key := saved.hash()
+	if not _loco_checked.has(key):
+		if _loco_checked.size() > 16: _loco_checked.clear()
+		_loco_checked[key] = BodyMotion._loco_saved_ok(saved) or BodyMotion._loco_saved_ok(saved, true)
+	return _loco_checked[key]
 
 ## The v2 entrance: the same admitted projection, refusing anything but a v2 receipt.
 static func sample_locomotion_candidate(ctx: Map3DContext, code: String, committed: Dictionary = {}) -> Dictionary:
@@ -168,8 +179,17 @@ static func along_locomotion_candidate(sampled: Dictionary, time_q: int) -> Dict
 	if moves.is_empty():
 		return out if time_q >= 0 and time_q <= BodyMotion.LOCOMOTION_Q else _candidate_result("invalid", unit, "Invalid locomotion time")
 	if moves.size() != out.rows.size(): return _candidate_result("invalid", unit, "Partial locomotion timeline")
-	var drawn := BodyMotion.sample_locomotion_candidate({"version": 2, "moves": moves}, time_q)
-	if drawn.status != "complete": return _candidate_result("invalid", unit, drawn.reason)
+	# The engine admits a copied timeline once (its heading proofs cost milliseconds a unit);
+	# every later frame of the same timeline only interpolates it.
+	var key := moves.hash()
+	var drawn := {"status": "complete", "rows": []}
+	if _timelines.has(key) and time_q >= 0 and time_q <= BodyMotion.LOCOMOTION_Q:
+		drawn.rows = BodyMotion.sample_locomotion_rows(moves, time_q)
+	else:
+		drawn = BodyMotion.sample_locomotion_candidate({"version": 2, "moves": moves}, time_q)
+		if drawn.status != "complete": return _candidate_result("invalid", unit, drawn.reason)
+		if _timelines.size() > 32: _timelines.clear()
+		_timelines[key] = true
 	for i: int in out.rows.size():
 		var row: Dictionary = out.rows[i]
 		row.x_m = drawn.rows[i].x_m

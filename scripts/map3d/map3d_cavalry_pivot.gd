@@ -56,17 +56,80 @@ static func sample(rest: Variant, authored_pose: Variant, operation: Variant, co
 		return _reject("entry_pose_mismatch")
 	if operation.phase == 1.0 and authored_pose.locals != authored_pose.exit:
 		return _reject("exit_pose_mismatch")
-	var entry: Dictionary = _Math._fk(rest.bones, authored_pose.entry)
-	var exit: Dictionary = _Math._fk(rest.bones, authored_pose.exit)
-	var turn_end: Transform3D = Transform3D(Basis(rest.turn_axis, deg_to_rad(operation.turn_degrees)), Vector3.ZERO)
-	for hoof: String in _HOOVES:
-		reason = _validate_contact(contacts[hoof])
+	reason = _validate_contacts(rest, authored_pose.entry, authored_pose.exit, operation.turn_degrees, contacts)
+	if reason != "":
+		return _reject(reason)
+	return _solve_all(rest, authored_pose.locals, operation, contacts)
+
+
+## The phase-independent half of `sample`, done once per turn: validates the rest, the entry and exit
+## poses, the operation and the contacts exactly as `sample` does (same checks, same reasons) and
+## returns {ok, diagnostics, ...} to hand to `sample_prepared`. The caller must not mutate any input
+## afterwards (the prepared value keeps them by reference).
+static func prepare(rest: Variant, entry: Variant, exit: Variant, operation: Variant, contacts: Variant) -> Dictionary:
+	if not _Math._finite(rest) or not _Math._finite(entry) or not _Math._finite(exit) or not _Math._finite(operation) or not _Math._finite(contacts):
+		return _reject("nonfinite_or_raw_type")
+	if not _keys(rest, ["version", "turn_axis", "bones", "chains"]) or not _keys(operation, _OP_KEYS) or not _keys(contacts, _HOOVES):
+		return _reject("schema")
+	var reason: String = _validate_rest(rest)
+	if reason != "":
+		return _reject(reason)
+	reason = _validate_operation(operation)
+	if reason != "":
+		return _reject(reason)
+	for key: String in ["entry", "exit"]:
+		reason = _validate_pose(rest, entry if key == "entry" else exit)
 		if reason != "":
-			return _reject(hoof + ":" + reason)
+			return _reject(key + ":" + reason)
+	reason = _validate_contacts(rest, entry, exit, operation.turn_degrees, contacts)
+	if reason != "":
+		return _reject(reason)
+	return {"ok": true, "locals": {}, "diagnostics": {"reason": ""}, "rest": rest, "entry": entry, "exit": exit,
+		"turn_degrees": operation.turn_degrees, "contacts": contacts}
+
+
+## `sample` for one phase of a prepared turn: validates only what changes with the phase (the
+## operation, the authored locals and their endpoint identity), then solves exactly as `sample`.
+static func sample_prepared(prepared: Dictionary, locals: Variant, operation: Variant) -> Dictionary:
+	if not prepared.ok:
+		return _reject("unprepared")
+	if not _Math._finite(locals) or not _Math._finite(operation):
+		return _reject("nonfinite_or_raw_type")
+	if not _keys(operation, _OP_KEYS):
+		return _reject("schema")
+	if operation.turn_degrees != prepared.turn_degrees:
+		return _reject("prepared_turn_mismatch")
+	var reason: String = _validate_operation(operation)
+	if reason != "":
+		return _reject(reason)
+	reason = _validate_pose(prepared.rest, locals)
+	if reason != "":
+		return _reject("locals:" + reason)
+	if operation.phase == 0.0 and locals != prepared.entry:
+		return _reject("entry_pose_mismatch")
+	if operation.phase == 1.0 and locals != prepared.exit:
+		return _reject("exit_pose_mismatch")
+	return _solve_all(prepared.rest, locals, operation, prepared.contacts)
+
+
+## Every hoof's contact valid and meeting the native entry and the turned native exit.
+static func _validate_contacts(rest: Dictionary, entry_pose: Dictionary, exit_pose: Dictionary, turn_degrees: float,
+		contacts: Dictionary) -> String:
+	var entry: Dictionary = _Math._fk(rest.bones, entry_pose)
+	var exit: Dictionary = _Math._fk(rest.bones, exit_pose)
+	var turn_end: Transform3D = Transform3D(Basis(rest.turn_axis, deg_to_rad(turn_degrees)), Vector3.ZERO)
+	for hoof: String in _HOOVES:
+		var reason: String = _validate_contact(contacts[hoof])
+		if reason != "":
+			return hoof + ":" + reason
 		var segments: Array = contacts[hoof].segments
 		if not _Math._close(segments[0].from, entry[hoof] * contacts[hoof].offset) or not _Math._close(segments[-1].to, turn_end * exit[hoof] * contacts[hoof].offset):
-			return _reject(hoof + ":incompatible_native_endpoint")
-	var locals: Dictionary = authored_pose.locals.duplicate(true)
+			return hoof + ":incompatible_native_endpoint"
+	return ""
+
+
+static func _solve_all(rest: Dictionary, authored: Dictionary, operation: Dictionary, contacts: Dictionary) -> Dictionary:
+	var locals: Dictionary = authored.duplicate(true)
 	var globals: Dictionary = _Math._fk(rest.bones, locals)
 	var turn: Transform3D = Transform3D(Basis(rest.turn_axis, deg_to_rad(operation.turn_degrees * operation.phase)), Vector3.ZERO)
 	var iterations: int = 0
@@ -90,12 +153,12 @@ static func sample(rest: Variant, authored_pose: Variant, operation: Variant, co
 			return _reject(hoof + ":attachment_residual", {"iterations": iterations})
 		if not _Math._close(turn * globals[hoof] * contact.offset, curve.value):
 			return _reject(hoof + ":contact_residual", {"iterations": iterations})
-	reason = _validate_pose(rest, locals)
+	var reason: String = _validate_pose(rest, locals)
 	if reason != "":
 		return _reject("solved:" + reason, {"iterations": iterations})
 	# Compatible endpoints must keep every bit of their native skin matrices.
 	if operation.phase == 0.0 or operation.phase == 1.0:
-		if locals != authored_pose.locals:
+		if locals != authored:
 			return _reject("native_endpoint_requires_correction")
 	return {"ok": true, "locals": locals, "diagnostics": {"reason": "", "iterations": iterations}}
 

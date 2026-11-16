@@ -96,7 +96,8 @@ sweep. Translated measured circles and stationary circles must fit the land grid
 
 `sample_locomotion_candidate({version:2,moves},time_q)` accepts a copied admitted
 subset only, validates all rows before returning any, and interpolates transient
-float X/Y/yaw with next-interval boundary selection. It reads no repository,
+float X/Y/yaw with next-interval boundary selection (`sample_locomotion_rows(moves,time_q)`
+is that interpolation alone, for a consumer re-sampling moves it already had admitted). It reads no repository,
 state, admission, orders or clock. It never mutates or saves presentation values.
 V1 APIs, production callers, frozen march protocols, art and rendering stay
 separate; this API does not activate v2 or resolve PR201's acceptance boundary.

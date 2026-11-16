@@ -241,10 +241,13 @@ static func _norm_squared(values: Array) -> float:
 	return out
 
 
-static func _jacobian(rest: Dictionary, chain: Dictionary, locals: Dictionary, globals: Array[Transform3D], frame: Transform3D, turn: Transform3D, offset: Transform3D, heads: Array[Vector3]) -> Array:
-	var rows: Array = []
-	for _row: int in 12 + 6 * globals.size():
-		rows.append([])
+## The Jacobian as its COLUMNS (one PackedFloat64Array of 12 + 6 x bones rows per joint axis):
+## column c, row r is d residual[r] / d joint[c]. Packed, so the normal equations read it fast.
+static func _jacobian(rest: Dictionary, chain: Dictionary, locals: Dictionary, globals: Array[Transform3D], frame: Transform3D, turn: Transform3D, offset: Transform3D, heads: Array[Vector3]) -> Array[PackedFloat64Array]:
+	var columns: Array[PackedFloat64Array] = []
+	var bones: Array[Dictionary] = []
+	for name: String in chain.bones:
+		bones.append(_bone(rest.bones, name))
 	var end: Transform3D = turn * globals[-1] * offset
 	for i: int in globals.size():
 		var parent: Transform3D = turn * (frame if i == 0 else globals[i - 1])
@@ -256,11 +259,11 @@ static func _jacobian(rest: Dictionary, chain: Dictionary, locals: Dictionary, g
 			var x: Vector3 = parent.basis * axis.cross(inverse * end.basis.x)
 			var y: Vector3 = parent.basis * axis.cross(inverse * end.basis.y)
 			var z: Vector3 = parent.basis * axis.cross(inverse * end.basis.z)
-			var column: Array[float] = [p.x, p.y, p.z, x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z]
+			var column: PackedFloat64Array = [p.x, p.y, p.z, x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z]
 			var native_parent: Transform3D = frame if i == 0 else globals[i - 1]
-			var world_column: Array[float] = []
+			var world_column: PackedFloat64Array = []
 			for j: int in globals.size():
-				var bone: Dictionary = _bone(rest.bones, chain.bones[j])
+				var bone: Dictionary = bones[j]
 				var local: Vector3 = axis.cross(locals[bone.name].basis * bone.head) if i == j else Vector3.ZERO
 				var world: Vector3 = native_parent.basis * local
 				if j > i:
@@ -268,13 +271,15 @@ static func _jacobian(rest: Dictionary, chain: Dictionary, locals: Dictionary, g
 				column.append_array([local.x, local.y, local.z])
 				world_column.append_array([world.x, world.y, world.z])
 			column.append_array(world_column)
-			for row: int in rows.size():
-				rows[row].append(column[row])
-	return rows
+			columns.append(column)
+	return columns
 
 
 static func _linear_solve(matrix: Array, right: Array) -> Array[float]:
-	var rows: Array = matrix.duplicate(true)
+	# Packed copies of the rows (same doubles, same operations, far cheaper than Variant arrays).
+	var rows: Array[PackedFloat64Array] = []
+	for row: Array in matrix:
+		rows.append(PackedFloat64Array(row))
 	var out: Array[float] = []
 	for value: float in right:
 		out.append(value)
@@ -285,22 +290,26 @@ static func _linear_solve(matrix: Array, right: Array) -> Array[float]:
 				pivot = j
 		if rows[pivot][i] == 0.0:
 			return []
-		var saved: Array = rows[i]
+		var saved: PackedFloat64Array = rows[i]
 		rows[i] = rows[pivot]
 		rows[pivot] = saved
 		var saved_value: float = out[i]
 		out[i] = out[pivot]
 		out[pivot] = saved_value
-		var divisor: float = rows[i][i]
+		var top: PackedFloat64Array = rows[i]
+		var divisor: float = top[i]
 		for j: int in range(i, out.size()):
-			rows[i][j] /= divisor
+			top[j] /= divisor
+		rows[i] = top
 		out[i] /= divisor
 		for j: int in out.size():
 			if j == i:
 				continue
-			var factor: float = rows[j][i]
+			var row: PackedFloat64Array = rows[j]
+			var factor: float = row[i]
 			for k: int in range(i, out.size()):
-				rows[j][k] -= factor * rows[i][k]
+				row[k] -= factor * top[k]
+			rows[j] = row
 			out[j] -= factor * out[i]
 	return out
 
@@ -327,24 +336,32 @@ static func _solve(rest: Dictionary, chain: Dictionary, native: Dictionary, targ
 		attempts = iteration + 1
 		var residual: Array[float] = _residual(observed, target, heads)
 		var score: float = _norm_squared(residual)
-		var jacobian: Array = _jacobian(rest, chain, locals, globals, frame, turn, offset, heads)
+		var jacobian: Array[PackedFloat64Array] = _jacobian(rest, chain, locals, globals, frame, turn, offset, heads)
 		if jacobian.is_empty():
 			return {"ok": false, "reason": "singular_joint_frame", "iterations": attempts}
 		# Solve in joint coordinates: at most 15 unknowns, including all head constraints.
+		# JtJ + damping, filled symmetrically: entry (j, i) sums the same products in the same order
+		# as (i, j), so it is the same float.
+		var unknowns: int = jacobian.size()
 		var system: Array = []
 		var right: Array[float] = []
-		for i: int in jacobian[0].size():
+		for i: int in unknowns:
 			var row: Array[float] = []
+			row.resize(unknowns)
+			system.append(row)
+		for i: int in unknowns:
+			var a: PackedFloat64Array = jacobian[i]
 			var gradient: float = 0.0
 			for k: int in residual.size():
-				gradient -= jacobian[k][i] * residual[k]
+				gradient -= a[k] * residual[k]
 			right.append(gradient)
-			for j: int in jacobian[0].size():
+			for j: int in range(i, unknowns):
+				var b: PackedFloat64Array = jacobian[j]
 				var value: float = damping if i == j else 0.0
 				for k: int in residual.size():
-					value += jacobian[k][i] * jacobian[k][j]
-				row.append(value)
-			system.append(row)
+					value += a[k] * b[k]
+				system[i][j] = value
+				system[j][i] = value
 		var delta: Array[float] = _linear_solve(system, right)
 		if delta.is_empty():
 			return {"ok": false, "reason": "numerical_system", "iterations": iteration}

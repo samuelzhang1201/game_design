@@ -19,7 +19,7 @@ const _SOURCES: Dictionary = {
 	"res://scripts/map3d/map3d_unit_rig.gd":"71e683b7baabe3dd87e1185ec2ad34c9a8b41e35cf56b19d0dacd3bcc6fb8fec",
 	"res://scripts/map3d/map3d_royal_locomotion_source.gd":"b4301e3953e92676cdb0386bf4324c9e779687c665dfd9c9433a0083d3e827e7",
 	"res://scripts/map3d/map3d_world_loader.gd":"b59e4fb2cb7223fbd1989047fce0b2c5e05ab2cd0f3878a24fc212c9dc4c61bd",
-	"res://scripts/engine/body_motion.gd":"f7d0928c7cfb0de7e2e56866f029b70a9d5b611a3ac9151a0d712a9af1d58eb7",
+	"res://scripts/engine/body_motion.gd":"12c1032aedb194fb25ff178eaede905f9fcfb38a61d31f3fe157567189950569",
 	"res://scripts/engine/army_system.gd":"8ca9982a4c5db6a2c792d76c87caab046c488934dc48c22360dfecbf7c540532",
 	"res://scripts/engine/march_path.gd":"8f4b63b38c2f1e447ece94f09851939b1336a1a9f51880e05a07c8719264e568",
 	"res://scripts/engine/unit_bodies.gd":"e5ef5385575531e95914d0adb6cd6dcf59751d093a29e428fc48284a8621b4ca",
