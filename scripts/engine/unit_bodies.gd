@@ -897,6 +897,9 @@ static func transfer_battle_candidate(repo: DataRepository, source: GameState, u
 ## participant whose bodies exceed its fit keeps its first rows by slot order, identity and
 ## position, with canonical counts; the rest retire and the slot counter's high water stays.
 ## Growth, unrelated staged changes or any invalid world reject. The round stays open.
+## Only the CF06 settlement may call this, on the stage it produced itself after proving the
+## round's body_round.basis on its admitted pre-settlement world: "complete" certifies the
+## personnel part, never a standalone provenance of arbitrary staged state.
 static func reconcile_round_candidate(repo: DataRepository, source: GameState, proposed: Dictionary, boundary: Dictionary) -> Dictionary:
 	if repo == null or source == null: return _failure("Round reconciliation requires data and source")
 	if not BodyMotion._keys(proposed, ["battle_id", "round"]) or not BodyMotion._loco_integer(proposed.battle_id) \
@@ -945,19 +948,22 @@ static func reconcile_round_candidate(repo: DataRepository, source: GameState, p
 		var entry := _entry(candidate, code)
 		var store: Variant = entry.get("body_groups") if owner.is_empty() else owner.get("groups", {}).get(code)
 		if not store is Array: return _failure("Round participant lacks bodies: " + code)
-		var rows: Array = store.duplicate(true)
-		rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.slot) < int(b.slot))
+		var rows: Array = store.duplicate(true)   # stored order: the order the canonical counts follow
 		var total := 0
-		for row: Dictionary in rows: total += int(row.count)
+		for row: Variant in rows:
+			if not row is Dictionary or not _whole(row.get("count")) or not _whole(row.get("slot")): return _failure("Invalid round participant body: " + code)
+			total += int(row.count)
 		var fit := MilitaryRoster.fit(candidate, code)
 		if fit > total: return _failure("Round settlement cannot grow bodies: " + code)
 		if fit == total: continue   # already reconciled: a retry is a no-op
 		# Otherwise the bodies must be exactly the fit before THIS round's event: no other staged loss.
 		if total != _frozen_fit(candidate, code, battle): return _failure("Bodies do not match the round's own losses: " + code)
 		var partition := BattleGroups.counts(fit, size)
+		if partition.size() > rows.size(): return _failure("Round losses cannot add bodies: " + code)
 		var kept: Array[Dictionary] = []
 		for i: int in partition.size():
 			var row: Dictionary = rows[i]
+			if partition[i] > int(row.count): return _failure("A round loss cannot move personnel between bodies: " + code)
 			row.count = partition[i]
 			kept.append(row)
 		if owner.is_empty(): entry.body_groups = kept

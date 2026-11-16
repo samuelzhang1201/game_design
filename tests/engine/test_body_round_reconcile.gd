@@ -71,6 +71,8 @@ func test_losses_901_to_900_and_100_to_0_retire_only_required_rows() -> void:
 	assert_eq(result.candidate.battles[0].pending_round, f.state.battles[0].pending_round)
 	assert_eq(result.candidate.rng.to_dict(), f.state.rng.to_dict())
 	assert_eq(result.candidate.military_cohorts, f.state.military_cohorts)
+	assert_eq(UnitBodies._entry(result.candidate, f.enemy).group_next_slot, UnitBodies._entry(f.state, f.enemy).group_next_slot)
+	assert_eq(UnitBodies._entry(result.candidate, f.other).body_groups, UnitBodies._entry(f.state, f.other).body_groups, "non-participants untouched")
 
 func test_partial_loss_keeps_every_row_and_rewrites_counts() -> void:
 	var f := _frozen(1000)
@@ -151,6 +153,25 @@ func test_unrelated_staged_changes_and_bad_provenance_reject() -> void:
 		bad[key] = 2 if key == "version" else ("advance" if key == "stage" else "9")
 		assert_eq(UnitBodies.reconcile_round_candidate(f.repo, f.state, {"battle_id": f.id, "round": 1}, bad).status, "error", key)
 	assert_eq(UnitBodies.reconcile_round_candidate(null, f.state, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(f.state)).status, "error")
+
+func test_stored_order_is_kept_and_no_row_grows() -> void:
+	# A store saved in a non-slot order: the canonical counts follow stored order, so the
+	# loss trims the stored tail and no 1-person row ever becomes a 100-person row.
+	var f := _frozen()
+	var rows: Array = f.state.battles[0].groups[f.unit]
+	var last: Dictionary = rows[9]
+	rows.remove_at(9)
+	rows.push_front(last)   # stored order now [slot 9 (1), slot 0..8 (100 each)]
+	BodyBattle._seal_private(f.repo, f.state)
+	_lose(f, {f.unit: 1})
+	var result := _reconcile(f)
+	assert_eq(result.status, "error", "stored order is not canonical: no row may grow")
+	assert_true(result.reason.contains("move personnel"), result.reason)
+	# Malformed participant rows reject rather than crash.
+	f = _frozen()
+	f.state.battles[0].groups[f.unit][0].erase("count")
+	_lose(f, {f.unit: 1})
+	assert_eq(_reconcile(f).status, "error")
 
 func test_growth_is_never_a_round_result() -> void:
 	var f := _frozen()
