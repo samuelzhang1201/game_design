@@ -1394,3 +1394,155 @@ static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: Str
 	b["report_outcome"] = {"why": why, "winner": winner, "town": String(b["town"])}
 	BattleReport.note(b, events)
 	BattleReport.snapshot(repo, state, int(b["id"]))
+
+
+## CF06 candidate incoming context of `target` from its admitted lawful sources I(t), each
+## `{code, melee, firing, impact}` (target-scoped M_t, J_t and earned contacting impact).
+## Withdrawal/rout first (pursuit when any lawful source reaches it), else ranged by the
+## arm-by-arm crew classification, else shock by earned impact, else melee; then the
+## simultaneous exposure once, then the target's authored event exposures in saved order.
+static func candidate_context(repo: DataRepository, state: GameState, battle: Dictionary, target: String, sources: Array) -> Dictionary:
+	var rows: Array = []
+	var ranged := 0
+	var crew := 0
+	var mounted := 0
+	var heads := 0
+	var types: Dictionary = repo.world_table("military", "unit_types")
+	for raw: Variant in sources:
+		if not raw is Dictionary or not raw.get("code") is String: return {"error": "Invalid context source"}
+		var source: Dictionary = raw
+		for key: String in ["melee", "firing", "impact"]:
+			if not source.get(key) is int or int(source[key]) < 0: return {"error": "Context source needs nonnegative integer " + key}
+		# I(t): unique, hostile, with a positive eligible equipped numerator; impact is melee personnel.
+		if rows.any(func(r: Dictionary) -> bool: return r.code == source.code) or not _candidate_hostile(repo, state, source.code, target) \
+			or _candidate_numerator(repo, state, source.code, int(source.melee), int(source.firing)) <= 0 or int(source.impact) > int(source.melee):
+			return {"error": "Context source is duplicated, not hostile or has no eligible numerator: " + String(source.code)}
+		var fit := ArmySystem.fit_count(repo, state, source.code)
+		var reg := ArmySystem.regiment(repo, source.code, state)
+		rows.append({"code": source.code, "fit": fit, "ranged_share": BattleRanged.share(repo, state, source.code), "melee": source.melee, "firing": source.firing})
+		for arm: String in types:
+			var people := int(reg.get(arm, 0)) * int(types[arm]["crew"])
+			crew += people
+			if String(types[arm]["type"]) in ["ranged", "machinery"] and fit > 0:
+				@warning_ignore("integer_division")
+				ranged += people * int(source.firing) / fit
+		heads += fit
+		@warning_ignore("integer_division")
+		mounted += int(source.impact) * BattleCharge.mounted_share(repo, state, source.code) / 1000
+	if BattleRules.side_of(battle, target) == "": return {"error": "Context target is not a battle member"}
+	var weighted := BattleStrength.exposure(rows.map(func(r: Dictionary) -> Dictionary:
+		return {"fit": r.fit, "ranged_share": r.ranged_share, "melee": r.melee, "firing": r.firing}))
+	if weighted.has("error"): return weighted
+	var threshold := int(repo.bal("battle_context_arm_threshold_permille"))
+	var kind := "melee"
+	var side := BattleRules.side_of(battle, target)
+	if BattleOrders.kind(battle, side) == "retreat" or bool(_stored(state, target).get("battle_retreat", false)) \
+		or String(battle.get("routed_side", "")) == side:
+		kind = "pursuit" if not sources.is_empty() else "withdrawal"
+	elif crew > 0 and ranged * 1000 >= crew * threshold:
+		kind = "ranged"
+	elif heads > 0 and mounted * 1000 >= heads * threshold:
+		kind = "shock"
+	var scale := 1000 if kind == "melee" else int(repo.bal("battle_context_" + kind + "_permille"))
+	@warning_ignore("integer_division")
+	scale = scale * int(weighted.exposure) / 1000
+	for modifier: Dictionary in battle.get("event_modifiers", []):
+		if modifier.unit == target and int(modifier.until_day) >= state.absolute_day():
+			@warning_ignore("integer_division")
+			scale = scale * int(modifier.exposure_permille) / 1000
+	return {"kind": kind, "loss_permille": scale, "exposure": int(weighted.exposure),
+		"reason": "Incoming %s casualties from %d lawful sources at exposure %d" % [kind, sources.size(), weighted.exposure]}
+
+
+## CF06 candidate sources of `target`: every hostile member of its own field's opposing side
+## and of every other live field (both-field terms through `BattleRanged.counts_candidate`),
+## kept only with H > 0, C > 0 and a positive eligible equipped numerator. Earned impact is
+## the source's melee against this target only when its saved impact today is still earned
+## by `BattleCharge.target` (a flank task, pursuit, no supplies or no attack earn none).
+static func candidate_sources(repo: DataRepository, source: GameState, battle_id: int, target: String, boundary: Dictionary) -> Dictionary:
+	var admitted := BodyBattleContact.exposure_candidate(repo, source, battle_id, target, [], boundary)
+	if admitted.status != "complete": return {"error": admitted.reason}
+	var battle := battle_by_id(source, battle_id)
+	var side := BattleRules.side_of(battle, target)
+	if battle.is_empty() or side == "": return {"error": "Context target is not a live battle member"}
+	var out: Array = []
+	var fields: Array = source.battles.filter(func(b: Dictionary) -> bool:
+		return not bool(b.get("ended", false)) and not bool(b.get("finished", false)))
+	fields.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return int(x.id) < int(y.id))
+	for field: Dictionary in fields:
+		var same := int(field.id) == int(battle.id)
+		var members: Array = (field["def" if side == "att" else "att"] if same else field.att + field.def).duplicate()
+		members.sort()
+		for code: String in members:
+			if not _candidate_hostile(repo, source, code, target): continue
+			var query := BattleRanged.counts_candidate(repo, source, int(field.id), code, target, 0 if same else int(battle.id), boundary)
+			if query.status != "complete": return {"error": query.reason}
+			# Per-target counts are subsets of the source's round union: close contact in ANY
+			# field suppresses its fire at every target.
+			var union := candidate_union(repo, source, int(field.id), code, boundary)
+			if union.has("error"): return union
+			var firing := 0 if int(union.melee) > 0 else int(query.firing)
+			if _candidate_numerator(repo, source, code, int(query.melee), firing) <= 0: continue
+			var charge: Dictionary = _stored(source, code).get("charge", {})
+			var earned: bool = charge.get("phase", "") == "impact" and int(charge.get("impact_day", -1)) == source.absolute_day() \
+				and String(charge.get("target", "")) == target and BattleCharge.target(repo, source, field, code) == target
+			out.append({"code": code, "melee": int(query.melee), "firing": firing, "impact": int(query.melee) if earned else 0})
+	return {"sources": out}
+
+
+## The contact query's realm hostility between two units.
+static func _candidate_hostile(repo: DataRepository, state: GameState, a: String, b: String) -> bool:
+	var relations := {"player": repo.resolve_realm("player_realm"), "raider": repo.resolve_realm("raider_realm"),
+		"diplomacy": repo.world_table("political", "diplomacy"), "hostile": {}}
+	return a != b and ArmySystem._hostile(relations, ArmySystem.realm_of(repo, a, state), ArmySystem.realm_of(repo, b, state))
+
+
+## sum(C[a] * E[a]) with H = F - guards: 0 unless H > 0, C > 0 and some equipped arm is eligible.
+static func _candidate_numerator(repo: DataRepository, state: GameState, code: String, melee: int, firing: int) -> int:
+	if ArmySystem.fit_count(repo, state, code) - PrisonerBurden.guard_count(repo, state, code) <= 0: return 0
+	var types: Dictionary = repo.world_table("military", "unit_types")
+	var reg := ArmySystem.regiment(repo, code, state)
+	var numerator := 0
+	for arm: String in types:
+		var people := int(reg.get(arm, 0)) * int(types[arm]["crew"])
+		numerator += people * (melee + firing if String(types[arm]["type"]) in ["ranged", "machinery"] else melee)
+	return numerator
+
+
+## CF06 candidate outgoing power: the source's union of eligible melee and fire over every
+## target, through the original equipment chain once. No legacy contact participation factor.
+static func candidate_power(repo: DataRepository, source: GameState, battle_id: int, code: String,
+		attacking: bool, extra_factors: Array[Dictionary], boundary: Dictionary) -> Dictionary:
+	if not attacking: return {"error": "Defence keeps its full personnel chain; candidate power is outgoing only"}
+	for factor: Dictionary in extra_factors:
+		if String(factor.get("category", "")) == "contact" or String(factor.get("source", "")).begins_with("contact:"):
+			return {"error": "Candidate power takes no contact participation factor: E already is the participation"}
+	var union := candidate_union(repo, source, battle_id, code, boundary)
+	if union.has("error"): return union
+	return BattleStrength.unit(repo, source, code, attacking, extra_factors, int(union.melee), int(union.firing))
+
+
+## A source's outgoing union over every eligible target of its own field and of every other
+## live field: each (unit, slot) once, with close contact anywhere taking precedence over fire.
+static func candidate_union(repo: DataRepository, source: GameState, battle_id: int, code: String, boundary: Dictionary) -> Dictionary:
+	var own := battle_by_id(source, battle_id)
+	if own.is_empty() or BattleRules.side_of(own, code) == "": return {"error": "Power source is not a live battle member"}
+	var melee := {}
+	var firing := {}
+	var fields: Array = source.battles.filter(func(b: Dictionary) -> bool:
+		return not bool(b.get("ended", false)) and not bool(b.get("finished", false)))
+	fields.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return int(x.id) < int(y.id))
+	for field: Dictionary in fields:
+		var same := int(field.id) == int(own.id)
+		if not same and not (field.att + field.def).any(func(other: String) -> bool: return _candidate_hostile(repo, source, code, other)):
+			continue
+		var query := BattleRanged.counts_candidate(repo, source, int(own.id), code, "", 0 if same else int(field.id), boundary)
+		if query.status != "complete": return {"error": query.reason}
+		for pair: Dictionary in query.pairs:
+			(melee if pair.kind == "melee" else firing)[int(pair.slot)] = int(pair.count)
+	if not melee.is_empty(): firing = {}   # a unit in close contact anywhere fires nowhere
+	var m := 0
+	for count: int in melee.values(): m += count
+	var j := 0
+	for count: int in firing.values(): j += count
+	return {"melee": m, "firing": j}
