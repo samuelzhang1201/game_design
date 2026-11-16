@@ -270,15 +270,22 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 	Map3DUnits.show_piece(piece, not (piece["groups"] as Array).is_empty())
 	return box
 
-## A group's saved point in world XZ and its saved facing as a yaw.
+## A group's saved point in world XZ and its saved facing as a yaw; a duelling
+## figure's step toward its opponent and its turn to face it (Map3DDuelDriver) on top.
 static func _target(ctx: Map3DContext, piece: Dictionary, group: Dictionary) -> Dictionary:
-	var repo := ctx.repo
-	var pack_px := Vector2(group["x_m"], group["y_m"]) / float(ArmySystem.metres_per_pack_px(repo)) if piece.get("candidate_bodies", false) \
-		else ArmySystem.metres_to_pack(repo, Vector2i(group["x_m"], group["y_m"]))
 	# A v2 sample carries the committed fractional yaw (pack microdegrees); else the saved facing.
 	var heading := Vector2.from_angle(deg_to_rad(float(group.yaw_udeg) / BodyMotion.LOCOMOTION_Q)) if group.has("yaw_udeg") \
 		else WarFront.facing_vector(int(group.get("facing_deg", piece["facing_deg"])))
-	return {"xz": ctx.to_world(pack_px), "yaw": Map3DUnits.facing_yaw(heading, group["piece"]["stand_deg"])}
+	var child: Dictionary = group["piece"]
+	return {"xz": saved_xz(ctx, piece, group) + child.get("duel_offset", Vector2.ZERO),
+		"yaw": float(child.get("duel_yaw", Map3DUnits.facing_yaw(heading, child["stand_deg"])))}
+
+
+## A group's saved point in world XZ.
+static func saved_xz(ctx: Map3DContext, piece: Dictionary, group: Dictionary) -> Vector2:
+	var pack_px := Vector2(group["x_m"], group["y_m"]) / float(ArmySystem.metres_per_pack_px(ctx.repo)) if piece.get("candidate_bodies", false) \
+		else ArmySystem.metres_to_pack(ctx.repo, Vector2i(group["x_m"], group["y_m"]))
+	return ctx.to_world(pack_px)
 
 
 static func evidence(piece: Dictionary) -> Array:
