@@ -197,3 +197,15 @@ func test_a_clip_that_does_not_match_the_turn_is_refused() -> void:
 	var out: Dictionary = Provider.solve(_player, _sk, "PIVOT_LEFT", 90000000, 0.5)
 	assert_false(out.ok)
 	assert_eq(out.pose, {})
+
+
+func test_the_cached_solve_is_the_uncached_sample_bit_for_bit() -> void:
+	# solve() keeps the MARCH locals, riders and contact plan per figure and turn; sample() derives
+	# them again. Another pose on the skeleton between calls must not reach the cache.
+	for turn: int in [1, -45000000, 90000000, -179999999, 180000000]:
+		for phase: float in [0.0, 0.13, 0.5, 0.871, 1.0]:
+			Shell.seek(_player, _sk, "ATTACK", 0.3)
+			var cached: Dictionary = _pose(turn, phase)
+			var plain: Dictionary = Provider.sample(_rest, phase, turn, _march, _stand, _patches, Provider.plan())
+			assert_true(plain.ok)
+			assert_eq(cached, plain.locals, "%d at %s" % [turn, phase])

@@ -33,7 +33,8 @@ const TURN_AXIS: Vector3 = Vector3(0.0, -1.0, 0.0)
 const _ZERO: Transform3D = Transform3D(Basis(Vector3.ZERO, Vector3.ZERO, Vector3.ZERO), Vector3.ZERO)
 
 static var _plan: Dictionary = {}
-static var _bound_by_id: Dictionary = {}  # skeleton instance id -> {rest, patches, stand}
+static var _bound_by_id: Dictionary = {}  # skeleton instance id -> {rest, patches, stand, march, riders, contacts}
+const CONTACT_CACHE: int = 64  # turns whose contact plans a figure keeps (cleared whole when full)
 
 
 ## Certifier provider (tools/units3d/certify_locomotion.py), through the shared shell.
@@ -49,9 +50,20 @@ static func solve(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, t
 	var bound: Dictionary = bind(player, skeleton)
 	if not bound.ok:
 		return {"ok": false, "reason": bound.reason, "pose": {}}
-	var march: Dictionary = Provider.locals(player, skeleton, "MARCH",
-		float(plan().march_phase) * player.get_animation("MARCH").length, bound.rest.bones)
-	var out: Dictionary = sample(bound.rest, phase, turn_udeg, march, bound.stand, bound.patches, plan())
+	# Per figure and turn, what every phase of the pivot shares (LOCO-ROY-SOLVE-PERF): the MARCH
+	# locals at the admitted phase, the riders and the expanded contact plan are computed once.
+	# Every royal clip keys T/R/S on every joint, so the seek leaves no earlier pose in the locals.
+	if bound.march.is_empty():
+		bound.march = Provider.locals(player, skeleton, "MARCH",
+			float(plan().march_phase) * player.get_animation("MARCH").length, bound.rest.bones)
+		bound.riders = riders(bound.rest, String(plan().rider_root))
+	if not bound.contacts.has(turn_udeg):
+		if bound.contacts.size() >= CONTACT_CACHE:
+			bound.contacts.clear()
+		bound.contacts[turn_udeg] = contacts_for(_Math._fk(bound.rest.bones, bound.march),
+			_Math._fk(bound.rest.bones, bound.stand), bound.patches, float(turn_udeg) / 1e6, plan())
+	var out: Dictionary = sample_contacts(bound.rest, phase, turn_udeg, bound.march, bound.stand,
+		bound.contacts[turn_udeg], plan(), bound.riders)
 	if not out.ok:
 		return {"ok": false, "reason": str(out.diagnostics), "pose": {}}
 	return {"ok": true, "reason": "", "pose": out.locals}
@@ -63,6 +75,18 @@ static func sample(rest: Dictionary, phase: float, turn_udeg: int, march: Dictio
 		stand: Dictionary, hooves: Dictionary, profile: Dictionary) -> Dictionary:
 	if turn_udeg == 0 or phase < 0.0 or phase > 1.0:
 		return {"ok": false, "locals": {}, "diagnostics": {"reason": "request"}}
+	var contacts: Dictionary = contacts_for(_Math._fk(rest.bones, march), _Math._fk(rest.bones, stand), hooves,
+		float(turn_udeg) / 1e6, profile)
+	return sample_contacts(rest, phase, turn_udeg, march, stand, contacts, profile,
+		riders(rest, String(profile.rider_root)))
+
+
+## sample() with the turn's contact plan (contacts_for) and the rider set (riders) already made:
+## the same pose, bit for bit, without re-deriving what every phase of one turn shares.
+static func sample_contacts(rest: Dictionary, phase: float, turn_udeg: int, march: Dictionary,
+		stand: Dictionary, contacts: Dictionary, profile: Dictionary, rider: Dictionary) -> Dictionary:
+	if turn_udeg == 0 or phase < 0.0 or phase > 1.0:
+		return {"ok": false, "locals": {}, "diagnostics": {"reason": "request"}}
 	var turn: float = float(turn_udeg) / 1e6
 	var steps: int = steps_for(turn, profile)
 	# The horse eases MARCH <-> stand over one step (a longer ease folds the fore legs against the
@@ -72,7 +96,6 @@ static func sample(rest: Dictionary, phase: float, turn_udeg: int, march: Dictio
 	var rider_w: float = maxf(horse_w, float(profile.blend))
 	var native: Dictionary = march
 	if phase > 0.0 and phase < 1.0:
-		var rider: Dictionary = riders(rest, String(profile.rider_root))
 		native = {}
 		for name: String in march:
 			var w: float = rider_w if rider.has(name) else horse_w
@@ -82,7 +105,6 @@ static func sample(rest: Dictionary, phase: float, turn_udeg: int, march: Dictio
 	var op: Dictionary = {"start_heading": 0.0, "end_heading": fposmod(turn, 360.0), "turn_degrees": turn,
 		"duration": 1.0, "phase": phase, "entry_phase": float(profile.march_phase),
 		"exit_phase": float(profile.march_phase)}
-	var contacts: Dictionary = contacts_for(_Math._fk(rest.bones, march), _Math._fk(rest.bones, stand), hooves, turn, profile)
 	return _Pivot.sample(rest, {"locals": native, "entry": march, "exit": march}, op, contacts)
 
 
@@ -287,5 +309,6 @@ static func bind(player: AnimationPlayer, skeleton: Skeleton3D) -> Dictionary:
 		var stand: Dictionary = seat(rest, Provider.locals(player, skeleton, "STANDBY", 0.0, rest.bones), hooves)
 		if stand.is_empty():
 			return {"ok": false, "reason": "royal stand could not be seated"}
-		_bound_by_id[id] = {"ok": true, "reason": "", "rest": rest, "patches": hooves, "stand": stand}
+		_bound_by_id[id] = {"ok": true, "reason": "", "rest": rest, "patches": hooves, "stand": stand,
+			"march": {}, "riders": {}, "contacts": {}}
 	return _bound_by_id[id]
