@@ -20,7 +20,7 @@ const Limb = preload("res://scripts/map3d/map3d_cavalry_pivot_math.gd")
 const PLAN_PATH: String = "res://assets/3D/units/cavalry/cavalry_pivot_plan.json"
 
 static var _plan: Dictionary = {}
-static var _bound_by_id: Dictionary = {}  # skeleton instance id -> {ok, reason, rest, patches, stand}
+static var _bound_by_id: Dictionary = {}  # skeleton instance id -> {ok, reason, rest, patches, stand, turns}
 
 
 ## Certifier provider (tools/units3d/certify_locomotion.py), through the shared shell.
@@ -71,6 +71,11 @@ static func prepared(player: AnimationPlayer, skeleton: Skeleton3D, bound: Dicti
 		if turns.size() >= 64:
 			turns.clear()
 		var profile: Dictionary = plan()
+		# MARCH keys only some channels (mostly rotations); the rest keep whatever the skeleton held.
+		# From the rest pose, seek the turn's pivot clip first (as Provider.apply does before every
+		# certified solve), so the cached MARCH pose never depends on the pose the figure showed before.
+		skeleton.reset_bone_poses()
+		Provider.seek(player, skeleton, "PIVOT_RIGHT" if turn_udeg > 0 else "PIVOT_LEFT", 0.0)
 		var march: Dictionary = Provider.locals(player, skeleton, "MARCH",
 			float(profile.march_phase) * player.get_animation("MARCH").length, bound.rest.bones)
 		var turn: float = float(turn_udeg) / 1e6
@@ -133,6 +138,7 @@ static func bind(player: AnimationPlayer, skeleton: Skeleton3D) -> Dictionary:
 			return {"ok": false, "reason": "cavalry figure has no skinned body mesh"}
 		var rest: Dictionary = Horse.rest_of(skeleton, mesh.skin, landmarks(skeleton, mesh.skin))
 		var hooves: Dictionary = Horse.patches(mesh, plan())
+		skeleton.reset_bone_poses()  # STANDBY too keys only some channels: seek it from the rest pose
 		var stand: Dictionary = Horse.seat(rest, Provider.locals(player, skeleton, "STANDBY", 0.0, rest.bones), hooves)
 		if stand.is_empty():
 			return {"ok": false, "reason": "cavalry stand could not be seated"}

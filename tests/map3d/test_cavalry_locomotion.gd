@@ -139,3 +139,18 @@ func test_a_prepared_turn_refuses_another_turn_and_a_bad_request() -> void:
 	op.turn_degrees = 45.0
 	assert_false(Horse._Pivot.sample_prepared(turn.kernel, _march, op).ok, "another turn's operation")
 	assert_false(Loco.solve(_player, _sk, "PIVOT_RIGHT", 90000000, 1.5).ok, "phase out of range")
+
+
+func test_a_pose_never_depends_on_what_the_figure_showed_before() -> void:
+	# MARCH and STANDBY key only some channels: binding and preparing seek them from the rest pose,
+	# so a figure first posed from some other pose gets the same pivot as a fresh one.
+	var model: Node3D = load("res://scenes/models/units/cavalry.tscn").instantiate()
+	add_child(model)
+	var sk: Skeleton3D = model.find_children("*", "Skeleton3D", true, false)[0]
+	var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]
+	Shell.seek(player, sk, "PIVOT_LEFT", 0.3)
+	Shell.set_pose(sk, _pose(90000000, 0.5))
+	var out: Dictionary = Loco.solve(player, sk, "PIVOT_RIGHT", 45000000, 1.0 / 12.0)
+	assert_true(out.ok, out.reason)
+	assert_eq(var_to_bytes(out.pose), var_to_bytes(_pose(45000000, 1.0 / 12.0)), "same pose from a foreign start")
+	model.free()

@@ -4,8 +4,20 @@
 
 `certificate.json` is main's `tools/units3d/certify_locomotion.py` run on `certificate.config.json`
 against main's assets: the re-authored cavalry MARCH (#316, ruling R-I; `cavalry.glb` `0dac618d…`) and
-the provider `Map3DCavalryLocomotion` (#314). Status **NUMERIC_PASS**, digest `16d5cdde…`. The digest
+the provider `Map3DCavalryLocomotion` (#314). Status **NUMERIC_PASS**, digest `90e7f594…` (re-issued by LOCO-CAV-SOLVE-PERF, below). The digest
 binds the tool, the config and every input (scene, GLB, textures, provider, pivot plan, data).
+
+**Re-issue (LOCO-CAV-SOLVE-PERF, 2026-11-17).** The provider now prepares each turn once and the
+shared IK runs on packed arrays, so a warm `solve` costs about 3.4 ms instead of about 10.9 ms
+(`tools/units3d/bench_pivot_solve.gd`, 128 phases, median, same machine back to back). The poses are
+byte-identical: the re-issued certificate's report equals the previous one exactly, and its 470 MB
+capture differs from the previous capture only in the capturing process id. Binding and preparing now
+seek STANDBY and MARCH from the rest pose (and MARCH after the turn's PIVOT clip, as `Provider.apply`
+seeks it): those clips key only some channels, and main's `solve` let the rest carry over from the
+pose the figure showed before (18 leg bones differed in `pivot_frames.gd`'s frame sequence). The
+certifier always seeked the PIVOT clip first, so the certified pose is the one now produced from any start. Only the input digests
+moved (the provider, `map3d_cavalry_pivot.gd`, `map3d_cavalry_pivot_math.gd`, and main's
+`data/screens/map3d/balance.csv`).
 
 | Quantity | Total (sampled + margin) | Bound |
 |---|---:|---:|

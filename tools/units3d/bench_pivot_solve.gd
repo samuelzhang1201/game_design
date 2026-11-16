@@ -25,7 +25,7 @@ func _initialize() -> void:
 	var provider: GDScript = load(arm[1])
 	var turn: int = int(args.turn)
 	var clip: String = "PIVOT_RIGHT" if turn > 0 else "PIVOT_LEFT"
-	var calls: int = int(args.calls)
+	var calls: int = maxi(1, int(args.calls))
 	var t0: int = Time.get_ticks_usec()
 	var first: Dictionary = provider.solve(player, skeleton, clip, turn, 0.5)
 	var first_ms: float = float(Time.get_ticks_usec() - t0) / 1000.0
