@@ -19,6 +19,12 @@ certifier always seeked the PIVOT clip first, so the certified pose is the one n
 moved (the provider, `map3d_cavalry_pivot.gd`, `map3d_cavalry_pivot_math.gd`, and main's
 `data/screens/map3d/balance.csv`).
 
+`solve-perf/`: `bench.txt` (two back-to-back rounds, main = `wtbase`, this change = `wtperf`; measured
+before the rest-pose seek, which only touches a turn's first call), and real-window +90° frames of
+`pivot_frames.gd` on main over this change (`turn90_feet.png`, `turn90_body.png`,
+`frame01_main_branch_diffx8.png`). They differ only in frames 1, 2, 11 and 12 (at most 605 pixels, single
+pixels up to 120 levels): main's frames carry the previous frame's pose in MARCH's unkeyed channels.
+
 | Quantity | Total (sampled + margin) | Bound |
 |---|---:|---:|
 | Penetration (rendered ground) | 7693 µm | 29273 µm |
