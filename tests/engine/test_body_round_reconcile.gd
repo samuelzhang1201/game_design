@@ -37,7 +37,7 @@ func _lose(f: Dictionary, losses: Dictionary, event := "") -> void:
 func _reconcile(f: Dictionary, request: Dictionary = {}) -> Dictionary:
 	var before := BodyMotion._hash(f.state.to_dict())
 	var proposed := request if not request.is_empty() else {"battle_id": f.id, "round": 1}
-	var result := UnitBodies.reconcile_round_candidate(f.repo, f.state, proposed, BodyBattleMotion._boundary(f.state))
+	var result := BodyRoundReconcile.reconcile_round_candidate(f.repo, f.state, proposed, BodyBattleMotion._boundary(f.state))
 	assert_eq(result.keys().size(), 5, "UnitBodies' five-field result")
 	assert_eq(BodyMotion._hash(f.state.to_dict()), before, "the source never changes")
 	return result
@@ -102,7 +102,7 @@ func test_retry_capture_and_json_are_exact() -> void:
 	# A retry on the reconciled stage (direct and through a JSON save) is an exact no-op.
 	var json: GameState = GameState.from_dict(JSON.parse_string(JSON.stringify(first.candidate.to_dict())), false)
 	for stage: GameState in [first.candidate, json]:
-		var again := UnitBodies.reconcile_round_candidate(f.repo, stage, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(stage))
+		var again := BodyRoundReconcile.reconcile_round_candidate(f.repo, stage, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(stage))
 		assert_eq(again.status, "complete", again.reason)
 		if again.candidate != null: assert_eq(BodyMotion._hash(again.candidate.to_dict()), BodyMotion._hash(first.candidate.to_dict()))
 
@@ -156,14 +156,14 @@ func test_unrelated_staged_changes_and_bad_provenance_reject() -> void:
 		assert_eq(_reconcile(f, bad).status, "error", str(bad))
 	var stripped := UnitBodies._copy(f.state)
 	stripped.battles[0].erase("pending_round")
-	assert_eq(UnitBodies.reconcile_round_candidate(f.repo, stripped, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(stripped)).status, "error")
+	assert_eq(BodyRoundReconcile.reconcile_round_candidate(f.repo, stripped, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(stripped)).status, "error")
 	# The boundary must be the saved round boundary.
 	var boundary := BodyBattleMotion._boundary(f.state)
 	for key: String in ["stage", "abs_day", "substep", "sequence", "version"]:
 		var bad := BodyBattleMotion._boundary(f.state)
 		bad[key] = 2 if key == "version" else ("advance" if key == "stage" else "9")
-		assert_eq(UnitBodies.reconcile_round_candidate(f.repo, f.state, {"battle_id": f.id, "round": 1}, bad).status, "error", key)
-	assert_eq(UnitBodies.reconcile_round_candidate(null, f.state, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(f.state)).status, "error")
+		assert_eq(BodyRoundReconcile.reconcile_round_candidate(f.repo, f.state, {"battle_id": f.id, "round": 1}, bad).status, "error", key)
+	assert_eq(BodyRoundReconcile.reconcile_round_candidate(null, f.state, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(f.state)).status, "error")
 
 func test_stored_order_is_kept_and_no_row_grows() -> void:
 	# A store saved in a non-slot order: the canonical counts follow stored order, so the
@@ -191,6 +191,6 @@ func test_growth_is_never_a_round_result() -> void:
 	var forged := UnitBodies._copy(f.state)
 	var personnel: GDScript = load("res://tests/engine/personnel_helpers.gd")
 	assert_false(personnel.replace(f.repo, forged, f.enemy, 150).has("error"))
-	var result := UnitBodies.reconcile_round_candidate(f.repo, forged, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(forged))
+	var result := BodyRoundReconcile.reconcile_round_candidate(f.repo, forged, {"battle_id": f.id, "round": 1}, BodyBattleMotion._boundary(forged))
 	assert_eq(result.status, "error")
 	assert_true(result.reason.contains("grow"), result.reason)

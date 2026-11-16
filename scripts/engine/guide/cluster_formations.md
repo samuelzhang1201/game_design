@@ -166,7 +166,7 @@ day driver, lifecycle, damage, production activation or visual acceptance is add
 
 ## Candidate round reconciliation
 
-`UnitBodies.reconcile_round_candidate(repo, source, {battle_id, round}, boundary)`
+`BodyRoundReconcile.reconcile_round_candidate(repo, source, {battle_id, round}, boundary)` (its own file: `unit_bodies.gd` is a SHA-256-pinned premise of the royal carrier proof, `Map3DRoyalCarrierSource._SOURCES`, so it stays unedited)
 brings a frozen round's settled personnel losses to its bodies inside the CF06
 settlement's private stage. It checks provenance first: the saved round-stage
 boundary, a canonical live field, that round's `body_round` and `pending_round`
