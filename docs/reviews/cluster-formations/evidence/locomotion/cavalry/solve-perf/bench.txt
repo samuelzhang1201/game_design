@@ -1,0 +1,16 @@
+wtbase PIVOT_SOLVE_BENCH arm=cavalry turn=90000000 ok=true first=103.02ms warm median=10.886ms p95=12.796ms max=13.897ms n=128
+wtbase PIVOT_SOLVE_BENCH arm=cavalry turn=-45000000 ok=true first=103.68ms warm median=10.884ms p95=13.862ms max=16.359ms n=128
+wtbase PIVOT_SOLVE_BENCH arm=cavalry turn=180000000 ok=true first=101.20ms warm median=11.094ms p95=13.136ms max=13.924ms n=128
+wtbase PIVOT_SOLVE_BENCH arm=cavalry turn=1 ok=true first=97.79ms warm median=9.816ms p95=11.615ms max=12.034ms n=128
+wtperf PIVOT_SOLVE_BENCH arm=cavalry turn=90000000 ok=true first=91.96ms warm median=3.368ms p95=3.991ms max=4.121ms n=128
+wtperf PIVOT_SOLVE_BENCH arm=cavalry turn=-45000000 ok=true first=94.69ms warm median=3.424ms p95=4.135ms max=4.453ms n=128
+wtperf PIVOT_SOLVE_BENCH arm=cavalry turn=180000000 ok=true first=94.81ms warm median=3.412ms p95=4.158ms max=4.426ms n=128
+wtperf PIVOT_SOLVE_BENCH arm=cavalry turn=1 ok=true first=95.17ms warm median=3.486ms p95=4.053ms max=4.414ms n=128
+wtbase PIVOT_SOLVE_BENCH arm=cavalry turn=90000000 ok=true first=99.44ms warm median=10.505ms p95=12.302ms max=13.054ms n=128
+wtbase PIVOT_SOLVE_BENCH arm=cavalry turn=-45000000 ok=true first=109.27ms warm median=10.648ms p95=14.161ms max=62.693ms n=128
+wtbase PIVOT_SOLVE_BENCH arm=cavalry turn=180000000 ok=true first=119.05ms warm median=12.394ms p95=15.026ms max=16.658ms n=128
+wtbase PIVOT_SOLVE_BENCH arm=cavalry turn=1 ok=true first=105.72ms warm median=11.195ms p95=12.770ms max=13.710ms n=128
+wtperf PIVOT_SOLVE_BENCH arm=cavalry turn=90000000 ok=true first=111.08ms warm median=4.268ms p95=5.172ms max=5.957ms n=128
+wtperf PIVOT_SOLVE_BENCH arm=cavalry turn=-45000000 ok=true first=122.77ms warm median=4.597ms p95=5.575ms max=5.809ms n=128
+wtperf PIVOT_SOLVE_BENCH arm=cavalry turn=180000000 ok=true first=96.87ms warm median=3.416ms p95=4.139ms max=4.553ms n=128
+wtperf PIVOT_SOLVE_BENCH arm=cavalry turn=1 ok=true first=99.69ms warm median=3.717ms p95=4.691ms max=5.798ms n=128
