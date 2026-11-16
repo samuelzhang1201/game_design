@@ -210,7 +210,10 @@ draw under the outer `{kind:"round_pending"}` operation. A repeat re-checks the
 basis, the wrapper, the pending equality and that outer receipt, then returns the
 frozen state unchanged (no second draw); a changed basis or tampered payload
 errors. The proofs are keyless: a forger who recomputes every digest is not
-stopped (the RNG after the draw is not bound in the closed plan). Readiness
+stopped (the RNG after the draw is not bound in the closed plan), and erasing
+both the pending and the wrapper then resealing the endpoint plans afresh with a
+second draw. Defence carries no contact participation factor
+(cf06-power-contract §defence); production still applies it until ACT-CUTOVER. Readiness
 (`BodyBattle` round_ready) first applies production's side fallback, so a
 law-barred or unaffordable all-out attack is frozen as hold. `GameState` keeps the wrapper raw like the envelope, and the readiness
 basis excludes it. No personnel, morale, cost, impact or cursor changes: that is

@@ -194,7 +194,9 @@ func test_an_uncommitted_reserve_adds_no_attack_power() -> void:
 	reserved.battles[0].reserves = {f.enemy: {"reason": "Held back"}}
 	BodyBattle._seal_private(f.repo, reserved)
 	# The reserve changes the basis: readiness must be re-earned, so plan from a fresh ready day.
-	assert_eq(_plan(f, reserved).status, "error", "a reserve set after readiness changes the basis")
+	var changed := _plan(f, reserved)
+	assert_eq(changed.status, "error")
+	assert_true(changed.reason.contains("basis"), changed.reason)
 	var helper: GutTest = load("res://tests/engine/test_body_battle_motion.gd").new()
 	var g: Dictionary = helper.call("_world", 1000)
 	UnitBodies._entry(g.state, g.enemy).supplies = 1000000
@@ -216,3 +218,22 @@ func test_an_uncommitted_reserve_adds_no_attack_power() -> void:
 	var pending: Dictionary = result.candidate.battles[0].pending_round
 	assert_eq(pending[enemy_side + "_power"], 0)
 	assert_eq(pending.costs, [])
+
+func test_candidate_defence_carries_no_contact_participation_factor() -> void:
+	# cf06-power-contract §defence (lines 138-155): the holding crown unit's power is the full
+	# defence chain with the existing non-contact factors only, never contact:engaged/ranged.
+	var f := _ready_world()
+	var result := _plan(f, f.ready)
+	assert_eq(result.status, "complete", result.reason)
+	if result.candidate == null: return
+	var field: Dictionary = f.ready.battles[0]
+	var side := "att" if f.unit in field.att else "def"
+	assert_eq(field[side], [f.unit], "the crown unit is alone on its side")
+	var enemies: Array = field["def" if side == "att" else "att"]
+	var factors := BodyBattleRounds._factors(f.repo, f.ready, field, f.unit, false, enemies, field.body_round.unit_actions[f.unit])
+	assert_false(factors.any(func(x: Dictionary) -> bool: return String(x.category) == "contact"))
+	var expected := BattleStrength.unit(f.repo, f.ready, f.unit, false, factors)
+	assert_eq(result.candidate.battles[0].pending_round[side + "_power"], int(expected.power))
+	# Production still scales its defender by contact participation until ACT-CUTOVER.
+	var production := BattleSystem.unit_strength(f.repo, f.ready, f.unit, Callable(), false, enemies)
+	assert_true(production.factors.any(func(x: Dictionary) -> bool: return String(x.category) == "contact"))
