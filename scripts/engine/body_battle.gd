@@ -382,6 +382,7 @@ static func _round_basis(repo: DataRepository, state: GameState) -> String:
 	for battle: Dictionary in saved.battles:
 		battle.erase("body_round")
 		battle.erase("pending_round")
+		battle.erase("body_round_plan")
 	var projection := {}
 	for key: String in ["regiments", "foes", "military_rosters", "military_cohorts", "army_roster", "battles",
 		"battle_aliases", "unit_tasks"]: projection[key] = saved.get(key)
