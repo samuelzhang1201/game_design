@@ -889,6 +889,73 @@ static func transfer_battle_candidate(repo: DataRepository, source: GameState, u
 	if final.status != "complete": return _failure("Transferred world failed final validation: " + final.reason)
 	return _result("complete", "Staged exact body ownership without movement", candidate)
 
+## CF06 D-RECONCILE: a frozen round's settled personnel losses reach its bodies. `proposed` is
+## exactly {battle_id:int, round:int}; the source is the private settlement stage in which the
+## round's personnel event `battle:<id>:round:<n>:personnel` has applied. Provenance is checked
+## (round-stage boundary on the saved control, canonical live field, body_round and pending_round
+## of that round with its receipt, the event touching only the round's participants). Each
+## participant whose bodies exceed its fit keeps its first rows by slot order, identity and
+## position, with canonical counts; the rest retire and the slot counter's high water stays.
+## Growth, unrelated staged changes or any invalid world reject. The round stays open.
+static func reconcile_round_candidate(repo: DataRepository, source: GameState, proposed: Dictionary, boundary: Dictionary) -> Dictionary:
+	if repo == null or source == null: return _failure("Round reconciliation requires data and source")
+	if not BodyMotion._keys(proposed, ["battle_id", "round"]) or not BodyMotion._loco_integer(proposed.battle_id) \
+		or not BodyMotion._loco_integer(proposed.round) or int(proposed.battle_id) <= 0 or int(proposed.round) <= 0:
+		return _failure("Invalid round reconciliation request")
+	var raw_error := _battle_raw_error(source)
+	if not raw_error.is_empty(): return _failure(raw_error)
+	var control: Variant = source.day_resolution.get("body_battle")
+	if not control is Dictionary or not BodyMotion._keys(boundary, ["version", "kind", "abs_day", "substep", "sequence", "stage"]) \
+		or boundary.kind != "battle" or boundary.stage != "round" or boundary.stage != control.get("stage") \
+		or boundary.abs_day != control.get("abs_day") or boundary.substep != control.get("next_substep") \
+		or boundary.sequence != control.get("sequence") or int(boundary.abs_day) != source.absolute_day():
+		return _failure("Round reconciliation requires its saved round boundary")
+	var id := int(proposed.battle_id)
+	var battle := _battle(source, id)
+	if battle.is_empty() or BattleSystem.canonical(source, id) != id: return _failure("Round reconciliation requires a canonical live field")
+	var round_error := _battle_round_error(battle)
+	if not round_error.is_empty(): return _failure(round_error)
+	var pending: Dictionary = battle.get("pending_round", {})
+	if not battle.has("body_round") or pending.is_empty() or int(battle.body_round.round) != int(proposed.round):
+		return _failure("Round reconciliation requires that frozen round")
+	var event: Variant = source.military_events.get("battle:%d:round:%d:personnel" % [id, int(proposed.round)])
+	if not event is Dictionary or not event.get("result") is Dictionary or not event.result.get("changes") is Array:
+		return _failure("Round reconciliation requires the round's settled personnel event")
+	var participants: Array = pending.att + pending.def
+	for change: Variant in event.result.changes:
+		if not change is Dictionary: return _failure("Invalid round personnel change")
+		var unit: Variant = source.military_cohorts.get(change.get("cohort_id"), {}).get("unit_code")
+		if unit not in participants: return _failure("Round personnel event touches a non-participant")
+	var size := int(repo.bal("battle_group_size"))
+	var candidate := _copy(source)
+	var index := _owners(candidate)
+	if not index.error.is_empty(): return _failure(index.error)
+	var ordered := participants.duplicate()
+	ordered.sort()
+	for code: String in ordered:
+		var owner: Dictionary = index.owners.get(code, {})
+		var entry := _entry(candidate, code)
+		var store: Variant = entry.get("body_groups") if owner.is_empty() else owner.get("groups", {}).get(code)
+		if not store is Array: return _failure("Round participant lacks bodies: " + code)
+		var rows: Array = store.duplicate(true)
+		rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.slot) < int(b.slot))
+		var total := 0
+		for row: Dictionary in rows: total += int(row.count)
+		var fit := MilitaryRoster.fit(candidate, code)
+		if fit == total: continue
+		if fit > total: return _failure("Round settlement cannot grow bodies: " + code)
+		var partition := BattleGroups.counts(fit, size)
+		var kept: Array[Dictionary] = []
+		for i: int in partition.size():
+			var row: Dictionary = rows[i]
+			row.count = partition[i]
+			kept.append(row)
+		if owner.is_empty(): entry.body_groups = kept
+		else: owner.groups[code] = kept
+	var final := _battle_world(repo, candidate)
+	if final.status != "complete": return _failure("Reconciled world failed validation: " + final.reason)
+	return _result("complete", "Reconciled frozen round losses without closing the round", candidate)
+
 static func _battle_result_hash(repo: DataRepository, source: GameState) -> String:
 	var grid := MarchPath.of_pack(repo)
 	if not BodyMotion._loco_grid_ok(grid): return ""
