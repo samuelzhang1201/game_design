@@ -1037,11 +1037,18 @@ static func sample_locomotion_candidate(projected: Dictionary, time_q: int) -> D
 	var failure := {"status": "error", "reason": "Invalid copied locomotion timeline/time", "rows": []}
 	if time_q < 0 or time_q > LOCOMOTION_Q or not _keys(projected, ["version", "moves"]) \
 		or not _loco_integer(projected.version) or projected.version != 2 or not projected.moves is Array: return failure
-	var rows: Array = []
 	var identities := {}
 	for move: Variant in projected.moves:
 		if not _loco_move_ok(move) or identities.has(_id(move)): return failure
 		identities[_id(move)] = true
+	return {"status": "complete", "reason": "", "rows": sample_locomotion_rows(projected.moves, time_q)}
+
+## The rows of moves that sample_locomotion_candidate has already admitted, at `time_q`:
+## interpolation only (a consumer re-sampling one admitted timeline every frame skips the
+## heading proofs it already passed).
+static func sample_locomotion_rows(moves: Array, time_q: int) -> Array:
+	var rows: Array = []
+	for move: Dictionary in moves:
 		var chosen: Dictionary = move.ops.back()
 		for op: Dictionary in move.ops:
 			if time_q < int(op.t1_q):
@@ -1052,7 +1059,7 @@ static func sample_locomotion_candidate(projected: Dictionary, time_q: int) -> D
 			"x_m": float(chosen.a[0]) + _difference(chosen.b[0], chosen.a[0]) * share,
 			"y_m": float(chosen.a[1]) + _difference(chosen.b[1], chosen.a[1]) * share,
 			"yaw_udeg": fposmod(float(chosen.yaw0_udeg) + float(chosen.turn_udeg) * share, LOCOMOTION_TURN)})
-	return {"status": "complete", "reason": "", "rows": rows}
+	return rows
 
 ## Battle TIME is private cost-staged geometry; the outer consumer seals full state.
 static func _battle_boundary_ok(boundary: Dictionary) -> bool:
