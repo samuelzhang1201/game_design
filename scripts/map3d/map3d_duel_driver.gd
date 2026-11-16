@@ -9,6 +9,8 @@ extends RefCounted
 ## which Map3DBattleGroups walks it to) — the saved point never moves.
 
 var _pairs: Dictionary = {}  ## "code:slot|code:slot" -> {figs, t, n, turn}
+var _bodies: Array = []  ## the fallen: [{child, t}] (Map3DFall)
+var _losses: Dictionary = {}  ## code -> how many losses it has shown
 
 
 func is_duelling(anim: AnimationPlayer) -> bool:
@@ -41,7 +43,36 @@ static func tune_of(repo: DataRepository) -> Dictionary:
 	var out := {"chain_lo": repo.bal("map3d_unit_chain_rest_min_s"), "chain_hi": repo.bal("map3d_unit_chain_rest_max_s")}
 	for key: String in ["steal", "double", "hit", "rest_min_s", "rest_max_s", "open_max_s", "reach_h", "close_h", "step_max_h"]:
 		out[key.trim_suffix("_s")] = repo.bal("map3d_duel_" + key)
+	out["fall_hold"] = repo.bal("map3d_fall_hold_s")
+	out["fall_fade"] = repo.bal("map3d_fall_fade_s")
 	return out
+
+
+## Which figures fall for `code`'s `removed` slots (Map3DFall.plan over its duellists in `kept`).
+func plan_falls(code: String, removed: Array, kept: Array) -> Array:
+	var n := int(_losses.get(code, 0))
+	_losses[code] = n + 1
+	return Map3DFall.plan(code, removed, paired_slots(code), kept, n)
+
+
+## A body (a group child taken out by Map3DBattleGroups.fall_swap) plays one of
+## its arm's DEATH clips, holds, fades and is freed; no DEATH clip: freed now.
+func fall(child: Dictionary, art: Dictionary, _tune: Dictionary) -> void:
+	var anim: AnimationPlayer = (child["anims"] as Array)[0] if not (child["anims"] as Array).is_empty() else null
+	var deaths: Array = Map3DClipChain.of_column(art, "duel").get("DEATH", [])
+	var clip := ""
+	if is_instance_valid(anim) and not deaths.is_empty():
+		var pick := mini(int(Map3DMarchLag.unit("%d|death" % anim.get_instance_id()) * deaths.size()), deaths.size() - 1)
+		clip = Map3DUnits.clip_named(anim, String(deaths[pick]))
+	if clip == "":
+		(child["node"] as Node3D).queue_free()
+		return
+	anim.set_meta("duel", true)  # nothing else plays a body
+	Map3DClipChain.stop(anim)
+	anim.speed_scale = 1.0
+	anim.play(clip, 0.1)
+	anim.seek(0.0, true)
+	_bodies.append({"child": child, "t": 0.0})
 
 
 ## Each battle's front figures that can duel, by side ("a" = its attacking side), in battle id order.
@@ -126,7 +157,25 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 			placed[figs[1]["code"]] = true
 	for key: String in _pairs:
 		_advance(_pairs[key], key, delta, running, tune)
+	_fade(delta, running, tune)
 	return placed.keys()
+
+
+func _fade(delta: float, running: bool, tune: Dictionary) -> void:
+	for body: Dictionary in _bodies.duplicate():
+		var child: Dictionary = body["child"]
+		if not is_instance_valid(child["node"]):
+			_bodies.erase(body)  # freed with its piece
+			continue
+		(child["anims"][0] as AnimationPlayer).speed_scale = 1.0 if running else 0.0
+		if not running:
+			continue
+		body["t"] = float(body["t"]) + delta
+		var a := Map3DFall.alpha(float(body["t"]), float(tune["fall_hold"]), float(tune["fall_fade"]))
+		Map3DCourierRide.apply(child, a)
+		if a <= 0.0:
+			(child["node"] as Node3D).queue_free()
+			_bodies.erase(body)
 
 
 static func _claim(f: Dictionary) -> void:

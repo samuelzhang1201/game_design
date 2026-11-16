@@ -24,11 +24,11 @@ const _SOURCES: Dictionary = {
 	"res://scripts/engine/march_path.gd":"8f4b63b38c2f1e447ece94f09851939b1336a1a9f51880e05a07c8719264e568",
 	"res://scripts/engine/unit_bodies.gd":"e5ef5385575531e95914d0adb6cd6dcf59751d093a29e428fc48284a8621b4ca",
 	"res://scripts/engine/war_front.gd":"73c5fa064b95c84f4e5c5215bf120bd7ff7e496792179810ed59ba64d053a6dc",
-	"res://scripts/map3d/map3d_battle_groups.gd":"ba25d1735fda8a7ab5ba57ef99cdc4fa82edcb253e1bfcb07963b655bce0ffd5",
+	"res://scripts/map3d/map3d_battle_groups.gd":"2b91b65f07d1110767d192b42d14f5fc84c5aba0181881d11cbd022435c5f1d6",
 	"res://scripts/map3d/map3d_units.gd":"e842566f033267ae5cbb8bf548bed2aefc88103a9234b344cdc1b3554e32fb4d",
 	"res://scripts/map3d/map3d_formation.gd":"374f643878041d8e3140506e7a06854fe295538b2431abdb6c449af617bbb970",
 	"res://scripts/map3d/map3d_geometry.gd":"64797a53505cff9bd849e9245107f9be9f73fbb78cc2d27ab9f58b71bfce9e4c",
-	"res://scripts/map3d/map3d_layer_units.gd":"f08707e2ef32ee8d00772ff5f30f99bb75fbc52f2f44c16468faab1e3659aceb",
+	"res://scripts/map3d/map3d_layer_units.gd":"e9cf98cd2044fcab07dd938f94ebe5cd4d6a5de284b0c000e2adee723d33cf61",
 	"res://scripts/map3d/map3d_unit_standard.gd":"ec4b2f5fcc15e9b962ec86fd4c39c3e0bef5bfed3d02224870ada8a41ff3c3df",
 	"res://scripts/map3d/map3d_national_flag.gd":"c9fd16bf11475c6ca628881ef3ca9a1eab389635007f19c673bd7f5b6becccb4",
 	"res://scripts/map3d/map3d_context.gd":"d7d45a27a77d7859a7df00b6d87980e106535c198b2828795d5f47837a5d3172"}
