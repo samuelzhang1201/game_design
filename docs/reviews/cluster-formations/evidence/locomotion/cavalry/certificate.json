@@ -2086,7 +2086,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "1e602a944b28861e984fcd42208d1acbe16729276491ae2bb39363aa10f790eb",
+  "sha256": "41935c5e025c347fba7e607b7495609c153f9f4311b45b4d5c54ff64d6f91230",
   "uniform": 512
  },
  "config": {
@@ -2172,13 +2172,13 @@
   "data/army/balance.csv": "09c376c4f530a4f30217e600f08f705ffa8919b8926b58d552c5c13166e10700",
   "data/army/unit_footprints.csv": "5d7ebb28d0942802e698284eb42817203d66100ad607debc6cbda895485412de",
   "data/screens/map3d/army_art.csv": "269f416f0c3d6a12d182c62bc29986dd65879cc036c47e2c2b351615a6d89ddf",
-  "data/screens/map3d/balance.csv": "52dc59c5f39a8936cc27ffe6e820e62d54a84ba04555891e384a68e34c214591",
+  "data/screens/map3d/balance.csv": "4fa9c734808e35238ad305fab60679857c12a03f46f246d44e508513dea8112e",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bde168689056dcc1f338d4c76f06899d6bcec146cede2e11af02e39f65b3a780",
   "scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
-  "scripts/map3d/map3d_cavalry_locomotion.gd": "f3911b9f0af7238f0d435d01b744556c884e8b5821be098d178f8a19c7b1e45e",
-  "scripts/map3d/map3d_cavalry_pivot.gd": "567a68683f34d51ada2105a4bd6d1ec67ecf9cf474efbaf9a2ce0840b516129c",
-  "scripts/map3d/map3d_cavalry_pivot_math.gd": "66538405f1a76a0e11f1c62ae8f15ebef889557486bb70eff721c603ad5bbcca",
+  "scripts/map3d/map3d_cavalry_locomotion.gd": "0a10fe26e8781f3c014a6a6f87c4369f79f59f4f3209f327762298cb1a3d8022",
+  "scripts/map3d/map3d_cavalry_pivot.gd": "b210d21b965ff11830e290d81b526eb7e713b9ddf2c285467b9838e27a96197d",
+  "scripts/map3d/map3d_cavalry_pivot_math.gd": "0c9ae12d36755d2d9b5928d6343c7a6c4bdb871aa62d7c6e0013c729d65911e1",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
   "scripts/map3d/map3d_royal_locomotion_source.gd": "b4301e3953e92676cdb0386bf4324c9e779687c665dfd9c9433a0083d3e827e7",
   "scripts/map3d/map3d_royal_pivot.gd": "2c94e0b6d7cf6269634cd5c854238cd3b5707aeefa367393b8b9034019e9ad6d",
@@ -2192,11 +2192,11 @@
    "MARCH"
   ],
   "contact_um": 29273,
-  "digest": "16d5cdde13e9eb76994dd7202c2d4f96ae31428378537f0f3912a7a7ef6dfc42",
+  "digest": "90e7f594f0ce251910ec81c044521780337b7a7c3af4548612ab6a21f64bf721",
   "radius_m": 804,
   "turn_q": 400000
  },
- "payload_sha256": "16d5cdde13e9eb76994dd7202c2d4f96ae31428378537f0f3912a7a7ef6dfc42",
+ "payload_sha256": "90e7f594f0ce251910ec81c044521780337b7a7c3af4548612ab6a21f64bf721",
  "report": {
   "bounds_um": {
    "contact": 29273,

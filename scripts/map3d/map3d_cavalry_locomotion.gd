@@ -15,10 +15,12 @@ extends RefCounted
 
 const Horse = preload("res://scripts/map3d/map3d_royal_pivot.gd")
 const Provider = preload("res://scripts/map3d/map3d_pivot_provider.gd")
+const Kernel = preload("res://scripts/map3d/map3d_cavalry_pivot.gd")
+const Limb = preload("res://scripts/map3d/map3d_cavalry_pivot_math.gd")
 const PLAN_PATH: String = "res://assets/3D/units/cavalry/cavalry_pivot_plan.json"
 
 static var _plan: Dictionary = {}
-static var _bound_by_id: Dictionary = {}  # skeleton instance id -> {ok, reason, rest, patches, stand}
+static var _bound_by_id: Dictionary = {}  # skeleton instance id -> {ok, reason, rest, patches, stand, turns}
 
 
 ## Certifier provider (tools/units3d/certify_locomotion.py), through the shared shell.
@@ -26,7 +28,10 @@ static func pose(player: AnimationPlayer, skeleton: Skeleton3D, request: Diction
 	Provider.apply(solve, player, skeleton, request)
 
 
-## One phase of a `turn_udeg` pivot: {ok, reason, pose: {bone: local Transform3D}}.
+## One phase of a `turn_udeg` pivot: {ok, reason, pose: {bone: local Transform3D}}. Exactly
+## Map3DRoyalPivot.sample on this binding, but what does not change with the phase (the MARCH pose,
+## the hoof contacts, the kernel's validation of rest, entry, exit and contacts) is prepared once per
+## (figure, turn) by `prepared`, so a frame only blends and solves its phase.
 static func solve(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, turn_udeg: int,
 		phase: float) -> Dictionary:
 	if clip != ("PIVOT_RIGHT" if turn_udeg > 0 else "PIVOT_LEFT"):
@@ -34,12 +39,56 @@ static func solve(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, t
 	var bound: Dictionary = bind(player, skeleton)
 	if not bound.ok:
 		return {"ok": false, "reason": bound.reason, "pose": {}}
-	var march: Dictionary = Provider.locals(player, skeleton, "MARCH",
-		float(plan().march_phase) * player.get_animation("MARCH").length, bound.rest.bones)
-	var out: Dictionary = Horse.sample(bound.rest, phase, turn_udeg, march, bound.stand, bound.patches, plan())
+	if turn_udeg == 0 or phase < 0.0 or phase > 1.0:
+		return {"ok": false, "reason": str({"reason": "request"}), "pose": {}}
+	var turn: Dictionary = prepared(player, skeleton, bound, turn_udeg)
+	if not turn.kernel.ok:
+		return {"ok": false, "reason": str(turn.kernel.diagnostics), "pose": {}}
+	# Map3DRoyalPivot.sample's blend: the horse eases MARCH <-> stand over one step, the rider over
+	# at least PLAN.blend.
+	var march: Dictionary = turn.march
+	var native: Dictionary = march
+	if phase > 0.0 and phase < 1.0:
+		native = {}
+		for name: String in march:
+			var w: float = turn.rider_w if turn.rider.has(name) else turn.horse_w
+			var t: float = clampf(minf(phase, 1.0 - phase) / w, 0.0, 1.0)
+			native[name] = bound.stand[name] if t == 1.0 else \
+				(march[name] as Transform3D).interpolate_with(bound.stand[name], t * t * (3.0 - 2.0 * t))
+	var op: Dictionary = turn.op.duplicate()
+	op.phase = phase
+	var out: Dictionary = Kernel.sample_prepared(turn.kernel, native, op)
 	if not out.ok:
 		return {"ok": false, "reason": str(out.diagnostics), "pose": {}}
 	return {"ok": true, "reason": "", "pose": out.locals}
+
+
+## The phase-independent part of a `turn_udeg` pivot for this figure, built once and kept (at most
+## 64 turns a figure; the consumer's turns are few): {march, rider, horse_w, rider_w, op, kernel}.
+static func prepared(player: AnimationPlayer, skeleton: Skeleton3D, bound: Dictionary, turn_udeg: int) -> Dictionary:
+	var turns: Dictionary = bound.turns
+	if not turns.has(turn_udeg):
+		if turns.size() >= 64:
+			turns.clear()
+		var profile: Dictionary = plan()
+		# MARCH keys only some channels (mostly rotations); the rest keep whatever the skeleton held.
+		# From the rest pose, seek the turn's pivot clip first (as Provider.apply does before every
+		# certified solve), so the cached MARCH pose never depends on the pose the figure showed before.
+		skeleton.reset_bone_poses()
+		Provider.seek(player, skeleton, "PIVOT_RIGHT" if turn_udeg > 0 else "PIVOT_LEFT", 0.0)
+		var march: Dictionary = Provider.locals(player, skeleton, "MARCH",
+			float(profile.march_phase) * player.get_animation("MARCH").length, bound.rest.bones)
+		var turn: float = float(turn_udeg) / 1e6
+		var horse_w: float = 1.0 / float(Horse.steps_for(turn, profile))
+		var op: Dictionary = {"start_heading": 0.0, "end_heading": fposmod(turn, 360.0), "turn_degrees": turn,
+			"duration": 1.0, "phase": 0.0, "entry_phase": float(profile.march_phase),
+			"exit_phase": float(profile.march_phase)}
+		var contacts: Dictionary = Horse.contacts_for(Limb._fk(bound.rest.bones, march),
+			Limb._fk(bound.rest.bones, bound.stand), bound.patches, turn, profile)
+		turns[turn_udeg] = {"march": march, "rider": Horse.riders(bound.rest, String(profile.rider_root)),
+			"horse_w": horse_w, "rider_w": maxf(horse_w, float(profile.blend)), "op": op,
+			"kernel": Kernel.prepare(bound.rest, march, march, op, contacts)}
+	return turns[turn_udeg]
 
 
 ## Bone landmarks in each bone's own bind frame: the head at its origin, the tail at the bind
@@ -72,7 +121,7 @@ static func plan() -> Dictionary:
 	return _plan
 
 
-## {ok, reason, rest, patches, stand}: the kernel rest, hoof patches and seated stand of this
+## {ok, reason, rest, patches, stand, turns}: the kernel rest, hoof patches and seated stand of this
 ## figure, built once per skeleton (never evicted: fine for the certifier; the consumer keys it on
 ## the shared skin and mesh, as for the royal piece).
 static func bind(player: AnimationPlayer, skeleton: Skeleton3D) -> Dictionary:
@@ -89,8 +138,10 @@ static func bind(player: AnimationPlayer, skeleton: Skeleton3D) -> Dictionary:
 			return {"ok": false, "reason": "cavalry figure has no skinned body mesh"}
 		var rest: Dictionary = Horse.rest_of(skeleton, mesh.skin, landmarks(skeleton, mesh.skin))
 		var hooves: Dictionary = Horse.patches(mesh, plan())
+		skeleton.reset_bone_poses()  # STANDBY too keys only some channels: seek it from the rest pose
 		var stand: Dictionary = Horse.seat(rest, Provider.locals(player, skeleton, "STANDBY", 0.0, rest.bones), hooves)
 		if stand.is_empty():
 			return {"ok": false, "reason": "cavalry stand could not be seated"}
-		_bound_by_id[id] = {"ok": true, "reason": "", "rest": rest, "patches": hooves, "stand": stand}
+		_bound_by_id[id] = {"ok": true, "reason": "", "rest": rest, "patches": hooves, "stand": stand,
+			"turns": {}}
 	return _bound_by_id[id]
