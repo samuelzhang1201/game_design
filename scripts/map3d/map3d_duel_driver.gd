@@ -39,7 +39,7 @@ func step(ctx: Map3DContext, pieces: Dictionary, delta: float, place: Callable) 
 
 static func tune_of(repo: DataRepository) -> Dictionary:
 	var out := {"chain_lo": repo.bal("map3d_unit_chain_rest_min_s"), "chain_hi": repo.bal("map3d_unit_chain_rest_max_s")}
-	for key: String in ["steal", "double", "hit", "rest_min_s", "rest_max_s", "reach_h", "close_h", "step_max_h"]:
+	for key: String in ["steal", "double", "hit", "rest_min_s", "rest_max_s", "open_max_s", "reach_h", "close_h", "step_max_h"]:
 		out[key.trim_suffix("_s")] = repo.bal("map3d_duel_" + key)
 	return out
 
@@ -52,17 +52,20 @@ static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 		if piece.get("layout", "") != "physical_groups" or code.begins_with(Sighting.GHOST_CODE):
 			continue
 		var battle := BattleSystem.battle_of(ctx.state(), code)
-		if battle.is_empty():
+		if battle.is_empty() or int(battle.get("rounds", 0)) <= 0:
 			continue
 		var id := int(battle.get("id", 0))  # a hand-built battle may carry none
 		if not by_id.has(id):
-			var heading := WarFront.facing_vector(int(piece.get("facing_deg", 0)))
-			by_id[id] = {"id": id, "rounds": int(battle.get("rounds", 0)), "across": Vector2(-heading.y, heading.x), "a": [], "b": []}
+			by_id[id] = {"id": id, "rounds": int(battle["rounds"]), "across": Vector2.ZERO, "across_code": "", "a": [], "b": []}
+		if code in battle["att"] and (by_id[id]["across_code"] == "" or code < by_id[id]["across_code"]):
+			var heading := WarFront.facing_vector(int(piece.get("facing_deg", 0)))  # the attackers' front, whatever the pieces' order
+			by_id[id]["across"] = Vector2(-heading.y, heading.x)
+			by_id[id]["across_code"] = code
 		var art: Dictionary = ctx.repo.army_art.get(String(piece.get("model", "")), {})
 		for group: Dictionary in piece["groups"]:
 			var child: Dictionary = group["piece"]
 			if String(group["role"]) != "front" or (child["anims"] as Array).is_empty() \
-					or not Map3DDuel.duels(art, child["anims"][0]):
+					or not can_duel(child, art, child["anims"][0]):
 				continue
 			by_id[id]["a" if code in battle["att"] else "b"].append({"key": "%s:%d" % [code, int(group["slot"])],
 				"code": code, "slot": int(group["slot"]), "anim": child["anims"][0], "child": child, "art": art, "piece": piece,
@@ -85,7 +88,18 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 		for f: Dictionary in battle["a"] + battle["b"]:
 			figs[f["key"]] = f
 			h = maxf(h, float(f["h"]))
-		for p: Dictionary in Map3DDuel.pairs(battle["a"], battle["b"], battle["across"], float(tune["reach_h"]) * h):
+		var reach := float(tune["reach_h"]) * h
+		var taken: Dictionary = {}
+		for key: String in _pairs:  # a pair whose two figures still stand within reach keeps its exchange
+			var ka := String(_pairs[key]["figs"][0]["key"])
+			var kb := String(_pairs[key]["figs"][1]["key"])
+			if figs.has(ka) and figs.has(kb) and not taken.has(ka) and not taken.has(kb) \
+					and (figs[ka]["xz"] as Vector2).distance_to(figs[kb]["xz"]) <= reach:
+				wanted[key] = [figs[ka], figs[kb]]
+				taken[ka] = true
+				taken[kb] = true
+		var free := func(side: Array) -> Array: return side.filter(func(f: Dictionary) -> bool: return not taken.has(f["key"]))
+		for p: Dictionary in Map3DDuel.pairs(free.call(battle["a"]), free.call(battle["b"]), battle["across"], reach):
 			wanted["%s|%s" % [p["a"], p["b"]]] = [figs[p["a"]], figs[p["b"]]]
 	for key: String in _pairs.keys():
 		if not wanted.has(key):
@@ -96,7 +110,8 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 	for key: String in wanted:
 		var figs: Array = wanted[key]
 		if not _pairs.has(key):
-			_pairs[key] = {"figs": figs, "t": 0.0, "n": 0}
+			# each pair opens after its own hashed guard, so a front never strikes in unison
+			_pairs[key] = {"figs": figs, "t": -Map3DMarchLag.unit(key + "|open") * float(tune["open_max"]), "n": 0}
 			for f: Dictionary in figs:
 				_claim(f)
 			_begin(_pairs[key], key, tune)
@@ -123,11 +138,12 @@ static func _claim(f: Dictionary) -> void:
 
 ## Back to the piece's own action (its chain, if it chains), its saved spot and facing.
 static func _release(f: Dictionary, tune: Dictionary) -> bool:
-	var anim: AnimationPlayer = f["anim"]
 	(f["child"] as Dictionary).erase("duel_offset")
 	(f["child"] as Dictionary).erase("duel_yaw")
-	if not is_instance_valid(anim):
-		return false
+	(f["child"] as Dictionary)["step_facing"] = true  # it steps back facing its foe
+	if not is_instance_valid(f["anim"]):
+		return false  # freed with its piece (e.g. a refresh under the pause menu)
+	var anim: AnimationPlayer = f["anim"]
 	anim.remove_meta("duel")
 	anim.speed_scale = 1.0
 	var action := String((f["piece"] as Dictionary).get("action", ""))
@@ -157,6 +173,7 @@ static func _aim(figs: Array, tune: Dictionary) -> bool:
 				or not is_equal_approx(float(child["duel_yaw"]), yaw):
 			child["duel_offset"] = offset
 			child["duel_yaw"] = yaw
+			child["step_facing"] = true  # it steps in facing its foe, never turned to its way
 			changed = true
 	return changed
 
@@ -178,7 +195,7 @@ static func _begin(p: Dictionary, key: String, tune: Dictionary) -> void:
 		_length(d["anim"], reply), float(Map3DDuel.contact_of(d["art"])[reply]))
 	var rest := lerpf(float(tune["rest_min"]), float(tune["rest_max"]), float(turn["rest_u"]))
 	p["turn"] = {"s": s["anim"], "d": d["anim"], "strike": strike, "reply": reply, "strike_at": timing["strike_at"],
-		"reply_at": timing["reply_at"], "end": timing["end"], "total": float(timing["end"]) + rest,
+		"reply_at": timing["reply_at"], "end": timing["end"], "total": maxf(float(timing["end"]) + rest, 0.05),
 		"struck": false, "replied": false, "guarded": false}
 
 
@@ -187,8 +204,8 @@ static func _advance(p: Dictionary, key: String, delta: float, running: bool, tu
 	for anim: AnimationPlayer in anims:
 		if is_instance_valid(anim):
 			anim.speed_scale = 1.0 if running else 0.0
-	if not running:
-		return
+	if not running or (p["figs"] as Array).any(func(f: Dictionary) -> bool: return bool((f["child"] as Dictionary).get("walking", false))):
+		return  # paused, or still stepping in: the turn waits
 	p["t"] = float(p["t"]) + delta
 	while true:
 		var tt: Dictionary = p["turn"]
@@ -220,3 +237,11 @@ static func _start(anim: AnimationPlayer, clip: String, at: float) -> void:
 		return  # a guard already held is not restarted
 	anim.play(name, 0.15)
 	anim.seek(at, true)
+
+
+## Whether a figure can duel, worked out once per AnimationPlayer and kept on its group child.
+static func can_duel(child: Dictionary, art: Dictionary, anim: AnimationPlayer) -> bool:
+	if int(child.get("duels_for", 0)) != anim.get_instance_id():
+		child["duels_for"] = anim.get_instance_id()
+		child["duels"] = Map3DDuel.duels(art, anim)
+	return bool(child["duels"])

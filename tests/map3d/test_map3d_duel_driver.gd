@@ -6,7 +6,7 @@ extends GutTest
 const ART := {"duel": "STRIKE:ATTACK;SLASH|BLOCK:BLOCK|HIT:HIT|DEATH:DEATH",
 	"contact": "ATTACK:0.4;SLASH:0.35;BLOCK:0.25;HIT:0.1"}
 const TUNE := {"steal": 0.0, "double": 0.0, "hit": 0.0, "rest_min": 0.2, "rest_max": 0.2,
-	"reach_h": 30.0, "close_h": 0.6, "step_max_h": 1.0, "chain_lo": 0.1, "chain_hi": 0.2}
+	"reach_h": 30.0, "close_h": 0.6, "step_max_h": 1.0, "chain_lo": 0.1, "chain_hi": 0.2, "open_max": 0.0}
 const DT := 0.05
 
 
@@ -135,3 +135,102 @@ func test_unpairing_returns_to_the_saved_spot() -> void:
 	assert_false((a[0]["child"] as Dictionary).has("duel_yaw"), "and its saved facing")
 	assert_true("A" in placed, "its piece is placed again to walk back")
 	assert_eq((a[0]["anim"] as AnimationPlayer).current_animation, "GARRISON", "a piece with no action stands its guard")
+
+
+func test_a_front_does_not_open_in_unison() -> void:
+	var a: Array = []
+	var b: Array = []
+	for i in 8:
+		a.append(_fig("A", i, Vector2(i * 5.0, 10)))
+		b.append(_fig("B", i, Vector2(i * 5.0, -10)))
+	var driver := Map3DDuelDriver.new()
+	var first: Dictionary = {}
+	var tune := TUNE.duplicate()
+	tune["open_max"] = 1.2
+	for frame in 60:
+		driver.run(_battle(a, b), DT, true, tune)
+		for f: Dictionary in a + b:
+			var anim: AnimationPlayer = f["anim"]
+			if not first.has(f["key"]) and anim.current_animation in ["ATTACK", "SLASH"]:
+				first[f["key"]] = frame
+	var frames: Dictionary = {}
+	for k: String in first:
+		frames[first[k]] = true
+	assert_gt(frames.size(), 3, "eight pairs open on different frames, not one")
+
+
+func test_losing_one_figure_keeps_the_other_pairs_running() -> void:
+	var a: Array = []
+	var b: Array = []
+	for i in 5:
+		a.append(_fig("A", i, Vector2(i * 5.0, 10)))
+		b.append(_fig("B", i, Vector2(i * 5.0, -10)))
+	var driver := Map3DDuelDriver.new()
+	for frame in 10:
+		driver.run(_battle(a, b), DT, true, TUNE)
+	var before := driver.pair_time("A:4|B:4")
+	a.remove_at(1)
+	driver.run(_battle(a, b), DT, true, TUNE)
+	assert_almost_eq(driver.pair_time("A:4|B:4"), before + DT, 0.0001, "an untouched pair keeps its exchange")
+	assert_true(driver.is_duelling(a[0]["anim"]), "A:0 still duels B:0")
+	assert_false(driver.is_duelling(b[1]["anim"]), "B:1 lost its partner and stands alone")
+
+
+func test_a_pair_does_not_strike_while_it_steps_in() -> void:
+	var a := [_fig("A", 0, Vector2(0, 10))]
+	var b := [_fig("B", 0, Vector2(0, -10))]
+	var driver := Map3DDuelDriver.new()
+	driver.run(_battle(a, b), DT, true, TUNE)
+	a[0]["child"]["walking"] = true
+	var t := driver.pair_time("A:0|B:0")
+	for i in 20:
+		driver.run(_battle(a, b), DT, true, TUNE)
+	assert_almost_eq(driver.pair_time("A:0|B:0"), t, 0.0001, "the turn waits for the step to end")
+	a[0]["child"]["walking"] = false
+	driver.run(_battle(a, b), DT, true, TUNE)
+	assert_almost_eq(driver.pair_time("A:0|B:0"), t + DT, 0.0001)
+
+
+func test_a_step_in_or_out_never_turns_its_back() -> void:
+	var a := [_fig("A", 0, Vector2(0, 10))]
+	var b := [_fig("B", 0, Vector2(0, -10))]
+	var driver := Map3DDuelDriver.new()
+	driver.run(_battle(a, b), DT, true, TUNE)
+	assert_true(a[0]["child"].get("step_facing", false), "stepping in keeps its facing")
+	driver.run(_battle(a, []), DT, true, TUNE)
+	assert_true(a[0]["child"].get("step_facing", false), "stepping back too")
+
+
+func test_whether_a_figure_duels_is_worked_out_once() -> void:
+	var f := _fig("A", 0, Vector2.ZERO)
+	assert_true(Map3DDuelDriver.can_duel(f["child"], ART, f["anim"]))
+	(f["anim"] as AnimationPlayer).get_animation_library("").remove_animation("BLOCK")
+	assert_true(Map3DDuelDriver.can_duel(f["child"], ART, f["anim"]), "cached on the figure, not parsed every frame")
+	var other := _fig("A", 1, Vector2.ZERO)
+	(other["anim"] as AnimationPlayer).get_animation_library("").remove_animation("BLOCK")
+	assert_false(Map3DDuelDriver.can_duel(other["child"], ART, other["anim"]))
+
+
+func test_a_freed_figure_releases_its_partner() -> void:
+	var a := [_fig("A", 0, Vector2(0, 10))]
+	var b := [_fig("B", 0, Vector2(0, -10))]
+	var driver := Map3DDuelDriver.new()
+	driver.run(_battle(a, b), DT, true, TUNE)
+	(a[0]["anim"] as AnimationPlayer).free()
+	driver.run(_battle([], b), DT, true, TUNE)
+	assert_false(driver.is_duelling(b[0]["anim"]), "the survivor is handed back")
+	assert_eq((b[0]["anim"] as AnimationPlayer).current_animation, "GARRISON")
+
+
+func test_a_zero_length_turn_still_ends_the_frame() -> void:
+	var a := [_fig("A", 0, Vector2(0, 10))]
+	var b := [_fig("B", 0, Vector2(0, -10))]
+	for f: Dictionary in a + b:
+		for clip: String in ["ATTACK", "SLASH", "BLOCK", "HIT"]:
+			(f["anim"] as AnimationPlayer).get_animation(clip).length = 0.0
+	var tune := TUNE.duplicate()
+	tune["rest_min"] = 0.0
+	tune["rest_max"] = 0.0
+	var driver := Map3DDuelDriver.new()
+	driver.run(_battle(a, b), 1.0, true, tune)
+	assert_true(driver.is_duelling(a[0]["anim"]), "it returned")

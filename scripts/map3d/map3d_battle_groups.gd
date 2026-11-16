@@ -118,11 +118,15 @@ static func starts_of(old: Dictionary) -> Array:
 
 ## A figure on its walk from where it stood to a new saved point, {xz, yaw} at
 ## share `t` 0..1: it turns into its way over the first fifth and out to its
-## saved facing over the last; one already on its point only turns.
-static func eased(from_xz: Vector2, from_yaw: float, to_xz: Vector2, to_yaw: float, t: float, stand_deg := 0.0) -> Dictionary:
+## saved facing over the last; one already on its point, or on a duel's step
+## (`keep_facing`: it faces its foe in and out, Map3DDuelDriver), only turns.
+static func eased(from_xz: Vector2, from_yaw: float, to_xz: Vector2, to_yaw: float, t: float, stand_deg := 0.0,
+		keep_facing := false) -> Dictionary:
 	if t >= 1.0:
 		return {"xz": to_xz, "yaw": to_yaw}
 	t = maxf(t, 0.0)
+	if keep_facing:
+		return {"xz": from_xz.lerp(to_xz, t), "yaw": lerp_angle(from_yaw, to_yaw, t)}
 	if from_xz.is_equal_approx(to_xz):
 		return {"xz": to_xz, "yaw": lerp_angle(from_yaw, to_yaw, t)}
 	var way := Map3DUnits.facing_yaw(to_xz - from_xz, stand_deg)
@@ -152,8 +156,11 @@ static func _walk(repo: DataRepository, piece: Dictionary, child: Dictionary, xz
 	var wait := float(walk["from"].get("delay", 0.0))   # a lane sets off this share of the walk late
 	var t := 1.0 if walk_s <= 0.0 or walk["from"]["xz"] == xz and walk["from"]["yaw"] == yaw \
 		else ((float(piece.get("clock", 0.0)) - float(walk["t0"])) / walk_s - wait) / (1.0 - wait)
-	child["at"] = eased(walk["from"]["xz"], walk["from"]["yaw"], xz, yaw, t, child["stand_deg"]) if t < 1.0 else to
+	child["at"] = eased(walk["from"]["xz"], walk["from"]["yaw"], xz, yaw, t, child["stand_deg"],
+		bool(child.get("step_facing", false))) if t < 1.0 else to
 	child["walking"] = t < 1.0
+	if t >= 1.0:
+		child.erase("step_facing")  # a later walk to a new saved point turns into its way again
 	return child["at"]
 
 ## Optional saved slots retain their model and animation player across removal/refresh.

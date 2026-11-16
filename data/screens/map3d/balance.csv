@@ -173,6 +173,7 @@ map3d_duel_double,0.15,"Front-rank duels (spec 2026-11-16-infantry-duel-animatio
 map3d_duel_hit,0.3,"Front-rank duels (spec 2026-11-16-infantry-duel-animation-design.md; view-only): the share of replies that take the blow (a HIT clip) instead of blocking it (BLOCK)"
 map3d_duel_rest_min_s,0.3,"Front-rank duels (spec 2026-11-16-infantry-duel-animation-design.md; view-only): the shortest guard pause, real seconds, between two turns of a pair (hashed per turn)"
 map3d_duel_rest_max_s,0.9,"Front-rank duels (spec 2026-11-16-infantry-duel-animation-design.md; view-only): the longest guard pause between two turns of a pair"
+map3d_duel_open_max_s,1.2,"Front-rank duels (spec 2026-11-16-infantry-duel-animation-design.md; view-only): the longest a new pair stands its guard before its first turn (hashed per pair), so a front never opens in unison"
 map3d_duel_reach_h,3,"Front-rank duels (spec 2026-11-16-infantry-duel-animation-design.md; view-only): two opposing front figures pair only within this many figure heights of each other as drawn (first guess; measure on the new infantry in a real window)"
 map3d_duel_close_h,0.6,"Front-rank duels (spec 2026-11-16-infantry-duel-animation-design.md; view-only): a pair steps toward each other until this many figure heights apart, sword's length at the miniature's scale (first guess)"
 map3d_duel_step_max_h,1,"Front-rank duels (spec 2026-11-16-infantry-duel-animation-design.md; view-only): the most each figure of a pair steps off its saved point toward the other, in figure heights (the saved point never moves)"
