@@ -72,7 +72,8 @@ static func continuity_error(before: GameState, after: GameState, request: Dicti
 	if BodyMotion._hash(now) != BodyMotion._hash(cursor):
 		var expected: Variant = cursor.duplicate(true) if cursor is Dictionary else null
 		if expected is Dictionary: expected.erase("plan")
-		if now != null or expected == null or BodyMotion._hash(closed) != BodyMotion._hash(expected): return "Lifecycle lost the motion cursor"
+		if expected == null: return "Lifecycle invented a motion cursor"
+		if now != null or BodyMotion._hash(closed) != BodyMotion._hash(expected): return "Lifecycle lost the motion cursor"
 	elif BodyMotion._hash(closed) != BodyMotion._hash(_outer(before).get("closed_motion", {})): return "Lifecycle changed the closed motion cursor"
 	return ""
 

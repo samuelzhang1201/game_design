@@ -233,7 +233,7 @@ func test_any_displacement_or_owner_slip_is_refused() -> void:
 	assert_eq(BodyLifecycle.continuity_error(f.state, faced, request), "Lifecycle changed the unit_facing of " + f.unit)
 	var cursor := UnitBodies._copy(state)
 	cursor.military_migration.body_motion = {"version": "1"}
-	assert_eq(BodyLifecycle.continuity_error(f.state, cursor, request), "Lifecycle lost the motion cursor")
+	assert_eq(BodyLifecycle.continuity_error(f.state, cursor, request), "Lifecycle invented a motion cursor")
 
 func test_non_edges_pending_decisions_and_failures_publish_nothing() -> void:
 	var f := _end_world(901)
@@ -275,12 +275,14 @@ func test_non_edges_pending_decisions_and_failures_publish_nothing() -> void:
 	file = BodyMotion._hash(g.state.to_dict())
 	for request: Dictionary in [join, {"kind": "contacts"}, {"kind": "merge", "first_id": "8", "second_id": "9"},
 			{"kind": "withdraw", "unit": g.unit, "battle_id": "8", "reason": "Leaves"},
-			{"kind": "cancel", "battle_id": "8", "reason": "Called off"}]:
+			{"kind": "cancel", "battle_id": "8", "reason": "Called off"}, {"kind": "end", "battle_id": "8", "reason": "Ended"}]:
 		var waiting := BodyBattle.plan_candidate(g.repo, g.state, request, round)
 		assert_eq(waiting.status, "deferred", request.kind)
 		assert_eq(waiting.reason, "Operation waits for its lifecycle stage", request.kind)
-	for at: Dictionary in [contact, round]:
+	var refusals := ["Battle boundary disagrees with saved control", "Invalid enrollment plan/boundary"]
+	for i: int in 2:
+		var at: Dictionary = [contact, round][i]
 		var held := BodyLifecycle.commit_candidate(g.repo, g.state, clean.plan, at)
-		assert_ne(held.status, "complete", held.reason)
+		assert_eq([held.status, held.reason], ["error", refusals[i]])
 		assert_null(held.candidate)
 	assert_eq(BodyMotion._hash(g.state.to_dict()), file)
