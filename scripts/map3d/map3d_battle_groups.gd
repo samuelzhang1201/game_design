@@ -118,11 +118,15 @@ static func starts_of(old: Dictionary) -> Array:
 
 ## A figure on its walk from where it stood to a new saved point, {xz, yaw} at
 ## share `t` 0..1: it turns into its way over the first fifth and out to its
-## saved facing over the last; one already on its point only turns.
-static func eased(from_xz: Vector2, from_yaw: float, to_xz: Vector2, to_yaw: float, t: float, stand_deg := 0.0) -> Dictionary:
+## saved facing over the last; one already on its point, or on a duel's step
+## (`keep_facing`: it faces its foe in and out, Map3DDuelDriver), only turns.
+static func eased(from_xz: Vector2, from_yaw: float, to_xz: Vector2, to_yaw: float, t: float, stand_deg := 0.0,
+		keep_facing := false) -> Dictionary:
 	if t >= 1.0:
 		return {"xz": to_xz, "yaw": to_yaw}
 	t = maxf(t, 0.0)
+	if keep_facing:
+		return {"xz": from_xz.lerp(to_xz, t), "yaw": lerp_angle(from_yaw, to_yaw, t)}
 	if from_xz.is_equal_approx(to_xz):
 		return {"xz": to_xz, "yaw": lerp_angle(from_yaw, to_yaw, t)}
 	var way := Map3DUnits.facing_yaw(to_xz - from_xz, stand_deg)
@@ -152,8 +156,11 @@ static func _walk(repo: DataRepository, piece: Dictionary, child: Dictionary, xz
 	var wait := float(walk["from"].get("delay", 0.0))   # a lane sets off this share of the walk late
 	var t := 1.0 if walk_s <= 0.0 or walk["from"]["xz"] == xz and walk["from"]["yaw"] == yaw \
 		else ((float(piece.get("clock", 0.0)) - float(walk["t0"])) / walk_s - wait) / (1.0 - wait)
-	child["at"] = eased(walk["from"]["xz"], walk["from"]["yaw"], xz, yaw, t, child["stand_deg"]) if t < 1.0 else to
+	child["at"] = eased(walk["from"]["xz"], walk["from"]["yaw"], xz, yaw, t, child["stand_deg"],
+		bool(child.get("step_facing", false))) if t < 1.0 else to
 	child["walking"] = t < 1.0
+	if t >= 1.0:
+		child.erase("step_facing")  # a later walk to a new saved point turns into its way again
 	return child["at"]
 
 ## Optional saved slots retain their model and animation player across removal/refresh.
@@ -270,15 +277,22 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 	Map3DUnits.show_piece(piece, not (piece["groups"] as Array).is_empty())
 	return box
 
-## A group's saved point in world XZ and its saved facing as a yaw.
+## A group's saved point in world XZ and its saved facing as a yaw; a duelling
+## figure's step toward its opponent and its turn to face it (Map3DDuelDriver) on top.
 static func _target(ctx: Map3DContext, piece: Dictionary, group: Dictionary) -> Dictionary:
-	var repo := ctx.repo
-	var pack_px := Vector2(group["x_m"], group["y_m"]) / float(ArmySystem.metres_per_pack_px(repo)) if piece.get("candidate_bodies", false) \
-		else ArmySystem.metres_to_pack(repo, Vector2i(group["x_m"], group["y_m"]))
 	# A v2 sample carries the committed fractional yaw (pack microdegrees); else the saved facing.
 	var heading := Vector2.from_angle(deg_to_rad(float(group.yaw_udeg) / BodyMotion.LOCOMOTION_Q)) if group.has("yaw_udeg") \
 		else WarFront.facing_vector(int(group.get("facing_deg", piece["facing_deg"])))
-	return {"xz": ctx.to_world(pack_px), "yaw": Map3DUnits.facing_yaw(heading, group["piece"]["stand_deg"])}
+	var child: Dictionary = group["piece"]
+	return {"xz": saved_xz(ctx, piece, group) + child.get("duel_offset", Vector2.ZERO),
+		"yaw": float(child.get("duel_yaw", Map3DUnits.facing_yaw(heading, child["stand_deg"])))}
+
+
+## A group's saved point in world XZ.
+static func saved_xz(ctx: Map3DContext, piece: Dictionary, group: Dictionary) -> Vector2:
+	var pack_px := Vector2(group["x_m"], group["y_m"]) / float(ArmySystem.metres_per_pack_px(ctx.repo)) if piece.get("candidate_bodies", false) \
+		else ArmySystem.metres_to_pack(ctx.repo, Vector2i(group["x_m"], group["y_m"]))
+	return ctx.to_world(pack_px)
 
 
 static func evidence(piece: Dictionary) -> Array:

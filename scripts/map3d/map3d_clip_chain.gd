@@ -11,8 +11,13 @@ extends RefCounted
 
 ## `art`'s chains: action -> [clip, ...], from "ACTION:clip;clip|ACTION:clip;clip".
 static func of_art(art: Dictionary) -> Dictionary:
+	return of_column(art, "chains")
+
+
+## Any `art` column in the chains' grammar (`chains`, the duel's `duel`).
+static func of_column(art: Dictionary, column: String) -> Dictionary:
 	var out: Dictionary = {}
-	for part: String in String(art.get("chains", "")).split("|", false):
+	for part: String in String(art.get(column, "")).split("|", false):
 		var kv := part.split(":", false)
 		if kv.size() != 2:
 			continue

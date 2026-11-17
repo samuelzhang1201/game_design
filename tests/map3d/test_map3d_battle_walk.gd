@@ -119,3 +119,12 @@ func test_a_loaded_save_places_its_battle_without_a_walk() -> void:
 	var piece: Dictionary = layer.built_piece(foe)
 	assert_eq(piece.get("layout", ""), "physical_groups")
 	assert_false(bool(piece.get("easing", false)), "nobody walks in from the previous campaign's ground")
+
+
+## A duel's step in or out (Map3DDuelDriver's `step_facing`) keeps facing the foe: never turned to its way.
+func test_a_duel_step_keeps_its_facing() -> void:
+	var from := Vector2(0, 0)
+	var to := Vector2(0, -3)
+	var half: Dictionary = Groups.eased(from, 1.0, to, 1.2, 0.5, 0.0, true)
+	assert_eq(half["xz"], Vector2(0, -1.5))
+	assert_almost_eq(float(half["yaw"]), lerp_angle(1.0, 1.2, 0.5), 0.0001, "it turns straight from its facing to the next")
