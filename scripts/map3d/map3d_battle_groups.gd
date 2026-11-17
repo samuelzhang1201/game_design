@@ -161,13 +161,25 @@ static func _walk(repo: DataRepository, piece: Dictionary, child: Dictionary, xz
 	child["walking"] = t < 1.0
 	if t >= 1.0:
 		child.erase("step_facing")  # a later walk to a new saved point turns into its way again
+		child.erase("step_up")
 	return child["at"]
 
 ## Optional saved slots retain their model and animation player across removal/refresh.
-static func sync(repo: DataRepository, reg: Dictionary, piece: Dictionary, sampled: Dictionary) -> void:
+## With `duels` (Map3DDuelDriver; none after a state swap) a LOSS shows each removed
+## group as a duellist falling and the removed figure walking up into its row.
+static func sync(repo: DataRepository, reg: Dictionary, piece: Dictionary, sampled: Dictionary, duels: Object = null) -> void:
 	var previous: Dictionary = {}
 	for group: Dictionary in piece["groups"]:
 		previous[group["slot"]] = group["piece"]
+	if duels != null and is_loss(piece, sampled):
+		var slots: Array = sampled["rows"].map(func(row: Dictionary) -> int: return int(row["slot"]))
+		var removed: Array = previous.keys().filter(func(slot: int) -> bool: return not slot in slots)
+		removed.sort()
+		if not removed.is_empty():
+			var code := String(reg["regiment_code"])
+			var art: Dictionary = repo.army_art.get(String(piece.get("model", "")), {})
+			for body: Dictionary in fall_swap(previous, duels.plan_falls(code, removed, slots.filter(func(slot: int) -> bool: return previous.has(slot)))):
+				duels.fall(body, art, Map3DDuelDriver.tune_of(repo))
 	var groups: Array = []
 	var anims: Array = []
 	for row: Dictionary in sampled["rows"]:
@@ -209,6 +221,36 @@ static func sync(repo: DataRepository, reg: Dictionary, piece: Dictionary, sampl
 	piece["facing_deg"] = sampled.get("facing_deg", 0)
 	piece["sample_key"] = sampled["key"].duplicate(true) if sampled.has("key") else []
 	if not piece.has("action"): piece["action"] = ""
+
+## Map3DFall.plan's rows applied to `previous` (slot -> child): a faller's
+## child is taken out as the body and the removed slot's child stands for its
+## row instead (its walk then brings it there); one falling as itself is taken out.
+static func fall_swap(previous: Dictionary, plan: Array) -> Array:
+	var bodies: Array = []
+	for row: Dictionary in plan:
+		var removed := int(row["removed"])
+		var faller := int(row["faller"])
+		if not previous.has(removed):
+			continue
+		if faller != removed and previous.has(faller):
+			bodies.append(previous[faller])
+			previous[faller] = previous[removed]
+			(previous[faller] as Dictionary)["step_up"] = true  # its walk up turns into its way (Map3DDuelDriver._aim)
+		else:
+			bodies.append(previous[removed])
+		previous.erase(removed)
+	return bodies
+
+
+## Whether a new sample only LOST people: the same group size and version, fewer of them.
+static func is_loss(piece: Dictionary, sampled: Dictionary) -> bool:
+	var was: Array = piece.get("sample_key", [])
+	var now: Array = sampled.get("key", [])
+	if was.size() < 2 or now.size() < 2 or was.slice(-2) != now.slice(-2):
+		return false
+	var men := func(rows: Array) -> int: return rows.reduce(func(n: int, row: Dictionary) -> int: return n + int(row["count"]), 0)
+	return men.call(sampled.get("rows", [])) < men.call(piece.get("groups", []))
+
 
 static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: float, selected: bool) -> Rect2:
 	var root: Node3D = piece["node"]

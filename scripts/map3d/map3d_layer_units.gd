@@ -370,7 +370,7 @@ func _piece_of(code: String) -> Dictionary:
 			add_child(built["node"])
 			_pieces[code] = built
 		elif _pieces[code].get("sample_key", []) != sampled["key"]:
-			BattleGroupsView.sync(ctx.repo, reg, _pieces[code], sampled)
+			BattleGroupsView.sync(ctx.repo, reg, _pieces[code], sampled, _duels if _same_state else null)  # a loss falls in the duel
 		_pieces[code]["candidate_bodies"] = sampled["mode"] == "bodies"
 		if sampled["mode"] == "bodies":
 			_pieces[code]["candidate_sample"] = sampled
