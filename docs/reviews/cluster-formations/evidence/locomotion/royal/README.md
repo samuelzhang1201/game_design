@@ -112,3 +112,8 @@ main's provider on the same tree, every MARCH sample and every pivot's phase 0 a
 the mid-pivot samples moved by a median 1e-5 and at most 0.60 mm model (0.012 world m, PIVOT_LEFT -135°
 at 0.925), the IK settling from a MARCH input that differs in those three bones by up to 1e-6. The
 re-issued report equals the previous one exactly; against main's issue only the provider's input digest moved.
+
+## Re-issued for the infantry's pack walk (2026-11-18)
+
+Only hashed inputs moved (`army_art.csv` and the cf01 `measurements.json`, for the infantry's new
+walk and idle); this arm measures as before (NUMERIC_PASS, same totals and bounds), only the digest moved.

@@ -40,19 +40,20 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 import test_pivot_feasibility as frozen  # noqa: E402
 
-# The MARCH passing frame where the thighs are most nearly parallel (0.6 deg), the left sole planted.
-NEUTRAL_PHASE = 181 / 420
+# The MARCH passing frame where the thighs are most nearly parallel (7.1 deg), the left sole planted.
+NEUTRAL_PHASE = 182 / 420
 LAST_STEP = .88
 # Native frames whose sole patch is flattest while planted (boot within 0.5 mm of the plane):
-# a held foot's pose. Left 168/420 (patch spread 6.1 mm), right 387/420 (3.5 mm).
-FOOT_PHASES = (168 / 420, 387 / 420)
+# a held foot's pose. Left 181/420 (patch spread 7.0 mm), right 396/420 (3.7 mm).
+FOOT_PHASES = (181 / 420, 396 / 420)
 SEATED_PLANE_Y = 0.0
 UNCOUPLED = {'neutral': (10 / 35, 0.0), 'foot': (10 / 35, 0.0), 'plane': None, 'last_step': .84}
 COUPLED = {'neutral': (NEUTRAL_PHASE, NEUTRAL_PHASE), 'foot': FOOT_PHASES, 'plane': SEATED_PLANE_Y,
            'last_step': LAST_STEP}
-# entry == exit of both shipped clips: the passing frame with the right sole flat and the left boot
-# just lifted (thighs 5.9 deg apart), the hold pose of the certificate's consumer requirement
-CANONICAL_PHASE = 13 / 14
+# entry == exit of both shipped clips: the right sole flat (0.2 mm) and the left boot just lifted
+# (8 mm; the pack walk is a guarded shuffle, its thighs never nearer than 13.8 deg on this side),
+# the hold pose of the certificate's consumer requirement
+CANONICAL_PHASE = 8 / 420
 # R-A: ceil(world bound / k * 1e6), k = 25.8437 world m per model m (cf01 measurements, size 0.62)
 CONTACT_UM = 23217
 SEAM_UM = 1935

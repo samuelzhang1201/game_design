@@ -11,7 +11,7 @@ THE game infantry (and the artillery's stand-in): `assets/3D/units/infantry/infa
 `infantry-no-rigging.glb` soldier rigged with Auto-Rig Pro (rig `rig`, mesh `Infantry_body`), the
 short sword `Weapon` and round shield `Shield` bone-parented to the `cc_weapon.r / .l` sockets, the
 owner's Mixamo clips retargeted and hand-tuned there (stance widening, fist grip, carry offsets,
-per-frame gear clearance, sole grounding, authored STANDBY / DEFEND loops). Body maps:
+per-frame gear clearance, sole grounding, authored DEFEND loop, STANDBY = the pack's quiet idle). Body maps:
 `textures/body_{base,mr,normal}.png` (4096, re-authored metal / leather / cloth classes), gear maps
 `textures/ShortSword_*`, `RoundShield_*`. Every authoring step, script and gate number is in that
 folder's `README.md` and `scripts/`; they stay beside their .blend files (git-ignored together).
@@ -43,37 +43,47 @@ leaks into every clip); a static base needs a key on every frame.
   ATTACK, SLASH, ATTACK_VAR1, ATTACK_2, SLASH_2, SLASH_3; ATTACK_VAR1's and ATTACK_2's lunges
   taken out (in place). The other batch-2 clips (BLOCK*, HIT*, DEATH*, TURN_*, RUN*, ADVANCE*,
   GARRISON_2, DEFEND_2/3) are not shipped until their runtime hooks exist; helper actions
-  (`*_retarget`, `*_raw`, `WALK_base`, `STANDBY_src`, `ATTACK_swordcut`) never are;
-- it returns the MARCH measure for `army_art.csv`: `stride_m` 1.618, `steps` 0.34;0.83 (35
-  intervals), and the rest height 1.636 m, 8,604 tris.
+  (`*_retarget`, `*_raw`, `WALK_base`, `STANDBY_src`, `STANDBY_authored`, `ATTACK_swordcut`) never are;
+- the .blend's WALK is a copy of the pack's combat walk `ADVANCE` (Pro Sword and Shield Pack
+  "sword and shield walk", 34 frames, made in place in batch 2): the sword carried up on the right
+  shoulder, the shield before the left side, short guarded steps. Owner 2026-11-18, after seeing it
+  beside Standard Walk and "walk (2)"; the Standard Walk (with its sword arm swung out at the
+  shoulder, below) is kept as `WALK_standard`, never shipped;
+- the .blend's STANDBY is a copy of the pack's quiet guard idle `GARRISON_2` (Pro Sword and Shield
+  Pack "idle (4)", 76 frames, retargeted and gripped like the batch-2 clips; the earlier authored
+  rest is kept beside it as `STANDBY_authored`; `holds.py standby` would rebuild that one, so never
+  rerun it onto STANDBY): shield up before the chest, sword low,
+  feet planted, a small breathing sway. Owner 2026-11-17: the authored rest (a neutral stand,
+  GARRISON's shield arm grafted on, the wrist tilting the shield up and the chest swaying ±10°)
+  read wholly unnatural; take the pack's own. The pack's other idles: `idle` is GARRISON,
+  `idle (2)` / `idle (3)` are long flourishes that read as attacks, `block idle` / `crouch block
+  idle` are DEFEND_2 / DEFEND_3;
+- it returns the MARCH measure for `army_art.csv`: `stride_m` 1.4838 (the locked sole speed x 33
+  intervals), `steps` 0.2121;0.9091 (the authored stances' starts), and the rest height 1.636 m,
+  8,604 tris.
 
-MARCH contact lock (`LOCK`, `_lock_feet`): in the retargeted in-place walk a planted sole did not
-travel back at one speed and the right toe dragged forward through its push-off (a 48 mm
-planted-sole slide; the certifier's bound is 23.2 mm). A foot is planted while its lowest point is
-within 4 mm of its lowest in the clip AND its deepest sole points travel back at least half the
-walk's median planted speed (0.0466 m a frame); then those points are made to travel straight back
-at that speed, the foot moved by the accumulated difference (orientation kept), thigh and shin
+MARCH contact lock (`LOCK`, `_lock_feet`): in a retargeted in-place walk a planted sole does not
+travel back at one speed (the Standard Walk's right toe slid 48 mm through its push-off; the
+certifier's bound is 23.2 mm). A foot is planted while its lowest point is within 4 mm of its
+lowest in the clip AND its deepest sole points travel back at least half the walk's median planted
+speed; then those points are made to travel straight back at that speed (0.0450 m a frame on the
+pack walk), the foot moved by the accumulated difference (orientation kept), thigh and shin
 following by two-bone IK in their own bend plane; the offset eases to zero through the swing
-(largest 14 / 19 mm, left / right). A pinned point past the leg's reach is pulled back to it with
-the knee bent at least `min_knee_deg` 2° (largest pull-back 2.9 mm, left mid-stance): clamping
-the knee straight instead left the foot 3 mm off the shin and the leg on its singular pose, where
-the pivot helper's native endpoint check fails on float rounding. In the first half of each swing the foot is lifted until its
-lowest point clears 5 mm (eased over 3 frames; largest 7 mm). Native MARCH's worst planted slide is
-then 11.9 mm at the constant stride, so no `phase_map` is needed.
+(largest 36 / 41 mm, left / right). A pinned point past the leg's reach is pulled back to it with
+the knee bent at least `min_knee_deg` 2°: clamping the knee straight left the foot off the shin
+and the leg on its singular pose, where the pivot helper's native endpoint check fails on float
+rounding. The pack walk is a guarded shuffle: its soles rock 5-8 mm off the ground mid-stance and
+the right boot taps down mid-swing, so a height test cut its stances into pieces and the certifier
+counted the tap as planted (289 mm slide). Its stances are therefore authored (`stance`: left
+0.20-0.86, right 0.90-0.35 of the loop), each planted sole is also set on the ground (z = 0), and
+the whole swing but its last `land_frames` 2 is lifted until it clears `clear_m` 12 mm (eased
+over 3 frames; largest 16 mm). The stride is then exactly the locked speed over the loop, which
+the export reports (the ankle-based measure gave 1.40, 6 % under it).
 
 Polish (`POLISH`, owner 2026-11-17, the first install's critic notes; each knob bracketed in
 real-window and map shots, two critic rounds; overridable with the `INFANTRY_POLISH` environment
 variable as JSON):
 
-- rest: STANDBY's relaxed body takes GARRISON's left arm (shoulder to the shield socket, same
-  phase), pinned at STANDBY's own shoulder and turned `rest_arm_turn` 0.8 of the way from the
-  guard's twisted chest to the figure's own facing (copied on the chest alone the shield stood
-  edge-on at the side: the guard leads with the shield shoulder); then the wrist turns until the
-  shield's outer face (the disc's least axis, from the mesh) looks at least `rest_shield_up_deg`
-  30° above level (up to 34°); the upper body (all but legs and root) turns `rest_sway_deg` 10°
-  either way about the upright through `spine_01` over the loop, the feet planted: the map starts
-  each resting man at his own phase, so the raised shields are never stamped clones: upright, the face caught no light from the map's camera. Turning
-  about the handle instead swings the face sideways (the handle is upright in this carry);
 - shield wood: planks and rim drawn to `shield_contrast` 0.55 of their spread about the mean
   colour (a light ochre plank stood out), then
   `shield_tone` (1.25, 0.95) (saturation, value shares): the knight's (0.55, 0.8) left the raised
@@ -81,9 +91,12 @@ variable as JSON):
 - shield hand: in every clip the thumb chain turns about its base until its tip rests at
   `thumb_tip` in the hand's frame (over the curled index), up to 38°: the retargeted grip laid
   the thumb along the handle (the guard's own grip too, so copying its fist changed nothing);
-- MARCH blade: the right wrist turns until the blade leans out of the body's mid-plane by at least
-  `blade_min_deg` 30° (up to 26°): it passed close to the knee. A floor on its forward pitch laid
-  it along the front shin, one measured in the side-to-vertical plane tipped it onto the front shoe;
+- MARCH blade: the pack walk carries the sword on the shoulder, 0.55 m from the leg axes at its
+  closest (`march.blade_leg_gap`, reported by the export). On the Standard Walk the hanging blade
+  passed the knee; `WALK_standard` keeps that walk with its FK sword arm `c_arm_fk.r` swung out at
+  the shoulder (blade at least 30° out of the mid-plane; an earlier export-time fix turned the
+  wrist alone, a kinked wrist, owner 2026-11-17). Backup of the source before these edits:
+  `infantry_shortsword_shield_before_2026-11-17.blend` beside it;
 - body value `body_lift` / `body_sat`: the colour of the authored classes multiplied (mail x1.35,
   green leather x1.4 and its saturation x1.35, plate x1.15): on dark grass the dark mail and tunic
   sank into the ground (mail x1.55 read chalky at play zoom);
@@ -107,13 +120,13 @@ knight capture:
 3. `plan` writes `assets/3D/units/infantry/infantry_pivot_plan.json`; `fixture` packs
    `tests/fixtures/infantry_pivot_mapping.json` (baseline, MARCH capture, solve).
 
-Parameters measured on this MARCH: entry = exit 13/14 (the passing frame: the right sole flat,
-the left boot 2 cm up just after toe-off, thighs 5.9° apart — the same frame of the walk the
-knight's 25/28 was); NEUTRAL 181/420 (thighs 0.6° apart, the left sole planted); FOOT left
-168/420, right 387/420 (flattest planted sole, spread 6.1 / 3.5 mm). Bounds R-A at k 25.8437
-world m per model m: contact 23217 µm, seam 1935 µm. Audit: skin flags introduced 0, penetration
-557 µm, hover / slide / seam 1 µm on both turns. Stop, start and hold are admitted at MARCH 13/14
-only.
+Parameters measured on this MARCH (the pack walk): entry = exit 8/420 (the right sole flat at
+0.2 mm, the left boot just lifted 8 mm, thighs 13.8° apart: the guarded shuffle never brings them
+nearer on that side, the Standard Walk's frame was 5.9°); NEUTRAL 182/420 (thighs 7.1° apart, the
+left sole planted); FOOT left 181/420, right 396/420 (flattest planted sole, spread 7.0 / 3.7 mm).
+Bounds R-A at k 25.8437 world m per model m: contact 23217 µm, seam 1935 µm. Audit: skin flags
+introduced 0, penetration 27 µm, hover / slide / seam 1 µm on both turns. Stop, start and hold
+are admitted at MARCH 8/420 only.
 
 Then `tools/units3d/certify_locomotion.py` re-issues the infantry and artillery certificates
 (`docs/reviews/cluster-formations/evidence/locomotion/{infantry,artillery}/`) and their rows in

@@ -103,7 +103,7 @@
   "actions": {
    "MARCH": [
     0,
-    35
+    33
    ],
    "GARRISON": [
     0,
@@ -111,7 +111,7 @@
    ],
    "STANDBY": [
     0,
-    120
+    75
    ],
    "DEFEND": [
     0,
@@ -148,7 +148,7 @@
   "kind": "humanoid",
   "label": "Man-at-arms",
   "source": "The no-rig Tripo soldier (infantry-no-rigging.glb) with a short sword and a round shield, rigged with Auto-Rig Pro and driven by the owner's Mixamo sword-and-shield clips: assets/3D/model_wip/blender_output/infantry/infantry_shortsword_shield.blend (git-ignored), tools/units3d/infantry_arp/game_export.py; PIVOT_RIGHT / PIVOT_LEFT baked by tools/units3d/soldier_arp/pivot.py",
-  "stride_m": 1.618,
+  "stride_m": 1.4838,
   "tris": 8604,
   "weights": "ARP heat-map skin, legs split below the hem; sword and shield rigid on cc_weapon.r / cc_weapon.l"
  },

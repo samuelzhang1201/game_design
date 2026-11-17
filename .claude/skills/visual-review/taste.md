@@ -42,7 +42,10 @@ existing one.
 - **Worn, not new.** Kit is field kit, paper is old, walls are stained at the
   foot.
 - **Physically possible.** A building stands plumb on its ground; a body only
-  holds poses a body can make, from every side.
+  holds poses a body can make, from every side. Motion is a real body's: a
+  clip is a captured performance, never parts of different clips stitched
+  together, and a correction moves the joint a person would move (an arm
+  swings out at the shoulder; a wrist does not kink to carry a blade).
 - **Carried equipment has weight and a secure grip.** A shield follows the
   stride in a continuous arc; rapid trembling reads as a broken attachment.
 - **Cloth, leather and metal must read as different materials.** Padded cloth
