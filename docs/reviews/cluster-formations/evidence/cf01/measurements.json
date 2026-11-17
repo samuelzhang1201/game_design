@@ -122,7 +122,7 @@
 		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg": "87dae2d5426bf52b5f4dd43676ce6a2bf92b9ff22e922e1ba98a8628caffe2ed",
 		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
 		"res://data/screens/map3d/army_art.csv": "a09c92010775b7aab3dc2059be98d63935998d3c8fc0565e65277f57f52c1426",
-		"res://data/screens/map3d/balance.csv": "991e816e7bb767bdd7bf13ee545c5ada87faf5737e0cfd11340c15c77cea1454",
+		"res://data/screens/map3d/balance.csv": "8909525588cdfe925cff1777baef2a8c875fcda6301fc97c40e43c1d07394c2b",
 		"res://data/world/maps.csv": "cd856ebde844cdac7b8f370c5a51b414eecbb091b3a48bcc12de9a23bd775443",
 		"res://scenes/map3d/worlds/beria.tscn": "c665914748691603c93ba9dfda0aacf6887c36f9b022e80a6a382d00f7237e81",
 		"res://scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
