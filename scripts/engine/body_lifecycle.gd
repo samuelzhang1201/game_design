@@ -13,7 +13,7 @@ const EDGES: Array[String] = ["contacts", "enter", "merge", "withdraw", "end", "
 static func commit_candidate(repo: DataRepository, source: GameState, plan: Dictionary, boundary: Dictionary) -> Dictionary:
 	if repo == null or source == null or not plan.get("request") is Dictionary or not plan.request.get("kind") in EDGES:
 		return BodyBattleMotion._result("error", "Not a body lifecycle edge")
-	var replay: bool = source.military_migration.get("body_battle", {}).get("receipt") == BodyMotion._hash(plan)
+	var replay: bool = _outer(source).get("receipt") == BodyMotion._hash(plan)
 	var committed := BodyBattle.commit_candidate(repo, source, plan, boundary)
 	if committed.status != "complete" or committed.candidate == null: return committed
 	var moved := continuity_error(source, committed.candidate, {"kind": "replay"} if replay else plan.request)
@@ -65,13 +65,15 @@ static func continuity_error(before: GameState, after: GameState, request: Dicti
 	if BodyMotion._hash(before.military_cohorts) != BodyMotion._hash(after.military_cohorts) \
 		or BodyMotion._hash(before.rng.to_dict()) != BodyMotion._hash(after.rng.to_dict()):
 		return "Lifecycle changed personnel or RNG"
-	if before.military_migration.has("body_motion"):
-		var cursor: Dictionary = before.military_migration.body_motion.duplicate(true)
-		var closed: Variant = after.military_migration.get("body_battle", {}).get("closed_motion")
-		cursor.erase("plan")
-		var kept := BodyMotion._hash(after.military_migration.get("body_motion")) == BodyMotion._hash(before.military_migration.body_motion)
-		if not kept and BodyMotion._hash(closed) != BodyMotion._hash(cursor): return "Lifecycle lost the motion cursor"
-	elif after.military_migration.has("body_motion"): return "Lifecycle invented a motion cursor"
+	# The cursor stays, or the contact stage closes it into exactly `closed_motion`; nothing else.
+	var cursor: Variant = before.military_migration.get("body_motion")
+	var now: Variant = after.military_migration.get("body_motion")
+	var closed: Variant = _outer(after).get("closed_motion", {})
+	if BodyMotion._hash(now) != BodyMotion._hash(cursor):
+		var expected: Variant = cursor.duplicate(true) if cursor is Dictionary else null
+		if expected is Dictionary: expected.erase("plan")
+		if now != null or expected == null or BodyMotion._hash(closed) != BodyMotion._hash(expected): return "Lifecycle lost the motion cursor"
+	elif BodyMotion._hash(closed) != BodyMotion._hash(_outer(before).get("closed_motion", {})): return "Lifecycle changed the closed motion cursor"
 	return ""
 
 ## A unit keeps its owner (an absorbed field's alias names its survivor) unless the edge moves it:
@@ -93,3 +95,7 @@ static func _owner_error(after: GameState, request: Dictionary, a: Dictionary, b
 		elif now != (BattleSystem.canonical(after, was) if was > 0 else 0) and not (request.kind == "contacts" and was == 0 and now > 0):
 			return "Unlawful body owner change: " + code
 	return ""
+
+static func _outer(state: GameState) -> Dictionary:
+	var outer: Variant = state.military_migration.get("body_battle", {})
+	return outer if outer is Dictionary else {}

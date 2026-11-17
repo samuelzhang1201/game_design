@@ -253,12 +253,13 @@ keys every land unit's bodies by stable identity whichever container owns them (
 `groups` or nonbattle `body_groups`): rows by slot, anchor, group and unit facing, slot high
 water and owner battle. `continuity_error` requires every `(unit, slot)` to keep its exact row
 (point, facing, count, home, role, path) in the same order, the same anchors, facings and next
-slot, unchanged personnel and RNG, and the motion cursor either kept or exactly the closed
-`body_battle.closed_motion`. Owners move only as the edge says: `enter` its unit in, `withdraw`
+slot, unchanged personnel and RNG, and the motion cursor either kept (with `closed_motion`
+unchanged) or closed into exactly `body_battle.closed_motion`. Owners move only as the edge says: `enter` its unit in, `withdraw`
 its unit out, `end`/`cancel` every member to owner zero, `contacts` may enroll nonbattle units,
 and an absorbed field's units follow its alias to the survivor; a replay of the committed
 receipt moves no one. A failed proof returns an error and no candidate, so nothing publishes.
-Deferrals (pending decision, wrong stage, ongoing battle) come from planning unchanged.
+Deferrals come from `BodyBattle` unchanged: a decision is lawfully pending only at the round
+stage, where every lifecycle edge waits for its own stage; an ongoing field's `end` waits too.
 Nothing in ordinary dispatch calls it: `BattleSystem`'s `_start`/`join`/`_exits`/`_end`,
 `BattleMerge.day` and `BattleGroups.refresh` keep their behaviour until ACT-CUTOVER routes the
 admitted world through this adapter together with the driver and the projection.

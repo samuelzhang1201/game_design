@@ -225,6 +225,15 @@ func test_any_displacement_or_owner_slip_is_refused() -> void:
 	assert_string_starts_with(BodyLifecycle.continuity_error(f.state, f.state, request), "Lifecycle did not move the owner of ")
 	var join := {"kind": "enter", "unit": f.unit, "battle_id": "8", "side": "att"}
 	assert_string_starts_with(BodyLifecycle.continuity_error(state, f.state, join), "Unlawful body owner change: ")
+	var wrong := {"kind": "enter", "unit": f.unit, "battle_id": "9", "side": "att"}
+	assert_eq(BodyLifecycle._owner_error(state, wrong, {f.unit: {"owner": 0}}, {f.unit: {"owner": 8}}),
+		"Lifecycle did not move the owner of " + f.unit, "joined the wrong field")
+	var faced := UnitBodies._copy(state)
+	UnitBodies._entry(faced, f.unit).facing_deg = 91
+	assert_eq(BodyLifecycle.continuity_error(f.state, faced, request), "Lifecycle changed the unit_facing of " + f.unit)
+	var cursor := UnitBodies._copy(state)
+	cursor.military_migration.body_motion = {"version": "1"}
+	assert_eq(BodyLifecycle.continuity_error(f.state, cursor, request), "Lifecycle lost the motion cursor")
 
 func test_non_edges_pending_decisions_and_failures_publish_nothing() -> void:
 	var f := _end_world(901)
@@ -243,15 +252,17 @@ func test_non_edges_pending_decisions_and_failures_publish_nothing() -> void:
 	var ongoing := BodyBattle.plan_candidate(f.repo, f.state, {"kind": "end", "battle_id": "8", "reason": "Ended"}, boundary)
 	assert_eq(ongoing.status, "deferred", "both sides still stand")
 	assert_eq(BodyMotion._hash(f.state.to_dict()), file)
-	# A pending decision defers the edge before any plan exists; the old plan cannot slip past it.
+	# A decision is lawfully pending only at the round stage (contact and advance need an idle
+	# cursor), so every lifecycle edge waits for its own stage; a clean contact plan cannot slip past.
 	var helper: GutTest = load("res://tests/engine/test_body_battle_enter.gd").new()
 	var g: Dictionary = helper.call("_fixture")
 	helper.call("_field", g)
 	helper.call("_joiner", g)
 	assert_eq(helper.get_fail_count(), 0)
 	helper.free()
-	var request := {"kind": "enter", "unit": g.other, "battle_id": "8", "side": "att"}
-	var clean := BodyBattle.plan_candidate(g.repo, g.state, request, BodyBattleMotion._boundary(g.state))
+	var join := {"kind": "enter", "unit": g.other, "battle_id": "8", "side": "att"}
+	var contact := BodyBattleMotion._boundary(g.state)
+	var clean := BodyBattle.plan_candidate(g.repo, g.state, join, contact)
 	assert_eq(clean.status, "complete", clean.reason)
 	var tx: Dictionary = g.state.day_resolution
 	tx.battle_step = "fighting"
@@ -260,10 +271,16 @@ func test_non_edges_pending_decisions_and_failures_publish_nothing() -> void:
 	tx.body_battle.battle_ids = ["8"]
 	tx.body_battle.stage = "round"
 	DayResolution.block_on_encounter(tx, 8)
+	var round := BodyBattleMotion._boundary(g.state)
 	file = BodyMotion._hash(g.state.to_dict())
-	var waiting := BodyBattle.plan_candidate(g.repo, g.state, request, BodyBattleMotion._boundary(g.state))
-	assert_eq(waiting.status, "deferred", waiting.reason)
-	var stale := BodyLifecycle.commit_candidate(g.repo, g.state, clean.plan, BodyBattleMotion._boundary(g.state))
-	assert_eq(stale.status, "error", stale.reason)
-	assert_null(stale.candidate)
+	for request: Dictionary in [join, {"kind": "contacts"}, {"kind": "merge", "first_id": "8", "second_id": "9"},
+			{"kind": "withdraw", "unit": g.unit, "battle_id": "8", "reason": "Leaves"},
+			{"kind": "cancel", "battle_id": "8", "reason": "Called off"}]:
+		var waiting := BodyBattle.plan_candidate(g.repo, g.state, request, round)
+		assert_eq(waiting.status, "deferred", request.kind)
+		assert_eq(waiting.reason, "Operation waits for its lifecycle stage", request.kind)
+	for at: Dictionary in [contact, round]:
+		var held := BodyLifecycle.commit_candidate(g.repo, g.state, clean.plan, at)
+		assert_ne(held.status, "complete", held.reason)
+		assert_null(held.candidate)
 	assert_eq(BodyMotion._hash(g.state.to_dict()), file)
