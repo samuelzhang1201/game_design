@@ -63,12 +63,17 @@ func test_an_arm_without_its_duel_clips_does_not_duel() -> void:
 	assert_true(Map3DDuel.duels(ART, _anim(["GARRISON", "ATTACK", "SLASH", "BLOCK", "HIT"])), "DEATH is not needed to duel")
 
 
-func test_the_installed_knight_does_not_duel_yet() -> void:
+func test_the_installed_infantry_duels_and_falls() -> void:
 	var repo := SuiteData.repo()
 	var root := (load("res://assets/3D/units/infantry/infantry.glb") as PackedScene).instantiate()
 	add_child_autofree(root)
-	assert_false(Map3DDuel.duels(repo.army_art["infantry"], Map3DUnits.find_anim(root)),
-		"the duel clips come with the new infantry (owner 2026-11-16: 先写逻辑，等新步兵)")
+	var anim := Map3DUnits.find_anim(root)
+	assert_true(Map3DDuel.duels(repo.army_art["infantry"], anim), "every STRIKE / BLOCK / HIT clip installed with its contact")
+	for clip: String in Map3DClipChain.of_column(repo.army_art["infantry"], "duel")["DEATH"]:
+		assert_ne(Map3DUnits.clip_named(anim, clip), "", "%s is installed: a lost duellist falls" % clip)
+	for clip: String in Map3DDuel.contact_of(repo.army_art["infantry"]):
+		var share := float(Map3DDuel.contact_of(repo.army_art["infantry"])[clip])
+		assert_true(share > 0.0 and share < 1.0, "%s meets inside its clip" % clip)
 
 
 func test_turn_is_stable_and_in_range() -> void:

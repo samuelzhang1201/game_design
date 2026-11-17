@@ -4,7 +4,7 @@
 1. The uncoupled parameters rebuild the frozen (knight) feasibility references exactly (the port is faithful).
 2. The canonical pair rebuilt from the committed captures of the installed infantry passes the R-B skin
    and R-A contact audit.
-3. Baking the committed solve onto the installed GLB's own ten-clip prefix reproduces it byte for byte.
+3. Baking the committed solve onto the installed GLB's own nineteen-clip prefix reproduces it byte for byte.
 4. The committed runtime plan (infantry_pivot_plan.json) is what the mapping generates.
 """
 import base64
@@ -28,8 +28,8 @@ PLAN = ROOT / 'assets/3D/units/infantry/infantry_pivot_plan.json'
 HASHES = {'baseline-native.json': '7f1a02bd1cc16184d991c44da97426bf57e5ea19c2f1f9f61dc22846467e50ec',
           'native-march.json': '03ae19a705cd68e920f3edea56204d3b0affc27dffa81005100a4475de6152e2',
           'canonical-samples.json': 'd5ec281d8933d677ff0840f5e3be070af53d665ca8b0dd2ac3d56dae234f711e'}
-MAIN_GLB_SHA256 = '0fc3a40e2e73680d051d873e010d91f1dcb19f1aac57e620354b56d9e35edc65'  # ten clips (game_export.py)
-OLD = {'animations': 10, 'accessors': 2117, 'bufferViews': 2120, 'binary': 5817804}
+MAIN_GLB_SHA256 = '8f06e2befc615672a7a1f3f9f0c67099e4c9da00aa44e754c0be99c3d90e5479'  # nineteen clips (game_export.py)
+OLD = {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6748644}
 
 
 def sources():
@@ -45,7 +45,7 @@ def sources():
 
 
 def bare_source(path, out):
-    """The installed GLB minus the appended pair: exactly the ten-clip export pivot.bake read."""
+    """The installed GLB minus the appended pair: exactly the nineteen-clip export pivot.bake read."""
     data, binary = pivot._read(path)
     assert [a['name'] for a in data['animations'][OLD['animations']:]] == ['PIVOT_RIGHT', 'PIVOT_LEFT']
     data['animations'] = data['animations'][:OLD['animations']]
@@ -81,7 +81,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         bare_source(GLB, tmp / 'source.glb')
-        assert hashlib.sha256((tmp / 'source.glb').read_bytes()).hexdigest() == MAIN_GLB_SHA256, 'old ten changed'
+        assert hashlib.sha256((tmp / 'source.glb').read_bytes()).hexdigest() == MAIN_GLB_SHA256, 'old nineteen changed'
         (tmp / 'samples.json').write_text(json.dumps(data['canonical-samples.json']))
         pivot.bake(tmp / 'source.glb', tmp / 'samples.json', tmp / 'out.glb', 4.0)
         mine, theirs = (tmp / 'out.glb').read_bytes(), GLB.read_bytes()

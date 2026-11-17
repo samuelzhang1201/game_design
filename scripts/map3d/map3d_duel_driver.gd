@@ -9,7 +9,7 @@ extends RefCounted
 ## which Map3DBattleGroups walks it to) — the saved point never moves.
 
 var _pairs: Dictionary = {}  ## "code:slot|code:slot" -> {figs, t, n, turn}
-var _bodies: Array = []  ## the fallen: [{child, t}] (Map3DFall)
+var _bodies: Array = []  ## the fallen: [{child, t, clip_s, key}] (Map3DFall; key: the duel slot it fell from)
 var _losses: Dictionary = {}  ## code -> how many losses it has shown
 
 
@@ -56,7 +56,8 @@ func plan_falls(code: String, removed: Array, kept: Array) -> Array:
 
 
 ## A body (a group child taken out by Map3DBattleGroups.fall_swap) plays one of
-## its arm's DEATH clips, holds, fades and is freed; no DEATH clip: freed now.
+## its arm's DEATH clips, then holds, fades and is freed; no DEATH clip: freed now.
+## The tail man walking up into its slot waits until it lies (`_wait_for_bodies`).
 func fall(child: Dictionary, art: Dictionary, _tune: Dictionary) -> void:
 	var anim: AnimationPlayer = (child["anims"] as Array)[0] if not (child["anims"] as Array).is_empty() else null
 	var deaths: Array = Map3DClipChain.of_column(art, "duel").get("DEATH", [])
@@ -73,7 +74,12 @@ func fall(child: Dictionary, art: Dictionary, _tune: Dictionary) -> void:
 	anim.speed_scale = 1.0
 	anim.play(clip, 0.1)
 	anim.seek(0.0, true)
-	_bodies.append({"child": child, "t": 0.0})
+	var key := ""
+	for p: Dictionary in _pairs.values():
+		for f: Dictionary in p["figs"]:
+			if is_same(f["child"], child):
+				key = String(f["key"])
+	_bodies.append({"child": child, "t": 0.0, "clip_s": anim.get_animation(clip).length, "key": key})
 
 
 ## Each battle's front figures that can duel, by side ("a" = its attacking side), in battle id order.
@@ -153,6 +159,7 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 				_claim(f)
 			_pairs[key]["t"] = 0.0
 			_begin(_pairs[key], key, tune)
+		_wait_for_bodies(figs, tune)
 		if _aim(figs, tune):
 			placed[figs[0]["code"]] = true
 			placed[figs[1]["code"]] = true
@@ -172,11 +179,25 @@ func _fade(delta: float, running: bool, tune: Dictionary) -> void:
 		if not running:
 			continue
 		body["t"] = float(body["t"]) + delta
-		var a := Map3DFall.alpha(float(body["t"]), float(tune["fall_hold"]), float(tune["fall_fade"]))
+		var a := Map3DFall.alpha(float(body["t"]) - float(body["clip_s"]), float(tune["fall_hold"]), float(tune["fall_fade"]))
 		Map3DCourierRide.apply(child, a)
 		if a <= 0.0:
 			(child["node"] as Node3D).queue_free()
 			_bodies.erase(body)
+
+
+## The tail man walking up into a slot whose body is still falling holds back
+## (his walk kept at its start, so the pair's turn waits); he steps up once it lies.
+## With hold + fade = map3d_battle_walk_s he arrives as the body is gone.
+func _wait_for_bodies(figs: Array, tune: Dictionary) -> void:
+	for f: Dictionary in figs:
+		var child: Dictionary = f["child"]
+		if not child.get("step_up", false) or not child.has("walk"):
+			continue
+		for body: Dictionary in _bodies:
+			if String(body["key"]) == String(f["key"]) \
+					and float(body["t"]) < float(body["clip_s"]):
+				child["walk"]["t0"] = float((f["piece"] as Dictionary).get("clock", 0.0))
 
 
 static func _claim(f: Dictionary) -> void:

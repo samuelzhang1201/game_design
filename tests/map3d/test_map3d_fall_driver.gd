@@ -69,9 +69,9 @@ func test_the_body_falls_then_fades_and_is_freed() -> void:
 	var body := _child(["GARRISON", "DEATH"])
 	driver.fall(body, ART, TUNE)
 	assert_eq((body["anims"][0] as AnimationPlayer).current_animation, "DEATH")
-	for i in 40:  # 2.0 s: still whole
+	for i in 60:  # 3.0 s: the 1 s fall, then the 2 s hold from where it ends
 		driver.run([], 0.05, true, TUNE)
-	assert_almost_eq(float(body.get("alpha", 1.0)), 1.0, 0.0001, "it lies whole through its hold")
+	assert_almost_eq(float(body.get("alpha", 1.0)), 1.0, 0.0001, "it falls, then lies whole through its hold")
 	for i in 15:  # 0.75 s into the fade
 		driver.run([], 0.05, true, TUNE)
 	assert_almost_eq(float(body["alpha"]), 0.5, 0.01, "half faded")
@@ -81,6 +81,31 @@ func test_the_body_falls_then_fades_and_is_freed() -> void:
 	for i in 20:
 		driver.run([], 0.05, true, TUNE)
 	assert_true((body["node"] as Node3D).is_queued_for_deletion(), "gone once faded")
+
+
+func test_the_tail_man_waits_while_the_body_falls_in_his_place() -> void:
+	var driver := Map3DDuelDriver.new()
+	var clips := ["GARRISON", "ATTACK", "SLASH", "BLOCK", "HIT", "DEATH"]
+	var faller := _child(clips)
+	var b := [{"key": "B:0", "code": "B", "slot": 0, "anim": add_child_autofree(_anim(clips)),
+		"child": {}, "xz": Vector2(0, -10), "h": 1.0, "art": ART, "piece": {}}]
+	var fig := func(child: Dictionary, piece: Dictionary) -> Array:
+		return [{"key": "A:1", "code": "A", "slot": 1, "anim": child["anims"][0], "child": child,
+			"xz": Vector2(0, 10), "h": 1.0, "art": ART, "piece": piece}]
+	driver.run([{"id": 1, "rounds": 1, "across": Vector2(1, 0), "a": fig.call(faller, {}), "b": b}], 0.05, true, TUNE)
+	driver.fall(faller, ART, TUNE)  # its row's figure is now the tail man, walking up
+	var walker := _child(clips)
+	walker["step_up"] = true
+	walker["walk"] = {"to": {"xz": Vector2(0, 10)}, "t0": 0.0}
+	var piece := {"clock": 5.0}
+	var battle := [{"id": 1, "rounds": 1, "across": Vector2(1, 0), "a": fig.call(walker, piece), "b": b}]
+	driver.run(battle, 0.05, true, TUNE)
+	assert_eq(float(walker["walk"]["t0"]), 5.0, "he holds back while the body falls")
+	for i in 21:  # past the 1 s fall: the body lies
+		driver.run(battle, 0.05, true, TUNE)
+	piece["clock"] = 9.0
+	driver.run(battle, 0.05, true, TUNE)
+	assert_eq(float(walker["walk"]["t0"]), 5.0, "he steps up once it lies")
 
 
 func test_no_death_clip_frees_as_today() -> void:

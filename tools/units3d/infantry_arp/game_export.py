@@ -32,13 +32,18 @@ import bpy
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
-# Shipped clips (owner 2026-11-16). The other batch-2 clips (BLOCK*, HIT*, DEATH*, TURN_*, RUN*,
+# Shipped clips (owner 2026-11-16), then the front-rank duel's (Map3DDuel: BLOCK*, HIT*; Map3DFall:
+# DEATH*), appended so the first ten export exactly as before. The other batch-2 clips (TURN_*, RUN*,
 # ADVANCE*, GARRISON_2, DEFEND_2/3) wait for their runtime hooks; helper actions never ship.
 GAME = {"WALK": "MARCH", "IDLE": "GARRISON", "STANDBY": "STANDBY", "DEFEND": "DEFEND",
         "ATTACK": "ATTACK", "SLASH": "SLASH", "ATTACK_VAR1": "ATTACK_VAR1", "ATTACK_2": "ATTACK_2",
-        "SLASH_2": "SLASH_2", "SLASH_3": "SLASH_3"}
+        "SLASH_2": "SLASH_2", "SLASH_3": "SLASH_3",
+        **{c: c for c in ("BLOCK", "BLOCK_2", "BLOCK_3", "BLOCK_4", "HIT", "HIT_2", "HIT_3", "DEATH", "DEATH_2")}}
 LOOPS = {"WALK", "IDLE", "STANDBY", "DEFEND"}
-IN_PLACE = {"ATTACK_VAR1", "ATTACK_2"}   # Mixamo lunges: 1.82 m forward / 2.17 m forward-left
+# Mixamo lunges: 1.82 m forward / 2.17 m forward-left; the blocks' steps (0.20 m in, 0.22 m back,
+# 0.27 m in): a duellist blends back to its guard in 0.15 s, so a step left in would snap back.
+# DEATH / DEATH_2 keep their fall (1.13 / 0.92 m back): the body lies where it fell, then fades.
+IN_PLACE = {"ATTACK_VAR1", "ATTACK_2", "BLOCK", "BLOCK_2", "BLOCK_3"}
 # Foot locking (owner 2026-11-16: re-author MARCH's ground contacts, as the archers' and cavalry's
 # were): in the retargeted in-place walk a planted sole does not travel back at one speed (the
 # right toe slid 48 mm through its push-off), which the locomotion certifier fails. Each frame the
