@@ -33,7 +33,8 @@ const TURN_AXIS: Vector3 = Vector3(0.0, -1.0, 0.0)
 const _ZERO: Transform3D = Transform3D(Basis(Vector3.ZERO, Vector3.ZERO, Vector3.ZERO), Vector3.ZERO)
 
 static var _plan: Dictionary = {}
-static var _bound_by_id: Dictionary = {}  # skeleton instance id -> {rest, patches, stand}
+static var _bound_by_id: Dictionary = {}  # skeleton instance id -> {rest, patches, stand, riders, turns}
+const CONTACT_CACHE: int = 64  # turns whose contact plans a figure keeps (cleared whole when full)
 
 
 ## Certifier provider (tools/units3d/certify_locomotion.py), through the shared shell.
@@ -49,12 +50,43 @@ static func solve(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, t
 	var bound: Dictionary = bind(player, skeleton)
 	if not bound.ok:
 		return {"ok": false, "reason": bound.reason, "pose": {}}
-	var march: Dictionary = Provider.locals(player, skeleton, "MARCH",
-		float(plan().march_phase) * player.get_animation("MARCH").length, bound.rest.bones)
-	var out: Dictionary = sample(bound.rest, phase, turn_udeg, march, bound.stand, bound.patches, plan())
+	if turn_udeg == 0 or phase < 0.0 or phase > 1.0:
+		return {"ok": false, "reason": str({"reason": "request"}), "pose": {}}
+	var turn: Dictionary = prepared(player, skeleton, bound, turn_udeg)
+	if not turn.kernel.ok:
+		return {"ok": false, "reason": str(turn.kernel.diagnostics), "pose": {}}
+	var op: Dictionary = turn.op.duplicate()
+	op.phase = phase
+	var out: Dictionary = _Pivot.sample_prepared(turn.kernel,
+		_blend(turn.march, bound.stand, bound.riders, phase, turn_udeg, plan()), op)
 	if not out.ok:
 		return {"ok": false, "reason": str(out.diagnostics), "pose": {}}
 	return {"ok": true, "reason": "", "pose": out.locals}
+
+
+## The phase-independent part of a `turn_udeg` pivot for this figure, built once and kept (at most
+## CONTACT_CACHE turns a figure): {march, op, kernel} (Map3DCavalryPivot.prepare of the turn's contact plan).
+## The import drops the constant Saddle, Sword and Chest tracks from every clip but the PIVOTs, so a
+## MARCH seek leaves those bones as the figure last showed them. From the rest pose, seek the turn's
+## pivot clip first (as Provider.apply does before every certified solve), so the cached MARCH pose
+## never depends on the pose the figure showed before.
+static func prepared(player: AnimationPlayer, skeleton: Skeleton3D, bound: Dictionary, turn_udeg: int) -> Dictionary:
+	var profile: Dictionary = plan()
+	if bound.riders.is_empty():
+		bound.riders = riders(bound.rest, String(profile.rider_root))
+	var turns: Dictionary = bound.turns
+	if not turns.has(turn_udeg):
+		if turns.size() >= CONTACT_CACHE:
+			turns.clear()
+		skeleton.reset_bone_poses()
+		Provider.seek(player, skeleton, "PIVOT_RIGHT" if turn_udeg > 0 else "PIVOT_LEFT", 0.0)
+		var march: Dictionary = Provider.locals(player, skeleton, "MARCH",
+			float(profile.march_phase) * player.get_animation("MARCH").length, bound.rest.bones)
+		var op: Dictionary = _op(turn_udeg, 0.0, profile)
+		var contacts: Dictionary = contacts_for(_Math._fk(bound.rest.bones, march),
+			_Math._fk(bound.rest.bones, bound.stand), bound.patches, float(turn_udeg) / 1e6, profile)
+		turns[turn_udeg] = {"march": march, "op": op, "kernel": _Pivot.prepare(bound.rest, march, march, op, contacts)}
+	return turns[turn_udeg]
 
 
 ## The pivot at `phase`: march = MARCH locals at PLAN.march_phase, stand = the seated stand,
@@ -63,27 +95,37 @@ static func sample(rest: Dictionary, phase: float, turn_udeg: int, march: Dictio
 		stand: Dictionary, hooves: Dictionary, profile: Dictionary) -> Dictionary:
 	if turn_udeg == 0 or phase < 0.0 or phase > 1.0:
 		return {"ok": false, "locals": {}, "diagnostics": {"reason": "request"}}
-	var turn: float = float(turn_udeg) / 1e6
-	var steps: int = steps_for(turn, profile)
-	# The horse eases MARCH <-> stand over one step (a longer ease folds the fore legs against the
-	# planted hooves and tears the chest skin); the rider, whose sword swing read as a flick over
-	# one step, eases over at least PLAN.blend.
-	var horse_w: float = 1.0 / float(steps)
+	var contacts: Dictionary = contacts_for(_Math._fk(rest.bones, march), _Math._fk(rest.bones, stand), hooves,
+		float(turn_udeg) / 1e6, profile)
+	var native: Dictionary = _blend(march, stand, riders(rest, String(profile.rider_root)), phase, turn_udeg,
+		profile)
+	return _Pivot.sample(rest, {"locals": native, "entry": march, "exit": march},
+		_op(turn_udeg, phase, profile), contacts)
+
+
+## The horse eases MARCH <-> stand over one step (a longer ease folds the fore legs against the
+## planted hooves and tears the chest skin); the rider, whose sword swing read as a flick over one
+## step, eases over at least PLAN.blend.
+static func _blend(march: Dictionary, stand: Dictionary, rider: Dictionary, phase: float, turn_udeg: int,
+		profile: Dictionary) -> Dictionary:
+	if phase <= 0.0 or phase >= 1.0:
+		return march
+	var horse_w: float = 1.0 / float(steps_for(float(turn_udeg) / 1e6, profile))
 	var rider_w: float = maxf(horse_w, float(profile.blend))
-	var native: Dictionary = march
-	if phase > 0.0 and phase < 1.0:
-		var rider: Dictionary = riders(rest, String(profile.rider_root))
-		native = {}
-		for name: String in march:
-			var w: float = rider_w if rider.has(name) else horse_w
-			var t: float = clampf(minf(phase, 1.0 - phase) / w, 0.0, 1.0)
-			native[name] = stand[name] if t == 1.0 else \
-				(march[name] as Transform3D).interpolate_with(stand[name], t * t * (3.0 - 2.0 * t))
-	var op: Dictionary = {"start_heading": 0.0, "end_heading": fposmod(turn, 360.0), "turn_degrees": turn,
+	var native: Dictionary = {}
+	for name: String in march:
+		var w: float = rider_w if rider.has(name) else horse_w
+		var t: float = clampf(minf(phase, 1.0 - phase) / w, 0.0, 1.0)
+		native[name] = stand[name] if t == 1.0 else \
+			(march[name] as Transform3D).interpolate_with(stand[name], t * t * (3.0 - 2.0 * t))
+	return native
+
+
+static func _op(turn_udeg: int, phase: float, profile: Dictionary) -> Dictionary:
+	var turn: float = float(turn_udeg) / 1e6
+	return {"start_heading": 0.0, "end_heading": fposmod(turn, 360.0), "turn_degrees": turn,
 		"duration": 1.0, "phase": phase, "entry_phase": float(profile.march_phase),
 		"exit_phase": float(profile.march_phase)}
-	var contacts: Dictionary = contacts_for(_Math._fk(rest.bones, march), _Math._fk(rest.bones, stand), hooves, turn, profile)
-	return _Pivot.sample(rest, {"locals": native, "entry": march, "exit": march}, op, contacts)
 
 
 static func steps_for(turn_deg: float, profile: Dictionary) -> int:
@@ -284,8 +326,10 @@ static func bind(player: AnimationPlayer, skeleton: Skeleton3D) -> Dictionary:
 		var mesh: MeshInstance3D = meshes[0]
 		var rest: Dictionary = rest_of(skeleton, mesh.skin, load(SOURCE).landmarks)
 		var hooves: Dictionary = patches(mesh, plan())
+		skeleton.reset_bone_poses()  # STANDBY too lacks the constant tracks (prepared)
 		var stand: Dictionary = seat(rest, Provider.locals(player, skeleton, "STANDBY", 0.0, rest.bones), hooves)
 		if stand.is_empty():
 			return {"ok": false, "reason": "royal stand could not be seated"}
-		_bound_by_id[id] = {"ok": true, "reason": "", "rest": rest, "patches": hooves, "stand": stand}
+		_bound_by_id[id] = {"ok": true, "reason": "", "rest": rest, "patches": hooves, "stand": stand,
+			"riders": {}, "turns": {}}
 	return _bound_by_id[id]
