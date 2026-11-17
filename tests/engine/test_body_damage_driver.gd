@@ -102,6 +102,18 @@ func test_each_round_transition_retries_exactly_direct_and_json() -> void:
 	held.military_events.erase(stale)
 	BodyBattle._seal_private(f.repo, held)
 	assert_eq(_hash(_step(f, held, "complete")), _hash(settled))
+	# Malformed frozen state through the driver fails closed: never a second planning draw.
+	for broken_kind: String in ["pending_only", "wrapper_only", "wrapper_not_dict"]:
+		var bad := _json(planned)
+		var live: Dictionary = bad.battles[0]
+		match broken_kind:
+			"pending_only": live.erase("body_round_plan")
+			"wrapper_only": live.erase("pending_round")
+			"wrapper_not_dict": live.body_round_plan = "forged"
+		BodyBattle._seal_private(f.repo, bad)
+		var result: Dictionary = f.engine.step_body_battle_candidate(bad)
+		assert_eq(result.status, "error", broken_kind)
+		assert_null(result.candidate, broken_kind)
 	# A changed basis after readiness errors, with no candidate.
 	var moved := _json(f.ready)
 	moved.battles[0].groups[f.unit][5].y_m += 1
