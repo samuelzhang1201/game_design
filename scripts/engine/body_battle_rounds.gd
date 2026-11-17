@@ -220,6 +220,7 @@ static func settle_candidate(repo: DataRepository, source: GameState, plan: Dict
 		"effects": plan.effects.duplicate(true), "personnel_event_id": personnel_id, "round_event": round_event.duplicate(true)}}
 	for erased: String in ["body_round", "pending_round", "body_round_plan"]: live.erase(erased)
 	var ctx := candidate.day_resolution
+	ctx.journal.battles.append(round_event.duplicate(true))   # the day's ordinary round event
 	if id not in ctx.processed_battle_ids: ctx.processed_battle_ids.append(id)
 	ctx.processed_battle_ids.sort()
 	for code: String in pending.att + pending.def:
