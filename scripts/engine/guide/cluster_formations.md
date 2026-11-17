@@ -187,3 +187,58 @@ numbers, which only the settlement's basis proof can catch. It returns UnitBodie
 open (the envelope and payload stay) and draws no RNG. Non-personnel staging
 (rows, tasks, laws) is the caller's to prove: the settlement checks the round's
 `body_round.basis` on its admitted pre-settlement world before applying the event.
+
+## Candidate round planning
+
+`BodyBattleRounds.plan_candidate(repo, source, battle_id, boundary)` plans the
+current queued round-ready field once. It admits the frozen readiness (the
+whole-world validator's frozen-round deferral after every raw and endpoint check),
+requires an unchanged `body_round.basis` and its closed motion, then works on a
+private probe without the envelope (resealed) so the physical queries can run.
+Every participant's live `unit_action` must equal its frozen action (else error;
+the queries never use a reselected one). Attacking units contribute
+`BattleSystem.candidate_power` (an uncommitted reserve adds none, as in
+`side_power`) and pay the attack food once each, the others the full defence chain, with the existing non-contact factors (height, defence stance and
+camp, events, frozen order). One `rng.randi_range(0, 999)` gives the roll, then
+`odds_permille`, `eff_permille` and `tier_of`; every participant's rate and
+morale exposure come from `candidate_sources` / `candidate_context`. The
+existing pending payload (plus `body_round_receipt`), the exact effects through
+`BattleSystem._plan_side` (grouped orders, unit results, charge units, family
+event IDs `battle:<id>:round:<n>:<unit>`) and the closed plan wrapper
+`battle.body_round_plan` `{version:"1",receipt,plan}` publish with that one
+draw under the outer `{kind:"round_pending"}` operation. A repeat re-checks the
+basis, the wrapper, the pending equality and that outer receipt, then returns the
+frozen state unchanged (no second draw); a changed basis or tampered payload
+errors. The proofs are keyless: a forger who recomputes every digest is not
+stopped (the RNG after the draw is not bound in the closed plan), and erasing
+both the pending and the wrapper then resealing the endpoint plans afresh with a
+second draw. Defence carries no contact participation factor
+(cf06-power-contract §defence); production still applies it until ACT-CUTOVER. Readiness
+(`BodyBattle` round_ready) first applies production's side fallback, so a
+law-barred or unaffordable all-out attack is frozen as hold. `GameState` keeps the wrapper raw like the envelope, and the readiness
+basis excludes it. No personnel, morale, cost, impact or cursor changes: that is
+the settlement.
+
+## Candidate round settlement
+
+`BodyBattleRounds.settle_candidate(repo, source, plan, boundary)` commits the
+current field's frozen plan. It admits the round-stage boundary, the saved
+wrapper equal to `plan`, the outer `round_pending` as the last operation and an
+unchanged `body_round.basis`, then works on a clone in the ordinary round's
+order: `BattleSystem.apply_round` (event `battle:<id>:round:<n>`, transfer
+`:personnel`; its results must equal the frozen `unit_results`, zero-loss
+morale included), `BodyRoundReconcile` for the bodies, `_settle_family_losses`
+(the added IDs must equal the frozen ones; a refused ID fails), custody, the
+frozen costs, committed reserves and the earned impact (must equal
+`charge_units`). It writes the full receipt
+`bodyround:<id>:<day>:<round>:settlement` `{request:{kind:"body_round_settlement",plan},
+result:{pending,effects,personnel_event_id,round_event}}`, clears `body_round`,
+`pending_round` and `body_round_plan`, marks the field and its units processed,
+advances the queue (to `advance` when exhausted) and seals the outer
+`round_settle`. A failed writer (personnel, bodies, family, custody) returns
+blocked with the unchanged pending source and the same plan; the frozen draw
+stays. A retry whose receipt exists with the same plan is a detached no-op; a
+different plan errors. Exits, routs and ends are not run here: the advance
+stage's lifecycle requests own them, and a tier's rout is only recorded in the
+round event until D-DRIVER/ACT-CUTOVER. The ordinary round event lives only in
+the receipt's `round_event` (`left` empty); D-DRIVER emits it to the day's events.
