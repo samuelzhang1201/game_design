@@ -136,11 +136,12 @@ func test_mid_slice_round_ready_json_retry() -> void:
 	for code: String in [f.unit, f.enemy]:
 		assert_eq(UnitBodies._entry(ready, code).supplies, UnitBodies._entry(f.state, code).supplies)
 	assert_false(battle.has("pending_round"))
-	# Absent CF06 the round stays blocked; repeating is an exact no-op, direct and JSON.
-	for source: GameState in [ready, _json(ready)]:
-		var held := _step(f, source, "blocked")
-		assert_eq(_hash(held), _hash(ready))
-		assert_eq(held.day_resolution.body_battle.stage, "round")
+	# The next step is CF06's planning (D-DRIVER): one frozen pending, still at the round
+	# stage, identical direct and through JSON.
+	var planned := _step(f, ready, "complete")
+	assert_true(planned.battles[0].has("pending_round"))
+	assert_eq(planned.day_resolution.body_battle.stage, "round")
+	assert_eq(_hash(_step(f, _json(ready), "complete")), _hash(planned))
 	# Changed inputs after readiness error with the input file unchanged.
 	for change: String in ["row", "party", "law", "route", "budget", "policy", "radius", "terrain", "diplomacy"]:
 		var changed := _json(ready)
