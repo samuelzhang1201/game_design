@@ -2086,7 +2086,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "fc07041cb6a6e9a94743bed14b440ffdd30afa721505d56640f3688028bfd88d",
+  "sha256": "f6fd9d7a0b317873aa4225248d243151ee51f205d780dac02bab284e824dd221",
   "uniform": 512
  },
  "config": {
@@ -2181,7 +2181,7 @@
   "scripts/map3d/map3d_cavalry_pivot_math.gd": "0c9ae12d36755d2d9b5928d6343c7a6c4bdb871aa62d7c6e0013c729d65911e1",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
   "scripts/map3d/map3d_royal_locomotion_source.gd": "b4301e3953e92676cdb0386bf4324c9e779687c665dfd9c9433a0083d3e827e7",
-  "scripts/map3d/map3d_royal_pivot.gd": "2c94e0b6d7cf6269634cd5c854238cd3b5707aeefa367393b8b9034019e9ad6d",
+  "scripts/map3d/map3d_royal_pivot.gd": "336c029e08b719deb11869ac99716f8c0f8b0bf95324ae8fa8ab835d12d3fd39",
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
  "locomotion_certificate": {
@@ -2192,11 +2192,11 @@
    "MARCH"
   ],
   "contact_um": 29273,
-  "digest": "b50dafd4281bfad15be1fbcd2419c0437768abd80ebc3daa928a68daf18136df",
+  "digest": "9ed74690f6e7d46830d1ac80a1a13451d18073a23774d8252e6296aa78aebf7c",
   "radius_m": 804,
   "turn_q": 400000
  },
- "payload_sha256": "b50dafd4281bfad15be1fbcd2419c0437768abd80ebc3daa928a68daf18136df",
+ "payload_sha256": "9ed74690f6e7d46830d1ac80a1a13451d18073a23774d8252e6296aa78aebf7c",
  "report": {
   "bounds_um": {
    "contact": 29273,
