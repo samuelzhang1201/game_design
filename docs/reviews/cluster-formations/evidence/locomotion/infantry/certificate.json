@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "a60a98f8f52044b22e66a7fc87d9dfa5f5f3ae3b4f35c4ff595015e9700eb7ff",
+  "sha256": "2727c1472f7cd26643ac79d5b2179c12944d29df3afbf7052c0534d6114972b1",
   "uniform": 512
  },
  "config": {
@@ -443,11 +443,11 @@
    "MARCH"
   ],
   "contact_um": 23217,
-  "digest": "c1f87118f0b48bd217f8e012c6dc8d6e4a8b3c2f795591e4da2e2cf78d069965",
+  "digest": "5c538b1fa4388a461742b88aad92aee8f91bfb9a723410956b3f72429d6042e2",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "c1f87118f0b48bd217f8e012c6dc8d6e4a8b3c2f795591e4da2e2cf78d069965",
+ "payload_sha256": "5c538b1fa4388a461742b88aad92aee8f91bfb9a723410956b3f72429d6042e2",
  "report": {
   "bounds_um": {
    "contact": 23217,
