@@ -569,7 +569,7 @@ func to_dict() -> Dictionary:
 		saved.day_resolution.body_battle = _raw_battle_value(day_resolution.body_battle)
 	for i: int in battles.size():
 		if not battles[i] is Dictionary: continue
-		for field: String in ["body_round", "pending_round"]:
+		for field: String in ["body_round", "pending_round", "body_round_plan"]:
 			if battles[i].has(field) and (field == "body_round" or battles[i].has("body_round") \
 				or (battles[i][field] is Dictionary and battles[i][field].has("body_round_receipt"))):
 				saved.battles[i][field] = _raw_battle_value(battles[i][field])
@@ -709,7 +709,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	for i: int in s.battles.size():
 		var raw: Variant = d.battles[i]
 		if not raw is Dictionary: continue
-		for field: String in ["body_round", "pending_round"]:
+		for field: String in ["body_round", "pending_round", "body_round_plan"]:
 			if raw.has(field) and (field == "body_round" or raw.has("body_round") \
 				or (raw[field] is Dictionary and raw[field].has("body_round_receipt"))):
 				s.battles[i][field] = _raw_battle_value(raw[field])
