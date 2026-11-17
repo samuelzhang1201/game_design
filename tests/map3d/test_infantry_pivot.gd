@@ -726,7 +726,7 @@ func _native_asset() -> Dictionary:
 	if not _native_cache.is_empty():
 		return _native_cache
 	var path: String = "res://assets/3D/units/infantry/infantry.glb"
-	# Source GLB sha256 b94d3fbbebfebac60fe8bc9ab2f93e4538e569b4dbc4c9ff18745fb7cfb38acf (ten clips, before the pivot pair).
+	# Source GLB sha256 0fc3a40e2e73680d051d873e010d91f1dcb19f1aac57e620354b56d9e35edc65 (ten clips, before the pivot pair).
 	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
 	var size: int = bytes.decode_u32(12)
 	var document: Dictionary = JSON.parse_string(bytes.slice(20, 20 + size).get_string_from_utf8())

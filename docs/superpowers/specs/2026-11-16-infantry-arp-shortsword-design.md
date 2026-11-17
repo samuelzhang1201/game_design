@@ -97,10 +97,15 @@ the export (`POLISH`, `tools/units3d/infantry_arp/README.md`).
 The polish took four critic rounds. The last one judged the regiment at rest as legible as the
 knight's.
 
-## Open (owner)
+## Body value and resting variety (owner 2026-11-17: both fixed)
 
-- On dark grass the dark green tunics and dark mail still merge with the ground; without its shield
-  a man is hard to make out. The final critic suggested lifting the mail or helmet value, or the
-  tunic shade. That is an art change and was not made here.
-- Every man rests with the same shield tilt and heading, so the ring reads as identical copies.
-  Per-figure variation would be runtime work in the map's units layer.
+- On dark grass the dark mail and green tunic sank into the ground; without its shield a man was
+  hard to make out. The export's `body_lift` / `body_sat` lift the authored classes (mail x1.35,
+  green leather x1.4 and a richer green, plate x1.15; mail x1.55 read chalky), so the body reads off
+  the turf.
+- Every man rested at the same shield tilt and heading, so the ring read as identical copies.
+  STANDBY's upper body now turns 10 degrees either way over its loop, with the feet planted
+  (`rest_sway_deg`). The map already starts each resting man at his own phase of the loop, so at any
+  moment each faces his own way. A per-figure turn in the map's code was tried (it read better at
+  +/-18 degrees than at +/-8) and withdrawn: `Map3DUnitRig` and `Map3DLayerUnits` are pinned sources
+  of the royal carrier proof (`Map3DRoyalCarrierSource._SOURCES`).

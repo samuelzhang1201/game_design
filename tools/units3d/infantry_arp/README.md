@@ -70,7 +70,9 @@ variable as JSON):
   guard's twisted chest to the figure's own facing (copied on the chest alone the shield stood
   edge-on at the side: the guard leads with the shield shoulder); then the wrist turns until the
   shield's outer face (the disc's least axis, from the mesh) looks at least `rest_shield_up_deg`
-  30° above level (up to 34°): upright, the face caught no light from the map's camera. Turning
+  30° above level (up to 34°); the upper body (all but legs and root) turns `rest_sway_deg` 10°
+  either way about the upright through `spine_01` over the loop, the feet planted: the map starts
+  each resting man at his own phase, so the raised shields are never stamped clones: upright, the face caught no light from the map's camera. Turning
   about the handle instead swings the face sideways (the handle is upright in this carry);
 - shield wood: planks and rim drawn to `shield_contrast` 0.55 of their spread about the mean
   colour (a light ochre plank stood out), then
@@ -82,6 +84,9 @@ variable as JSON):
 - MARCH blade: the right wrist turns until the blade leans out of the body's mid-plane by at least
   `blade_min_deg` 30° (up to 26°): it passed close to the knee. A floor on its forward pitch laid
   it along the front shin, one measured in the side-to-vertical plane tipped it onto the front shoe;
+- body value `body_lift` / `body_sat`: the colour of the authored classes multiplied (mail x1.35,
+  green leather x1.4 and its saturation x1.35, plate x1.15): on dark grass the dark mail and tunic
+  sank into the ground (mail x1.55 read chalky at play zoom);
 - mail (class 2 of the authored `textures/body_class.npy`): colour keeps 25 % of its ring contrast
   against a 3 px box blur, the normal 12 % of its relief, roughness 30 % of its variation + 0.3
   (less made it read oily in close-ups).

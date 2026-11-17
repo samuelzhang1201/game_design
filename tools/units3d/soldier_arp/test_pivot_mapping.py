@@ -25,11 +25,11 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/infantry_pivot_mapping.json'
 GLB = ROOT / 'assets/3D/units/infantry/infantry.glb'
 PLAN = ROOT / 'assets/3D/units/infantry/infantry_pivot_plan.json'
-HASHES = {'baseline-native.json': '688f12a453bbab9246178e526a15c07f762565597b14d26d1b44b30703de0108',
-          'native-march.json': 'ab62ebdf47772df1cf7642aaf6941d0a016a17644b74099a53ff526ee0caac97',
-          'canonical-samples.json': '6613f23f4c4dac0e14749ededee30be8f8a70429a45163c4c13643f1d46bcb3b'}
-MAIN_GLB_SHA256 = 'b94d3fbbebfebac60fe8bc9ab2f93e4538e569b4dbc4c9ff18745fb7cfb38acf'  # ten clips (game_export.py)
-OLD = {'animations': 10, 'accessors': 2117, 'bufferViews': 2120, 'binary': 5757072}
+HASHES = {'baseline-native.json': '7f1a02bd1cc16184d991c44da97426bf57e5ea19c2f1f9f61dc22846467e50ec',
+          'native-march.json': '03ae19a705cd68e920f3edea56204d3b0affc27dffa81005100a4475de6152e2',
+          'canonical-samples.json': 'd5ec281d8933d677ff0840f5e3be070af53d665ca8b0dd2ac3d56dae234f711e'}
+MAIN_GLB_SHA256 = '0fc3a40e2e73680d051d873e010d91f1dcb19f1aac57e620354b56d9e35edc65'  # ten clips (game_export.py)
+OLD = {'animations': 10, 'accessors': 2117, 'bufferViews': 2120, 'binary': 5817804}
 
 
 def sources():
@@ -92,7 +92,9 @@ def main():
             assert len(x) == len(y) and float(np.abs(x - y).max()) < 2e-6, 'installed GLB is not the committed bake'
     committed = json.loads(PLAN.read_text())
     mine = pm.encode([{k: g[k] if k not in ('sole', 'toe') else g[k][:3, :3] for k in g} for g in cases[0]['plan']])
-    assert committed['march_phase'] == pm.CANONICAL_PHASE and committed['rest'] == pm.encode(cases[0]['rest'])
+    # the rest is built from the GLB's joints by numpy: another BLAS rounds its last bits apart
+    assert committed['march_phase'] == pm.CANONICAL_PHASE and close(committed['rest'], pm.encode(cases[0]['rest'])), \
+        'infantry_pivot_plan.json rest is stale: rerun pivot_mapping.py plan'
     assert close(committed['legs'], mine), 'infantry_pivot_plan.json is stale: rerun pivot_mapping.py plan'
     print('PIVOT_MAPPING_MATCH', json.dumps([{k: r[k] for k in ('turn_udeg', 'skin', 'contact_um')} for r in report]))
 

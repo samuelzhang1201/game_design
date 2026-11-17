@@ -76,7 +76,10 @@ GAME_METAL = 0.45
 #   shield socket, same phase), pinned at its own shoulder and turned `rest_arm_turn` of the way from
 #   the guard's twisted chest to the figure's facing; the wrist then tilts the shield's face at least
 #   `rest_shield_up_deg` above level, so a regiment at rest shows a ring of lit, raised shields from
-#   the map's height instead of shields hanging edge-on.
+#   the map's height instead of shields hanging edge-on; the upper body turns `rest_sway_deg` either
+#   way over the loop (feet planted), and as the map starts each man at his own phase of it the ring
+#   is never stamped clones (owner 2026-11-17; per-figure turns in the map's code would touch the
+#   royal proof's pinned sources).
 # - Shield hand: the retargeted grip laid the thumb along the handle, past the index (a raised
 #   thumb in every clip, plainest in the strikes); each frame the thumb chain turns about its base
 #   until its tip rests at `thumb_tip` in the hand's frame (over the curled index's middle joint).
@@ -84,14 +87,19 @@ GAME_METAL = 0.45
 #   `blade_soft_deg` wide, the wrist turning): the hanging blade passed close to the knee. (A floor
 #   on its forward pitch laid it along the front shin; one measured in the side-to-vertical plane
 #   tipped it onto the front shoe when it pointed forward.)
+# - Body value: on dark grass the dark mail and green tunic sank into the ground (critic 2026-11-17,
+#   owner: fix it); `body_lift` multiplies the colour of each authored class (2 mail, 1 green leather,
+#   3 plate) and `body_sat` its saturation, so the limbs read off the turf (x1.55 on the mail read
+#   chalky at play zoom; the tunic's richer green carries the rest).
 # - Mail (class 2 of the authored `textures/body_class.npy`) at play zoom read as dark speckle: in it
 #   the colour keeps `mail_albedo` of its ring contrast against a `mail_blur_px` box blur, the normal
 #   `mail_normal` of its relief, the roughness `mail_rough` of its variation plus `mail_rough_add`.
-POLISH = {"rest_arm": True, "rest_arm_turn": 0.8, "rest_shield_up_deg": 30.0,
+POLISH = {"rest_arm": True, "rest_arm_turn": 0.8, "rest_shield_up_deg": 30.0, "rest_sway_deg": 10.0,
           "shield_tone": (1.25, 0.95), "shield_contrast": 0.55, "thumb_tip": (0.042, 0.09, -0.045),
           "blade_min_deg": 30.0, "blade_soft_deg": 8.0,
           "mail_blur_px": 3, "mail_albedo": 0.25, "mail_normal": 0.12, "mail_rough": 0.3,
-          "mail_rough_add": 0.3}
+          "mail_rough_add": 0.3, "body_lift": {"2": 1.35, "1": 1.4, "3": 1.15},
+          "body_sat": {"1": 1.35}}
 THUMB = ("thumb1.l", "c_thumb2.l", "c_thumb3.l")
 
 
@@ -214,13 +222,14 @@ def _box(a, r):
     return a
 
 
-def _mail_mask(w, h):
-    """The authored chain-mail class (2) of the body's maps, resampled to w x h, rows bottom-up as
+def _class_mask(w, h, k):
+    """Class `k` of the body's authored material classes (`textures/body_class.npy`: 1 green
+    leather, 2 chain mail, 3 plate, scripts/matmaps.py), resampled to w x h, rows bottom-up as
     Blender's pixels, edges softened."""
     cls = np.load(Path(bpy.data.filepath).parent / "textures/body_class.npy")[::-1]
     ys = (np.arange(h) * cls.shape[0]) // h
     xs = (np.arange(w) * cls.shape[1]) // w
-    return _box((cls[ys][:, xs] == 2).astype(np.float32), 2)[..., None]
+    return _box((cls[ys][:, xs] == k).astype(np.float32), 2)[..., None]
 
 
 def _calm_mail(kind, px, mask, cfg):
@@ -269,8 +278,16 @@ def _atlases(mat, out_dir):
                 atlas[y:y + h, x:x + w] = _pixels(img, w, h)
             if part == "body":
                 if mask is None:
-                    mask = _mail_mask(w, h)
+                    mask = _class_mask(w, h, 2)
                 atlas[y:y + h, x:x + w] = _calm_mail(kind, atlas[y:y + h, x:x + w], mask, cfg)
+                if kind == "albedo":
+                    for k, lift in cfg["body_lift"].items():
+                        m = mask if int(k) == 2 else _class_mask(w, h, int(k))
+                        px = atlas[y:y + h, x:x + w, :3]
+                        lum = px.mean(2, keepdims=True)
+                        sat = float(cfg["body_sat"].get(k, 1.0))
+                        tinted = (lum + (px - lum) * sat) * lift
+                        atlas[y:y + h, x:x + w, :3] = px + m * (tinted - px)
             if kind == "albedo" and part == "shield":
                 r = atlas[y:y + h, x:x + w, :3]
                 lum = r.mean(2, keepdims=True)
@@ -510,6 +527,22 @@ def _floor(poses, hand, names, socket, local, toward, lo_deg, soft_deg):
     return round(math.degrees(worst), 1)
 
 
+def _sway(poses, keep, amp_deg):
+    """The upper body (every kept bone but the legs' and the root) turns about the upright through
+    spine_01 by amp_deg x sin over the loop (0 at both ends, so the loop stays closed): the map
+    starts each resting figure at its own phase, so at any moment each man faces his own way."""
+    legs = ("thigh", "leg_", "foot", "toes")
+    upper = [n for n in keep if n != "root.x" and not n.startswith(legs)]
+    last = max(len(poses) - 1, 1)
+    for f, p in enumerate(poses):
+        a = math.radians(amp_deg) * math.sin(2.0 * math.pi * f / last)
+        o = p["spine_01.x"].translation.copy()
+        r = Matrix.Translation(o) @ Matrix.Rotation(a, 4, "Z") @ Matrix.Translation(-o)
+        for n in upper:
+            p[n] = r @ p[n]
+    return len(upper)
+
+
 def _shield_face(src):
     """The shield's outer face normal in its socket's frame (the disc's least axis, pointing away
     from the grip), from the rest pose."""
@@ -547,6 +580,8 @@ def _polish(src, keep, clip, poses):
                "forearm_twist.l"] + _under(src, keep, "hand.l")
         _graft(poses, DONOR["IDLE"], "spine_03.x", arm, "shoulder.l", cfg["rest_arm_turn"])
         out["rest_arm"] = len(arm)
+        if cfg["rest_sway_deg"]:
+            out["rest_sway_deg"] = _sway(poses, keep, cfg["rest_sway_deg"])
         if cfg["rest_shield_up_deg"] is not None:
             out["rest_shield_max_turn_deg"] = _floor(
                 poses, "hand.l", _under(src, keep, "hand.l"), SOCKET["shield"], _shield_face(src),
