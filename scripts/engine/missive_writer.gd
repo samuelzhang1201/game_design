@@ -358,6 +358,10 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 				facts.append(MissiveLog.words("start@%d" % id, "Contact", battle_words(repo, "battle_start",
 					{"att": _battle_names(repo, e["att"]), "def": _battle_names(repo, e["def"]),
 						"place": place}, pick)))
+			"declined":
+				facts.append(MissiveLog.words("declined@%d.%s.%s" % [pick, ",".join(e["att"]), ",".join(e["def"])], "No battle",
+					battle_words(repo, "battle_declined", {"att": _battle_names(repo, e["att"]), "def": _battle_names(repo, e["def"]),
+						"place": place}, pick)))
 			"join":
 				facts.append(MissiveLog.words("join@%d.%s" % [id, e["code"]], "Joined",
 					battle_words(repo, "battle_join_" + String(e["side"]), {"unit": _unit_label(repo, String(e["code"])),
