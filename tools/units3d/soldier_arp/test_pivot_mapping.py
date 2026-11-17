@@ -25,11 +25,11 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/infantry_pivot_mapping.json'
 GLB = ROOT / 'assets/3D/units/infantry/infantry.glb'
 PLAN = ROOT / 'assets/3D/units/infantry/infantry_pivot_plan.json'
-HASHES = {'baseline-native.json': '033d4188ae84fe36b833cbe6a16036dcf2400bc85d284e7ac3ebaf0dd30e69ec',
-          'native-march.json': 'ed0ead91304f3a7f4e8aebd656f57207912b0e425ddfece146aaa5a12c0333f3',
-          'canonical-samples.json': 'd53fa2ca320460b597855721b1605335a6b84ccbf3d9f44522af8b9bad1f48b0'}
-MAIN_GLB_SHA256 = '872419b3f76b781b226b15fe6d3d83024044a8bd9f71d55d2f1f4ac6e163b2b6'  # ten clips (game_export.py)
-OLD = {'animations': 10, 'accessors': 2117, 'bufferViews': 2120, 'binary': 6340312}
+HASHES = {'baseline-native.json': '688f12a453bbab9246178e526a15c07f762565597b14d26d1b44b30703de0108',
+          'native-march.json': 'ab62ebdf47772df1cf7642aaf6941d0a016a17644b74099a53ff526ee0caac97',
+          'canonical-samples.json': '6613f23f4c4dac0e14749ededee30be8f8a70429a45163c4c13643f1d46bcb3b'}
+MAIN_GLB_SHA256 = 'b94d3fbbebfebac60fe8bc9ab2f93e4538e569b4dbc4c9ff18745fb7cfb38acf'  # ten clips (game_export.py)
+OLD = {'animations': 10, 'accessors': 2117, 'bufferViews': 2120, 'binary': 5757072}
 
 
 def sources():

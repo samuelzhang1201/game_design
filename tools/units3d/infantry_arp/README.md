@@ -33,7 +33,7 @@ leaks into every clip); a static base needs a key on every frame.
 - armature `inf_rig` (68 deform bones + the two sockets, `head.x` renamed `head`), one skinned
   mesh `infantry` (body + gear merged, the gear rigid on its socket), ONE material on a 2048 atlas
   (body lower-left 3/4, sword and shield in the right strip; metallic x `GAME_METAL` 0.45, shield
-  wood weathered by `SHIELD_TONE`);
+  wood toned by `shield_tone`, below);
 - rest = GARRISON frame 1 (the guard stance; the map sizes a piece from its rest mesh);
 - clips WALK→MARCH, IDLE→GARRISON, STANDBY, DEFEND (loops closed by spreading the first/last
   residual over their last 6 frames — lerping those frames toward frame 1 dragged MARCH's planted
@@ -60,6 +60,31 @@ the knee straight instead left the foot 3 mm off the shin and the leg on its sin
 the pivot helper's native endpoint check fails on float rounding. In the first half of each swing the foot is lifted until its
 lowest point clears 5 mm (eased over 3 frames; largest 7 mm). Native MARCH's worst planted slide is
 then 11.9 mm at the constant stride, so no `phase_map` is needed.
+
+Polish (`POLISH`, owner 2026-11-17, the first install's critic notes; each knob bracketed in
+real-window and map shots, two critic rounds; overridable with the `INFANTRY_POLISH` environment
+variable as JSON):
+
+- rest: STANDBY's relaxed body takes GARRISON's left arm (shoulder to the shield socket, same
+  phase), pinned at STANDBY's own shoulder and turned `rest_arm_turn` 0.8 of the way from the
+  guard's twisted chest to the figure's own facing (copied on the chest alone the shield stood
+  edge-on at the side: the guard leads with the shield shoulder); then the wrist turns until the
+  shield's outer face (the disc's least axis, from the mesh) looks at least `rest_shield_up_deg`
+  30° above level (up to 34°): upright, the face caught no light from the map's camera. Turning
+  about the handle instead swings the face sideways (the handle is upright in this carry);
+- shield wood: planks and rim drawn to `shield_contrast` 0.55 of their spread about the mean
+  colour (a light ochre plank stood out), then
+  `shield_tone` (1.25, 0.95) (saturation, value shares): the knight's (0.55, 0.8) left the raised
+  shields near-black discs on the map, (0.9, 1.2) chalky discs brighter than the banner;
+- shield hand: in every clip the thumb chain turns about its base until its tip rests at
+  `thumb_tip` in the hand's frame (over the curled index), up to 38°: the retargeted grip laid
+  the thumb along the handle (the guard's own grip too, so copying its fist changed nothing);
+- MARCH blade: the right wrist turns until the blade leans out of the body's mid-plane by at least
+  `blade_min_deg` 30° (up to 26°): it passed close to the knee. A floor on its forward pitch laid
+  it along the front shin, one measured in the side-to-vertical plane tipped it onto the front shoe;
+- mail (class 2 of the authored `textures/body_class.npy`): colour keeps 25 % of its ring contrast
+  against a 3 px box blur, the normal 12 % of its relief, roughness 30 % of its variation + 0.3
+  (less made it read oily in close-ups).
 
 The new clips' loop modes are the `.glb.import` settings (STANDBY / DEFEND loop). Then the pivot
 pair is regenerated (below) and appended to the GLB.

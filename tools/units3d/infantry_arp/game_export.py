@@ -25,11 +25,12 @@ What the map needs of the infantry GLB (a plain export of the rig does not give 
 """
 import json
 import math
+import os
 from pathlib import Path
 
 import bpy
 import numpy as np
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Quaternion, Vector
 
 # Shipped clips (owner 2026-11-16). The other batch-2 clips (BLOCK*, HIT*, DEATH*, TURN_*, RUN*,
 # ADVANCE*, GARRISON_2, DEFEND_2/3) wait for their runtime hooks; helper actions never ship.
@@ -64,11 +65,34 @@ SEAM_FRAMES = 6                          # a loop's last frames that absorb its 
 # mirrors the dark ground and woods round it and reads black; x0.45 keeps the steel lit grey with
 # its sheen (bracketed x0.3 / x0.45 / x0.6 in real-window shots, 2026-10-19; the old knight sat at 0.27).
 GAME_METAL = 0.45
-# The shield's wood weathered in the game atlas (saturation share, value share): the Tripo wood is
-# new, bright orange, the archers' tabard and the roof tiles' hue, so infantry and archers stopped
-# parting at a glance (critic 2026-10-19); bracketed (0.55, 0.8) / (0.35, 0.68), the darker sank
-# into the mail.
-SHIELD_TONE = (0.55, 0.8)
+# The shield's wood in the game atlas: planks and rim drawn to `shield_contrast` of their spread
+# about the mean colour (one ochre plank stood out), then `shield_tone` (saturation share, value share; POLISH). The Tripo wood is new, bright
+# orange (the archers' tabard and roof tiles' hue); (0.55, 0.8) weathered it for the knight's carry,
+# but held up at rest it read as black discs on the map and (0.9, 1.2) as chalky discs brighter
+# than the banner (critics 2026-11-17); (1.25, 0.95) after the spread is the knight's warm mid-brown.
+# Owner 2026-11-17 polish (critic of the first install). Each knob is overridable for a bracketed
+# review through the INFANTRY_POLISH environment variable (a JSON object of the keys below).
+# - Rest: STANDBY's relaxed body keeps the guard's shield arm (GARRISON's left arm, shoulder to the
+#   shield socket, same phase), pinned at its own shoulder and turned `rest_arm_turn` of the way from
+#   the guard's twisted chest to the figure's facing; the wrist then tilts the shield's face at least
+#   `rest_shield_up_deg` above level, so a regiment at rest shows a ring of lit, raised shields from
+#   the map's height instead of shields hanging edge-on.
+# - Shield hand: the retargeted grip laid the thumb along the handle, past the index (a raised
+#   thumb in every clip, plainest in the strikes); each frame the thumb chain turns about its base
+#   until its tip rests at `thumb_tip` in the hand's frame (over the curled index's middle joint).
+# - MARCH: the sword leans out of the body's mid-plane by at least `blade_min_deg` (a smooth floor
+#   `blade_soft_deg` wide, the wrist turning): the hanging blade passed close to the knee. (A floor
+#   on its forward pitch laid it along the front shin; one measured in the side-to-vertical plane
+#   tipped it onto the front shoe when it pointed forward.)
+# - Mail (class 2 of the authored `textures/body_class.npy`) at play zoom read as dark speckle: in it
+#   the colour keeps `mail_albedo` of its ring contrast against a `mail_blur_px` box blur, the normal
+#   `mail_normal` of its relief, the roughness `mail_rough` of its variation plus `mail_rough_add`.
+POLISH = {"rest_arm": True, "rest_arm_turn": 0.8, "rest_shield_up_deg": 30.0,
+          "shield_tone": (1.25, 0.95), "shield_contrast": 0.55, "thumb_tip": (0.042, 0.09, -0.045),
+          "blade_min_deg": 30.0, "blade_soft_deg": 8.0,
+          "mail_blur_px": 3, "mail_albedo": 0.25, "mail_normal": 0.12, "mail_rough": 0.3,
+          "mail_rough_add": 0.3}
+THUMB = ("thumb1.l", "c_thumb2.l", "c_thumb3.l")
 
 
 def _set_action(rig, name):
@@ -178,6 +202,45 @@ def _pixels(img, w, h):
     return a
 
 
+def _box(a, r):
+    """Box blur of radius r px over the first two axes (edges clamped)."""
+    for axis in (0, 1):
+        pad = [(0, 0)] * a.ndim
+        pad[axis] = (r + 1, r)
+        c = np.cumsum(np.pad(a, pad, mode="edge"), axis=axis)
+        hi = np.take(c, range(2 * r + 1, c.shape[axis]), axis=axis)
+        lo = np.take(c, range(0, c.shape[axis] - 2 * r - 1), axis=axis)
+        a = (hi - lo) / (2 * r + 1)
+    return a
+
+
+def _mail_mask(w, h):
+    """The authored chain-mail class (2) of the body's maps, resampled to w x h, rows bottom-up as
+    Blender's pixels, edges softened."""
+    cls = np.load(Path(bpy.data.filepath).parent / "textures/body_class.npy")[::-1]
+    ys = (np.arange(h) * cls.shape[0]) // h
+    xs = (np.arange(w) * cls.shape[1]) // w
+    return _box((cls[ys][:, xs] == 2).astype(np.float32), 2)[..., None]
+
+
+def _calm_mail(kind, px, mask, cfg):
+    """Mail at play zoom: less ring contrast, flatter relief, steadier roughness (POLISH)."""
+    r = int(cfg["mail_blur_px"])
+    if kind == "albedo":
+        c = px[..., :3]; b = _box(c, r)
+        px[..., :3] = c + mask * ((b + (c - b) * cfg["mail_albedo"]) - c)
+    elif kind == "n":
+        xy = 0.5 + (px[..., :2] - 0.5) * cfg["mail_normal"]
+        v = np.concatenate([xy * 2 - 1, (px[..., 2:3] * 2 - 1)], -1)
+        v[..., 2:3] = np.sqrt(np.clip(1 - (v[..., :2] ** 2).sum(-1, keepdims=True), 0, 1))
+        px[..., :3] = px[..., :3] + mask * ((v + 1) / 2 - px[..., :3])
+    elif kind == "mr":
+        g = px[..., 1:2]; b = _box(g, r)
+        calm = np.clip(b + (g - b) * cfg["mail_rough"] + cfg["mail_rough_add"], 0, 1)
+        px[..., 1:2] = g + mask * (calm - g)
+    return px
+
+
 def _atlases(mat, out_dir):
     """Colour, metal-rough (G roughness, B metallic) and normal atlases, written as the infantry's
     files and wired into the one material (the GLB embeds them; the scene's override uses the files)."""
@@ -192,6 +255,7 @@ def _atlases(mat, out_dir):
     sources = {kind: {part: src(obj, suffix) for part, obj in parts.items()}
                for kind, suffix in (("albedo", "base"), ("mr", "mr"), ("n", "normal"))}
     files = {}
+    cfg, mask = _polish_cfg(), None
     for kind, parts in sources.items():
         atlas = np.zeros((ATLAS, ATLAS, 4), np.float32)
         atlas[..., 3] = 1
@@ -203,10 +267,18 @@ def _atlases(mat, out_dir):
             x, y = int(u0 * ATLAS), int(v0 * ATLAS)
             if img is not None:
                 atlas[y:y + h, x:x + w] = _pixels(img, w, h)
+            if part == "body":
+                if mask is None:
+                    mask = _mail_mask(w, h)
+                atlas[y:y + h, x:x + w] = _calm_mail(kind, atlas[y:y + h, x:x + w], mask, cfg)
             if kind == "albedo" and part == "shield":
                 r = atlas[y:y + h, x:x + w, :3]
                 lum = r.mean(2, keepdims=True)
-                atlas[y:y + h, x:x + w, :3] = (lum + (r - lum) * SHIELD_TONE[0]) * SHIELD_TONE[1]
+                tone = cfg["shield_tone"]
+                m = r.reshape(-1, 3).mean(0)          # planks and rim drawn closer in colour first
+                r = m + (r - m) * cfg["shield_contrast"]
+                lum = r.mean(2, keepdims=True)
+                atlas[y:y + h, x:x + w, :3] = (lum + (r - lum) * tone[0]) * tone[1]
         if kind == "mr":
             atlas[..., 2] *= GAME_METAL
         # the image is named as the old GLB named it; Godot extracts it beside the .glb as
@@ -389,6 +461,106 @@ def _lock_feet(src, clip, poses):
     return report
 
 
+POLISHED = {}
+DONOR = {}
+
+
+def _polish_cfg():
+    cfg = dict(POLISH)
+    cfg.update(json.loads(os.environ.get("INFANTRY_POLISH", "{}")))
+    return cfg
+
+
+def _under(src, keep, bone):
+    """`bone` and every kept bone below it."""
+    return [n for n in keep if n == bone or bone in (b.name for b in src.data.bones[n].parent_recursive)]
+
+
+def _graft(poses, donor, anchor, names, pin=None, turn=0.0):
+    """Each pose's `names` become the donor's at the same phase, carried on `anchor` (armature
+    space). With `pin`, the carry's rotation is eased by `turn` (0..1) from the anchor's toward
+    none (the donor's own facing on the figure) and `pin`'s origin stays the pose's own."""
+    n, m = len(poses), len(donor)
+    for i, p in enumerate(poses):
+        d = donor[round(i * (m - 1) / max(n - 1, 1))]
+        carry = p[anchor] @ d[anchor].inverted()
+        if pin:
+            q = carry.to_quaternion().slerp(Quaternion(), turn)
+            r = q.to_matrix().to_4x4()
+            carry = Matrix.Translation(p[pin].translation) @ r @ Matrix.Translation(-d[pin].translation)
+        for b in names:
+            p[b] = carry @ d[b]
+
+
+def _floor(poses, hand, names, socket, local, toward, lo_deg, soft_deg):
+    """Turn the wrist (`names` about `hand`'s origin) so the socket's `local` direction leans toward
+    the armature direction `toward` by at least a smooth floor of lo_deg (its angle off the plane
+    normal to `toward`), turning in the plane of the two. Returns the largest turn in degrees."""
+    lo, w = math.radians(lo_deg), math.radians(soft_deg)
+    worst = 0.0
+    for p in poses:
+        v = (p[socket].to_3x3() @ local).normalized()
+        a = math.asin(max(-1.0, min(1.0, v.dot(toward))))
+        d = (lo - a + math.sqrt((a - lo) ** 2 + w * w)) / 2       # smooth max(a, lo) - a
+        o = p[hand].translation.copy()
+        r = Matrix.Translation(o) @ Matrix.Rotation(d, 4, v.cross(toward).normalized()) @ Matrix.Translation(-o)
+        for n in names:
+            p[n] = r @ p[n]
+        worst = max(worst, d)
+    return round(math.degrees(worst), 1)
+
+
+def _shield_face(src):
+    """The shield's outer face normal in its socket's frame (the disc's least axis, pointing away
+    from the grip), from the rest pose."""
+    _set_action(src, REST[0]); bpy.context.scene.frame_set(REST[1]); bpy.context.view_layer.update()
+    sock = src.pose.bones[SOCKET["shield"]].matrix.inverted() @ src.matrix_world.inverted()
+    ob = bpy.data.objects[GEAR["shield"]]
+    pts = np.array([list(sock @ (ob.matrix_world @ v.co)) for v in ob.data.vertices])
+    c = pts.mean(0)
+    n = np.linalg.svd(pts - c)[2][2]
+    return Vector(n if np.dot(n, c) > 0 else -n)
+
+
+def _fold_thumb(src, poses, tip_in_hand):
+    """Turn the shield hand's thumb chain about its base so its tip lands on `tip_in_hand`."""
+    length = src.data.bones[THUMB[-1]].length
+    worst = 0.0
+    for p in poses:
+        head = p[THUMB[0]].translation.copy()
+        tip = p[THUMB[-1]] @ Vector((0.0, length, 0.0))
+        q = (tip - head).rotation_difference(p["hand.l"] @ tip_in_hand - head)
+        r = Matrix.Translation(head) @ q.to_matrix().to_4x4() @ Matrix.Translation(-head)
+        for n in THUMB:
+            p[n] = r @ p[n]
+        worst = max(worst, q.angle)
+    return round(math.degrees(worst), 1)
+
+
+def _polish(src, keep, clip, poses):
+    cfg = _polish_cfg()
+    out = {}
+    if clip == "STANDBY" and cfg["rest_arm"]:
+        if "IDLE" not in DONOR:
+            DONOR["IDLE"] = _poses(src, keep, "IDLE")
+        arm = ["shoulder.l", "c_arm_twist_offset.l", "arm_stretch.l", "forearm_stretch.l",
+               "forearm_twist.l"] + _under(src, keep, "hand.l")
+        _graft(poses, DONOR["IDLE"], "spine_03.x", arm, "shoulder.l", cfg["rest_arm_turn"])
+        out["rest_arm"] = len(arm)
+        if cfg["rest_shield_up_deg"] is not None:
+            out["rest_shield_max_turn_deg"] = _floor(
+                poses, "hand.l", _under(src, keep, "hand.l"), SOCKET["shield"], _shield_face(src),
+                Vector((0.0, 0.0, 1.0)), cfg["rest_shield_up_deg"], cfg["blade_soft_deg"])
+    if cfg["thumb_tip"] is not None and clip in GAME:
+        out["thumb_max_turn_deg"] = _fold_thumb(src, poses, Vector(cfg["thumb_tip"]))
+    if clip == "WALK" and cfg["blade_min_deg"] is not None:
+        out["blade_max_bend_deg"] = _floor(poses, "hand.r", _under(src, keep, "hand.r"), SOCKET["sword"],
+                                           Vector((0.0, 1.0, 0.0)), Vector((-1.0, 0.0, 0.0)),
+                                           cfg["blade_min_deg"], cfg["blade_soft_deg"])
+    if out:
+        POLISHED[clip] = out
+
+
 def _poses(src, keep, clip):
     scn = bpy.context.scene
     act = _set_action(src, clip)
@@ -414,6 +586,7 @@ def _poses(src, keep, clip):
             i = n - SEAM_FRAMES + k
             w = (k + 1) / SEAM_FRAMES
             poses[i] = {b: Matrix.Identity(4).lerp(fix[b], w) @ m for b, m in poses[i].items()}
+    _polish(src, keep, clip, poses)
     LOCKED[clip] = _lock_feet(src, clip, poses)
     return poses
 
@@ -485,6 +658,7 @@ def install(root, pivot_samples=None, pivot_seconds=None):
         if clip == "WALK":
             info["march"] = _march_measure(src, poses, keep)
             info["march"]["lock"] = LOCKED.get(clip)
+    info["polish"] = {"config": _polish_cfg(), "clips": POLISHED}
     rig.rotation_euler.z = math.pi           # Blender -Y -> glTF +Z; the game's figures face -Z
     bpy.context.view_layer.update()
     for o in bpy.context.selected_objects:

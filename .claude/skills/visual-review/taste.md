@@ -55,7 +55,10 @@ existing one.
   that only reads in a close-up does not exist for the player; check the
   nearest and the farthest zoom.
 - **At small sizes, silhouette and colour carry meaning — not detail.** One
-  big legible sign beats many small ones.
+  big legible sign beats many small ones. A figure's resting pose shows its
+  kind's sign to the play camera (soldiers at rest hold their shields up, never
+  edge-on at the side), and fine surface pattern such as mail is calmed
+  until it reads as a material, not as speckle.
 - **Legibility may overrule real scale** (roads, rivers, houses, pieces), but
   never so far that one thing reads as a different kind of thing, or dwarfs
   its neighbours.

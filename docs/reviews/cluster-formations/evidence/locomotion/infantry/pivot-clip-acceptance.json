@@ -3,17 +3,17 @@
  "date": "2026-11-16",
  "rulings": "docs/reviews/cluster-formations/owner-rulings-2026-11-10.md R-A (contact_um 23217, seam 1935 model um at k 25.8437), R-B (introduced flags fail; same-phase native flags inherited), R-C (dense native sampling + real-window review)",
  "files": {
-  "assets/3D/units/infantry/infantry.glb": "64fa155dcd442212ef805b970ea85f7bb81f0299a9261469cf74e900cdf31bb5",
+  "assets/3D/units/infantry/infantry.glb": "57b86c771f3a957895f54059ae2f14c581255e9ac77c2a8c1febc53cd6359cad",
   "assets/3D/units/infantry/infantry.glb.import": "622a873cecde657eefd5ffac2281e66d1d98554ac85c6cfc0fad6d367c25cc65",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "1069ff9e0c74d7397d1acea461447fee063b90001df6465e4f7b882a351d6db7",
-  "tools/units3d/infantry_arp/game_export.py": "d23e1558e75b54dc579e8f2d0dc15f262ea4eb665c22b75274ad9e52f180d531",
+  "tools/units3d/infantry_arp/game_export.py": "31bed160476ac72387eb16b30ff4591e36e168c78f157b86e315e72ff7867a3b",
   "tools/units3d/soldier_arp/pivot_mapping.py": "a6056d80e1ef49e67a0d220ae22f2657b9ba14cf66853ec23b30641fea6bb366",
   "tools/units3d/soldier_arp/pivot.py": "199b883ea6e5b121f124288b242e29159d835f5e9aa1ed12d5a4be582f55a1b6",
   "tools/units3d/soldier_arp/pivot_solve.gd": "6cdb89773c1d91879fa3cda4b011d00c705f3193322babc8fffe2a975fe17cc6",
   "tools/units3d/soldier_arp/pivot_native.gd": "fcc416cd3fd7418825e84d6b40ceba145aecb614d47a23b7c9dc349ff8c89c92",
   "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
   "scripts/map3d/map3d_infantry_locomotion.gd": "b5ab0bfa95ce6a4cf6e676df09c9872ea438638216f89070bf93dc9ba5f9d419",
-  "tests/fixtures/infantry_pivot_mapping.json": "1e661853c54c927a6a416d59c4e0d79c504345cfbdaecc957089759f8b62b86d"
+  "tests/fixtures/infantry_pivot_mapping.json": "6533ab54c43621262ca43c03a3e96243b7427de913c514220ba55099c40b691c"
  },
  "model": "the installed infantry.glb, read through a pivot_native.gd capture with its skin and mesh (fixture baseline-native.json) and a template from its glTF joints (pivot_mapping.installed_template); the knight frozen feasibility capture is only the port self-check",
  "mapping": {

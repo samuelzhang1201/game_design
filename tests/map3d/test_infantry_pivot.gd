@@ -726,7 +726,7 @@ func _native_asset() -> Dictionary:
 	if not _native_cache.is_empty():
 		return _native_cache
 	var path: String = "res://assets/3D/units/infantry/infantry.glb"
-	# Source GLB sha256 872419b3f76b781b226b15fe6d3d83024044a8bd9f71d55d2f1f4ac6e163b2b6 (ten clips, before the pivot pair).
+	# Source GLB sha256 b94d3fbbebfebac60fe8bc9ab2f93e4538e569b4dbc4c9ff18745fb7cfb38acf (ten clips, before the pivot pair).
 	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
 	var size: int = bytes.decode_u32(12)
 	var document: Dictionary = JSON.parse_string(bytes.slice(20, 20 + size).get_string_from_utf8())
@@ -747,7 +747,7 @@ func _native_asset() -> Dictionary:
 				if phase < 1.0 and not _native_cache.keys.has(phase):
 					_native_cache.keys.append(phase)
 	_native_cache.keys.sort()
-	assert_eq(_native_fingerprint(), "353da87e2e5e7d07b21feb7e1ec8d63bf096bc343ddbc3e417a9f6c17d4c754d", "frozen original rest/mesh/skin/MARCH; additional clips do not change this input")
+	assert_eq(_native_fingerprint(), "f8a39559696c6452e1234e52b54e937a4475c286527c619eb8f09bf85eef1cf5", "frozen original rest/mesh/skin/MARCH; additional clips do not change this input")
 	return _native_cache
 
 func _native_order(index: int, parent: String) -> void:

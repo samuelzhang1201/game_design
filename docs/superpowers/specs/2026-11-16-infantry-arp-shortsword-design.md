@@ -12,7 +12,7 @@ model, possibly mixed per figure. The knight before it: `2026-10-19-infantry-arp
   `tools/units3d/infantry_arp/game_export.py` (moved from `soldier_arp/`, same contract: armature
   `inf_rig`, one skinned mesh `infantry`, gear rigid on `cc_weapon.r / .l`, ONE material on a 2048
   atlas with the old file names, rest = GARRISON frame 1, `head.x` → `head`, `GAME_METAL` 0.45,
-  `SHIELD_TONE` (0.55, 0.8)). The body's maps are the authored `body_{base,mr,normal}.png` (the
+  the shield wood toned, see Polish). The body's maps are the authored `body_{base,mr,normal}.png` (the
   body now has a normal map); every source map is found by its `_base / _mr / _normal` suffix.
 - `scenes/models/units/infantry.tscn` is unchanged: its material override still lands on
   `inf_rig/Skeleton3D/infantry` and reads the same file names.
@@ -77,11 +77,30 @@ reach of the held feet at ±1 µdeg and ±2° (this walk bobs more than the knig
 Every locomotion certificate hashes `army_art.csv` and the cf01 `measurements.json`, so all five arms
 are re-issued (`data/army/unit_locomotion.csv`); only infantry and artillery measure differently.
 
+## Polish (owner 2026-11-17)
+
+The first install's critic found four things; the owner agreed to all of them. All four are done in
+the export (`POLISH`, `tools/units3d/infantry_arp/README.md`).
+
+- **Shield up at rest.** At rest the men play STANDBY. Its shield hung at the side and showed edge-on
+  from the map's height, so the unit read worse than the knight's ring of raised shields. STANDBY now
+  keeps its relaxed body but takes the guard's (GARRISON's) shield arm, held up in front. The face is
+  tilted 30° toward the sky so the play camera sees it lit, and the wood is lighter and warmer: held
+  upright with the old tone, the raised shields read as black discs.
+- **Mail calmed.** At play zoom the arm and leg mail read as dark speckle. The mail texels (the
+  authored class mask) now keep a quarter of their ring contrast, a fifth of their normal relief and
+  steadier roughness.
+- **Thumb folded.** The shield hand's raised thumb (seen in the strikes, and present in every clip)
+  now folds over the curled index.
+- **MARCH blade out from the knee.** The hanging blade passing the knee is now rolled outward.
+
+The polish took four critic rounds. The last one judged the regiment at rest as legible as the
+knight's.
+
 ## Open (owner)
 
-- At rest on the map the men now play STANDBY (the shield hanging at the side), which the knight
-  spec asked for. From the map's height the shield then shows edge-on and the dark green tunics sit
-  on the grass and the green standard: the independent critic judged the unit harder to read than
-  the knight's ring of raised shields, and suggested a shield-up idle at rest. Not changed here.
-- Critic polish notes: the arm and leg mail reads noisy at play zoom; in ATTACK / SLASH the shield
-  hand's thumb is raised; in MARCH the hanging blade passes close to the knee.
+- On dark grass the dark green tunics and dark mail still merge with the ground; without its shield
+  a man is hard to make out. The final critic suggested lifting the mail or helmet value, or the
+  tunic shade. That is an art change and was not made here.
+- Every man rests with the same shield tilt and heading, so the ring reads as identical copies.
+  Per-figure variation would be runtime work in the map's units layer.

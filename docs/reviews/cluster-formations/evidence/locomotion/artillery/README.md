@@ -42,7 +42,7 @@ Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `dat
 
 The figure is now the ARP short-sword + round-shield soldier (`docs/superpowers/specs/2026-11-16-infantry-arp-shortsword-design.md`). Re-certified on it:
 MARCH `stride_m` 1.618 (was 1.765), k 25.8437 world m per model m, R-A bounds contact 23217 µm /
-seam 1935 µm, measured penetration 7469, hover 4330, slide 13604, seam 1 µm, sim envelope 481 m,
+seam 1935 µm, measured penetration 7469, hover 4330, slide 13604, seam 1 µm, sim envelope 503 m (the MARCH blade leans out, polish 2026-11-17),
 0 introduced skin flags: NUMERIC_PASS. The consumer now stops, starts and holds at MARCH 13/14
 (0.9285714285714286; the knight's was 25/28), the same passing frame of the walk. The visual review
 of the new figure (map and close-up, before/after, independent critic) is recorded in the spec.
