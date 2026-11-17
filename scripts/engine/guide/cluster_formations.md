@@ -242,3 +242,23 @@ different plan errors. Exits, routs and ends are not run here: the advance
 stage's lifecycle requests own them, and a tier's rout is only recorded in the
 round event until ACT-CUTOVER. The ordinary round event (`left` empty) is
 appended to the day's `journal.battles` and kept in the receipt's `round_event`.
+
+## Candidate lifecycle adapter (ACT-LIFECYCLE)
+
+`BodyLifecycle.commit_candidate(repo, source, plan, boundary)` (its own file, for the same
+pinned-source reason) commits one lifecycle edge's `BodyBattle.plan_candidate` plan — `contacts`
+(start, join or merge on discovery), `enter` (join), `merge`, `withdraw` (exit), `end`/`cancel` —
+and then proves it a zero-delta ownership transfer; any other request kind errors. `snapshot`
+keys every land unit's bodies by stable identity whichever container owns them (battle
+`groups` or nonbattle `body_groups`): rows by slot, anchor, group and unit facing, slot high
+water and owner battle. `continuity_error` requires every `(unit, slot)` to keep its exact row
+(point, facing, count, home, role, path) in the same order, the same anchors, facings and next
+slot, unchanged personnel and RNG, and the motion cursor either kept or exactly the closed
+`body_battle.closed_motion`. Owners move only as the edge says: `enter` its unit in, `withdraw`
+its unit out, `end`/`cancel` every member to owner zero, `contacts` may enroll nonbattle units,
+and an absorbed field's units follow its alias to the survivor; a replay of the committed
+receipt moves no one. A failed proof returns an error and no candidate, so nothing publishes.
+Deferrals (pending decision, wrong stage, ongoing battle) come from planning unchanged.
+Nothing in ordinary dispatch calls it: `BattleSystem`'s `_start`/`join`/`_exits`/`_end`,
+`BattleMerge.day` and `BattleGroups.refresh` keep their behaviour until ACT-CUTOVER routes the
+admitted world through this adapter together with the driver and the projection.
