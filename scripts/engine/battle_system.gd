@@ -939,8 +939,10 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 
 ## What each unit's noble dead and captured cost their families: one consume per unit in code
 ## order. Replay-safe: consume returns the saved rows for a known id, and `family_loss_ids`
-## keeps those rows from being appended to the battle twice.
-static func _settle_family_losses(repo: DataRepository, state: GameState, b: Dictionary, pending: Dictionary, n: int) -> void:
+## keeps those rows from being appended to the battle twice. The first refused id is returned
+## (the ordinary round ignores it, as before; the CF06 candidate settlement fails on it).
+static func _settle_family_losses(repo: DataRepository, state: GameState, b: Dictionary, pending: Dictionary, n: int) -> Dictionary:
+	var refused := {}
 	var receipt: Dictionary = state.military_events.get("battle:%d:round:%d:personnel" % [int(b["id"]), n], {})
 	var by_unit: Dictionary = {}
 	for change: Dictionary in receipt.get("result", {}).get("changes", []):
@@ -957,10 +959,14 @@ static func _settle_family_losses(repo: DataRepository, state: GameState, b: Dic
 		var loss_id := "battle:%d:round:%d:%s" % [int(b["id"]), n, code]
 		var rows: Variant = FamilyLosses.consume(repo, state, loss_id, by_unit[code], {"place": place, "order": order})
 		# The id is fixed per round and unit, so an {error} cannot arise; if it did, nothing is appended.
-		if not rows is Array or (b.get("family_loss_ids", []) as Array).has(loss_id):
+		if not rows is Array:
+			if refused.is_empty(): refused = rows
+			continue
+		if (b.get("family_loss_ids", []) as Array).has(loss_id):
 			continue
 		b["family_loss_ids"] = b.get("family_loss_ids", []) + [loss_id]
 		b["family_changes"] = b.get("family_changes", []) + rows
+	return refused if not refused.is_empty() else {"status": "applied"}
 
 
 ## Resolve custody while the defeated unit still has its battlefield context.

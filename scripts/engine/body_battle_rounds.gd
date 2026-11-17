@@ -3,7 +3,8 @@ extends RefCounted
 ## CF06 D-PENDING: the first detached planning of a round-ready candidate field. It freezes
 ## the existing pending_round payload, the round's exact effects (through the existing
 ## personnel planner) and ONE engine RNG draw together, sealed by the outer `round_pending`
-## operation. No personnel, morale, cost, impact or cursor change: that is D-SETTLE.
+## operation. No personnel, morale, cost, impact or cursor change: that is D-SETTLE
+## (`settle_candidate`), which commits that frozen plan atomically under `round_settle`.
 
 const PENDING_KEYS: Array[String] = ["day", "round", "att", "def", "tier", "att_power", "def_power", "odds",
 	"roll", "eff", "contexts", "reason", "costs", "unit_actions", "body_round_receipt"]
@@ -125,6 +126,118 @@ static func plan_candidate(repo: DataRepository, source: GameState, battle_id: i
 	var saved_error := _saved_error(live)
 	if not saved_error.is_empty(): return _result("error", saved_error)
 	return _result("complete", "Planned one frozen round", candidate, plan)
+
+## CF06 D-SETTLE: commit the field's frozen plan atomically on a clone. Personnel through the
+## existing round writer (`battle:<id>:round:<n>` and its `:personnel` transfer), the bodies
+## through `BodyRoundReconcile`, family losses and custody, the frozen costs, reserves and earned
+## impact; then the full receipt, the round closed, the field and its units processed and the
+## queue advanced, sealed by one outer `round_settle`. A failed late writer returns blocked with
+## the unchanged pending source; an exact settled retry is a detached no-op. Exits, routs and
+## ends stay with the advance stage's lifecycle requests.
+static func settle_candidate(repo: DataRepository, source: GameState, plan: Dictionary, boundary: Dictionary) -> Dictionary:
+	if repo == null or source == null or not BodyMotion._keys(plan, ["version", "battle_id", "boundary", "basis", "body_round_receipt", "pending", "effects"]) \
+		or not plan.battle_id is String or not String(plan.battle_id).is_valid_int() or int(plan.battle_id) <= 0 \
+		or not plan.pending is Dictionary or not BodyMotion._keys(plan.pending, PENDING_KEYS) or not plan.effects is Dictionary:
+		return _result("error", "Round settlement requires data, source and a frozen plan")
+	var id := int(plan.battle_id)
+	var key := "bodyround:%d:%d:%d:settlement" % [id, int(plan.pending.day), int(plan.pending.round)]
+	var request := {"kind": "body_round_settlement", "plan": plan}
+	if source.military_events.has(key):
+		var saved: Variant = source.military_events[key]
+		if not saved is Dictionary or BodyMotion._hash(saved.get("request")) != BodyMotion._hash(request):
+			return _result("error", "The round was settled under another plan")
+		var current := UnitBodies.validate_battle_candidate(repo, source, BodyBattleMotion._boundary(source))
+		if current.status == "error": return _result("error", current.reason)
+		return _result("complete", "Already settled round", UnitBodies._copy(source), plan.duplicate(true))
+	var admitted := UnitBodies.validate_battle_candidate(repo, source, boundary)
+	if admitted.status == "error": return _result("error", admitted.reason)
+	if boundary.get("kind") != "battle" or boundary.get("stage") != "round": return _result("error", "Round settlement requires the round-stage boundary")
+	var tx := source.day_resolution
+	if int(tx.battle_index) >= tx.battle_ids.size() or int(tx.battle_ids[int(tx.battle_index)]) != id:
+		return _result("error", "Round settlement names only the current queued field")
+	var battle := UnitBodies._battle(source, id)
+	if battle.is_empty() or BattleSystem.canonical(source, id) != id or not battle.has("body_round"):
+		return _result("error", "Round settlement requires a canonical round-ready field")
+	if admitted.reason != BodyBattle.FROZEN_ROUND: return _result("deferred", "Round settlement requires a frozen round")
+	if not tx.pending_decision.is_empty(): return _result("deferred", "A pending decision comes first")
+	if not battle.has("body_round_plan") and not battle.has("pending_round"): return _result("deferred", "The ready round awaits its planning")
+	var saved_error := _saved_error(battle)
+	if not saved_error.is_empty(): return _result("error", saved_error)
+	var wrapper: Dictionary = battle.body_round_plan
+	if BodyMotion._hash(wrapper.plan) != BodyMotion._hash(plan): return _result("error", "Settlement names another frozen plan")
+	var outer: Dictionary = source.military_migration.get("body_battle", {})
+	if outer.get("sequence") != plan.boundary.get("sequence") or outer.get("receipt") != BodyMotion._hash(_outer(plan, wrapper.receipt, battle.body_round)):
+		return _result("error", "The frozen round's round_pending is not the last outer operation")
+	# The basis proof on the admitted pre-settlement world: nothing the round read has moved.
+	if battle.body_round.basis != BodyBattle._round_basis(repo, source): return _result("error", "Readiness basis changed before settlement")
+	var pending: Dictionary = battle.pending_round
+	var n := int(pending.round)
+	if int(pending.day) != source.absolute_day() or n != int(battle.get("rounds", 0)) + 1:
+		return _result("error", "The frozen round is not today's next round")
+	var blocked := func(reason: String) -> Dictionary:
+		return _result("blocked", "Round settlement failed; the frozen round stays pending: " + reason, UnitBodies._copy(source), plan.duplicate(true))
+	var candidate := UnitBodies._copy(source)
+	var stance := func(code: String) -> String: return BattleSystem.stance_of(candidate, code)
+	var results := BattleSystem.apply_round(repo, candidate, pending.att, pending.def, pending.tier, pending.reason, stance,
+		"battle:%d:round:%d" % [id, n])
+	if results.has("error"): return blocked.call(String(results.error))
+	if BodyMotion._hash(results) != BodyMotion._hash(plan.effects.unit_results): return _result("error", "Settled personnel diverge from the frozen effects")
+	var personnel_id := ""
+	if not (plan.effects.personnel_orders as Array).is_empty():
+		personnel_id = "battle:%d:round:%d:personnel" % [id, n]
+		var bodies := BodyRoundReconcile.reconcile_round_candidate(repo, candidate, {"battle_id": id, "round": n}, boundary)
+		if bodies.status != "complete": return blocked.call(String(bodies.reason))
+		candidate = bodies.candidate
+	var live := UnitBodies._battle(candidate, id)
+	var losses_before: Array = live.get("family_loss_ids", []).duplicate()
+	var family := BattleSystem._settle_family_losses(repo, candidate, live, pending, n)
+	if family.has("error"): return blocked.call(String(family.error))
+	var added: Array = live.get("family_loss_ids", []).filter(func(loss: String) -> bool: return loss not in losses_before)
+	added.sort()
+	if added != plan.effects.family_event_ids: return _result("error", "Settled family losses diverge from the frozen effects")
+	var custody := BattleSystem._settle_defeated_holders(repo, candidate, live)
+	if custody.has("error"): return blocked.call(String(custody.error))
+	for cost: Dictionary in pending.costs:
+		var entry := BattleSystem._stored(candidate, String(cost.code))
+		entry.supplies = maxi(0, int(entry.supplies) - int(cost.supplies))
+	for code: String in pending.unit_actions:
+		var action: Dictionary = pending.unit_actions[code]
+		if action.kind == "attack" and action.task_id != "": live.get("reserves", {}).erase(code)
+	var charged: Array = (pending.att + pending.def).filter(func(code: String) -> bool:
+		var charge: Dictionary = BattleSystem._stored(candidate, code).get("charge", {})
+		return charge.get("phase", "") == "impact" and int(charge.get("impact_day", -1)) == int(pending.day))
+	charged.sort()
+	if charged != plan.effects.charge_units: return _result("error", "Earned impact diverges from the frozen effects")
+	BattleCharge.consume(candidate, pending.att + pending.def, int(pending.day))
+	live.rounds = n
+	live.last_resolved_day = int(pending.day)
+	var round_event := {"kind": "round", "battle_id": id, "round": n, "att_power": pending.att_power,
+		"def_power": pending.def_power, "odds": pending.odds, "roll": pending.roll, "eff": pending.eff,
+		"tier": pending.tier.get("tier", ""), "contexts": pending.contexts, "costs": pending.costs,
+		"unit_actions": pending.unit_actions, "results": results, "att": pending.att, "def": pending.def,
+		"town": String(live.town), "place_x_m": int(live.place_x_m), "place_y_m": int(live.place_y_m), "left": []}
+	candidate.military_events[key] = {"request": request.duplicate(true), "result": {"pending": pending.duplicate(true),
+		"effects": plan.effects.duplicate(true), "personnel_event_id": personnel_id, "round_event": round_event.duplicate(true)}}
+	for erased: String in ["body_round", "pending_round", "body_round_plan"]: live.erase(erased)
+	var ctx := candidate.day_resolution
+	if id not in ctx.processed_battle_ids: ctx.processed_battle_ids.append(id)
+	ctx.processed_battle_ids.sort()
+	for code: String in pending.att + pending.def:
+		if code not in ctx.body_battle.processed_units: ctx.body_battle.processed_units.append(code)
+	ctx.body_battle.processed_units.sort()
+	ctx.battle_index = int(ctx.battle_index) + 1
+	ctx.body_battle.battle_index = str(ctx.battle_index)
+	if int(ctx.battle_index) >= ctx.battle_ids.size(): ctx.body_battle.stage = "advance"
+	var settle := {"version": 1, "request": {"kind": "round_settle", "battle_id": String(plan.battle_id), "plan_receipt": wrapper.receipt},
+		"boundary": boundary.duplicate(true), "basis": {"source": BodyMotion._hash([source.to_dict(), boundary, BodyBattleMotion._context(repo, source)])},
+		"motion": {}, "contacts": battle.body_round.contacts.duplicate(true)}
+	ctx.body_battle.sequence = str(int(boundary.sequence) + 1)
+	candidate.military_migration.body_battle = {"version": "1", "sequence": boundary.sequence, "receipt": BodyMotion._hash(settle),
+		"result": "", "closed_motion": outer.get("closed_motion", {}).duplicate(true)}
+	candidate.military_migration.body_battle.result = UnitBodies._battle_result_hash(repo, candidate)
+	var final := UnitBodies.validate_battle_candidate(repo, candidate, BodyBattleMotion._boundary(candidate))
+	if final.status != "complete": return _result("error", "Settled round failed admission: " + final.reason)
+	return _result("complete", "Settled one frozen round", candidate, plan.duplicate(true))
 
 ## The outer `round_pending` operation, rebuilt identically for its receipt check.
 static func _outer(plan: Dictionary, plan_receipt: String, ready: Dictionary) -> Dictionary:
