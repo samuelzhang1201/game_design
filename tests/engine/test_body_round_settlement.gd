@@ -10,11 +10,17 @@ func after_each() -> void:
 	MarchPath.forget()
 	RoadGraph.forget()
 
-func _pending_world() -> Dictionary:
+## `pinned`: every outcome tier is the same row (loss 50 per mille each side, wounded 600,
+## morale -20 each side, no rout), so the casualties below are literal whatever the roll.
+func _pending_world(pinned: bool = false) -> Dictionary:
 	var helper: GutTest = load("res://tests/engine/test_body_round_pending.gd").new()
 	var f: Dictionary = helper.call("_ready_world")
 	assert_eq(helper.get_fail_count(), 0)
 	helper.free()
+	if pinned:
+		for row: Dictionary in f.repo.battle_outcomes:
+			row.merge({"attacker_loss_permille": 50, "defender_loss_permille": 50, "wounded_share_permille": 600,
+				"attacker_morale": -20, "defender_morale": -20, "rout": "none"}, true)
 	var planned := BodyBattleRounds.plan_candidate(f.repo, f.ready, f.id, BodyBattleMotion._boundary(f.ready))
 	assert_eq(planned.status, "complete", planned.reason)
 	f.pending = planned.candidate
@@ -102,6 +108,39 @@ func test_settles_the_frozen_plan_exactly_once() -> void:
 	assert_eq(state.day_resolution.body_battle.stage, "advance")
 	assert_eq(int(state.day_resolution.body_battle.sequence), int(source.day_resolution.body_battle.sequence) + 1)
 	assert_eq(UnitBodies.validate_battle_candidate(f.repo, state, BodyBattleMotion._boundary(state)).status, "complete")
+
+func test_hand_computed_casualties_and_zero_loss_morale() -> void:
+	var f := _pending_world(true)
+	var source: GameState = f.pending
+	var pending: Dictionary = source.battles[0].pending_round
+	assert_eq(pending.unit_actions[f.unit].kind, "hold")
+	assert_eq(pending.unit_actions[f.enemy].kind, "attack")
+	for code: String in [f.unit, f.enemy]: assert_eq(BattleSystem.stance_of(source, code), "steady", code)
+	assert_eq(MilitaryRoster.fit(source, f.unit), 1000)
+	assert_eq(MilitaryRoster.fit(source, f.enemy), 100)
+	var morale := {f.unit: int(UnitBodies._entry(source, f.unit).morale), f.enemy: int(UnitBodies._entry(source, f.enemy).morale)}
+	# Crown: exposure 1000, rate trunc(50 x 1000 / 1000) = 50; lost trunc(1000 x 50 / 1000) = 50,
+	# wounded trunc(50 x 600 / 1000) = 30, dead 20. Morale -20 x 1000/1000, steady x1000, hold x800 = -16.
+	# Enemy: exposure 100, rate trunc(50 x 100 / 1000) = 5; lost trunc(100 x 5 / 1000) = 0 — a zero-loss
+	# unit whose morale still falls: trunc(-20 x 100 / 1000) = -2, steady x1000, attack x1000 = -2.
+	assert_eq(pending.tier.unit_loss_permille, {f.unit: 50, f.enemy: 5})
+	var result := _settle(f, source)
+	assert_eq(result.status, "complete", result.reason)
+	if result.candidate == null: return
+	var state: GameState = result.candidate
+	assert_eq(f.plan.effects.unit_results[f.unit], {"dead": 20, "wounded": 30, "morale": -16, "reason": pending.reason})
+	assert_eq(f.plan.effects.unit_results[f.enemy], {"dead": 0, "wounded": 0, "morale": -2, "reason": pending.reason})
+	assert_eq(MilitaryRoster.fit(state, f.unit), 950)
+	assert_eq(MilitaryRoster.fit(state, f.enemy), 100)
+	assert_eq(int(UnitBodies._entry(state, f.unit).morale), clampi(int(morale[f.unit]) - 16, 0, 100))
+	assert_eq(int(UnitBodies._entry(state, f.enemy).morale), clampi(int(morale[f.enemy]) - 2, 0, 100))
+	assert_eq(_rows(state, f.unit).map(func(row: Dictionary) -> int: return int(row.count)), [100, 100, 100, 100, 100, 100, 100, 100, 100, 50])
+	assert_eq(_rows(state, f.enemy).map(func(row: Dictionary) -> int: return int(row.count)), [100])
+	# Only the crown has personnel orders, so only its family-loss id; the retry applies nothing twice.
+	assert_eq(f.plan.effects.family_event_ids, ["battle:%d:round:%d:%s" % [f.id, int(pending.round), f.unit]])
+	var again := _settle(f, state)
+	assert_eq(_hash(again.candidate), _hash(state))
+	assert_eq(int(UnitBodies._entry(again.candidate, f.enemy).morale), clampi(int(morale[f.enemy]) - 2, 0, 100), "zero-loss morale once")
 
 func test_settled_retries_are_no_ops_and_saves_round_trip() -> void:
 	var f := _pending_world()
