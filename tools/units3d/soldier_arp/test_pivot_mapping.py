@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """The shipped infantry pivot pair is the coupled mapping's solve, baked losslessly (no Godot needed).
 
-1. The uncoupled parameters rebuild the frozen feasibility references exactly (the port is faithful).
-2. The canonical pair rebuilt from the committed captures passes the R-B skin and R-A contact audit.
-3. Baking the committed solve onto the installed GLB's own five-clip prefix reproduces it byte for byte.
+1. The uncoupled parameters rebuild the frozen (knight) feasibility references exactly (the port is faithful).
+2. The canonical pair rebuilt from the committed captures of the installed infantry passes the R-B skin
+   and R-A contact audit.
+3. Baking the committed solve onto the installed GLB's own ten-clip prefix reproduces it byte for byte.
 4. The committed runtime plan (infantry_pivot_plan.json) is what the mapping generates.
 """
 import base64
@@ -24,15 +25,16 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/infantry_pivot_mapping.json'
 GLB = ROOT / 'assets/3D/units/infantry/infantry.glb'
 PLAN = ROOT / 'assets/3D/units/infantry/infantry_pivot_plan.json'
-HASHES = {'native-march.json': '2c04d2b90d5dfe28ed23b316f7a46762bd0daa3a08d89033bce846fa8c640b98',
-          'canonical-samples.json': 'b0d8c7b5104e158ad95795e3ff8bb9636c3acd9e1b478c43ef68109b512b8cfe'}
-MAIN_GLB_SHA256 = 'bb1d80b916be406f91390883034e07d0cf2d7690666951c3216b202393548085'  # five clips
-OLD = {'animations': 5, 'accessors': 1047, 'bufferViews': 1050, 'binary': 3837556}
+HASHES = {'baseline-native.json': '7f1a02bd1cc16184d991c44da97426bf57e5ea19c2f1f9f61dc22846467e50ec',
+          'native-march.json': '03ae19a705cd68e920f3edea56204d3b0affc27dffa81005100a4475de6152e2',
+          'canonical-samples.json': 'd5ec281d8933d677ff0840f5e3be070af53d665ca8b0dd2ac3d56dae234f711e'}
+MAIN_GLB_SHA256 = '0fc3a40e2e73680d051d873e010d91f1dcb19f1aac57e620354b56d9e35edc65'  # ten clips (game_export.py)
+OLD = {'animations': 10, 'accessors': 2117, 'bufferViews': 2120, 'binary': 5817804}
 
 
 def sources():
     fixture = json.loads(FIXTURE.read_text())
-    assert fixture['format'] == 'infantry-pivot-mapping-v1' and set(fixture['sources']) == set(HASHES)
+    assert fixture['format'] == 'infantry-pivot-mapping-v2' and set(fixture['sources']) == set(HASHES)
     out = {}
     for name, sha in HASHES.items():
         s = fixture['sources'][name]
@@ -43,7 +45,7 @@ def sources():
 
 
 def bare_source(path, out):
-    """The installed GLB minus the appended pair: exactly the five-clip export pivot.bake read."""
+    """The installed GLB minus the appended pair: exactly the ten-clip export pivot.bake read."""
     data, binary = pivot._read(path)
     assert [a['name'] for a in data['animations'][OLD['animations']:]] == ['PIVOT_RIGHT', 'PIVOT_LEFT']
     data['animations'] = data['animations'][:OLD['animations']]
@@ -69,10 +71,9 @@ def close(a, b):
 
 
 def main():
-    model = pm.Model(pm.load_frozen())
-    pm.self_check(model)
+    pm.self_check(pm.frozen_model())
     data = sources()
-    model = pm.Model(pm.load_frozen(), [data['native-march.json']])
+    model = pm.installed_model(data['baseline-native.json'], [data['native-march.json']])
     cases = pm.build(model)
     report = pm.audit(model, cases, data['canonical-samples.json'])
     for row in report:
@@ -80,7 +81,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         bare_source(GLB, tmp / 'source.glb')
-        assert hashlib.sha256((tmp / 'source.glb').read_bytes()).hexdigest() == MAIN_GLB_SHA256, 'old five changed'
+        assert hashlib.sha256((tmp / 'source.glb').read_bytes()).hexdigest() == MAIN_GLB_SHA256, 'old ten changed'
         (tmp / 'samples.json').write_text(json.dumps(data['canonical-samples.json']))
         pivot.bake(tmp / 'source.glb', tmp / 'samples.json', tmp / 'out.glb', 4.0)
         mine, theirs = (tmp / 'out.glb').read_bytes(), GLB.read_bytes()
@@ -91,7 +92,9 @@ def main():
             assert len(x) == len(y) and float(np.abs(x - y).max()) < 2e-6, 'installed GLB is not the committed bake'
     committed = json.loads(PLAN.read_text())
     mine = pm.encode([{k: g[k] if k not in ('sole', 'toe') else g[k][:3, :3] for k in g} for g in cases[0]['plan']])
-    assert committed['march_phase'] == pm.CANONICAL_PHASE and committed['rest'] == pm.encode(cases[0]['rest'])
+    # the rest is built from the GLB's joints by numpy: another BLAS rounds its last bits apart
+    assert committed['march_phase'] == pm.CANONICAL_PHASE and close(committed['rest'], pm.encode(cases[0]['rest'])), \
+        'infantry_pivot_plan.json rest is stale: rerun pivot_mapping.py plan'
     assert close(committed['legs'], mine), 'infantry_pivot_plan.json is stale: rerun pivot_mapping.py plan'
     print('PIVOT_MAPPING_MATCH', json.dumps([{k: r[k] for k in ('turn_udeg', 'skin', 'contact_um')} for r in report]))
 

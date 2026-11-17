@@ -726,7 +726,7 @@ func _native_asset() -> Dictionary:
 	if not _native_cache.is_empty():
 		return _native_cache
 	var path: String = "res://assets/3D/units/infantry/infantry.glb"
-	# Source GLB sha256 bb1d80b916be406f91390883034e07d0cf2d7690666951c3216b202393548085.
+	# Source GLB sha256 0fc3a40e2e73680d051d873e010d91f1dcb19f1aac57e620354b56d9e35edc65 (ten clips, before the pivot pair).
 	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
 	var size: int = bytes.decode_u32(12)
 	var document: Dictionary = JSON.parse_string(bytes.slice(20, 20 + size).get_string_from_utf8())
@@ -747,7 +747,7 @@ func _native_asset() -> Dictionary:
 				if phase < 1.0 and not _native_cache.keys.has(phase):
 					_native_cache.keys.append(phase)
 	_native_cache.keys.sort()
-	assert_eq(_native_fingerprint(), "707356edb648ef36bb57b4cfa9ecd56882405e17313e1b9f0e53b671bf4b90b7", "frozen original rest/mesh/skin/MARCH; additional clips do not change this input")
+	assert_eq(_native_fingerprint(), "f8a39559696c6452e1234e52b54e937a4475c286527c619eb8f09bf85eef1cf5", "frozen original rest/mesh/skin/MARCH; additional clips do not change this input")
 	return _native_cache
 
 func _native_order(index: int, parent: String) -> void:
@@ -847,8 +847,8 @@ func _march_fixture(entry: float, exit: float, turn: int = 2000000) -> Dictionar
 		var ankle: String = "foot" + side
 		var toe: String = "toes_01" + side
 		var leg: Dictionary = {"hip": hip, "knee": "leg_stretch" + side, "ankle": ankle, "toe": toe,
-			"pole": Vector3(-0.150626324, 0.442476592, -0.884039692) if side == ".l" else
-				Vector3(0.088675654, -0.441207958, -0.893012971),
+			"pole": Vector3(0.246106486, 0.394793154, -0.885194873) if side == ".l" else
+				Vector3(0.982994098, 0.066477337, -0.171182262),
 			"min_knee_rad": 0.0, "max_knee_rad": PI,
 			"followers": {"thigh_stretch" + side: "hip", "leg_twist" + side: "knee"}}
 		f.rest.legs.append(leg)
@@ -885,7 +885,7 @@ func _assert_native_pose(f: Dictionary, result: Dictionary, reference: Dictionar
 
 func test_transition_native_optimized_failure_and_all_skin_vertices_at_both_endpoints() -> void:
 	# Original native-helper-input sha256 e1bf40ccbe4dcd2d14c8e5ca44acf9b5fbba3accb8b28d80f01fb2e95fdca18d.
-	var phase: float = 0.8928571428571428
+	var phase: float = 13.0 / 14.0
 	var f: Dictionary = _march_fixture(phase, phase)
 	# Recreate original phase-zero stance inputs exactly from the installed asset.
 	for leg: Dictionary in f.rest.legs:
@@ -899,7 +899,9 @@ func test_transition_native_optimized_failure_and_all_skin_vertices_at_both_endp
 	if legacy.ok:
 		var original: Dictionary = _globals(f.rest, f.pose)
 		var old: Dictionary = _globals(f.rest, legacy.pose)
-		assert_almost_eq(old["toes_01.l"].origin.distance_to(original["toes_01.l"].origin), 0.00759866275, 0.000002)
+		# The retired knight's legacy stance path moved this toe 0.00759866275 m at 25/28; on the
+		# short-sword soldier's re-authored MARCH it holds the native toe at 13/14.
+		assert_lt(old["toes_01.l"].origin.distance_to(original["toes_01.l"].origin), 0.000002)
 	# Exit contacts must account for committed yaw to remain compatible native endpoints.
 	f = _march_fixture(phase, phase)
 	var mesh: Dictionary = _native_mesh()
@@ -913,7 +915,7 @@ func test_transition_native_optimized_failure_and_all_skin_vertices_at_both_endp
 			var maximum: float = 0.0
 			for i: int in range(mesh.positions.size()):
 				maximum = maxf(maximum, _skin(mesh, i, before).distance_to(_skin(mesh, i, after)))
-			assert_lt(maximum, 0.00001, "all 20880 actual rigid/mixed-weight vertices; old max 0.0179955408m")
+			assert_lt(maximum, 0.00001, "every actual rigid/mixed-weight vertex; the knight's old max 0.0179955408m")
 
 func _native_mesh() -> Dictionary:
 	var asset: Dictionary = _native_asset()

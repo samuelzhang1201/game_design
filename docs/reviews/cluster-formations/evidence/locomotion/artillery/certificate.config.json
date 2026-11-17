@@ -1,6 +1,6 @@
 {
  "arm": "artillery",
- "note": "LOCO-CERT-ART. The artillery is the infantry's knight until the guns have their own model (army_models.tres binds it to infantry.tscn), so this is the infantry's provider and config at the artillery's footprint radius 875 and its own scale; stride_m 1.765 is the infantry's MARCH measurement, now the artillery row's too. Map3DInfantryLocomotion re-solves the coupled pivot plan for each grid turn. Pivots enter and leave MARCH at 25/28 only and the hold is MARCH frozen at 25/28 (owner ruling A, a consumer requirement). Stance comes from the certifier's per-foot planting band. turn_q 400000 is the contract's example value: a LOCO-POLICY row with another turn_q means re-running this certificate. Any real gun model voids it.",
+ "note": "LOCO-CERT-ART. The artillery is the infantry's short-sword soldier until the guns have their own model (army_models.tres binds it to infantry.tscn), so this is the infantry's provider and config at the artillery's footprint radius 875 and its own scale; stride_m 1.765 is the infantry's MARCH measurement, now the artillery row's too. Map3DInfantryLocomotion re-solves the coupled pivot plan for each grid turn. Pivots enter and leave MARCH at 13/14 only and the hold is MARCH frozen at 13/14 (owner ruling A, a consumer requirement). Stance comes from the certifier's per-foot planting band. turn_q 400000 is the contract's example value: a LOCO-POLICY row with another turn_q means re-running this certificate. Any real gun model voids it. Re-issued 2026-11-16 for the short-sword soldier (new infantry.glb, MARCH stride 1.618, k 25.8437, contact 23217 um).",
  "scene": "scenes/models/units/infantry.tscn",
  "provider": "scripts/map3d/map3d_infantry_locomotion.gd",
  "feet": {
@@ -19,18 +19,18 @@
   0,
   -1
  ],
- "stride_m": 1.765,
+ "stride_m": 1.618,
  "turn_q": 400000,
  "radius_m": 875,
- "entry_phase": 0.8928571428571429,
+ "entry_phase": 0.9285714285714286,
  "hold_clip": "MARCH",
  "march_stop_phases": [
-  0.8928571428571429
+  0.9285714285714286
  ],
  "march_start_phases": [
-  0.8928571428571429
+  0.9285714285714286
  ],
  "hold_phases": [
-  0.8928571428571429
+  0.9285714285714286
  ]
 }
