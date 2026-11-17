@@ -127,10 +127,12 @@ func test_retries_never_redraw_and_saves_round_trip() -> void:
 		assert_eq(repeat.candidate.rng.to_dict(), published.rng.to_dict())
 		assert_eq(BodyMotion._hash(repeat.candidate.to_dict()), BodyMotion._hash(published.to_dict()))
 		assert_eq(BodyMotion._hash(_json(source).to_dict()), BodyMotion._hash(source.to_dict()), "the plan survives saves verbatim")
-	# The frozen round still waits for settlement: a step is a blocked no-op.
+	# The next step settles the frozen round (D-DRIVER) and never plans it again.
 	var engine := TickEngine.new(f.repo)
-	var held: Dictionary = engine.step_body_battle_candidate(published)
-	assert_eq(held.status, "blocked", held.reason)
+	var next: Dictionary = engine.step_body_battle_candidate(published)
+	assert_eq(next.status, "complete", next.reason)
+	assert_eq(next.reason, "Settled one frozen round")
+	assert_eq(next.candidate.rng.to_dict(), published.rng.to_dict())
 
 func test_changed_basis_tampering_and_wrong_field_reject() -> void:
 	var f := _ready_world()

@@ -1,7 +1,7 @@
 # Royal locomotion certificate (LOCO-CERT-ROY, 2026-11-14)
 
 `certificate.json` is what main's certifier (`tools/units3d/certify_locomotion.py`, tool sha256 `efc58b66…`)
-writes for `certificate.config.json`. Status: **NUMERIC_PASS**. Certificate digest `000db95b…`. It
+writes for `certificate.config.json`. Status: **NUMERIC_PASS**. Certificate digest `91999158…` (re-issued by LOCO-ROY-SOLVE-PERF, below). It
 binds the tool, the config and all 24 inputs:
 - the scene and `royal.glb` with its re-keyed MARCH (LOCO-ROY-MARCH, owner ruling R-J);
 - the provider `Map3DRoyalPivot`, its plan and its helpers;
@@ -95,6 +95,23 @@ Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `dat
 ## Re-issued for the short-sword infantry (2026-11-16)
 
 Only hashed inputs moved (`army_art.csv`, `data/army/balance.csv` and the cf01 `measurements.json`, for the new infantry figure); this arm measures as before (NUMERIC_PASS, same totals and bounds), only the digest moved.
+
+## Re-issued for LOCO-ROY-SOLVE-PERF (2026-11-17)
+
+`Map3DRoyalPivot.solve` now makes the riders once per figure, and each turn's MARCH pose, contact plan
+and `Map3DCavalryPivot.prepare` once per figure and turn; a phase only blends and calls `sample_prepared`
+(the shared kernel of LOCO-CAV-SOLVE-PERF, #329). A warm `solve` costs about 3.4 ms (main 4.8-5.7 ms,
+before #329 9.6-10.5 ms; `tools/units3d/bench_pivot_solve.gd --arm royal`, 128 phases, median, four turns,
+two rounds back to back on one machine: `solve-perf/bench.txt`). The poses are `sample`'s bit for bit
+(`test_the_cached_solve_is_the_uncached_sample_bit_for_bit`). The import drops the constant Saddle, Sword
+and Chest tracks from every clip but the PIVOTs, so main's `solve` took those three bones from whatever the
+figure showed before: under the certifier, the PIVOT clip at the requested phase (`Provider.apply` seeks it
+first). `bind` and the per-turn MARCH now seek from the rest pose, MARCH after the turn's PIVOT clip at 0,
+as the cavalry does, so a pose no longer depends on what the figure showed before. Against a capture of
+main's provider on the same tree, every MARCH sample and every pivot's phase 0 and 1 are byte-identical;
+the mid-pivot samples moved by a median 1e-5 and at most 0.60 mm model (0.012 world m, PIVOT_LEFT -135°
+at 0.925), the IK settling from a MARCH input that differs in those three bones by up to 1e-6. The
+re-issued report equals the previous one exactly; against main's issue only the provider's input digest moved.
 
 ## Re-issued for the infantry's pack walk (2026-11-18)
 

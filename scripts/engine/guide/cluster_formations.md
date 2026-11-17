@@ -218,3 +218,27 @@ second draw. Defence carries no contact participation factor
 law-barred or unaffordable all-out attack is frozen as hold. `GameState` keeps the wrapper raw like the envelope, and the readiness
 basis excludes it. No personnel, morale, cost, impact or cursor changes: that is
 the settlement.
+
+## Candidate round settlement
+
+`BodyBattleRounds.settle_candidate(repo, source, plan, boundary)` commits the
+current field's frozen plan. It admits the round-stage boundary, the saved
+wrapper equal to `plan`, the outer `round_pending` as the last operation and an
+unchanged `body_round.basis`, then works on a clone in the ordinary round's
+order: `BattleSystem.apply_round` (event `battle:<id>:round:<n>`, transfer
+`:personnel`; its results must equal the frozen `unit_results`, zero-loss
+morale included), `BodyRoundReconcile` for the bodies, `_settle_family_losses`
+(the added IDs must equal the frozen ones; a refused ID fails), custody, the
+frozen costs, committed reserves and the earned impact (must equal
+`charge_units`). It writes the full receipt
+`bodyround:<id>:<day>:<round>:settlement` `{request:{kind:"body_round_settlement",plan},
+result:{pending,effects,personnel_event_id,round_event}}`, clears `body_round`,
+`pending_round` and `body_round_plan`, marks the field and its units processed,
+advances the queue (to `advance` when exhausted) and seals the outer
+`round_settle`. A failed writer (personnel, bodies, family, custody) returns
+blocked with the unchanged pending source and the same plan; the frozen draw
+stays. A retry whose receipt exists with the same plan is a detached no-op; a
+different plan errors. Exits, routs and ends are not run here: the advance
+stage's lifecycle requests own them, and a tier's rout is only recorded in the
+round event until ACT-CUTOVER. The ordinary round event (`left` empty) is
+appended to the day's `journal.battles` and kept in the receipt's `round_event`.

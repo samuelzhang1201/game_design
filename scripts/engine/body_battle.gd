@@ -447,13 +447,15 @@ static func _ready(repo: DataRepository, source: GameState, request: Dictionary,
 		"contacts": contacts, "unit_actions": actions}
 	return _result("complete", "Round ready for its settlement consumer", candidate, {"contacts": contacts, "blocked": true})
 
-## A published readiness stays blocked until CF06 settles it; a changed basis errors.
-static func _held(repo: DataRepository, source: GameState, battle: Dictionary) -> Dictionary:
-	var checked := UnitBodies.validate_battle_candidate(repo, source, BodyBattleMotion._boundary(source))
-	if checked.status == "error": return _result("error", checked.reason)
-	if checked.reason != FROZEN_ROUND: return _result(checked.status, checked.reason)
-	if battle.body_round.basis != _round_basis(repo, source): return _result("error", "Readiness basis changed before settlement")
-	return _result("blocked", "Round awaits its settlement consumer", UnitBodies._copy(source))
+## CF06 D-DRIVER: a published readiness is planned once (one draw), then settled; each is one
+## control transition. A failed settlement stays blocked on the frozen pending; a changed basis errors.
+static func _frozen(repo: DataRepository, source: GameState, battle: Dictionary) -> Dictionary:
+	var boundary := BodyBattleMotion._boundary(source)
+	if not battle.has("pending_round") and not battle.has("body_round_plan"):
+		return BodyBattleRounds.plan_candidate(repo, source, int(battle.id), boundary)
+	var wrapper: Variant = battle.get("body_round_plan")
+	var plan: Variant = wrapper.get("plan") if wrapper is Dictionary else null
+	return BodyBattleRounds.settle_candidate(repo, source, plan if plan is Dictionary else {}, boundary)
 
 static func _run(repo: DataRepository, source: GameState, request: Dictionary) -> Dictionary:
 	var boundary := BodyBattleMotion._boundary(source)
@@ -477,7 +479,7 @@ static func step_candidate(repo: DataRepository, source: GameState) -> Dictionar
 		"contact": return _run(repo, source, {"kind": "contacts"})
 		"round":
 			var battle := UnitBodies._battle(source, int(tx.battle_ids[int(tx.battle_index)]))
-			if battle.has("body_round"): return _held(repo, source, battle)
+			if battle.has("body_round"): return _frozen(repo, source, battle)
 			if not tx.pending_decision.is_empty():
 				var checked := UnitBodies.validate_battle_candidate(repo, source, BodyBattleMotion._boundary(source))
 				if checked.status != "complete": return _result(checked.status, checked.reason)
