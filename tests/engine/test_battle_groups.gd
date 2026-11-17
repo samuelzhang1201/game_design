@@ -541,12 +541,42 @@ func test_seed_moves_a_closed_row_to_the_nearest_open_lattice_point() -> void:
 	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 200)
 	f.state.regiments[f.a].facing_deg = 90
 	var grid := _row_ground(f, Vector2i(10, 19))
-	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	var why := {}
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle, why), String(why.get("reason", "")))
 	var rows: Array = f.battle.groups[f.a]
 	assert_eq(rows.map(func(r: Dictionary) -> Vector2i: return Vector2i(int(r.x_m), int(r.y_m))),
 		[Vector2i(1000, 2000), Vector2i(920, 1920)], "the front stays; the rear steps one pitch across")
 	assert_true(grid.clear(Vector2i(920, 1920), Vector2i(920, 1920)))
 	assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
+	MarchPath.forget()
+
+# Another field's row holds (920,1920), so the rear takes the next candidate: same distance,
+# |j| = 1, rear first -> (i,j) = (0,1) -> (1000,1840), cell (10,18), the line through (10,19) its own start.
+func test_seed_shift_avoids_another_fields_rows() -> void:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 200)
+	f.state.regiments[f.a].facing_deg = 90
+	var codes: Array = f.state.regiments.keys()
+	codes.sort()
+	f.state.battles.append({"id": 1, "att": [codes[1]], "def": [], "groups": {codes[1]: [
+		{"slot": 0, "count": 100, "role": "front", "x_m": 920, "y_m": 1920}]}})
+	_row_ground(f, Vector2i(10, 19))
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	var rear: Dictionary = f.battle.groups[f.a][1]
+	assert_eq(Vector2i(int(rear.x_m), int(rear.y_m)), Vector2i(1000, 1840))
+	MarchPath.forget()
+
+func test_an_admitted_row_on_closed_ground_is_never_moved() -> void:
+	var f := _fixture()
+	f.state.town_seat.clear()
+	for code: String in [f.a, f.enemy]: Personnel.replace(f.repo, f.state, code, 200)
+	f.state.regiments[f.a].facing_deg = 90
+	assert_true(BattleGroups.refresh(f.repo, f.state, f.battle))
+	_row_ground(f, Vector2i(10, 19)) # the admitted rear at (1000,1920) now stands on closed ground
+	var before := SaveLoad.state_hash(f.state)
+	assert_false(BattleGroups.refresh(f.repo, f.state, f.battle), "a saved row is not relocated by the shift")
+	assert_eq(SaveLoad.state_hash(f.state), before)
 	MarchPath.forget()
 
 func test_new_contact_on_a_closed_reserve_row_starts_the_battle() -> void:
@@ -568,7 +598,7 @@ func test_new_contact_on_a_closed_reserve_row_starts_the_battle() -> void:
 	MarchPath.forget()
 
 # 10 m cells, only the anchors' own cells open: a's rear (1000,1920) has no clear lattice
-# point within 3 pitches but (1000,2000), which its front holds.
+# point within 2 pitches but (1000,2000), which its front holds.
 func test_contact_with_no_lawful_deployment_is_declined_once_per_standoff() -> void:
 	var f := _fixture()
 	f.state.town_seat.clear()
@@ -593,9 +623,9 @@ func test_contact_with_no_lawful_deployment_is_declined_once_per_standoff() -> v
 	assert_eq(events.size(), 1)
 	assert_eq(events[0].kind, "declined")
 	assert_eq(int(events[0].battle_id), -1)
-	assert_eq(events[0].reason, "No open ground within 3 pitches for %s near (1000, 1920)" % f.a)
+	assert_eq(events[0].reason, "No open ground within 2 pitches for %s near (1000, 1920)" % f.a)
 	var letter := MissiveWriter.battle_report(f.repo, f.state, events)
-	assert_string_contains(String(letter.facts[0].text), "no ground to draw up a battle line")
+	assert_string_contains(String(letter.facts[0].text), "could not draw up their lines")
 	var again: Array = []
 	BattleSystem._start(f.repo, f.state, f.a, f.enemy, "", again)
 	f.state.day += 1

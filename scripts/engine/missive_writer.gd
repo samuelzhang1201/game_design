@@ -317,7 +317,11 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 	var first_battle := -1
 	var siege_town := ""
 	var raid_at: Dictionary = {}  # the first raid line's event (its place)
+	var declined_at: Dictionary = {}  # the first declined contact (battle id -1, its own place)
 	for e: Dictionary in events:
+		if String(e["kind"]) == "declined":
+			declined_at = e if declined_at.is_empty() else declined_at
+			continue
 		if String(e["kind"]).begins_with("raid_"):
 			raid_at = e if raid_at.is_empty() else raid_at
 			continue
@@ -361,7 +365,7 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 			"declined":
 				facts.append(MissiveLog.words("declined@%d.%s.%s" % [pick, ",".join(e["att"]), ",".join(e["def"])], "No battle",
 					battle_words(repo, "battle_declined", {"att": _battle_names(repo, e["att"]), "def": _battle_names(repo, e["def"]),
-						"place": place}, pick)))
+						"place": battle_place(repo, state, e)}, pick)))
 			"join":
 				facts.append(MissiveLog.words("join@%d.%s" % [id, e["code"]], "Joined",
 					battle_words(repo, "battle_join_" + String(e["side"]), {"unit": _unit_label(repo, String(e["code"])),
@@ -387,6 +391,8 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 		head = {"town": siege_town, "place_x_m": town_m.x, "place_y_m": town_m.y}
 	if head.is_empty() and not raid_at.is_empty():
 		head = {"town": "", "place_x_m": int(raid_at["place_x_m"]), "place_y_m": int(raid_at["place_y_m"])}
+	if head.is_empty():
+		head = declined_at
 	var pack := ArmySystem.metres_to_pack(repo, Vector2i(int(head.get("place_x_m", 0)), int(head.get("place_y_m", 0))))
 	var subject := MissiveLog.subject("regiment", first_mine, -1, pack) if first_mine != "" \
 		else MissiveLog.subject("point", "", -1, pack)
