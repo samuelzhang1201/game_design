@@ -1,38 +1,38 @@
 {
- "step": "LOCO-INF-CLIP re-issued for the short-sword soldier (infantry_arp)",
- "date": "2026-11-16",
+ "step": "LOCO-INF-CLIP re-issued for the short-sword soldier on the pack walk (infantry_arp)",
+ "date": "2026-11-18",
  "rulings": "docs/reviews/cluster-formations/owner-rulings-2026-11-10.md R-A (contact_um 23217, seam 1935 model um at k 25.8437), R-B (introduced flags fail; same-phase native flags inherited), R-C (dense native sampling + real-window review)",
  "files": {
-  "assets/3D/units/infantry/infantry.glb": "86b83fa99c3fcfd62fb988337d6eb239caf975193e0740c21160334c40f9b964",
+  "assets/3D/units/infantry/infantry.glb": "b5714d5ee69ae9b716cfbe9e71c548d832e34b35877a86858c271f15562c767f",
   "assets/3D/units/infantry/infantry.glb.import": "622a873cecde657eefd5ffac2281e66d1d98554ac85c6cfc0fad6d367c25cc65",
-  "assets/3D/units/infantry/infantry_pivot_plan.json": "1069ff9e0c74d7397d1acea461447fee063b90001df6465e4f7b882a351d6db7",
-  "tools/units3d/infantry_arp/game_export.py": "8b9fb6367453b372dadc474f14b971cef6ccf672798b60fae2159603e01f83d9",
-  "tools/units3d/soldier_arp/pivot_mapping.py": "a6056d80e1ef49e67a0d220ae22f2657b9ba14cf66853ec23b30641fea6bb366",
+  "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
+  "tools/units3d/infantry_arp/game_export.py": "f4a3d3f5b25cc0fd5b681bffc8b7e5303eee5a3db5ac3d8bd8e7f8247049c4b0",
+  "tools/units3d/soldier_arp/pivot_mapping.py": "fecef746f113d395f85866949a1fd78bb26ee21373088ce05041544417eeabd7",
   "tools/units3d/soldier_arp/pivot.py": "199b883ea6e5b121f124288b242e29159d835f5e9aa1ed12d5a4be582f55a1b6",
   "tools/units3d/soldier_arp/pivot_solve.gd": "6cdb89773c1d91879fa3cda4b011d00c705f3193322babc8fffe2a975fe17cc6",
   "tools/units3d/soldier_arp/pivot_native.gd": "fcc416cd3fd7418825e84d6b40ceba145aecb614d47a23b7c9dc349ff8c89c92",
   "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
   "scripts/map3d/map3d_infantry_locomotion.gd": "b5ab0bfa95ce6a4cf6e676df09c9872ea438638216f89070bf93dc9ba5f9d419",
-  "tests/fixtures/infantry_pivot_mapping.json": "67b92c4487fbda840c94c6faed42c92bef16b7c94b27264a4c54549e885ef4ab"
+  "tests/fixtures/infantry_pivot_mapping.json": "77ff9b5a864cbcddf102f1ce0146b4571f9bb12710b126d48c31280bede11454"
  },
  "model": "the installed infantry.glb, read through a pivot_native.gd capture with its skin and mesh (fixture baseline-native.json) and a template from its glTF joints (pivot_mapping.installed_template); the knight frozen feasibility capture is only the port self-check",
  "mapping": {
-  "canonical_phase": 0.9285714285714286,
-  "coupled_neutral_phase": 0.430952380952381,
+  "canonical_phase": 0.01904761904761905,
+  "coupled_neutral_phase": 0.43333333333333335,
   "foot_phases": [
-   0.4,
-   0.9214285714285714
+   0.430952380952381,
+   0.9428571428571428
   ],
   "seated_plane_model_y": 0.0,
   "last_step": 0.88,
-  "meaning": "entry = exit at the MARCH passing frame (right sole flat, left boot just lifted, thighs 5.9 deg apart); both thighs leave for and hold the passing frame where they are most nearly parallel (0.6 deg); each held foot lands under that frame's hip, its sole posed as in its flattest planted frame, on the seated plane y = 0; the last step starts at .88",
+  "meaning": "entry = exit at MARCH 8/420 (right sole flat, left boot lifted in its swing; the pack walk's thighs are never nearer than 13.8 deg on that side); both thighs leave for and hold the frame where they are most nearly parallel (7.1 deg, 182/420); each held foot lands under that frame's hip, its sole posed as in its flattest planted frame (181 / 396 of 420), on the seated plane y = 0; the last step starts at .88",
   "selection": "420-phase scan of the imported MARCH (pivot_native.gd, baseline)"
  },
  "canonical_pair_solve": [
   {
    "turn_udeg": 90000000,
-   "march_entry_phase": 0.9285714285714286,
-   "march_exit_phase": 0.9285714285714286,
+   "march_entry_phase": 0.01904761904761905,
+   "march_exit_phase": 0.01904761904761905,
    "frames": 145,
    "skin": {
     "flags": 0,
@@ -40,10 +40,10 @@
     "introduced": 0,
     "mapping_only": 0,
     "first_introduced": [],
-    "worst_non_native_gate_ratio": 0.544868
+    "worst_non_native_gate_ratio": 0.684857
    },
    "contact_um": {
-    "penetration": 557,
+    "penetration": 27,
     "hover": 1,
     "slide": 1,
     "seam": 1
@@ -56,8 +56,8 @@
   },
   {
    "turn_udeg": -90000000,
-   "march_entry_phase": 0.9285714285714286,
-   "march_exit_phase": 0.9285714285714286,
+   "march_entry_phase": 0.01904761904761905,
+   "march_exit_phase": 0.01904761904761905,
    "frames": 145,
    "skin": {
     "flags": 0,
@@ -65,10 +65,10 @@
     "introduced": 0,
     "mapping_only": 0,
     "first_introduced": [],
-    "worst_non_native_gate_ratio": 0.542107
+    "worst_non_native_gate_ratio": 0.686223
    },
    "contact_um": {
-    "penetration": 557,
+    "penetration": 27,
     "hover": 1,
     "slide": 1,
     "seam": 1

@@ -329,7 +329,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "5d8e6d5580fa8605a580d949196f691e40f158258b83df821abedb4b9f869951",
+  "sha256": "4f323ed8ef46742a5ad980d4cbbcc44a4ee46c460e8ca53243e24d27f1ec2352",
   "uniform": 512
  },
  "config": {
@@ -411,9 +411,9 @@
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg.import": "c8dc15fa86145c123bff4e26fef8300d719dfc5d946d22be712cf4d478ce9067",
   "data/army/balance.csv": "161958b363556cc8d1980517612d61f21434349a6ea7c9a367e9bffdfae24277",
   "data/army/unit_footprints.csv": "5d7ebb28d0942802e698284eb42817203d66100ad607debc6cbda895485412de",
-  "data/screens/map3d/army_art.csv": "a09c92010775b7aab3dc2059be98d63935998d3c8fc0565e65277f57f52c1426",
+  "data/screens/map3d/army_art.csv": "261b1c7f250421b3e7d3ed51abf095f3b744cdac616a726bd6fe6a4add0c76e7",
   "data/screens/map3d/balance.csv": "8909525588cdfe925cff1777baef2a8c875fcda6301fc97c40e43c1d07394c2b",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "fd4dd8a65d2ab2cce9c17da2defa128c1a815debe69062d57a53ffb452ec9a5a",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "e9a149b9974218eaedd046ecca8d1ce2c7f977cfc8a93432dfb772202ca84e19",
   "scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
   "scripts/map3d/map3d_archer_locomotion.gd": "747cb3f67d51d7f82f34b6888948022f307022f72060c561dd245d4572182fea",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
@@ -427,11 +427,11 @@
    "MARCH"
   ],
   "contact_um": 28474,
-  "digest": "b8f3561443fc8dd874678d23f1516e7fa894a1d24ce409fd1b34268833b7fd35",
+  "digest": "5edafc136e5b3c7c0dc95e84be521556c15b1167485f9e4a35bf1574f4212be8",
   "radius_m": 932,
   "turn_q": 400000
  },
- "payload_sha256": "b8f3561443fc8dd874678d23f1516e7fa894a1d24ce409fd1b34268833b7fd35",
+ "payload_sha256": "5edafc136e5b3c7c0dc95e84be521556c15b1167485f9e4a35bf1574f4212be8",
  "report": {
   "bounds_um": {
    "contact": 28474,

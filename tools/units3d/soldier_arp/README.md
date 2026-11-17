@@ -91,7 +91,7 @@ the lunging clip keeps its travel.
 
 ## Pivot clips (PIVOT_RIGHT / PIVOT_LEFT)
 
-Two one-shot 90° reference turns appended to the installed `infantry.glb` (MARCH phase 13/14 in and
+Two one-shot 90° reference turns appended to the installed `infantry.glb` (MARCH phase 8/420 in and
 out, 4 s, positive pack turn = RIGHT; body yaw stays in the engine). Built without Blender:
 
 1. `pivot_native.gd` samples the imported MARCH at the phases `pivot_mapping.py request` lists

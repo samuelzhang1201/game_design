@@ -95,3 +95,8 @@ Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `dat
 ## Re-issued for the short-sword infantry (2026-11-16)
 
 Only hashed inputs moved (`army_art.csv`, `data/army/balance.csv` and the cf01 `measurements.json`, for the new infantry figure); this arm measures as before (NUMERIC_PASS, same totals and bounds), only the digest moved.
+
+## Re-issued for the infantry's pack walk (2026-11-18)
+
+Only hashed inputs moved (`army_art.csv` and the cf01 `measurements.json`, for the infantry's new
+walk and idle); this arm measures as before (NUMERIC_PASS, same totals and bounds), only the digest moved.
