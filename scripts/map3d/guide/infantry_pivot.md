@@ -85,9 +85,10 @@ unchanged and outputs are detached.
 The committed native GLB/hash, all MARCH keys and adversarial interpolated
 phases, full native local endpoints, original inverse binds/rigid and mixed
 weights, and sampled transition continuity are numerical regressions. The
-phase 0.8928571428571428 fixed-rest counterexample (7.599 mm left toe and
-17.996 mm maximum skin jump) remains evidence, not grounded-slip acceptance:
-that left boot was airborne. Continuous ground/sole/heel/toe contact, conservative
+retired knight's phase 0.8928571428571428 fixed-rest counterexample (7.599 mm
+left toe and 17.996 mm maximum skin jump) remains evidence, not grounded-slip
+acceptance: that left boot was airborne. On the short-sword soldier the same
+check runs at MARCH 13/14, where the legacy stance path holds the native toe. Continuous ground/sole/heel/toe contact, conservative
 envelopes, full parameter-domain certification and real-window near/far,
 pause/1x/4x/FPS visual review remain the original clip/certification steps' gates.
 No art, imported clip, production consumer or installed policy is activated here.

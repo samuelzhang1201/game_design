@@ -1,8 +1,10 @@
 extends SceneTree
 ## Samples the imported infantry clips with the real AnimationPlayer (pivot_mapping.py input).
 ## Godot --headless --path . -s tools/units3d/soldier_arp/pivot_native.gd -- REQUEST.json OUT.json
-## REQUEST: {"clip": "MARCH", "samples": [{"id": <exact float hex>, "phase": <0..1>}]}.
-## OUT: skeleton-space bone globals per sample; no interpolation outside the player.
+## REQUEST: {"clip": "MARCH", "samples": [{"id": <exact float hex>, "phase": <0..1>}], "baseline": bool}.
+## OUT: skeleton-space bone globals per sample; no interpolation outside the player. With
+## "baseline" it also holds the imported skin (bind poses by name) and the mesh's first surface
+## (vertices, 4 bones / weights per vertex, indices): pivot_mapping.py's native mesh.
 
 func _matrix(t: Transform3D) -> Array:
 	return [[t.basis.x.x, t.basis.y.x, t.basis.z.x, t.origin.x], [t.basis.x.y, t.basis.y.y, t.basis.z.y, t.origin.y],
@@ -38,6 +40,21 @@ func _run() -> void:
 	var result: Dictionary = {"clip": clip, "source_sha256": FileAccess.get_sha256(path),
 		"import_sha256": FileAccess.get_sha256(path + ".import"), "godot": Engine.get_version_info(),
 		"length_s": animation.length, "loop_mode": animation.loop_mode, "samples": []}
+	if request.get("baseline", false):
+		var mesh: MeshInstance3D = _find(model, "MeshInstance3D") as MeshInstance3D
+		var arrays: Array = mesh.mesh.surface_get_arrays(0)
+		var vertices: Array = []
+		for v: Vector3 in arrays[Mesh.ARRAY_VERTEX]:
+			vertices.append([v.x, v.y, v.z])
+		var binds: Array = []
+		for i: int in mesh.skin.get_bind_count():
+			var name: String = String(mesh.skin.get_bind_name(i))
+			if name.is_empty():
+				name = String(skeleton.get_bone_name(mesh.skin.get_bind_bone(i)))
+			binds.append({"name": name, "pose": _matrix(mesh.skin.get_bind_pose(i))})
+		result.binds = binds
+		result.surfaces = [{"vertices": vertices, "bones": Array(arrays[Mesh.ARRAY_BONES]),
+			"weights": Array(arrays[Mesh.ARRAY_WEIGHTS]), "indices": Array(arrays[Mesh.ARRAY_INDEX])}]
 	for sample: Dictionary in request.samples:
 		var phase: float = float(sample.phase)
 		player.play(clip, 0.0)

@@ -1,7 +1,7 @@
 # Royal locomotion certificate (LOCO-CERT-ROY, 2026-11-14)
 
 `certificate.json` is what main's certifier (`tools/units3d/certify_locomotion.py`, tool sha256 `efc58b66…`)
-writes for `certificate.config.json`. Status: **NUMERIC_PASS**. Certificate digest `206e9a42…` (re-issued by LOCO-ROY-SOLVE-PERF, below). It
+writes for `certificate.config.json`. Status: **NUMERIC_PASS**. Certificate digest `91999158…` (re-issued by LOCO-ROY-SOLVE-PERF, below). It
 binds the tool, the config and all 24 inputs:
 - the scene and `royal.glb` with its re-keyed MARCH (LOCO-ROY-MARCH, owner ruling R-J);
 - the provider `Map3DRoyalPivot`, its plan and its helpers;
@@ -92,6 +92,10 @@ nothing blocking. Its notes, all mild:
 
 Re-certified on main d61d9756 with the LOCO-POLICY tree: the certifier sha, `data/army/balance.csv` (the new `body_locomotion_*` rows) and, for some arms, other hashed inputs had changed since the first issue. The status is still NUMERIC_PASS and the measured totals and bounds are unchanged; only the digest moved. The installed row is `data/army/unit_locomotion.csv`.
 
+## Re-issued for the short-sword infantry (2026-11-16)
+
+Only hashed inputs moved (`army_art.csv`, `data/army/balance.csv` and the cf01 `measurements.json`, for the new infantry figure); this arm measures as before (NUMERIC_PASS, same totals and bounds), only the digest moved.
+
 ## Re-issued for LOCO-ROY-SOLVE-PERF (2026-11-17)
 
 `Map3DRoyalPivot.solve` now makes the riders once per figure, and each turn's MARCH pose, contact plan
@@ -107,5 +111,4 @@ as the cavalry does, so a pose no longer depends on what the figure showed befor
 main's provider on the same tree, every MARCH sample and every pivot's phase 0 and 1 are byte-identical;
 the mid-pivot samples moved by a median 1e-5 and at most 0.60 mm model (0.012 world m, PIVOT_LEFT -135°
 at 0.925), the IK settling from a MARCH input that differs in those three bones by up to 1e-6. The
-re-issued report equals the previous one exactly; only the input digests moved (the
-provider, `map3d_cavalry_pivot.gd`, `map3d_cavalry_pivot_math.gd` and main's `data/screens/map3d/balance.csv`).
+re-issued report equals the previous one exactly; against main's issue only the provider's input digest moved.

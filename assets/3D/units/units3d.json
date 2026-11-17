@@ -109,6 +109,14 @@
     0,
     110
    ],
+   "STANDBY": [
+    0,
+    120
+   ],
+   "DEFEND": [
+    0,
+    90
+   ],
    "ATTACK": [
     0,
     30
@@ -120,17 +128,29 @@
    "ATTACK_VAR1": [
     0,
     52
+   ],
+   "ATTACK_2": [
+    0,
+    39
+   ],
+   "SLASH_2": [
+    0,
+    47
+   ],
+   "SLASH_3": [
+    0,
+    41
    ]
   },
-  "bones": 69,
+  "bones": 70,
   "fps": 30,
-  "height_m": 1.604,
+  "height_m": 1.636,
   "kind": "humanoid",
   "label": "Man-at-arms",
-  "source": "The no-rig Tripo knight with a round shield and short sword, rigged with Auto-Rig Pro in the owner's Blender and driven by the owner's Mixamo sword-and-shield clips: assets/3D/units/soldier/model_wip/arp_knight_20261018/soldier_knight_arp.blend, tools/units3d/soldier_arp/game_export.py",
-  "stride_m": 1.765,
-  "tris": 15657,
-  "weights": "ARP heat-map skin, the plate/mail skirt shared; sword and shield rigid on cc_weapon.r / cc_weapon.l"
+  "source": "The no-rig Tripo soldier (infantry-no-rigging.glb) with a short sword and a round shield, rigged with Auto-Rig Pro and driven by the owner's Mixamo sword-and-shield clips: assets/3D/model_wip/blender_output/infantry/infantry_shortsword_shield.blend (git-ignored), tools/units3d/infantry_arp/game_export.py; PIVOT_RIGHT / PIVOT_LEFT baked by tools/units3d/soldier_arp/pivot.py",
+  "stride_m": 1.618,
+  "tris": 8604,
+  "weights": "ARP heat-map skin, legs split below the hem; sword and shield rigid on cc_weapon.r / cc_weapon.l"
  },
  "royal": {
   "actions": {

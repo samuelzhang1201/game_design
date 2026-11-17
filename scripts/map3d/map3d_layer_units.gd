@@ -68,7 +68,7 @@ var _moves := 0
 var _roster_was: Array = []  ## the state the drawn set was last cut for (_roster_key)
 var _live: Array = []  ## the codes drawn, in roster order
 var _same_state := false  ## the drawn set was last cut from the state it was cut from before
-
+var _duels := Map3DDuelDriver.new()  ## the front ranks' duels (spec 2026-11-16 infantry duels)
 var _candidate_bodies := false
 var _candidate_committed: Dictionary = {}
 var _candidate_samples: Dictionary = {}
@@ -295,7 +295,7 @@ func step(delta: float) -> bool:
 	_camps.prune(_pieces); _sound.sync(repo, ctx.camera, _pieces, delta)  # the march's sound
 	_settle.step(self, delta)  # held halts drop into their guard on the footfall
 	_sync_scouts()
-	_sync_battle_signals()
+	_sync_battle_signals(); _duels.step(ctx, _pieces, delta, _place)  # the duels, after the actions are synced
 	if moved:
 		_moves += 1
 	return moved
@@ -370,7 +370,7 @@ func _piece_of(code: String) -> Dictionary:
 			add_child(built["node"])
 			_pieces[code] = built
 		elif _pieces[code].get("sample_key", []) != sampled["key"]:
-			BattleGroupsView.sync(ctx.repo, reg, _pieces[code], sampled)
+			BattleGroupsView.sync(ctx.repo, reg, _pieces[code], sampled, _duels if _same_state else null)  # a loss falls in the duel
 		_pieces[code]["candidate_bodies"] = sampled["mode"] == "bodies"
 		if sampled["mode"] == "bodies":
 			_pieces[code]["candidate_sample"] = sampled

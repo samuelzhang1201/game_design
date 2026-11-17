@@ -101,6 +101,8 @@ static func play(anims: Array, action: String, blend_s: float, code: String = ""
 	for i in anims.size():
 		var anim: AnimationPlayer = anims[i]
 		anim.set_meta("want_action", action)
+		if anim.has_meta("duel"):
+			continue  # its pair's turns play it (Map3DDuelDriver); it takes `action` when released
 		if not chain.is_empty():
 			Map3DClipChain.start(anim, action, chain["clips"], code, i, chain["lo"], chain["hi"], blend_s)
 			continue

@@ -42,6 +42,16 @@ static func solve(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, t
 				legs[name] = true
 			for name: String in leg.followers:
 				legs[name] = true
+		# The bones carrying the hips (root.x) keep the clip's own bob too: the held feet were
+		# placed for it, and eased toward the entry pose the hips can rise out of reach.
+		var parents := {}
+		for bone: Dictionary in rest.bones:
+			parents[bone.name] = bone.parent
+		for name: String in legs.keys():
+			var up: String = parents[name]
+			while up != "" and parents[up] != "":
+				legs[up] = true
+				up = parents[up]
 		for bone: Dictionary in rest.bones:
 			if bone.parent != "" and not legs.has(bone.name):
 				current[bone.name] = (entry[bone.name] as Transform3D).interpolate_with(current[bone.name], share)

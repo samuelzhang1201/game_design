@@ -1,4 +1,9 @@
-# ARP knight (no-rig Tripo soldier)
+# ARP knight (no-rig Tripo soldier) — retired 2026-11-16
+
+The knight was the game infantry from 2026-10-19 to 2026-11-16; the short-sword soldier of
+`tools/units3d/infantry_arp/` replaced it (its `game_export.py` moved there). The pivot tools in this
+folder (`pivot*.py`, `pivot_native.gd`, `pivot_solve.gd`) are the infantry's and now read the
+installed model; the knight's frozen feasibility capture remains only the mapping port's self-check.
 
 Source: `assets/3D/model_wip/tripo_inbox/units/no-rigging/soldier/tripo/medieval+knight+3d+model no rig.glb`.
 Work file (git-ignored): `assets/3D/units/soldier/model_wip/arp_knight_20261018/soldier_knight_arp.blend`
@@ -86,15 +91,16 @@ the lunging clip keeps its travel.
 
 ## Pivot clips (PIVOT_RIGHT / PIVOT_LEFT)
 
-Two one-shot 90° reference turns appended to the installed `infantry.glb` (MARCH phase 25/28 in and
+Two one-shot 90° reference turns appended to the installed `infantry.glb` (MARCH phase 13/14 in and
 out, 4 s, positive pack turn = RIGHT; body yaw stays in the engine). Built without Blender:
 
-1. `pivot_native.gd` samples the imported MARCH at the phases `pivot_mapping.py request` lists.
+1. `pivot_native.gd` samples the imported MARCH at the phases `pivot_mapping.py request` lists
+   (with `"baseline": true` it also writes the imported skin and mesh: the model the mapping reads).
 2. `pivot_mapping.py build` writes the coupled author mapping (one shared native thigh frame, each
    held foot flat under it, last step from .88) as `Map3DInfantryPivot.sample_transition` cases.
 3. `pivot_solve.gd` solves them; `pivot_mapping.py audit` applies the 2026-11-10 skin (R-B) and
-   contact (R-A) gates; `pivot.bake` appends the pair. `--witness` rebuilds the five frozen
-   feasibility cases (the uncoupled mapping had 45 introduced skin flags there; this one has none).
+   contact (R-A) gates; `pivot.bake` appends the pair. NEUTRAL_PHASE, FOOT_PHASES and the bounds
+   are the installed MARCH's: re-derive them when it changes (`tools/units3d/infantry_arp/README.md`).
 
 `test_pivot_mapping.py` re-audits the committed solve and re-bakes the installed GLB byte for byte.
 Evidence: `docs/reviews/cluster-formations/evidence/locomotion/infantry/pivot-clip-acceptance.json`.

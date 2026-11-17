@@ -8,11 +8,17 @@ thigh pair; independent per-leg templates tore it (feasibility contract: 45 intr
 A held foot lands under that frame's hip, its sole posed flat (FOOT_PHASES) on the seated plane.
 The last step starts at LAST_STEP so its blend toward the exit never leads native MARCH there.
 Native poses are exact Godot AnimationPlayer captures (pivot_native.gd), never interpolated here.
+The mesh, binds and template come from the installed infantry.glb (installed_model: BASELINE is a
+pivot_native.gd capture with "baseline"); the frozen knight is only the port self-check's input.
+NEUTRAL_PHASE, FOOT_PHASES and the micrometre bounds are the installed MARCH's (2026-11-16 short-sword
+soldier, tools/units3d/infantry_arp/README.md): re-derive them when MARCH or the model changes.
 
-  pivot_mapping.py request OUT          native MARCH phases the builds need (pivot_native.gd input)
-  pivot_mapping.py build NATIVE OUT [--witness]   canonical +/-90 pair, or the five frozen cases
-  pivot_mapping.py audit NATIVE INPUTS RESULTS    R-B skin gate + R-A contact; exit 1 on failure
-  pivot_mapping.py --self-check         uncoupled parameters reproduce the frozen references exactly
+  pivot_mapping.py request BASELINE OUT [NATIVE...]    native MARCH phases the build still needs (pivot_native.gd input)
+  pivot_mapping.py build BASELINE NATIVE OUT           canonical +/-90 pair (pivot_solve.gd input)
+  pivot_mapping.py audit BASELINE NATIVE INPUTS RESULTS   R-B skin gate + R-A contact; exit 1 on failure
+  pivot_mapping.py plan BASELINE NATIVE OUT            the runtime plan (infantry_pivot_plan.json)
+  pivot_mapping.py fixture OUT NAME=PATH...            pack sources losslessly (test fixture format)
+  pivot_mapping.py --self-check                        uncoupled parameters reproduce the frozen references exactly
 
 Gates (owner rulings 2026-11-10): an edge flags when length > 4 x native-entry AND > .03 m; a
 flag fails unless native MARCH at the same body phase is flagged (R-B). Penetration, stance hover
@@ -34,17 +40,23 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 import test_pivot_feasibility as frozen  # noqa: E402
 
-NEUTRAL_PHASE = float.fromhex('0x1.387e7c06e19b8p-1')  # 0.61034, a captured native MARCH phase
+# The MARCH passing frame where the thighs are most nearly parallel (0.6 deg), the left sole planted.
+NEUTRAL_PHASE = 181 / 420
 LAST_STEP = .88
-# Native frames whose sole patch is flat (lowest patch vertex == boot minimum): a held foot's pose.
-FOOT_PHASES = (float.fromhex('0x1.507205001a010p-4'), 0.0)  # 0.08214 (left), 0 (right)
+# Native frames whose sole patch is flattest while planted (boot within 0.5 mm of the plane):
+# a held foot's pose. Left 168/420 (patch spread 6.1 mm), right 387/420 (3.5 mm).
+FOOT_PHASES = (168 / 420, 387 / 420)
 SEATED_PLANE_Y = 0.0
 UNCOUPLED = {'neutral': (10 / 35, 0.0), 'foot': (10 / 35, 0.0), 'plane': None, 'last_step': .84}
 COUPLED = {'neutral': (NEUTRAL_PHASE, NEUTRAL_PHASE), 'foot': FOOT_PHASES, 'plane': SEATED_PLANE_Y,
            'last_step': LAST_STEP}
-CANONICAL_PHASE = 0.8928571428571428  # 25/28, entry == exit of both shipped clips
-CONTACT_UM = 22769
-SEAM_UM = 1898
+# entry == exit of both shipped clips: the passing frame with the right sole flat and the left boot
+# just lifted (thighs 5.9 deg apart), the hold pose of the certificate's consumer requirement
+CANONICAL_PHASE = 13 / 14
+# R-A: ceil(world bound / k * 1e6), k = 25.8437 world m per model m (cf01 measurements, size 0.62)
+CONTACT_UM = 23217
+SEAM_UM = 1935
+GLB = Path(__file__).resolve().parents[3] / 'assets/3D/units/infantry/infantry.glb'
 SOLE_PATCH_M = .005
 ROOT = 'root.x'
 
@@ -57,11 +69,16 @@ def load_frozen(fixture=frozen.FIXTURE):
 
 
 class Model:
-    """Native mesh, binds and every captured native MARCH pose (exact float-hex lookup)."""
+    """Native mesh, binds and every captured native MARCH pose (exact float-hex lookup).
 
-    def __init__(self, data, captures=()):
-        s = data['native_import_probe/baseline-native.json']['surfaces'][0]
-        binds = data['native_import_probe/baseline-native.json']['binds']
+    `baseline` holds `surfaces` and `binds` (pivot_native.gd with "baseline"), `templates` the
+    sample_transition cases whose rest, legs and contact binds the builds copy, `natives` the
+    MARCH captures. The frozen knight (frozen_model) serves only the port self-check; the
+    installed infantry is installed_model()."""
+
+    def __init__(self, baseline, templates, natives=()):
+        s = baseline['surfaces'][0]
+        binds = baseline['binds']
         self.names = [b['name'] for b in binds]
         self.ib = np.array([b['pose'] for b in binds])
         self.v = np.c_[np.array(s['vertices']), np.ones(len(s['vertices']))]
@@ -70,9 +87,9 @@ class Model:
         tri = np.array(s['indices']).reshape(-1, 3)
         edges = {tuple(sorted(e)) for a, b, c in tri for e in ((a, b), (b, c), (c, a))}
         self.edges = np.array(sorted(edges))
-        self.templates = data['round1_arc_combined/inputs.json']['cases']
+        self.templates = templates
         self.samples = {}
-        for native in [data['round1_actual_march/native-march.json'], *captures]:
+        for native in natives:
             for x in native['samples']:
                 self.samples[x['id']] = x['global_bones']
 
@@ -96,6 +113,70 @@ class Model:
     def minima(self, g, legs):
         p = self.points(g)
         return [float(p[self.owned(leg), 1].min()) for leg in legs]
+
+
+def frozen_model(captures=()):
+    """The retired knight's frozen feasibility capture: only the uncoupled port self-check uses it."""
+    data = load_frozen()
+    return Model(data['native_import_probe/baseline-native.json'], data['round1_arc_combined/inputs.json']['cases'],
+                 [data['round1_actual_march/native-march.json'], *captures])
+
+
+def _trs(node):
+    x, y, z, w = np.asarray(node.get('rotation', (0, 0, 0, 1)), float) / np.linalg.norm(node.get('rotation', (0, 0, 0, 1)))
+    m = np.eye(4)
+    m[:3, :3] = np.array([[1-2*(y*y+z*z), 2*(x*y-z*w), 2*(x*z+y*w)], [2*(x*y+z*w), 1-2*(x*x+z*z), 2*(y*z-x*w)],
+                          [2*(x*z-y*w), 2*(y*z+x*w), 1-2*(x*x+y*y)]]) @ np.diag(node.get('scale', (1, 1, 1)))
+    m[:3, 3] = node.get('translation', (0, 0, 0))
+    return m
+
+
+def installed_template(glb, baseline):
+    """The installed GLB's sample_transition template: rest = its glTF joint nodes under inf_rig
+    (parents first), the two legs, and contact binds whose markers sit at the bind boot's sole
+    patch (sole: the patch centroid; toe: the centroid of its toe-weighted part), axes level."""
+    import pivot  # noqa: E402 (sibling module)
+    data, _ = pivot._read(glb)
+    nodes = data['nodes']
+    joints = {data['nodes'][i]['name'] for i in data['skins'][0]['joints']}
+    bones = []
+
+    def visit(i, parent):
+        n = nodes[i]
+        if n['name'] == 'inf_rig' or n['name'] in joints:
+            bones.append({'name': n['name'], 'parent': parent, 'local': _trs(n)})
+            for c in n.get('children', []):
+                visit(c, n['name'])
+    visit(next(i for i, n in enumerate(nodes) if n.get('name') == 'inf_rig'), '')
+    rest = {}
+    for b in bones:
+        rest[b['name']] = (rest[b['parent']] if b['parent'] else np.eye(4)) @ b['local']
+    model = Model(baseline, [], [])
+    p = model.points(rest)
+    legs, contacts = [], {}
+    for side in ('.l', '.r'):
+        leg = {'hip': 'thigh_twist' + side, 'knee': 'leg_stretch' + side, 'ankle': 'foot' + side,
+               'toe': 'toes_01' + side, 'min_knee_rad': 0.0, 'max_knee_rad': math.pi,
+               'followers': {'thigh_stretch' + side: 'hip', 'leg_twist' + side: 'knee'}}
+        h, k, a = (rest[leg[n]][:3, 3] for n in ('hip', 'knee', 'ankle'))
+        axis = (a - h) / np.linalg.norm(a - h)
+        bend = (k - h) - axis * np.dot(k - h, axis)
+        leg['pole'] = bend / np.linalg.norm(bend)  # the rest knee's bend (native mode reads only its validity)
+        own = model.owned(leg)
+        patch = own & (model.v[:, 1] <= model.v[own, 1].min() + SOLE_PATCH_M)
+        toe = patch & (model.j[np.arange(len(model.j)), model.w.argmax(axis=1)] == model.names.index(leg['toe']))
+        if toe.sum() < 3:
+            toe = patch & (p[:, 2] <= np.quantile(p[patch, 2], .25))  # the patch's front quarter (-Z forward)
+        binds = {}
+        for key, bone, sel in (('sole_bind', leg['ankle'], patch), ('toe_bind', leg['toe'], toe)):
+            marker = np.eye(4)
+            marker[:3, 3] = p[sel].mean(axis=0)
+            binds[key] = np.linalg.inv(rest[bone]) @ marker
+        legs.append(leg)
+        contacts[leg['hip']] = binds
+    return {'rest': {'bones': bones, 'legs': legs}, 'contacts': {'legs': contacts},
+            'transition': {'entry_pose': {'inf_rig': bones[0]['local']}},
+            'source_glb_sha256': hashlib.sha256(Path(glb).read_bytes()).hexdigest()}
 
 
 def proper(m):
@@ -313,6 +394,7 @@ def canonical_ops():
 
 
 def build(model, witness=False, params=COUPLED):
+    """The canonical pair; witness=True rebuilds the template cases (the frozen knight's five)."""
     if witness:
         return [build_case(model, t, t['op'], t['phases'], params['neutral'], params['last_step'],
                            params['foot'], params['plane']) for t in model.templates]
@@ -320,15 +402,23 @@ def build(model, witness=False, params=COUPLED):
                        params['foot'], params['plane']) for op in canonical_ops()]
 
 
+def installed_model(baseline, natives=(), glb=GLB):
+    """The installed infantry: BASELINE's skin and mesh, the GLB's template, and the captures
+    (BASELINE's own samples first)."""
+    return Model(baseline, [installed_template(glb, baseline)], [baseline, *natives])
+
+
 def requested_phases(model):
     """Every native phase a coupled build reads that the frozen capture lacks."""
     need = set()
+    if float(CANONICAL_PHASE).hex() not in model.samples:
+        return [CANONICAL_PHASE]  # capture the entry first: which foot steps first depends on it
     for op in canonical_ops():
         ge = model.native(op['march_entry_phase'])
         legs = model.templates[0]['rest']['legs']
         _, _, ev = events(model.minima(ge, legs), model.minima(ge, legs), LAST_STEP)
         need.update(body_phase(op['march_entry_phase'], op['march_exit_phase'], u) for u in knots(ev))
-    need.update([NEUTRAL_PHASE, *FOOT_PHASES])
+    need.update([CANONICAL_PHASE, NEUTRAL_PHASE, *FOOT_PHASES])
     return sorted(p for p in need if float(p).hex() not in model.samples)
 
 
@@ -438,34 +528,60 @@ def self_check(model):
     assert not flagged(np.array([.03]), np.array([.001]))[0] and flagged(np.array([.040001]), np.array([.01]))[0]
 
 
+def pack(out, sources):
+    """The lossless fixture container test_pivot_mapping.py reads: name -> sha256, bytes, zlib+base64."""
+    import base64
+    import zlib
+    data = {}
+    for name, path in sources.items():
+        raw = Path(path).read_bytes()
+        data[name] = {'sha256': hashlib.sha256(raw).hexdigest(), 'bytes': len(raw),
+                      'zlib_base64': base64.b64encode(zlib.compress(raw, 9)).decode()}
+    Path(out).write_text(json.dumps({'format': 'infantry-pivot-mapping-v2', 'sources': data}, indent=1) + '\n')
+    return {k: v['sha256'] for k, v in data.items()}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--self-check', action='store_true')
     sub = parser.add_subparsers(dest='command')
-    sub.add_parser('request').add_argument('out', type=Path)
-    b = sub.add_parser('build')
-    b.add_argument('native', type=Path)
-    b.add_argument('out', type=Path)
-    b.add_argument('--witness', action='store_true')
-    pl = sub.add_parser('plan')
-    pl.add_argument('native', type=Path)
-    pl.add_argument('out', type=Path)
+    r = sub.add_parser('request')
+    r.add_argument('baseline', type=Path)
+    r.add_argument('out', type=Path)
+    r.add_argument('natives', type=Path, nargs='*')
+    for name in ('build', 'plan'):
+        b = sub.add_parser(name)
+        b.add_argument('baseline', type=Path)
+        b.add_argument('native', type=Path)
+        b.add_argument('out', type=Path)
     a = sub.add_parser('audit')
+    a.add_argument('baseline', type=Path)
     a.add_argument('native', type=Path)
     a.add_argument('inputs', type=Path)
     a.add_argument('results', type=Path)
+    f = sub.add_parser('fixture')
+    f.add_argument('out', type=Path)
+    f.add_argument('sources', nargs='+')
     args = parser.parse_args()
-    captures = [json.loads(args.native.read_text())] if getattr(args, 'native', None) else []
-    model = Model(load_frozen(), captures)
     if args.self_check:
-        self_check(model)
+        self_check(frozen_model())
         print('PIVOT_MAPPING_SELF_CHECK_MATCH')
-    elif args.command == 'request':
+        return
+    if args.command == 'fixture':
+        print(json.dumps(pack(args.out, dict(s.split('=', 1) for s in args.sources)), indent=1))
+        return
+    if args.command is None:
+        parser.print_help()
+        return
+    natives = [json.loads(n.read_text()) for n in ([args.native] if getattr(args, 'native', None) else
+                                                   getattr(args, 'natives', []))]
+    model = installed_model(json.loads(args.baseline.read_text()), natives)
+    if args.command == 'request':
         phases = requested_phases(model)
         args.out.write_text(json.dumps({'clip': 'MARCH', 'samples': [{'id': float(p).hex(), 'phase': p} for p in phases]}))
         print('phases', len(phases))
     elif args.command == 'build':
-        cases = build(model, witness=args.witness)
+        cases = build(model)
         text = json.dumps({'cases': encode(cases)})
         args.out.write_text(text)
         print('cases', len(cases), 'frames', sum(len(c['phases']) for c in cases),
@@ -483,8 +599,6 @@ def main():
         report = audit(model, cases, json.loads(args.results.read_text()))
         print(json.dumps(report, indent=1))
         sys.exit(0 if all(r['pass'] for r in report) else 1)
-    else:
-        parser.print_help()
 
 
 if __name__ == '__main__':
