@@ -56,7 +56,7 @@ extends SceneTree
 ##
 ## Polygons are filled with an even-odd scanline rasterizer. Deterministic:
 ## same inputs => byte-identical outputs. Hand-edits to the generated CSVs
-## are overwritten; lasting changes belong in Azgaar.
+## are overwritten; lasting changes belong in Azgaar (the game's own arms: data/army/game_arms.csv).
 ##
 ## Usage:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
@@ -565,13 +565,25 @@ func _run() -> int:
 	for g in _active(pack.get("goods", [])):
 		good_code[int(g["i"])] = _take_slug(good_slugs, String(g["name"]))
 	var options: Dictionary = (world["settings"] as Dictionary).get("options", {})
-	var unit_defs: Array = options.get("military", [])
+	var unit_defs: Array = (options.get("military", []) as Array).duplicate(true)
 	var unit_names: Array[String] = []
 	var unit_power: Dictionary = {}
 	for u in unit_defs:
 		if u is Dictionary:
 			unit_names.append(String(u["name"]))
 			unit_power[String(u["name"])] = float(u.get("power", 1))
+	# The game's own arms (data/army/game_arms.csv), which the export does not define: appended
+	# after the export's, with no men in any regiment, so a re-import keeps them.
+	for row: Dictionary in DataRepository.parse_csv("res://data/army/game_arms.csv",
+			["unit_code", "label", "type", "rural_rate", "urban_rate", "crew", "power", "separate"]):
+		var code := String(row["unit_code"])
+		if code in unit_names:
+			continue
+		unit_defs.append({"name": code, "label": String(row["label"]), "type": String(row["type"]),
+			"rural": float(row["rural_rate"]), "urban": float(row["urban_rate"]), "crew": int(row["crew"]),
+			"power": float(row["power"]), "separate": String(row["separate"]) == "1"})
+		unit_names.append(code)
+		unit_power[code] = float(row["power"])
 
 	# --- political/kingdoms.csv -------------------------------------------
 	var out := _csv_line(["kingdom_code", "state_id", "label", "capital_burg",
@@ -793,7 +805,7 @@ func _run() -> int:
 	for u in unit_defs:
 		if not u is Dictionary:
 			continue
-		out += _csv_line([String(u["name"]), String(u["name"]).capitalize(),
+		out += _csv_line([String(u["name"]), String(u.get("label", String(u["name"]).capitalize())),
 			String(u.get("type", "")), _num2(float(u.get("rural", 0))),
 			_num2(float(u.get("urban", 0))), str(int(u.get("crew", 1))),
 			_num2(float(u.get("power", 1))), "1" if u.get("separate") else "0"])
