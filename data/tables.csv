@@ -122,6 +122,7 @@ battle,prisoner_terms
 battle,parley_clauses
 battle,cluster_formations
 battle,cluster_slots
+battle,cluster_arms
 battle,formations
 battle,orders
 battle,behaviors

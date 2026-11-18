@@ -2,24 +2,21 @@ class_name ClusterLayout
 extends RefCounted
 ## Pure planning queries over approved projections; no state, movement or combat effects.
 
-const ARMS: Array[String] = ["infantry", "archers", "cavalry", "artillery"]
-const ARM_WORDS: Dictionary = {"infantry": "步兵", "archers": "弓兵", "cavalry": "骑兵", "artillery": "炮兵", "units": "作战单位"}
-
 static func options(repo: DataRepository, units: Array) -> Array:
-	var members: Array = _members(units)
+	var members: Array = _members(repo, units)
 	var counts: Dictionary = {}
 	for unit: Dictionary in members:
-		var arm: String = unit["arm"]
+		var arm: String = unit["slot_arm"]
 		counts[arm] = int(counts.get(arm, 0)) + 1
 	var out: Array = []
 	for code: String in repo.cluster_formations:
 		var row: Dictionary = repo.cluster_formations[code]
-		var missing: Dictionary = _missing(String(row["recipe"]), counts)
+		var missing: Dictionary = _missing(repo, String(row["recipe"]), counts)
 		if members.size() < 3:
 			missing["units"] = 3 - members.size()
 		var words: Array[String] = []
 		for arm: String in missing:
-			words.append("缺%d支%s" % [int(missing[arm]), String(ARM_WORDS.get(arm, arm))])
+			words.append("缺%d支%s" % [int(missing[arm]), String((repo.cluster_arms.get(arm, {}) as Dictionary).get("word", arm))])
 		out.append({"formation": code, "label": row["label"], "behavior": row["behavior"],
 			"eligible": missing.is_empty(), "missing": missing, "reason": "；".join(words)})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -44,7 +41,7 @@ static func layout(repo: DataRepository, formation: String, units: Array,
 	if not strong_side in ["", "left", "right"]:
 		out["reason"] = "未知强翼方向"
 		return out
-	var members: Array = _members(units)
+	var members: Array = _members(repo, units)
 	var width: int = 0
 	var depth: int = 0
 	for unit: Dictionary in members:
@@ -77,7 +74,7 @@ static func layout(repo: DataRepository, formation: String, units: Array,
 		var code: String = unit["unit"]
 		if out["blocked"].has(code):
 			continue
-		var arm: String = unit["arm"]
+		var arm: String = unit["slot_arm"]
 		var rows: Array = templates.get(arm, [])
 		if rows.is_empty():
 			out["blocked"][code] = "缺少兵种阵位"
@@ -100,7 +97,8 @@ static func layout(repo: DataRepository, formation: String, units: Array,
 		out["reason"] = "部分单位没有有效规划阵位"
 	return out
 
-static func _members(units: Array) -> Array:
+## Each counted unit carries `slot_arm`, the arm it fills (data/battle/cluster_arms.csv `counts_as`).
+static func _members(repo: DataRepository, units: Array) -> Array:
 	var by_code: Dictionary = {}
 	var conflicts: Dictionary = {}
 	for value: Variant in units:
@@ -108,9 +106,11 @@ static func _members(units: Array) -> Array:
 			continue
 		var row: Dictionary = value
 		var code: String = String(row.get("unit", ""))
-		if code.is_empty() or not String(row.get("arm", "")) in ARMS \
+		var slot_arm := String((repo.cluster_arms.get(String(row.get("arm", "")), {}) as Dictionary).get("counts_as", ""))
+		if code.is_empty() or slot_arm.is_empty() \
 				or not bool(row.get("controllable", false)) or int(row.get("fit", 0)) <= 0:
 			continue
+		row = row.merged({"slot_arm": slot_arm}, true)
 		if by_code.has(code) and by_code[code] != row:
 			conflicts[code] = true
 		by_code[code] = row
@@ -122,7 +122,7 @@ static func _members(units: Array) -> Array:
 			out.append(by_code[code])
 	return out
 
-static func _missing(recipe: String, counts: Dictionary) -> Dictionary:
+static func _missing(repo: DataRepository, recipe: String, counts: Dictionary) -> Dictionary:
 	var best: Dictionary = {}
 	var best_count: int = -1
 	for alternative: String in recipe.split("|"):
@@ -130,7 +130,7 @@ static func _missing(recipe: String, counts: Dictionary) -> Dictionary:
 		var total: int = 0
 		for term: String in alternative.split("+"):
 			var pair: PackedStringArray = term.split(":")
-			if pair.size() != 2 or not pair[0] in ARMS or not pair[1].is_valid_int() or int(pair[1]) <= 0:
+			if pair.size() != 2 or String((repo.cluster_arms.get(pair[0], {}) as Dictionary).get("counts_as", "")) != pair[0] or not pair[1].is_valid_int() or int(pair[1]) <= 0:
 				return {"recipe": 1}
 			var deficit: int = maxi(0, int(pair[1]) - int(counts.get(pair[0], 0)))
 			if deficit > 0:

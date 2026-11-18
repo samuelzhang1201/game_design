@@ -152,6 +152,8 @@ var prisoner_terms: Dictionary = {}
 var battle_formations: Dictionary = {}
 var cluster_formations: Dictionary = {}
 var cluster_slots: Array[Dictionary] = []
+## arm -> {counts_as, word} (data/battle/cluster_arms.csv): the recipe/slot arm a unit fills.
+var cluster_arms: Dictionary = {}
 var battle_orders: Dictionary = {}
 var battle_behaviors: Dictionary = {}
 var battle_events: Dictionary = {}
@@ -1048,6 +1050,9 @@ func _load(dir: String) -> bool:
 				"arm": String(r["arm"]), "role": String(r["role"]),
 				"lateral": int(r["lateral"]), "depth": int(r["depth"]),
 				"priority": int(r["priority"])})):
+		return false
+	if not _load_if_present(table_path(dir, "cluster_arms"), ["arm", "counts_as", "word"],
+			func(r): cluster_arms[String(r["arm"])] = {"counts_as": String(r["counts_as"]), "word": String(r["word"])}):
 		return false
 	if not _load_if_present(table_path(dir, "formations"),
 			["formation", "label", "frontage_m", "narrow_terrains", "narrow_width_m", "required_arms",
