@@ -118,7 +118,10 @@ from `certify_locomotion.py`. Goes through `visual-review`.
    `army_system.gd` (a `BattleStrength` factor with a reason).
 3. **Storming a town**: `army_town_defence.csv`'s `attack` column is read today by nothing
    (`terrain_factor` applies works to the defender only). A new factor gives the attacker of a
-   held town its arm's `attack` value for the works there.
+   held town its arm's `attack` value for the works there. **Dropped** (owner 2026-11-18:
+   "第三步不做了"): on main only enemy hosts besiege and storm towns and the player has no siege or
+   assault order, so the bonus could never reach the player's axemen. The `attack` column waits for
+   a player siege feature. The feature closes with step 2; steps 4–7 below are not scheduled.
 4. **3D axe soldier** on the map with its own clips.
 5. **First blow** rule and its table, test and report reason.
 6. **Formation 斧前剑后**.
@@ -136,3 +139,21 @@ war room's wooden piece may borrow the infantry's until step 2).
 Note for step 1: `certify_locomotion.py` hashes `army_art.csv`, `unit_footprints.csv` and
 `data/army/balance.csv`, so adding the `axemen` rows re-issues all five existing locomotion
 certificates in the same PR.
+
+## Step 2 detail (implementer's calls, 2026-11-18)
+
+`BattleMatchup` (`scripts/engine/battle_matchup.gd`) adds one battle factor, source `matchup:arms`,
+category `formation_terrain`, wherever a unit's strength is taken against named foes
+(`BattleSystem.unit_strength` and `BodyBattleRounds._factors`, both already handed the opposing
+codes for the height factor). For each of the unit's arms `a` (weight: its people, count x crew, as
+`BattleCharge.mounted_share`), the foe value is the people-weighted mean over the opposing units'
+arms `f` of `army_matchups[a][f]` — the `attack` column when the unit attacks, `defense` when it
+defends; a pair with no row reads that column's mean. A foe's people are its count x crew x its fit
+share (`ArmySystem.fit_permille`), so a broken unit weighs less than a fresh one. Divided by the
+column's mean (not the stance-blind `_arm_base`, which would let stance alone move an arm by up to
+13%) it is the arm's ratio; the unit's factor is the people-weighted mean of its arms' ratios. A
+foe of every arm alike gives 1000 in either stance, so the existing power scale holds and only the
+situational edge is new. Battles without named foes (none today) get no factor.
+
+The existing arms' "X vs axemen" rows land with it (infantry 1000/800, archers 1200/800, cavalry
+1300/1000, artillery 1100/700); they enter those arms' mean base too (infantry 1050 -> 1020).

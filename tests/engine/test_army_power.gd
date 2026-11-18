@@ -54,8 +54,9 @@ func test_power_follows_training_morale_and_wounds() -> void:
 	s.regiments[code]["training"] = 90
 	var drilled := ArmySystem.power(repo, s, code, "defend")
 	assert_gt(drilled, base)
-	# training factor 500+10*10=600 -> 500+10*90=1400
-	assert_almost_eq(float(drilled) / float(base), 1400.0 / 600.0, 0.01)
+	# training factor 500+10*10=600 -> 500+10*90=1400; each power is a whole ceiling
+	# (~128 -> ~297 here), so one point either way moves the ratio by up to ~0.02
+	assert_almost_eq(float(drilled) / float(base), 1400.0 / 600.0, 0.02)
 	assert_false(Personnel.move(repo, s, code, "fit", "wounded", ArmySystem.fit_count(repo, s, code)).has("error"))
 	assert_eq(ArmySystem.power(repo, s, code, "defend"), 0, "a regiment of wounded has no power")
 
@@ -250,18 +251,19 @@ func test_the_dead_never_recover() -> void:
 ## power_of_arms (spec 2026-10-07-war-room-annotations-and-planning-pieces
 ## §1.2): a host of given arms with no state — no wounds, the float at 1000.
 ## By hand from the CSVs: archers' base is the mean of (1200+800)/2,
-## (1000+1000)/2, (800+700)/2, (1000+900)/2 = 925; training 10 -> 600,
+## (1000+1000)/2, (800+700)/2, (1000+900)/2, (1200+800)/2 = 940; training 10 -> 600,
 ## morale 75 -> 875; hills archers defend 1150; a citadel archers 1350.
 func test_power_of_arms_is_worked_by_hand() -> void:
 	var arms := {"archers": 2000}
-	# 2000 * 1000 milli-heads * 925 * 600 * 875 / 1000^3 = 971,250
-	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "defend", "plains", ""), 972)
-	# 971,250 * 1150 / 1000 = 1,116,937 -> ceil to 1117
-	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "defend", "hills", ""), 1117)
-	# and behind a citadel's works: 1,116,937 * 1350 / 1000 = 1,507,864 -> 1508
-	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "defend", "hills", "citadel"), 1508)
-	# works never help the attacker: hills archers attack 1050
-	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "attack", "hills", "citadel"), 1020)
+	# 2000 * 1000 milli-heads * 940 * 600 * 875 / 1000^3 = 987,000
+	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "defend", "plains", ""), 987)
+	# 987,000 * 1150 / 1000 = 1,135,050 -> ceil to 1136
+	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "defend", "hills", ""), 1136)
+	# and behind a citadel's works: the terrain factor is 1150 * 1350 / 1000 = 1552,
+	# 987,000 * 1552 / 1000 = 1,531,824 -> 1532
+	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "defend", "hills", "citadel"), 1532)
+	# works never help the attacker: hills archers attack 1050: 1,036,350 -> 1037
+	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "attack", "hills", "citadel"), 1037)
 
 
 func test_power_on_is_power_of_arms_with_the_regiments_own_state() -> void:

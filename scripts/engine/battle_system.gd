@@ -99,6 +99,7 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 		var delta := ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, code, state), state) - enemy_m
 		factors.append({"source": "ground:height", "category": "formation_terrain",
 			"permille": ArmySystem.height_factor(repo, delta), "reason": "Height against the opposing line"})
+		factors.append(BattleMatchup.factor(repo, state, code, enemy_codes, attacking))
 	if not attacking:
 		var stance := String(stance_fn.call(code)) if stance_fn.is_valid() else stance_of(state, code)
 		factors.append({"source": "stance:defence", "category": "formation_terrain",

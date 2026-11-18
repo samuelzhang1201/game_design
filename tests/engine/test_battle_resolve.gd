@@ -232,6 +232,8 @@ func test_side_power_scales_by_height_against_the_mean_of_the_enemy() -> void:
 	repo.army_town_defence.clear()
 	var factor := ArmySystem.height_factor(repo, int(pair[2]))
 	assert_ne(factor, 1000)
+	# The arms matchup shares the formation_terrain category, so the two add (BattleStrength.combine).
+	factor += int(BattleMatchup.factor(repo, s, a, [b], true)["permille"]) - 1000
 	@warning_ignore("integer_division")
 	var want := int(BattleStrength.unit(repo, s, a, true)["power"]) * factor / 1000
 	assert_eq(BattleSystem.side_power(repo, s, [a], steady, true, [b]), want)
