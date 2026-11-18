@@ -118,7 +118,10 @@ from `certify_locomotion.py`. Goes through `visual-review`.
    `army_system.gd` (a `BattleStrength` factor with a reason).
 3. **Storming a town**: `army_town_defence.csv`'s `attack` column is read today by nothing
    (`terrain_factor` applies works to the defender only). A new factor gives the attacker of a
-   held town its arm's `attack` value for the works there.
+   held town its arm's `attack` value for the works there. **Dropped** (owner 2026-11-18:
+   "第三步不做了"): on main only enemy hosts besiege and storm towns and the player has no siege or
+   assault order, so the bonus could never reach the player's axemen. The `attack` column waits for
+   a player siege feature. The feature closes with step 2; steps 4–7 below are not scheduled.
 4. **3D axe soldier** on the map with its own clips.
 5. **First blow** rule and its table, test and report reason.
 6. **Formation 斧前剑后**.
