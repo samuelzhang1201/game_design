@@ -461,6 +461,8 @@ static func _run(repo: DataRepository, source: GameState, request: Dictionary) -
 	var boundary := BodyBattleMotion._boundary(source)
 	var planned := plan_candidate(repo, source, request, boundary)
 	if planned.status != "complete": return planned
+	# ACT-DRIVER: every lifecycle edge the day drives is proved a zero-delta ownership transfer.
+	if request.kind in BodyLifecycle.EDGES: return BodyLifecycle.commit_candidate(repo, source, planned.plan, boundary)
 	return commit_candidate(repo, source, planned.plan, boundary)
 
 ## Exactly one control transition of the candidate day. Never ordinary dispatch or damage.
