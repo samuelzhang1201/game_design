@@ -97,16 +97,24 @@ manual proof/day deletion is not closure. This API activates no production path.
 
 `BodyLoad` (its own file; `unit_bodies.gd` is pinned by the royal carrier proof) is the
 classification and initialization the ordinary load and new-game writers will call at
-ACT-CUTOVER; publishing its candidate is the driver's. `classify(repo, source)` is pure and
-returns `{kind, reason, units}`: `current` (body version 1, every row valid and clear),
-`legacy` (a lawful save from before bodies: saved rows valid and clear of each other; `units`
-are the land units with no pose), `deferred` (a frozen day/round, or a staged recruit's
-`body_reconciliation`, which only its own recruit transaction may finish) or `refused`
-(overlap, corrupt rows or controls, an unsupported save version — never repaired).
-`load_candidate` returns `{status, reason, error, candidate, kind}`: a current save is
-returned as saved; a legacy one keeps every saved row (point, path, slot, count) and places
-only the missing poses through `legacy_missing` at the next placement sequence
-(`placement:load:<sequence>`), so a full JSON save/load round trip comes back `current` and
-exactly equal. `initialize_campaign` places a fresh campaign's bodies (`initialize`,
-`placement:new_campaign`, sequence 0) and refuses a state that already has any body control.
+ACT-CUTOVER; publishing its candidate is the driver's. `classify(repo, source)` is pure,
+returns `{kind, reason, units}` and runs the same proof `load_candidate` does, so the two
+never disagree:
+- `current`: body version 1, returned exactly as saved;
+- `legacy`: a lawful save from before bodies. Saved rows are kept (point, path, slot) under the
+  foundation's legacy regroup, which merges noncanonical counts into canonical rows and retires
+  the emptied slots. The new campaign's `initialize` rule (`placement:load`, sequence 0) seeds
+  every land roster unit without an entry at its anchor and places only missing poses; `units`
+  are the units that received rows;
+- `deferred`: a frozen day/round, a v2 completion proof waiting for its consumer, or a staged
+  recruit's `body_reconciliation`. It is not judged yet (a frozen world's rows are not swept);
+  its own consumer finishes it and the save is classified again at the next safe boundary;
+- `refused`: overlap, corrupt rows or controls, a kept row on forbidden ground or failing
+  personnel provenance, a placement control without current bodies, an unsupported save
+  version, or no room for a missing pose (`space_unavailable`). Never repaired.
+
+`load_candidate` returns `{status, reason, error, candidate, kind}`, a candidate only for
+`current`/`legacy`. A full JSON save/load round trip of a loaded legacy world comes back
+`current` and exactly equal. `initialize_campaign` places a fresh campaign's bodies
+(`initialize`, `placement:new_campaign`, sequence 0) and refuses a state with a body control.
 Nothing changes the source, draws RNG or bumps the save constants (7/6).

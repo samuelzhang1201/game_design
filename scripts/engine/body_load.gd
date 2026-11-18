@@ -5,22 +5,24 @@ extends RefCounted
 ## driver's. Its own file: `unit_bodies.gd` is a SHA-256-pinned premise of the royal carrier proof.
 
 ## CURRENT: complete current bodies, kept exactly. LEGACY: a lawful save from before bodies —
-## every saved row valid and clear of the others; its rows are kept and only its missing poses
-## are placed. DEFERRED: a frozen day/round or a staged recruit keeps its bodies until its own
-## boundary. REFUSED: overlapping, corrupt or an unsupported version; nothing loads.
+## every saved row valid, on legal ground and clear of the others; its rows are kept (under the
+## foundation's legacy regroup) and only its missing poses are placed. DEFERRED: a frozen
+## day/round, a v2 completion proof or a staged recruit — not judged yet; its own consumer
+## finishes it and the save is classified again at the next safe boundary. REFUSED: overlapping,
+## corrupt, off legal ground, an unsupported version or no room for a missing pose; nothing loads.
 const CURRENT := "current"
 const LEGACY := "legacy"
 const DEFERRED := "deferred"
 const REFUSED := "refused"
 
-## Pure: `{kind, reason, units}`, `units` the land units whose poses are missing (sorted).
-## The source is never touched.
+## Pure: `{kind, reason, units}`, `units` the land units a LEGACY load gives bodies (sorted).
+## It runs the same proof `load_candidate` does, so the two always agree.
 static func classify(repo: DataRepository, source: GameState) -> Dictionary:
 	return _classified(repo, source).kind
 
 ## A new campaign's bodies: every land unit placed once at its saved anchor through the
 ## proven placement (homes, then the finite camp lattice, against terrain and every other
-## body). Returns the placement's five-field result; a source that already has bodies errors.
+## body). Returns the placement's five-field result; a state with a body control errors.
 static func initialize_campaign(repo: DataRepository, fresh: GameState) -> Dictionary:
 	if repo == null or fresh == null: return ArmyGround._placement_result("error", "Initialization requires data and a campaign")
 	for key: String in ["body_version", "body_placement"]:
@@ -28,43 +30,55 @@ static func initialize_campaign(repo: DataRepository, fresh: GameState) -> Dicti
 	return ArmySplit.initialize_bodies_candidate(repo, fresh, "placement:new_campaign", "0")
 
 ## A loaded save's body world, detached: `{status, reason, error, candidate, kind}`. CURRENT
-## is the save itself; LEGACY keeps every saved row (point, path, slot, count) and places only
-## the missing poses (`legacy_missing`, the next placement sequence); DEFERRED and REFUSED
-## return no candidate. A placement that finds no room defers with its reason.
+## is the save itself; LEGACY is the converted save with its missing entries seeded and missing
+## poses placed (`initialize`, `placement:load`, sequence 0); DEFERRED and REFUSED return none.
+## The source is never touched.
 static func load_candidate(repo: DataRepository, source: GameState) -> Dictionary:
 	var classified := _classified(repo, source)
 	var kind: Dictionary = classified.kind
-	match kind.kind:
-		REFUSED: return _result("error", kind.reason, REFUSED)
-		DEFERRED: return _result("deferred", kind.reason, DEFERRED)
-		CURRENT: return _result("complete", kind.reason, CURRENT, UnitBodies._copy(source))
-	if kind.units.is_empty(): return _result("complete", kind.reason, LEGACY, classified.candidate)
-	var saved: Dictionary = source.military_migration.get("body_placement", {})
-	var sequence := "0" if saved.is_empty() else str(int(saved.sequence) + 1)
-	var placed := ArmyGround.body_placement_candidate(repo, source, {"version": 1, "operation_id": "placement:load:" + sequence,
-		"sequence": sequence, "operation": "legacy_missing", "unit": "", "host": "", "previous_fit": null},
-		{"version": 1, "kind": "safe", "abs_day": str(source.absolute_day())})
-	if placed.status != "complete": return _result(placed.status, placed.reason, REFUSED if placed.status == "error" else DEFERRED)
-	return _result("complete", "Legacy rows kept; missing poses placed", LEGACY, placed.candidate)
+	var status: String = {CURRENT: "complete", LEGACY: "complete", DEFERRED: "deferred", REFUSED: "error"}[kind.kind]
+	return {"status": status, "reason": kind.reason, "error": kind.reason if status == "error" else "",
+		"candidate": classified.get("candidate"), "kind": kind.kind}
 
 static func _classified(repo: DataRepository, source: GameState) -> Dictionary:
-	if repo == null or source == null: return {"kind": _kind(REFUSED, "Load classification requires data and a save")}
-	if source.military_migration.has("body_placement") and not UnitBodies._placement_control_ok(source.military_migration.body_placement):
-		return {"kind": _kind(REFUSED, "Invalid saved placement control")}
+	if repo == null or source == null: return _kind(REFUSED, "Load classification requires data and a save")
+	var migration: Dictionary = source.military_migration
+	if migration.has("body_placement") and not UnitBodies._placement_control_ok(migration.body_placement):
+		return _kind(REFUSED, "Invalid saved placement control")
+	if migration.get("body_placement", {}).get("version") == "2" and not source.day_resolution.is_empty():
+		return _kind(DEFERRED, "frozen_transaction: completion proof requires its placement consumer")
 	var migrated := UnitBodies.migrate_candidate(repo, source)
 	match migrated.status:
-		"error": return {"kind": _kind(REFUSED, migrated.reason)}
-		"deferred": return {"kind": _kind(DEFERRED, migrated.reason)}
-	var units: Array[String] = []
+		"error": return _kind(REFUSED, migrated.reason)
+		"deferred": return _kind(DEFERRED, migrated.reason)
 	for request: Dictionary in migrated.placement_requests:
 		if request.reason != "legacy_missing_pose":
-			return {"kind": _kind(DEFERRED, "pending_personnel_boundary: explicit recruit transaction required")}
-		units.append(request.unit)
-	if source.military_migration.has("body_version"): return {"kind": _kind(CURRENT, "Current bodies kept exactly")}
-	return {"kind": _kind(LEGACY, "Lawful legacy save", units), "candidate": migrated.candidate}
+			return _kind(DEFERRED, "pending_personnel_boundary: explicit recruit transaction required")
+	var current := migration.has("body_version")
+	if not current and migration.has("body_placement"): return _kind(REFUSED, "Placement control without current bodies")
+	var boundary := {"version": 1, "kind": "safe", "abs_day": str(source.absolute_day())}
+	var candidate := UnitBodies._copy(source)
+	var units: Array[String] = []
+	if not current:
+		# The new campaign's own rule: a land roster unit with no entry is seeded at its pack
+		# anchor (`ArmySystem.starting_state`), and every missing pose is placed; saved rows stay.
+		var placed := ArmyGround.body_placement_candidate(repo, source, {"version": 1, "operation_id": "placement:load",
+			"sequence": "0", "operation": "initialize", "unit": "", "host": "", "previous_fit": null}, boundary)
+		if placed.status != "complete": return _kind(REFUSED, placed.reason)
+		candidate = placed.candidate
+		var placed_units := {}
+		for row: Dictionary in placed.plan.placements: placed_units[row.unit] = true
+		units.assign(placed_units.keys())
+		units.sort()
+	# Every kept row, current or legacy, faces the placement's own provenance and terrain proof.
+	var checked := UnitBodies.validate_placement_candidate(repo, candidate, boundary)
+	if checked.status != "complete": return _kind(REFUSED, checked.reason)
+	var grid := MarchPath.of_pack(repo)
+	if not ArmyGround._placement_grid_ok(grid): return _kind(REFUSED, "Load requires a valid land terrain grid")
+	var terrain := ArmyGround._placement_terrain_error(repo, candidate, grid)
+	if not terrain.is_empty(): return _kind(REFUSED, terrain)
+	if current: return {"kind": {"kind": CURRENT, "reason": "Current bodies kept exactly", "units": units}, "candidate": candidate}
+	return {"kind": {"kind": LEGACY, "reason": "Lawful legacy save", "units": units}, "candidate": candidate}
 
-static func _kind(kind: String, reason: String, units: Array[String] = []) -> Dictionary:
-	return {"kind": kind, "reason": reason, "units": units}
-
-static func _result(status: String, reason: String, kind: String, candidate: GameState = null) -> Dictionary:
-	return {"status": status, "reason": reason, "error": reason if status == "error" else "", "candidate": candidate, "kind": kind}
+static func _kind(kind: String, reason: String) -> Dictionary:
+	return {"kind": {"kind": kind, "reason": reason, "units": [] as Array[String]}}

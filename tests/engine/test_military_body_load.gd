@@ -66,11 +66,17 @@ func _legacy() -> Dictionary:
 	repo.balance.army_march_grid_px = 1
 	var slopes := PackedByteArray()
 	slopes.resize(200 * 200)
-	MarchPath.use(repo, MarchPath.build(repo, 200, 200, 1000, slopes))
-	return {"repo": repo, "state": _load(state), "a": a, "b": b}
+	var grid := MarchPath.build(repo, 200, 200, 1000, slopes)
+	MarchPath.use(repo, grid)
+	return {"repo": repo, "state": _load(state), "a": a, "b": b, "grid": grid}
 
-## Hand-computed: 901 -> nine rows of 100 and a one-man tail, at A's anchor plus each measured
-## home (facing 0: no rotation), slots 0..9; B keeps its two saved points and slots, counts 100/100.
+## Hand-computed: 901 -> nine rows of 100 and a one-man tail at A's anchor plus each measured
+## home, facing 0 (no rotation). Infantry is 5 files x 2 ranks at pitch 1,944 m
+## (`unit_footprints.csv`): x = (2*file - 4) * 972, y = (2*rank - 1) * 972. Slots 0..9.
+## B keeps its two saved points and slots, counts 100/100.
+const A_POINTS := [[46112, 49028], [48056, 49028], [50000, 49028], [51944, 49028], [53888, 49028],
+	[46112, 50972], [48056, 50972], [50000, 50972], [51944, 50972], [53888, 50972]]
+
 func test_lawful_legacy_save_keeps_rows_and_places_missing_poses() -> void:
 	var f := _legacy()
 	var file := _file(f.state)
@@ -82,13 +88,12 @@ func test_lawful_legacy_save_keeps_rows_and_places_missing_poses() -> void:
 	assert_eq(_file(f.state), file, "the loaded save is never touched")
 	if result.candidate == null: return
 	var loaded: GameState = result.candidate
-	var homes := UnitBodies.home_slots(f.repo, loaded, f.a)
 	var a_rows := UnitBodies.rows(f.repo, loaded, f.a)
 	assert_eq(a_rows.size(), 10)
 	for i: int in a_rows.size():
 		var row: Dictionary = a_rows[i]
 		assert_eq([int(row.slot), int(row.home_slot), int(row.count), int(row.facing_deg)], [i, i, 1 if i == 9 else 100, 0])
-		assert_eq([int(row.x_m), int(row.y_m)], [50000 + homes[i].x, 50000 + homes[i].y])
+		assert_eq([int(row.x_m), int(row.y_m)], A_POINTS[i])
 	assert_eq(int(loaded.regiments[f.a].group_next_slot), 10)
 	var b_rows := UnitBodies.rows(f.repo, loaded, f.b)
 	assert_eq(b_rows.size(), 2)
@@ -97,7 +102,7 @@ func test_lawful_legacy_save_keeps_rows_and_places_missing_poses() -> void:
 		assert_eq([int(row.slot), int(row.home_slot), int(row.count), int(row.x_m), int(row.y_m)],
 			[i, i, 100, B_POINTS[i][0], B_POINTS[i][1]], "the legacy row is kept where it was saved")
 		assert_eq(row.path_m, [B_POINTS[i]])
-	assert_eq(loaded.military_migration.body_placement.operation_id, "placement:load:0")
+	assert_eq(loaded.military_migration.body_placement.operation_id, "placement:load")
 	assert_eq(BodyMotion._hash(BodyLoad.load_candidate(f.repo, _load(f.state)).candidate.to_dict()), _file(loaded),
 		"the same save loads to the same world (determinism)")
 	assert_eq(loaded.rng.to_dict(), f.state.rng.to_dict(), "loading draws nothing")
@@ -113,8 +118,9 @@ func test_fresh_campaign_initializes_and_roundtrips() -> void:
 	var fresh := SuiteData.campaign(repo, 319)
 	var file := _file(fresh)
 	var land: Array[String] = []
-	for code: String in fresh.regiments.keys() + fresh.foes.keys():
-		if not UnitBodies._naval(fresh, code): land.append(code)
+	# Every land roster unit with men, entry or not: foreign units are seeded at their anchors.
+	for code: String in fresh.army_roster:
+		if not UnitBodies._naval(fresh, code) and MilitaryRoster.fit(fresh, code) > 0: land.append(code)
 	land.sort()
 	assert_eq(BodyLoad.classify(repo, fresh).units, land, "a fresh campaign has no bodies yet")
 	var result := BodyLoad.initialize_campaign(repo, fresh)
@@ -171,6 +177,46 @@ func test_corrupt_saves_are_refused() -> void:
 		_assert_refused(f.repo, _load_dict(raw), causes[mode])
 	assert_eq([GameState.MIN_SAVE_VERSION, GameState.SAVE_VERSION], [6, 7], "no save-version bump")
 
+## A legacy save with nothing missing only converts: rows of 50/50/100 regroup into the
+## canonical 100/100 — slot 0 keeps its point and takes 0's and 1's men, slot 2 keeps its own;
+## slot 1 retires and the next slot stays 3. The placement places nothing.
+func test_legacy_save_with_no_missing_pose_converts_by_regroup() -> void:
+	var f := _legacy()
+	var state := UnitBodies._copy(f.state)
+	for field: String in ["regiments", "army_roster", "military_rosters"]: state.get(field).erase(f.a)
+	var rows: Array = state.battles[0].groups[f.b]
+	rows[0].count = 50
+	rows[1].count = 50
+	rows.append({"slot": 2, "count": 100, "x_m": 84000, "y_m": 50000, "role": "front", "path_m": [[84000, 50000]]})
+	var loaded := _load(state)
+	assert_eq(BodyLoad.classify(f.repo, loaded), {"kind": BodyLoad.LEGACY, "reason": "Lawful legacy save", "units": []})
+	var result := BodyLoad.load_candidate(f.repo, loaded)
+	assert_eq(result.status, "complete", result.reason)
+	if result.candidate == null: return
+	var kept := UnitBodies.rows(f.repo, result.candidate, f.b).map(func(row: Dictionary) -> Array:
+		return [int(row.slot), int(row.home_slot), int(row.count), int(row.x_m), int(row.y_m)])
+	assert_eq(kept, [[0, 0, 100, 80000, 50000], [2, 1, 100, 84000, 50000]])
+	assert_eq(int(result.candidate.regiments[f.b].group_next_slot), 3)
+	assert_eq(result.candidate.military_migration.body_placement.operation_id, "placement:load")
+	assert_eq(int(result.candidate.military_migration.body_version), 1)
+
+## No room for a missing pose, a kept row on forbidden ground, or a placement control in a
+## save without current bodies: refused with the reason, never deferred or repaired.
+func test_no_room_bad_ground_and_stray_control_are_refused() -> void:
+	var f := _legacy()
+	f.grid.closed.fill(1)
+	_assert_refused(f.repo, f.state, "space_unavailable")
+	f.grid.closed.fill(0)
+	var current: GameState = BodyLoad.load_candidate(f.repo, f.state).candidate
+	if current == null: return
+	var row: Dictionary = UnitBodies.rows(f.repo, current, f.a)[0]
+	f.grid.water[int(row.y_m) / 1000 * 200 + int(row.x_m) / 1000] = 1
+	_assert_refused(f.repo, _load(current), f.a + " slot 0")
+	f.grid.water.fill(0)
+	var stray := UnitBodies._copy(f.state)
+	stray.military_migration.body_placement = current.military_migration.body_placement.duplicate()
+	_assert_refused(f.repo, _load(stray), "Placement control without current bodies")
+
 func test_frozen_and_pending_saves_defer() -> void:
 	var f := _legacy()
 	var frozen := UnitBodies._copy(f.state)
@@ -190,6 +236,11 @@ func test_frozen_and_pending_saves_defer() -> void:
 	var pending := _load(staged.candidate)
 	assert_eq(BodyLoad.classify(f.repo, pending).kind, BodyLoad.DEFERRED, "a staged recruit waits for its own transaction")
 	assert_null(BodyLoad.load_candidate(f.repo, pending).candidate)
+	var proof := UnitBodies._copy(current)
+	proof.military_migration.body_placement = {"version": "2", "sequence": "1", "operation_id": "placement:proof",
+		"receipt": "a".repeat(64), "completion_json": "{}"}
+	proof.day_resolution = DayResolution.begin(proof.day, false, proof.absolute_day())
+	assert_eq(BodyLoad.classify(f.repo, _load(proof)).kind, BodyLoad.DEFERRED, "a v2 completion proof waits for its consumer")
 
 func test_no_ordinary_path_reaches_body_load() -> void:
 	for path: String in _scripts("res://scripts"):
