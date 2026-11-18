@@ -136,3 +136,19 @@ war room's wooden piece may borrow the infantry's until step 2).
 Note for step 1: `certify_locomotion.py` hashes `army_art.csv`, `unit_footprints.csv` and
 `data/army/balance.csv`, so adding the `axemen` rows re-issues all five existing locomotion
 certificates in the same PR.
+
+## Step 2 detail (implementer's calls, 2026-11-18)
+
+`BattleMatchup` (`scripts/engine/battle_matchup.gd`) adds one battle factor, source `matchup:arms`,
+category `formation_terrain`, wherever a unit's strength is taken against named foes
+(`BattleSystem.unit_strength` and `BodyBattleRounds._factors`, both already handed the opposing
+codes for the height factor). For each of the unit's arms `a` (weight: its people, count x crew, as
+`BattleCharge.mounted_share`), the foe value is the people-weighted mean over the opposing units'
+arms `f` of `army_matchups[a][f]` — the `attack` column when the unit attacks, `defense` when it
+defends; a pair with no row reads the arm's own mean. Divided by the arm's mean base
+(`ArmySystem._arm_base` with no float) it is the arm's ratio; the unit's factor is the people-weighted
+mean of its arms' ratios. A uniform foe gives about 1000, so the existing power scale holds and only
+the situational edge is new. Battles without named foes (none today) get no factor.
+
+The existing arms' "X vs axemen" rows land with it (infantry 1000/800, archers 1200/800, cavalry
+1300/1000, artillery 1100/700); they enter those arms' mean base too (infantry 1050 -> 1020).
