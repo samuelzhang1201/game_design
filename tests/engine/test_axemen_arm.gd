@@ -16,9 +16,9 @@ func test_axe_base_is_its_matchup_mean() -> void:
 	assert_eq(ArmySystem._arm_base(repo, "", "axemen", 0), 1000)
 
 
-func test_infantry_base_unchanged() -> void:
-	# No "infantry vs axemen" row yet: (1000 + 950 + 1250 + 1000) / 4 = 1050
-	assert_eq(ArmySystem._arm_base(repo, "", "infantry", 0), 1050)
+func test_infantry_base_counts_its_axe_row() -> void:
+	# (1000 + 950 + 1250 + 1000 + (1000+800)/2) / 5 = 5100 / 5 = 1020
+	assert_eq(ArmySystem._arm_base(repo, "", "infantry", 0), 1020)
 
 
 func test_axe_forest_and_jungle() -> void:

@@ -258,6 +258,7 @@ static func _factors(repo: DataRepository, state: GameState, battle: Dictionary,
 		factors.append({"source": "ground:height", "category": "formation_terrain",
 			"permille": ArmySystem.height_factor(repo, ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, code, state), state) - enemy_m),
 			"reason": "Height against the opposing line"})
+		factors.append(BattleMatchup.factor(repo, state, code, enemies, attacking))
 	if not attacking:
 		factors.append({"source": "stance:defence", "category": "formation_terrain",
 			"permille": int(BattleSystem._stance_row(repo, BattleSystem.stance_of(state, code)).get("defence_permille", 1000)), "reason": "Delivered defensive stance"})

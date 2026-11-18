@@ -145,10 +145,12 @@ category `formation_terrain`, wherever a unit's strength is taken against named 
 codes for the height factor). For each of the unit's arms `a` (weight: its people, count x crew, as
 `BattleCharge.mounted_share`), the foe value is the people-weighted mean over the opposing units'
 arms `f` of `army_matchups[a][f]` — the `attack` column when the unit attacks, `defense` when it
-defends; a pair with no row reads the arm's own mean. Divided by the arm's mean base
-(`ArmySystem._arm_base` with no float) it is the arm's ratio; the unit's factor is the people-weighted
-mean of its arms' ratios. A uniform foe gives about 1000, so the existing power scale holds and only
-the situational edge is new. Battles without named foes (none today) get no factor.
+defends; a pair with no row reads that column's mean. A foe's people are its count x crew x its fit
+share (`ArmySystem.fit_permille`), so a broken unit weighs less than a fresh one. Divided by the
+column's mean (not the stance-blind `_arm_base`, which would let stance alone move an arm by up to
+13%) it is the arm's ratio; the unit's factor is the people-weighted mean of its arms' ratios. A
+foe of every arm alike gives 1000 in either stance, so the existing power scale holds and only the
+situational edge is new. Battles without named foes (none today) get no factor.
 
 The existing arms' "X vs axemen" rows land with it (infantry 1000/800, archers 1200/800, cavalry
 1300/1000, artillery 1100/700); they enter those arms' mean base too (infantry 1050 -> 1020).

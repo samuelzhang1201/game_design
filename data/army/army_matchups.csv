@@ -3,18 +3,22 @@ infantry,infantry,1000,1000,"first draft (owner 2026-09-17): each arm's base aga
 infantry,archers,900,1000,
 infantry,cavalry,1200,1300,"spears hold a charge"
 infantry,artillery,1100,900,
+infantry,axemen,1000,800,"owner 2026-11-18 (spec 2026-11-18-axemen-arm-design, step 2): axes break a shield wall; arrows and horse cut down an open line"
 archers,infantry,1200,800,"arrows thin a slow line"
 archers,archers,1000,1000,
 archers,cavalry,800,700,
 archers,artillery,1000,900,
+archers,axemen,1200,800,
 cavalry,infantry,900,800,
 cavalry,archers,1300,1200,"horse rides down bowmen"
 cavalry,cavalry,1000,1000,
 cavalry,artillery,1300,1100,
+cavalry,axemen,1300,1000,
 artillery,infantry,1100,700,
 artillery,archers,900,800,
 artillery,cavalry,800,600,
 artillery,artillery,1000,1000,
+artillery,axemen,1100,700,
 fleet,fleet,1000,1000,
 axemen,infantry,1300,1000,owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): axes break a shield wall but cannot keep a line
 axemen,archers,1100,900,
