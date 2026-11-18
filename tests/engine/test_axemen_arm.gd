@@ -47,3 +47,11 @@ func test_every_land_arm_has_its_rows() -> void:
 		assert_true(repo.unit_footprints.has(arm), arm + " unit_footprints")
 		assert_true(arm in split_arms, arm + " army_split")
 		assert_true(repo.army_art.has(arm), arm + " army_art")
+
+
+func test_axe_has_its_stand_in_art() -> void:
+	# Until the hand-axe soldier and its painting exist, the axemen wear the infantry's art.
+	for table: String in [GameArt.ARMY_MODELS, GameArt.ARMY_PAINTINGS, GameArt.WAR_PIECES,
+			GameArt.UNIT_SOUNDS, GameArt.UNIT_SETTLE_SOUNDS]:
+		assert_ne(GameArt.path(table, "infantry"), "", table + " has infantry")
+		assert_eq(GameArt.path(table, "axemen"), GameArt.path(table, "infantry"), table)
