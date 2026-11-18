@@ -30,7 +30,12 @@ const SCENES := {
 ## --battle-case encounter: real contact and its saved first-encounter pause.
 ## --battle-case field: the same contact, the notice then acknowledged through
 ## Game, so the battle stands with no window over it (the WAR ROOM's task block).
+## --battle-arm ARM stages a FIELD battle of that arm (code suffix, e.g. foot): the
+## first own unit with open dry ground 3 km off its camp leaves it for there, the
+## first such foe 1 km beyond; with --zoom3d and no --at3d the 3D map frames it.
 var _battle_case := ""
+var _battle_arm := ""
+var _battle_frame := false
 var _battle_save := ""
 var _group_evidence := ""
 var _frozen_options: Dictionary = {}
@@ -369,6 +374,8 @@ func _ready() -> void:
 			_out = args[i + 1]
 		elif args[i] == "--battle-case":
 			_battle_case = args[i + 1]
+		elif args[i] == "--battle-arm":
+			_battle_arm = args[i + 1]
 		elif args[i] == "--screen":
 			_screen = args[i + 1]
 		elif args[i] == "--seed":
@@ -972,8 +979,14 @@ func _process(_delta: float) -> void:
 	_frames += 1
 	if _battle_case in ["encounter", "field"] and _frames == 20 and _root != null:
 		_stage_battle_encounter()
+	if _battle_frame and _root.current_screen.has_method("map3d_view") and _root.current_screen.map3d_view()._ctx != null:
+		_battle_frame = false  # the world is loaded: frame the staged battle
+		frame_camera(_root.current_screen.map3d_view())
+		print("battle framed at frame %d: %s" % [_frames, _at3d])
 	if _battle_case == "field" and _frames == 24 and not Game.pending_battle_decision().is_empty():
 		Game.resolve_battle_decision(String(Game.pending_battle_decision()["token"]), "continue")
+		if _battle_arm != "" and _speed >= 0:
+			_start_clock()  # the encounter stopped the clock: play the battle on
 	if _root != null and _pause_menu and _frames == 20:
 		_root.toggle_pause_menu()
 	if _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu \
@@ -2000,22 +2013,50 @@ func _war_chart_click(view: WarRoomView, id: String) -> int:
 func _stage_battle_encounter() -> void:
 	var ours: Array = []
 	for code: String in Game.state.regiments:
-		if not ArmySystem.is_naval(Game.data, Game.state, code):
+		if not ArmySystem.is_naval(Game.data, Game.state, code) and (_battle_arm == "" or code.ends_with("_" + _battle_arm)):
 			ours.append(code)
 	ours.sort()
-	var foes := Game.state.foes.keys()
+	var foes := Game.state.foes.keys().filter(func(c: String) -> bool: return _battle_arm == "" or c.ends_with("_" + _battle_arm))
 	foes.sort()
 	if ours.is_empty() or foes.is_empty():
 		push_error("battle encounter showcase needs two real armies")
 		return
 	var own: Dictionary = Game.state.regiments[ours[0]]
 	var foe: Dictionary = Game.state.foes[foes[0]]
-	foe["x_m"] = int(own["x_m"]) + 1000
-	foe["y_m"] = int(own["y_m"])
+	var off := Vector2i(1000, 0)
+	if _battle_arm != "":  # a field battle: the unit leaves its camp for open dry ground, the foe 1 km beyond
+		var grid := MarchPath.of_pack(Game.data)
+		var found := false
+		for code: String in ours:
+			var at := Vector2i(int(Game.state.regiments[code]["x_m"]), int(Game.state.regiments[code]["y_m"]))
+			for d: Vector2i in [Vector2i(1000, 0), Vector2i(-1000, 0), Vector2i(0, 1000), Vector2i(0, -1000)]:
+				var spot := at + d * 3
+				if found or not grid.clear(spot, spot + d) or grid.is_water(grid.cell_of(spot)) \
+						or grid.is_water(grid.cell_of(spot + d)) \
+						or ArmySystem.town_at(Game.data, ArmySystem.metres_to_pack(Game.data, spot)) != "" \
+						or Game.state.regiments.keys().any(func(o: String) -> bool: return o != code \
+							and not ArmySystem.is_naval(Game.data, Game.state, o) and Vector2(spot + d).distance_to(
+							Vector2(int(Game.state.regiments[o]["x_m"]), int(Game.state.regiments[o]["y_m"]))) < 6000.0):
+					continue  # no other unit of ours in the battle's reach
+				ArmyGround.leave(Game.data, Game.state, code)
+				own = Game.state.regiments[code]
+				for k: String in ["x_m", "dest_x_m"]:
+					own[k] = spot.x
+				for k: String in ["y_m", "dest_y_m"]:
+					own[k] = spot.y
+				ours = [code]
+				off = d
+				found = true
+	foe["x_m"] = int(own["x_m"]) + off.x
+	foe["y_m"] = int(own["y_m"]) + off.y
 	foe["dest_x_m"] = foe["x_m"]
 	foe["dest_y_m"] = foe["y_m"]
 	foe["order"] = ArmySystem.ORDER_STANDBY
 	Game.advance_day()
+	if _battle_arm != "" and _zoom3d > 0.0 and _at3d.x < 0.0:
+		_at3d = ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, ours[0], Game.state))
+		_battle_frame = true
+	print("battle staged: %s vs %s" % [ours[0], foes[0]])
 
 
 ## Frame first, then orbit the same ground target without touching campaign state.

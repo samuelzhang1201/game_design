@@ -41,7 +41,11 @@ leaks into every clip); a static base needs a key on every frame.
   frame and each loop stalled), and WALK's ground contacts re-authored (`LOCK`, owner 2026-11-16,
   below),
   ATTACK, SLASH, ATTACK_VAR1, ATTACK_2, SLASH_2, SLASH_3; ATTACK_VAR1's and ATTACK_2's lunges
-  taken out (in place). The other batch-2 clips (BLOCK*, HIT*, DEATH*, TURN_*, RUN*, ADVANCE*,
+  taken out (in place); then the front-rank duel's clips (`scripts/map3d/guide/battle_duels.md`),
+  appended after the first ten: BLOCK, BLOCK_2, BLOCK_3, BLOCK_4 (the first three's 0.20 / 0.22 /
+  0.27 m steps taken out: a duellist blends back to guard in 0.15 s), HIT, HIT_2, HIT_3, DEATH,
+  DEATH_2 (their fall kept: 1.13 / 0.92 m back). Their `contact` shares in `army_art.csv` are
+  measured off these source clips. The other batch-2 clips (TURN_*, RUN*, ADVANCE*,
   GARRISON_2, DEFEND_2/3) are not shipped until their runtime hooks exist; helper actions
   (`*_retarget`, `*_raw`, `WALK_base`, `STANDBY_src`, `STANDBY_authored`, `ATTACK_swordcut`) never are;
 - the .blend's WALK is a copy of the pack's combat walk `ADVANCE` (Pro Sword and Shield Pack
