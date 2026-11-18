@@ -18,7 +18,7 @@
 ### Task 1: BattleMatchup
 **Files:** Create `scripts/engine/battle_matchup.gd`; Test `tests/engine/test_battle_matchup.gd`.
 **Interfaces:** `static func permille(repo: DataRepository, own: Dictionary, foes: Array, attacking: bool) -> int` (own/foes: arm -> count rows); `static func factor(repo, state, code: String, enemies: Array, attacking: bool) -> Dictionary` (the factor row).
-- [ ] Tests (rows pinned in the test): pure axemen vs pure infantry attacking → 1300; defending vs cavalry → 700; 100 infantry + 100 axemen vs 300 cavalry + 100 infantry attacking → infantry (300·1200+100·1000)/400 = 1150, ×1000/1020 = 1127; axemen (300·900+100·1300)/400 = 1000, ×1000/1000 = 1000; unit (100·1127+100·1000)/200 = 1063. Fleet vs infantry → 1000. Empty own or foes → 1000.
+- [ ] Tests (rows pinned in the test): pure axemen vs pure infantry attacking → 1300; defending vs cavalry → 700; 100 infantry + 100 axemen vs 300 cavalry (crew 2: 600 people) + 100 infantry attacking → infantry (600·1200+100·1000)/700 = 1171, ×1000/1020 = 1148; axemen (600·900+100·1300)/700 = 957; unit (1148+957)/2 = 1052. Fleet vs infantry → 1000. Empty own or foes → 1000.
 - [ ] Watch fail; implement; pass; commit.
 
 ### Task 2: Wire and data
