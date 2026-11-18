@@ -8,3 +8,5 @@ hills,archers,1150,1050,"height lengthens a bow's reach"
 mountains,artillery,700,700,"guns cannot be hauled up"
 marsh,artillery,700,700,
 sea,fleet,1000,1000,
+forest,axemen,1150,1150,owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): woodsmen
+jungle,axemen,1000,1000,axes clear the undergrowth: no jungle penalty
