@@ -50,7 +50,7 @@ static func snapshot(state: GameState) -> Dictionary:
 static func continuity_error(before: GameState, after: GameState, request: Dictionary) -> String:
 	var a := snapshot(before)
 	var b := snapshot(after)
-	if a.is_empty() or b.is_empty(): return "Lifecycle requires one valid body owner per unit"
+	if (a.is_empty() and _has_land(before)) or (b.is_empty() and _has_land(after)): return "Lifecycle requires one valid body owner per unit"
 	if a.keys() != b.keys(): return "Lifecycle changed the body roster"
 	for code: String in a:
 		if (a[code].rows == null) != (b[code].rows == null): return "Lifecycle created or dropped the body store of " + code
@@ -96,6 +96,10 @@ static func _owner_error(after: GameState, request: Dictionary, a: Dictionary, b
 		elif now != (BattleSystem.canonical(after, was) if was > 0 else 0) and not (request.kind == "contacts" and was == 0 and now > 0):
 			return "Unlawful body owner change: " + code
 	return ""
+
+## An empty snapshot is valid only for a world with no land unit.
+static func _has_land(state: GameState) -> bool:
+	return (state.regiments.keys() + state.foes.keys()).any(func(code: String) -> bool: return not UnitBodies._naval(state, code))
 
 static func _outer(state: GameState) -> Dictionary:
 	var outer: Variant = state.military_migration.get("body_battle", {})

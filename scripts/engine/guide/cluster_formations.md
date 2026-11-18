@@ -263,3 +263,24 @@ stage, where every lifecycle edge waits for its own stage; an ongoing field's `e
 Nothing in ordinary dispatch calls it: `BattleSystem`'s `_start`/`join`/`_exits`/`_end`,
 `BattleMerge.day` and `BattleGroups.refresh` keep their behaviour until ACT-CUTOVER routes the
 admitted world through this adapter together with the driver and the projection.
+
+## Candidate day driver (ACT-DRIVER, part A)
+
+`BodyDayDriver` (its own file, inactive like the adapter) is the one admission and driver every
+ordinary writer of an admitted body world shares. `admit(repo, source, prepare)` copies the
+source, runs the optional `prepare(repo, copy) -> {status, reason, candidate}` (the seam ACT-LOAD's
+fresh initialization and legacy classification plug into; a refusal fails closed), then requires
+`body_version`, no ordinary frozen day, a complete `validate_battle_candidate` at the safe boundary
+or at a saved body day's boundary (a published frozen round admits as it stands) and every land
+arm's installed policy. `tactical_day` admits, begins at the safe boundary, then takes
+`BodyBattle.step_candidate` transitions (march and withdrawal on the budgets `begin` froze) until
+the day completes, returns `blocked` at a pending encounter decision (`acknowledge` answers it), or
+errors with no candidate; a step ceiling per slice bounds it. `BodyBattle._run` commits every
+lifecycle edge (`BodyLifecycle.EDGES`) through `BodyLifecycle.commit_candidate`, so each is proved
+zero-delta (a world with no land unit has an empty, valid snapshot). A malformed saved day is refused
+before its boundary is read; a transition that changes nothing (a failed round settlement) returns
+`blocked` on its frozen pending. The result carries one detached candidate; the source never changes, a saved candidate
+resumes exactly and a completed one is a no-op. Part B (closing the frozen day into the ordinary
+remaining phases, arrival and garrison at actual body positions, and the march staging the CF04c
+visual review asks for: whole strides, front-first column order, facing written to the heading) and
+the Game/TickEngine bridges are not here; nothing in ordinary dispatch calls the driver.
