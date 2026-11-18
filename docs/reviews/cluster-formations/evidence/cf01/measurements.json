@@ -131,7 +131,7 @@
 		"res://scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
 		"res://scripts/engine/army_system.gd": "8ca9982a4c5db6a2c792d76c87caab046c488934dc48c22360dfecbf7c540532",
 		"res://scripts/engine/art_table.gd": "ae374d656f22d6542b66b8a6176e608c8112d4f6711bb847f1bb72dd7cae531a",
-		"res://scripts/map3d/map3d_formation.gd": "f86ed5dda46368df3c40823804337c6589517934be1411d67fac27e6d8ad20d6",
+		"res://scripts/map3d/map3d_formation.gd": "374f643878041d8e3140506e7a06854fe295538b2431abdb6c449af617bbb970",
 		"res://scripts/map3d/map3d_geometry.gd": "64797a53505cff9bd849e9245107f9be9f73fbb78cc2d27ab9f58b71bfce9e4c",
 		"res://scripts/map3d/map3d_units.gd": "e842566f033267ae5cbb8bf548bed2aefc88103a9234b344cdc1b3554e32fb4d",
 		"res://tools/units3d/measure_unit_bodies.gd": "8aff09e611300bc816c20bf6060661890115c308cd41bafd162f62688a55d7ed"
