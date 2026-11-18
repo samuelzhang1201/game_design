@@ -14,8 +14,7 @@ const MARCH := "MARCH"
 
 ## Figure spacing, × a figure's footprint (owner 2026-09-30: 可以适当分开一些).
 @export var formation_gap := 1.6
-## Legacy serialized setting; all figures retain their ordinary reference size.
-@export var figure_footprint_gap := 1.6
+@export var figure_footprint_gap := 1.6  ## legacy serialized setting: no effect
 ## Seconds a clip blends into the next (owner 2026-09-27: 行进的动作非常突兀).
 @export var blend_s := 0.3
 ## Degrees a second a piece turns (instant turning read as a glitch).
@@ -207,6 +206,7 @@ func _place(code: String, piece: Dictionary) -> void:
 				Map3DUnits.show_piece(piece, false)
 				_rects.erase(code)
 				return
+		piece.merge({"gap": formation_gap, "centre": _target_xz(ArmySystem.regiment(ctx.repo, code, ctx.state()))}, true)  # the block's spacing (stand_xz)
 		var box := BattleGroupsView.place(ctx, piece, _shown_xz[code], figure_footprint_gap, _selected.has(code))
 		_rects.erase(code)
 		if box.has_area(): _rects[code] = box
