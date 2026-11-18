@@ -121,7 +121,7 @@ visual and performance acceptance remain explicit limits.
 
 `UnitBodies.validate_placement_candidate` validates raw placement controls and
 safe/completed-MARCH boundaries without creating a row or removing frozen data.
-Placement transactions and replay: `scripts/engine/guide/body_placement.md`.
+Placement transactions and replay, and load classification (`BodyLoad`): `scripts/engine/guide/body_placement.md`.
 
 ## Candidate battle boundary
 
