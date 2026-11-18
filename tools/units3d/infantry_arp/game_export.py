@@ -30,11 +30,13 @@ from pathlib import Path
 
 import bpy
 import numpy as np
-from mathutils import Matrix, Quaternion, Vector
+from mathutils import Matrix, Vector
 
 # Shipped clips (owner 2026-11-16), then the front-rank duel's (Map3DDuel: BLOCK*, HIT*; Map3DFall:
-# DEATH*), appended so the first ten export exactly as before. The other batch-2 clips (TURN_*, RUN*,
-# ADVANCE*, GARRISON_2, DEFEND_2/3) wait for their runtime hooks; helper actions never ship.
+# DEATH*), appended after the first ten. The other batch-2 clips (TURN_*, RUN*, ADVANCE*, GARRISON_2,
+# DEFEND_2/3) wait for their runtime hooks; helper actions never ship. The .blend's STANDBY is a copy
+# of the pack's quiet guard idle GARRISON_2 (owner 2026-11-17: the authored rest read unnatural; it
+# is kept there as STANDBY_authored, never shipped).
 GAME = {"WALK": "MARCH", "IDLE": "GARRISON", "STANDBY": "STANDBY", "DEFEND": "DEFEND",
         "ATTACK": "ATTACK", "SLASH": "SLASH", "ATTACK_VAR1": "ATTACK_VAR1", "ATTACK_2": "ATTACK_2",
         "SLASH_2": "SLASH_2", "SLASH_3": "SLASH_3",
@@ -55,7 +57,8 @@ IN_PLACE = {"ATTACK_VAR1", "ATTACK_2", "BLOCK", "BLOCK_2", "BLOCK_3"}
 # swing), the lift eased over neighbouring frames. The upper body, arms and gear are untouched.
 LOCK = {"WALK": {"legs": [(s, "thigh_twist" + s, "thigh_stretch" + s, "leg_stretch" + s, "leg_twist" + s,
                            "foot" + s, "toes_01" + s) for s in (".l", ".r")],
-                 "stance_m": 0.004, "deep_m": 0.002, "clear_m": 0.005, "ease_frames": 3, "min_knee_deg": 2.0}}
+                 "stance_m": 0.004, "deep_m": 0.002, "clear_m": 0.012, "ease_frames": 3, "min_knee_deg": 2.0,
+                 "land_frames": 2, "stance": {".l": (0.20, 0.86), ".r": (0.90, 0.35)}}}
 BODY = "Infantry_body"
 GEAR = {"sword": "Weapon", "shield": "Shield"}
 REST = ("IDLE", 1)                       # the guard stance, GARRISON's first frame
@@ -77,21 +80,12 @@ GAME_METAL = 0.45
 # than the banner (critics 2026-11-17); (1.25, 0.95) after the spread is the knight's warm mid-brown.
 # Owner 2026-11-17 polish (critic of the first install). Each knob is overridable for a bracketed
 # review through the INFANTRY_POLISH environment variable (a JSON object of the keys below).
-# - Rest: STANDBY's relaxed body keeps the guard's shield arm (GARRISON's left arm, shoulder to the
-#   shield socket, same phase), pinned at its own shoulder and turned `rest_arm_turn` of the way from
-#   the guard's twisted chest to the figure's facing; the wrist then tilts the shield's face at least
-#   `rest_shield_up_deg` above level, so a regiment at rest shows a ring of lit, raised shields from
-#   the map's height instead of shields hanging edge-on; the upper body turns `rest_sway_deg` either
-#   way over the loop (feet planted), and as the map starts each man at his own phase of it the ring
-#   is never stamped clones (owner 2026-11-17; per-figure turns in the map's code would touch the
-#   royal proof's pinned sources).
 # - Shield hand: the retargeted grip laid the thumb along the handle, past the index (a raised
 #   thumb in every clip, plainest in the strikes); each frame the thumb chain turns about its base
 #   until its tip rests at `thumb_tip` in the hand's frame (over the curled index's middle joint).
-# - MARCH: the sword leans out of the body's mid-plane by at least `blade_min_deg` (a smooth floor
-#   `blade_soft_deg` wide, the wrist turning): the hanging blade passed close to the knee. (A floor
-#   on its forward pitch laid it along the front shin; one measured in the side-to-vertical plane
-#   tipped it onto the front shoe when it pointed forward.)
+# - MARCH's blade clears the knee in the .blend itself: the WALK sword arm swings out at the shoulder
+#   (owner 2026-11-17: the export once turned the wrist for it, a kinked wrist); the export reports
+#   the blade's least distance to the legs (`march.blade_leg_gap`).
 # - Body value: on dark grass the dark mail and green tunic sank into the ground (critic 2026-11-17,
 #   owner: fix it); `body_lift` multiplies the colour of each authored class (2 mail, 1 green leather,
 #   3 plate) and `body_sat` its saturation, so the limbs read off the turf (x1.55 on the mail read
@@ -99,9 +93,7 @@ GAME_METAL = 0.45
 # - Mail (class 2 of the authored `textures/body_class.npy`) at play zoom read as dark speckle: in it
 #   the colour keeps `mail_albedo` of its ring contrast against a `mail_blur_px` box blur, the normal
 #   `mail_normal` of its relief, the roughness `mail_rough` of its variation plus `mail_rough_add`.
-POLISH = {"rest_arm": True, "rest_arm_turn": 0.8, "rest_shield_up_deg": 30.0, "rest_sway_deg": 10.0,
-          "shield_tone": (1.25, 0.95), "shield_contrast": 0.55, "thumb_tip": (0.042, 0.09, -0.045),
-          "blade_min_deg": 30.0, "blade_soft_deg": 8.0,
+POLISH = {"shield_tone": (1.25, 0.95), "shield_contrast": 0.55, "thumb_tip": (0.042, 0.09, -0.045),
           "mail_blur_px": 3, "mail_albedo": 0.25, "mail_normal": 0.12, "mail_rough": 0.3,
           "mail_rough_add": 0.3, "body_lift": {"2": 1.35, "1": 1.4, "3": 1.15},
           "body_sat": {"1": 1.35}}
@@ -386,8 +378,16 @@ def _lock_feet(src, clip, poses):
             a, b = world[f], world[(f + 1) % n]
             deep = a[:, 2] <= a[:, 2].min() + cfg["deep_m"]
             return float(np.mean(b[deep, 1] - a[deep, 1])) > 0.5 * v
-        stance = [world[f][:, 2].min() <= low + cfg["stance_m"] and back(f) and back((f - 1) % n)
-                  for f in range(n)]
+        win = cfg.get("stance", {}).get(side)
+        if win:
+            # authored stance (`stance`: per foot, the clip shares it is planted, wrapping): the pack
+            # walk is a guarded shuffle whose soles rock 5-8 mm off the ground mid-stance and tap
+            # down mid-swing, so a height test cuts stances into pieces
+            a0, a1 = win
+            stance = [(a0 <= f / n < a1) if a0 < a1 else (f / n >= a0 or f / n < a1) for f in range(n)]
+        else:
+            stance = [world[f][:, 2].min() <= low + cfg["stance_m"] and back(f) and back((f - 1) % n)
+                      for f in range(n)]
         # offset[f]: what the foot must move by at frame f (x, y), integrated through each stance
         off = [Vector((0.0, 0.0, 0.0)) for _ in range(n)]
         start = next(f for f in range(n) if stance[f] and not stance[f - 1])
@@ -401,6 +401,8 @@ def _lock_feet(src, clip, poses):
                 acc = acc + Vector((-d[0], v - d[1], 0.0))
             elif not stance[f]:
                 acc = Vector((0.0, 0.0, 0.0))
+            if stance[f] and win:
+                acc.z = -float(world[f][:, 2].min())          # the sole on the ground, z = 0
             off[f] = acc.copy() if stance[f] else None
         # ease each stance's final offset back to zero through the swing that follows
         f = start
@@ -418,8 +420,10 @@ def _lock_feet(src, clip, poses):
                     off[g % n] = off[a] * (1 - (u * u * (3 - 2 * u)))
                 f = z % n
             f = (f + 1) % n
-        # swing lift: each swing frame raised to clear_m, spread to its neighbours on a cos^2 falloff
-        # only the first half of each swing (toe-off and early swing): a landing foot is left alone
+        # swing lift: each swing frame raised to clear_m, spread to its neighbours on a cos^2 falloff;
+        # the first half of each swing (toe-off and early swing), or with `land_frames` all of it but
+        # its last land_frames (the pack walk taps a swinging boot down mid-swing): a landing foot
+        # is left alone
         early = [False] * n
         f = start
         for _ in range(n):
@@ -427,7 +431,8 @@ def _lock_feet(src, clip, poses):
                 run = [f]
                 while not stance[(run[-1] + 1) % n]:
                     run.append((run[-1] + 1) % n)
-                for g in run[:(len(run) + 1) // 2]:
+                land = cfg.get("land_frames")
+                for g in run[:(len(run) + 1) // 2] if land is None else run[:max(len(run) - land, 0)]:
                     early[g] = True
             f = (f + 1) % n
         need = [max(0.0, cfg["clear_m"] - float(world[f][:, 2].min())) if early[f] else 0.0 for f in range(n)]
@@ -476,7 +481,8 @@ def _lock_feet(src, clip, poses):
                 pose[b] = r2 @ pose[b]
             for b in (foot, toe):
                 pose[b] = Matrix.Translation(d) @ pose[b]
-        report[side] = {"max_offset_m": round(worst, 4), "max_reach_pullback_m": round(pull, 4)}
+        report[side] = {"max_offset_m": round(worst, 4), "max_reach_pullback_m": round(pull, 4),
+                        "touchdown": round(start / n, 4)}
     for b in poses[0]:
         poses[-1][b] = poses[0][b].copy()
     report["speed_m_per_frame"] = round(v, 6)
@@ -484,7 +490,6 @@ def _lock_feet(src, clip, poses):
 
 
 POLISHED = {}
-DONOR = {}
 
 
 def _polish_cfg():
@@ -498,66 +503,27 @@ def _under(src, keep, bone):
     return [n for n in keep if n == bone or bone in (b.name for b in src.data.bones[n].parent_recursive)]
 
 
-def _graft(poses, donor, anchor, names, pin=None, turn=0.0):
-    """Each pose's `names` become the donor's at the same phase, carried on `anchor` (armature
-    space). With `pin`, the carry's rotation is eased by `turn` (0..1) from the anchor's toward
-    none (the donor's own facing on the figure) and `pin`'s origin stays the pose's own."""
-    n, m = len(poses), len(donor)
-    for i, p in enumerate(poses):
-        d = donor[round(i * (m - 1) / max(n - 1, 1))]
-        carry = p[anchor] @ d[anchor].inverted()
-        if pin:
-            q = carry.to_quaternion().slerp(Quaternion(), turn)
-            r = q.to_matrix().to_4x4()
-            carry = Matrix.Translation(p[pin].translation) @ r @ Matrix.Translation(-d[pin].translation)
-        for b in names:
-            p[b] = carry @ d[b]
-
-
-def _floor(poses, hand, names, socket, local, toward, lo_deg, soft_deg):
-    """Turn the wrist (`names` about `hand`'s origin) so the socket's `local` direction leans toward
-    the armature direction `toward` by at least a smooth floor of lo_deg (its angle off the plane
-    normal to `toward`), turning in the plane of the two. Returns the largest turn in degrees."""
-    lo, w = math.radians(lo_deg), math.radians(soft_deg)
-    worst = 0.0
-    for p in poses:
-        v = (p[socket].to_3x3() @ local).normalized()
-        a = math.asin(max(-1.0, min(1.0, v.dot(toward))))
-        d = (lo - a + math.sqrt((a - lo) ** 2 + w * w)) / 2       # smooth max(a, lo) - a
-        o = p[hand].translation.copy()
-        r = Matrix.Translation(o) @ Matrix.Rotation(d, 4, v.cross(toward).normalized()) @ Matrix.Translation(-o)
-        for n in names:
-            p[n] = r @ p[n]
-        worst = max(worst, d)
-    return round(math.degrees(worst), 1)
-
-
-def _sway(poses, keep, amp_deg):
-    """The upper body (every kept bone but the legs' and the root) turns about the upright through
-    spine_01 by amp_deg x sin over the loop (0 at both ends, so the loop stays closed): the map
-    starts each resting figure at its own phase, so at any moment each man faces his own way."""
-    legs = ("thigh", "leg_", "foot", "toes")
-    upper = [n for n in keep if n != "root.x" and not n.startswith(legs)]
-    last = max(len(poses) - 1, 1)
-    for f, p in enumerate(poses):
-        a = math.radians(amp_deg) * math.sin(2.0 * math.pi * f / last)
-        o = p["spine_01.x"].translation.copy()
-        r = Matrix.Translation(o) @ Matrix.Rotation(a, 4, "Z") @ Matrix.Translation(-o)
-        for n in upper:
-            p[n] = r @ p[n]
-    return len(upper)
-
-
-def _shield_face(src):
-    """The shield's outer face normal in its socket's frame (the disc's least axis, pointing away
-    from the grip), from the rest pose."""
+def _blade_leg_gap(src, poses):
+    """The least distance (model m) over the clip from the blade (its vertices along the socket's Y,
+    from the rest pose) to either leg's thigh and shin axes, and the frame it falls on."""
     _set_action(src, REST[0]); bpy.context.scene.frame_set(REST[1]); bpy.context.view_layer.update()
-    sock = src.pose.bones[SOCKET["shield"]].matrix.inverted() @ src.matrix_world.inverted()
-    ob = bpy.data.objects[GEAR["shield"]]
-    pts = np.array([list(sock @ (ob.matrix_world @ v.co)) for v in ob.data.vertices])
-    c = pts.mean(0)
-    n = np.linalg.svd(pts - c)[2][2]
-    return Vector(n if np.dot(n, c) > 0 else -n)
+    sock = src.pose.bones[SOCKET["sword"]].matrix.inverted() @ src.matrix_world.inverted()
+    ys = [(sock @ (bpy.data.objects[GEAR["sword"]].matrix_world @ v.co)).y
+          for v in bpy.data.objects[GEAR["sword"]].data.vertices]
+    pts = [Vector((0.0, y, 0.0)) for y in np.linspace(max(ys) * 0.3, max(ys), 12)]
+
+    def seg(p, a, b):
+        ab = b - a
+        t = max(0.0, min(1.0, (p - a).dot(ab) / ab.length_squared))
+        return (a + ab * t - p).length
+    best = (1e9, -1)
+    for f, p in enumerate(poses):
+        blade = [p[SOCKET["sword"]] @ q for q in pts]
+        for s in (".l", ".r"):
+            hip, knee, ankle = (p[b + s].translation for b in ("thigh_stretch", "leg_stretch", "foot"))
+            d = min(min(seg(q, hip, knee), seg(q, knee, ankle)) for q in blade)
+            best = min(best, (d, f))
+    return {"m": round(best[0], 4), "frame": best[1]}
 
 
 def _fold_thumb(src, poses, tip_in_hand):
@@ -578,25 +544,8 @@ def _fold_thumb(src, poses, tip_in_hand):
 def _polish(src, keep, clip, poses):
     cfg = _polish_cfg()
     out = {}
-    if clip == "STANDBY" and cfg["rest_arm"]:
-        if "IDLE" not in DONOR:
-            DONOR["IDLE"] = _poses(src, keep, "IDLE")
-        arm = ["shoulder.l", "c_arm_twist_offset.l", "arm_stretch.l", "forearm_stretch.l",
-               "forearm_twist.l"] + _under(src, keep, "hand.l")
-        _graft(poses, DONOR["IDLE"], "spine_03.x", arm, "shoulder.l", cfg["rest_arm_turn"])
-        out["rest_arm"] = len(arm)
-        if cfg["rest_sway_deg"]:
-            out["rest_sway_deg"] = _sway(poses, keep, cfg["rest_sway_deg"])
-        if cfg["rest_shield_up_deg"] is not None:
-            out["rest_shield_max_turn_deg"] = _floor(
-                poses, "hand.l", _under(src, keep, "hand.l"), SOCKET["shield"], _shield_face(src),
-                Vector((0.0, 0.0, 1.0)), cfg["rest_shield_up_deg"], cfg["blade_soft_deg"])
     if cfg["thumb_tip"] is not None and clip in GAME:
         out["thumb_max_turn_deg"] = _fold_thumb(src, poses, Vector(cfg["thumb_tip"]))
-    if clip == "WALK" and cfg["blade_min_deg"] is not None:
-        out["blade_max_bend_deg"] = _floor(poses, "hand.r", _under(src, keep, "hand.r"), SOCKET["sword"],
-                                           Vector((0.0, 1.0, 0.0)), Vector((-1.0, 0.0, 0.0)),
-                                           cfg["blade_min_deg"], cfg["blade_soft_deg"])
     if out:
         POLISHED[clip] = out
 
@@ -697,7 +646,13 @@ def install(root, pivot_samples=None, pivot_seconds=None):
                                "loop": clip in LOOPS, "in_place": clip in IN_PLACE}
         if clip == "WALK":
             info["march"] = _march_measure(src, poses, keep)
-            info["march"]["lock"] = LOCKED.get(clip)
+            info["march"]["lock"] = lock = LOCKED.get(clip)
+            if lock and LOCK[clip].get("stance"):
+                # authored stances: every planted sole travels back at exactly the lock's speed, so
+                # the stride is that speed over the loop and the footfalls are the stances' starts
+                info["march"]["stride_m"] = round(lock["speed_m_per_frame"] * (len(poses) - 1), 4)
+                info["march"]["steps"] = sorted(lock[s]["touchdown"] for s in (".l", ".r"))
+            info["march"]["blade_leg_gap"] = _blade_leg_gap(src, poses)
     info["polish"] = {"config": _polish_cfg(), "clips": POLISHED}
     rig.rotation_euler.z = math.pi           # Blender -Y -> glTF +Z; the game's figures face -Z
     bpy.context.view_layer.update()

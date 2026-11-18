@@ -240,5 +240,5 @@ blocked with the unchanged pending source and the same plan; the frozen draw
 stays. A retry whose receipt exists with the same plan is a detached no-op; a
 different plan errors. Exits, routs and ends are not run here: the advance
 stage's lifecycle requests own them, and a tier's rout is only recorded in the
-round event until D-DRIVER/ACT-CUTOVER. The ordinary round event lives only in
-the receipt's `round_event` (`left` empty); D-DRIVER emits it to the day's events.
+round event until ACT-CUTOVER. The ordinary round event (`left` empty) is
+appended to the day's `journal.battles` and kept in the receipt's `round_event`.

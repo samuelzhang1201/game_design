@@ -226,3 +226,15 @@ safe pre-day endpoint for this check; staging running costs happens only after
 admission and uses private geometry calls. Invalid/unsealed closed proofs cannot
 become a new ordinary plan, while ordinary TIME/MARCH result projections remain
 unchanged. An active receipt supplies its own priority instead of closed data.
+
+## Candidate round stage (CF06 D-DRIVER)
+
+`BodyBattle.step_candidate` at stage `round` drives the current queued field:
+`round_ready` publishes `body_round` (blocked; a new encounter first blocks on
+its decision), the next step plans it (`BodyBattleRounds.plan_candidate`, one
+draw), the next settles it (`settle_candidate`), which advances the queue to the
+next field or to `advance`. One control transition per step, each its own outer
+operation; a failed settlement stays blocked on the frozen pending. A field
+processed today — its id or any of its units — is never queued again that day,
+including after a merge or a reinforcement. There is no next-day shortcut: the
+candidate day still completes and freezes as before.

@@ -822,7 +822,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "5c1565f1dc794aa1382a2907ad72ae5a1b9ff6df27dc4ce25c0aa59d4c5a54cd",
+  "sha256": "0af259cdc05e11d3279d543ef6644c37284d7382ba5d04d13d7c50f1775818d1",
   "uniform": 512
  },
  "config": {
@@ -900,9 +900,9 @@
   "assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
   "data/army/balance.csv": "161958b363556cc8d1980517612d61f21434349a6ea7c9a367e9bffdfae24277",
   "data/army/unit_footprints.csv": "5d7ebb28d0942802e698284eb42817203d66100ad607debc6cbda895485412de",
-  "data/screens/map3d/army_art.csv": "d6034d240bca187dec7365eeb994f330acb0f107f7fc1902a9d8d9472681fc59",
-  "data/screens/map3d/balance.csv": "f128c6999b798ed089e50f888f24f0ee6a9e70646df2a9ff66169430190a3790",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "49ddf81d3521fb065b7335b213950d5d211a430bfc15097e02b34a8621f669b3",
+  "data/screens/map3d/army_art.csv": "261b1c7f250421b3e7d3ed51abf095f3b744cdac616a726bd6fe6a4add0c76e7",
+  "data/screens/map3d/balance.csv": "8909525588cdfe925cff1777baef2a8c875fcda6301fc97c40e43c1d07394c2b",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "e9a149b9974218eaedd046ecca8d1ce2c7f977cfc8a93432dfb772202ca84e19",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
   "scripts/map3d/map3d_cavalry_pivot.gd": "b210d21b965ff11830e290d81b526eb7e713b9ddf2c285467b9838e27a96197d",
   "scripts/map3d/map3d_cavalry_pivot_math.gd": "0c9ae12d36755d2d9b5928d6343c7a6c4bdb871aa62d7c6e0013c729d65911e1",
@@ -919,11 +919,11 @@
    "MARCH"
   ],
   "contact_um": 29338,
-  "digest": "bbc311be9efbde217e3c6a914be9469377aa8064b96879eb85155bd51239a65a",
+  "digest": "3e09a723b2dbce6646f0ac7c736b83cbfcd28ed7422316d634dd7ad2a2676987",
   "radius_m": 749,
   "turn_q": 400000
  },
- "payload_sha256": "bbc311be9efbde217e3c6a914be9469377aa8064b96879eb85155bd51239a65a",
+ "payload_sha256": "3e09a723b2dbce6646f0ac7c736b83cbfcd28ed7422316d634dd7ad2a2676987",
  "report": {
   "bounds_um": {
    "contact": 29338,

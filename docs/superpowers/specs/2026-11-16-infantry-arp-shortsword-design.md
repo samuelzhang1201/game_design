@@ -16,8 +16,8 @@ model, possibly mixed per figure. The knight before it: `2026-10-19-infantry-arp
   body now has a normal map); every source map is found by its `_base / _mr / _normal` suffix.
 - `scenes/models/units/infantry.tscn` is unchanged: its material override still lands on
   `inf_rig/Skeleton3D/infantry` and reads the same file names.
-- Clips: MARCH (Standard Walk, in place), GARRISON (the guard), STANDBY and DEFEND (the owner's
-  authored loops, now real: STANDBY was GARRISON's fallback), ATTACK, SLASH, ATTACK_VAR1, ATTACK_2,
+- Clips: MARCH (the pack's combat walk, in place; see "March" below), GARRISON (the guard), STANDBY (the pack's quiet guard idle;
+  see "Rest and march wrist") and DEFEND (the owner's authored loop), ATTACK, SLASH, ATTACK_VAR1, ATTACK_2,
   SLASH_2, SLASH_3 (once each; ATTACK_VAR1's 1.82 m and ATTACK_2's 2.17 m lunges taken out), and the
   regenerated PIVOT_RIGHT / PIVOT_LEFT. STANDBY / DEFEND loop in the `.glb.import`. Not shipped:
   BLOCK*, HIT*, DEATH*, TURN_*, RUN*, ADVANCE*, GARRISON_2, DEFEND_2/3 (they need runtime hooks).
@@ -109,3 +109,45 @@ knight's.
   moment each faces his own way. A per-figure turn in the map's code was tried (it read better at
   +/-18 degrees than at +/-8) and withdrawn: `Map3DUnitRig` and `Map3DLayerUnits` are pinned sources
   of the royal carrier proof (`Map3DRoyalCarrierSource._SOURCES`).
+
+## Rest and march wrist (owner 2026-11-17, second review)
+
+The owner watched every clip and ruled two of them wrong.
+
+- **STANDBY was wholly unnatural.** The authored rest was a neutral stand from another pack with
+  the guard's shield arm grafted on, the wrist tilting the shield up and the chest swaying 10
+  degrees: no body moves like that. The owner asked for the motion pack's own idle instead.
+  STANDBY is now the Pro Sword and Shield Pack's "idle (4)" (a copy of `GARRISON_2` in the .blend): the quiet guard, shield
+  up before the chest, sword low, feet planted, a small breathing sway (76 frames, a loop). It still
+  shows the raised shield at rest. The graft, the shield tilt and the sway are gone from the export.
+  The pack's other idles were screened: "idle" is already GARRISON, "idle (2)" and "idle (3)" are
+  long flourishes that read as attacks, the block idles are DEFEND_2 / DEFEND_3. The pack's idle
+  moves little, so resting men read more alike than with the sway; the map's per-man phase is the
+  only variety left.
+- **MARCH wrist kinked.** Keeping the blade off the knee turned the wrist alone, up to 26 degrees
+  sideways. Now the whole arm swings out at the shoulder instead and the wrist stays in line with
+  the forearm (bracketed half / 70 % / all of the turn at the shoulder; the critic picked all). It
+  also keeps the blade further from the legs: 0.35 m from the leg axes at its closest, 0.27 m with
+  no fix (the "near the knee" was the blade passing in front of the thigh from the camera).
+- **Both fixes live in the source .blend** (owner: also into the .blend): STANDBY is a copy of
+  `GARRISON_2` there, the old one kept as `STANDBY_authored`, and the shoulder swing is keyed on
+  WALK's FK arm control, so the export no longer corrects either.
+
+## March: the pack's combat walk (owner 2026-11-18)
+
+The owner watched the two pack walks applied as MARCH beside the Standard Walk and chose "sword and
+shield walk" (`ADVANCE` in the .blend, copied to WALK; Standard Walk kept as `WALK_standard`).
+The sword rides up on the right shoulder and the shield before the left side, so the regiment
+marches as soldiers at war, and the blade is far from the legs (0.55 m from the leg axes).
+
+- Its steps are short and guarded: stride 1.4838 (was 1.618), 34 frames. Its own contacts did not
+  certify: the soles rock off the ground mid-stance and the right boot taps down mid-swing, so the
+  certifier counted the tap as planted (289 mm slide). The stances are now authored (left 0.20-0.86,
+  right 0.90-0.35), the planted soles set on the ground, the swings lifted clear, and the stride is
+  the locked soles' speed: NUMERIC_PASS, slide 17.2 mm under the 23.2 mm bound. "walk (2)" was the
+  other choice; its feet move forward while planted and would need its own fitting.
+- The pivots were re-fitted on the new walk from a 420-phase scan: entry = exit 8/420 (right sole
+  flat, left boot just lifted, thighs 13.8 degrees apart), neutral 182/420, flat feet 181 / 396 of
+  420. Both turns solve with no failed frame and no introduced skin flag.
+- `steps` are the authored stances' starts, 0.2121 and 0.9091.
+

@@ -88,7 +88,7 @@ weights, and sampled transition continuity are numerical regressions. The
 retired knight's phase 0.8928571428571428 fixed-rest counterexample (7.599 mm
 left toe and 17.996 mm maximum skin jump) remains evidence, not grounded-slip
 acceptance: that left boot was airborne. On the short-sword soldier the same
-check runs at MARCH 13/14, where the legacy stance path holds the native toe. Continuous ground/sole/heel/toe contact, conservative
+check runs at MARCH 8/420, where the legacy stance path holds the native toe. Continuous ground/sole/heel/toe contact, conservative
 envelopes, full parameter-domain certification and real-window near/far,
 pause/1x/4x/FPS visual review remain the original clip/certification steps' gates.
 No art, imported clip, production consumer or installed policy is activated here.

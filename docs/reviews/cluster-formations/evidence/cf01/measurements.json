@@ -105,7 +105,7 @@
 		"res://assets/3D/units/cavalry/cavalry_cavalry_atlas_mr.jpg.import": "11dff65fe566eeb885a8fa35def5ba0f20d11d667c845cbc134ed5550c09818f",
 		"res://assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg": "38f28344390a6b6844b3cedfb3da1a0383ce253025701a30cc232818c448e228",
 		"res://assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg.import": "e99b960c02adede00ec5aecf53389c48384c93fdf4fc6a6ef24ed8efb0c6f250",
-		"res://assets/3D/units/infantry/infantry.glb": "08f34a2270d30df9badca895262abcf5f090eabae4a5f621d46b9c0155049d53",
+		"res://assets/3D/units/infantry/infantry.glb": "fa7fdcb75f50b1b77756bffa325e309600c1d1b4283a9085b38737234fcab94d",
 		"res://assets/3D/units/infantry/infantry.glb.import": "622a873cecde657eefd5ffac2281e66d1d98554ac85c6cfc0fad6d367c25cc65",
 		"res://assets/3D/units/infantry/infantry_infantry_atlas.jpg": "5f6be178220a2305f4b3d31ce3fdabef24f1a364356e8381c2da74e333030e6a",
 		"res://assets/3D/units/infantry/infantry_infantry_atlas.jpg.import": "271eb1f94d0e35b3273bdfd6064d088e3af29ef508fcc064b69aa856afb3b457",
@@ -121,7 +121,7 @@
 		"res://assets/3D/units/royal/royal_royal_atlas_mr.jpg.import": "ce415cba84687cbd3bf659d4dec769d6a054d6d9462172e3b45a0f0f8c5bed92",
 		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg": "87dae2d5426bf52b5f4dd43676ce6a2bf92b9ff22e922e1ba98a8628caffe2ed",
 		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
-		"res://data/screens/map3d/army_art.csv": "d6034d240bca187dec7365eeb994f330acb0f107f7fc1902a9d8d9472681fc59",
+		"res://data/screens/map3d/army_art.csv": "d6a9492405baa0725ab694c06d845fd7b47528c14dbfd1e720313e9789021d1a",
 		"res://data/screens/map3d/balance.csv": "f128c6999b798ed089e50f888f24f0ee6a9e70646df2a9ff66169430190a3790",
 		"res://data/world/maps.csv": "cd856ebde844cdac7b8f370c5a51b414eecbb091b3a48bcc12de9a23bd775443",
 		"res://scenes/map3d/worlds/beria.tscn": "c665914748691603c93ba9dfda0aacf6887c36f9b022e80a6a382d00f7237e81",
@@ -250,7 +250,7 @@
 			"body_radius_m": 912,
 			"deploy_min_depth_m": 3738,
 			"deploy_min_width_m": 9480,
-			"model_hash": "b279cd724f2de067fe6aa0716c1c80ccc5e98809d29294e029a1b61debbd23a9",
+			"model_hash": "671854eda32f441f56a7cc1abe567882570949fd2af33ca496f5d6d1063b963c",
 			"radius_m": 911.83447419201,
 			"rank_pitch_m": 1914,
 			"sampled_clips": [
@@ -286,7 +286,7 @@
 				},
 				{
 					"clip": "MARCH",
-					"length_s": 1.16666662693024,
+					"length_s": 1.10000002384186,
 					"player": "AnimationPlayer",
 					"samples": 17
 				},
@@ -322,7 +322,7 @@
 				},
 				{
 					"clip": "STANDBY",
-					"length_s": 4.0,
+					"length_s": 2.5,
 					"player": "AnimationPlayer",
 					"samples": 17
 				}
@@ -434,7 +434,7 @@
 			"body_radius_m": 912,
 			"deploy_min_depth_m": 3738,
 			"deploy_min_width_m": 9480,
-			"model_hash": "b279cd724f2de067fe6aa0716c1c80ccc5e98809d29294e029a1b61debbd23a9",
+			"model_hash": "671854eda32f441f56a7cc1abe567882570949fd2af33ca496f5d6d1063b963c",
 			"radius_m": 911.83447419201,
 			"rank_pitch_m": 1914,
 			"sampled_clips": [
@@ -470,7 +470,7 @@
 				},
 				{
 					"clip": "MARCH",
-					"length_s": 1.16666662693024,
+					"length_s": 1.10000002384186,
 					"player": "AnimationPlayer",
 					"samples": 17
 				},
@@ -506,7 +506,7 @@
 				},
 				{
 					"clip": "STANDBY",
-					"length_s": 4.0,
+					"length_s": 2.5,
 					"player": "AnimationPlayer",
 					"samples": 17
 				}

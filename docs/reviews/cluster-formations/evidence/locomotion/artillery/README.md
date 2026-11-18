@@ -46,3 +46,15 @@ seam 1935 µm, measured penetration 7469, hover 4330, slide 13604, seam 1 µm, s
 0 introduced skin flags: NUMERIC_PASS. The consumer now stops, starts and holds at MARCH 13/14
 (0.9285714285714286; the knight's was 25/28), the same passing frame of the walk. The visual review
 of the new figure (map and close-up, before/after, independent critic) is recorded in the spec.
+
+## Re-issued for the pack walk and idle (2026-11-18)
+
+Owner 2026-11-17/18: STANDBY is the pack's "idle (4)" and MARCH the pack's "sword and shield walk"
+(`docs/superpowers/specs/2026-11-16-infantry-arp-shortsword-design.md`, "March"). The walk's
+contacts are authored (`game_export.py` `LOCK`: stances left 0.20-0.86, right 0.90-0.35, soles
+grounded, swings clear of 12 mm) and its `stride_m` is the locked sole speed over the loop, 1.4838.
+Pivots re-fitted on it: entry = exit = hold at MARCH 8/420 (0.01904761904761905). Measured
+penetration 4695, hover 4690, slide 17240, seam 1 µm against contact 23217 / seam 1935 µm, sim
+envelope 431 m, 0 introduced skin flags: NUMERIC_PASS. (The first try, the walk's own contacts with
+a measured stride of 1.40, slid 289 mm: a mid-swing tap counted as planted, and the stride was 6 %
+under the soles' speed.)
