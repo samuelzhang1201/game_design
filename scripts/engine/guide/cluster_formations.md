@@ -264,7 +264,7 @@ Nothing in ordinary dispatch calls it: `BattleSystem`'s `_start`/`join`/`_exits`
 `BattleMerge.day` and `BattleGroups.refresh` keep their behaviour until ACT-CUTOVER routes the
 admitted world through this adapter together with the driver and the projection.
 
-## Candidate day driver (ACT-DRIVER, part A)
+## Candidate day driver (ACT-DRIVER)
 
 `BodyDayDriver` (its own file, inactive like the adapter) is the one admission and driver every
 ordinary writer of an admitted body world shares. `admit(repo, source, prepare)` copies the
@@ -280,7 +280,33 @@ lifecycle edge (`BodyLifecycle.EDGES`) through `BodyLifecycle.commit_candidate`,
 zero-delta (a world with no land unit has an empty, valid snapshot). A malformed saved day is refused
 before its boundary is read; a transition that changes nothing (a failed round settlement) returns
 `blocked` on its frozen pending. The result carries one detached candidate; the source never changes, a saved candidate
-resumes exactly and a completed one is a no-op. Part B (closing the frozen day into the ordinary
-remaining phases, arrival and garrison at actual body positions, and the march staging the CF04c
-visual review asks for: whole strides, front-first column order, facing written to the heading) and
-the Game/TickEngine bridges are not here; nothing in ordinary dispatch calls the driver.
+resumes exactly and a completed one is a no-op.
+
+**The whole day (part B1).** `day(repo, source)` is the production day: at the safe boundary it
+opens (the ordinary day's prisoner steps, reconciliation, `ArmySystem.ensure` and task travel,
+sealed as an outer operation; `begin` freezes the march budgets; then works, couriers, the enemy
+and sighting on the frozen day, resealed by `BodyBattle._seal_private` under begin's receipt, a
+departure from cf05's "begin changes nothing"), drives `tactical_day`, then closes (the tactical
+phase's day-end work once: `ArmyGround.reconcile`, `LawSystem.reconcile`, `BattleSystem.finish_day`;
+then `DayResolution.PHASES` after the tactical part through the calendar: supply eaten once, the day
+turned or the month settled; the transaction cleared, reconciled and sealed at the next safe
+boundary). Works run after the march setup, which never reads them. Its complete result adds
+`journal`, `ended`, `ticked` and `report` as `resolve_day` gives them (a blocked one carries the
+decision in its candidate; `close_month` is not taken). **The outer seal binds the whole save, so every publisher reseals**: `publish(repo, source,
+request, writer)` runs an ordinary writer between days (an order, a decree) on a detached copy at
+the safe boundary and seals it as the next outer operation (its `request` is the receipt, so the same request again is an
+"Already published" no-op; make it unique per act); an unsealed write fails the next
+admission ("Battle endpoint proof mismatch") and the save is kept. Every seal and phase group must
+leave `BodyLifecycle.snapshot` and the cohorts exactly as they were: a phase or writer that moves,
+adds or removes a body (an arrival's or a fighting garrison's seat snap by `ArmyGround.reconcile`, which moves the
+anchor and not the rows, so today an arrival day and an encounter day fail closed at the close; a
+spawned host, a recruit) or changes personnel
+(desertion, month-end wound recovery) fails closed, because its body writer is not installed yet.
+Tick 0's day 30 fails closed too (the opening month settles through `advance`, and the
+absolute day falls back to 1). `TickEngine.resolve_day`, `resolve_decision` and `advance` refuse a world with `body_version` (`BODY_WORLD`),
+so no ordinary writer is its alternate authority; no ordinary campaign carries the marker. Still
+not here (part B2): the ordinary tactical phase's per-slice work (the king's `step_substep`, host
+`arrival_substep`, per-slice seat and law reconciliation, `ArmyTasks.pause_battles`), body writers for arrival and garrison at actual positions, creation (spawn,
+recruit) and non-battle losses, and the march staging the CF04c visual review asks for (whole
+strides, front-first column order, facing written to the heading); the Game bridges are
+ACT-CUTOVER's. Nothing in ordinary dispatch calls the driver.
