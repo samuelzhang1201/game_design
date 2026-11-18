@@ -168,6 +168,7 @@ audience_open,paranoid,"Majesty. Shut the door first, if you would. Now — what
 audience_open,blunt,"Majesty. I have work waiting. What do you need?"
 battle_title,,"Field report: {place}"
 battle_start,,"{att} fell upon {def} at {place}."
+battle_declined,,"{att} and {def} met at {place} but could not draw up their lines there, so no battle was joined."
 battle_join_att,,"{unit} joined the attackers at {place}."
 battle_join_def,,"{unit} joined the defenders at {place}."
 battle_round,,"Day {round} at {place}: {tier}. Our men ({ours}) lost {own_dead} dead and {own_wounded} wounded; by their count the enemy ({theirs}) lost {foe_lo}–{foe_hi} dead and wounded."

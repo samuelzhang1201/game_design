@@ -44,7 +44,9 @@ static func layout(repo: DataRepository, count: int, anchor: Vector2i,
 
 ## Reconciles fit counts without moving surviving physical rows. Legacy rows
 ## acquire identities once; only a unit without rows seeds its formation.
-static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) -> bool:
+## `why.reason`, when given, names why a refusal admitted nothing.
+static func refresh(repo: DataRepository, state: GameState, battle: Dictionary, why: Dictionary = {}) -> bool:
+	why.reason = "Battle rows cannot be admitted"
 	if not (battle.get("pending_round", {}) as Dictionary).is_empty():
 		return false
 	var size := saved_size(repo, battle) if battle.has("groups") else int(repo.bal("battle_group_size"))
@@ -61,6 +63,7 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 	var snapshots := {}
 	var anchors := {}
 	var next_slots := {}
+	var fresh := {}   # code -> {slot: true}: rows this call creates, the only ones the ground shift may move
 	for side: String in BattleSystem.SIDES:
 		for code: String in battle[side]:
 			anchors[code] = BattleSystem._at_m(repo, state, code)
@@ -129,6 +132,7 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 					row["slot"] = next
 					next += 1
 				row["count"] = sizes[i]
+				if i >= old.size(): fresh.get_or_add(code, {})[int(row.slot)] = true
 				rows.append(row)
 			next_slots[code] = next
 			groups[code] = rows
@@ -143,11 +147,19 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 		if not battle.has("groups"):
 			proposed.group_size_version = 2 if size == int(repo.bal("battle_group_size")) else 1
 			proposed.group_size_men = size
-		var admission := placement(repo, state, proposed, false)
+		var ground := onto_ground(repo, state, proposed, fresh)
+		# a ground failure among overlapping seed rows still earns the complete deployment
+		var admission := placement(repo, state, proposed, false) if ground == "" \
+			else {"ok": false, "overlap": _overlapping(repo, state, proposed), "error": ground}
 		if not admission.ok:
+			why.reason = String(admission.error)
 			if not bool(admission.get("overlap", false)) or battle.has("groups"): return false
 			seeded_anchors = deployment(repo, state, proposed)
 			if seeded_anchors.size() != anchors.size() or _relayout(repo, state, proposed, seeded_anchors) != "": return false
+			ground = onto_ground(repo, state, proposed, fresh)
+			if ground != "":
+				why.reason = ground
+				return false
 			if not placement(repo, state, proposed, false).ok: return false
 			groups = proposed.groups
 			snapshots = proposed.group_anchor_m
@@ -318,6 +330,87 @@ static func migrate_geometry(repo: DataRepository, state: GameState, battle: Dic
 	battle.clear()
 	battle.merge(proposed)
 	return {"status": "complete"}
+
+
+## Moves every `fresh` row (code -> {slot: true}) of `battle` standing on
+## blocked ground to the nearest clear point of its unit's own pitch lattice
+## (across and back from its facing) within `battle_deploy_ground_rings` pitches,
+## reached by an open line from where it stood, that overlaps no other row of
+## this or any other field; rows go in unit-code then row order, candidates
+## nearest first, then same rank, rear before front, across ascending. A clear
+## or admitted row never moves. Returns "" or the reason no lawful deployment
+## exists (callers then discard the candidate).
+static func onto_ground(repo: DataRepository, state: GameState, battle: Dictionary, fresh: Dictionary) -> String:
+	var grid := MarchPath.of_pack(repo)
+	if grid == null: return ""
+	var rings := int(repo.bal("battle_deploy_ground_rings"))
+	var offsets: Array = []
+	for j: int in range(-rings, rings + 1):
+		for i: int in range(-rings, rings + 1):
+			if i != 0 or j != 0: offsets.append(Vector2i(i, j))
+	offsets.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		var da := a.length_squared()
+		var db := b.length_squared()
+		if da != db: return da < db
+		if absi(a.y) != absi(b.y): return absi(a.y) < absi(b.y)
+		if a.y != b.y: return a.y > b.y
+		return a.x < b.x)
+	var groups: Dictionary = battle.get("groups", {})
+	var codes: Array = groups.keys()
+	codes.sort()
+	var discs: Array = []   # [row, radius]: every occupied disc a moved row must not overlap
+	var radius := {}
+	for field: Dictionary in state.battles:
+		if int(field.get("id", -1)) == int(battle.get("id", -1)) or not field.get("groups", {}) is Dictionary: continue
+		for code: String in field.groups:
+			var footprint := piece(repo, state, code)
+			if not footprint.ok: return String(footprint.error)
+			for row: Dictionary in field.groups[code]: discs.append([row, int(footprint.radius_m)])
+	for code: String in codes:
+		var footprint := piece(repo, state, code)
+		if not footprint.ok: return String(footprint.error)
+		radius[code] = footprint
+		for row: Dictionary in groups[code]: discs.append([row, int(footprint.radius_m)])
+	for code: String in codes:
+		var pitch := float(radius[code].pitch_m)
+		var face := WarFront.facing_vector(int(battle.get("group_facing", {}).get(code, 0)))
+		var across := Vector2(-face.y, face.x) * pitch
+		var back := -face * pitch
+		for row: Dictionary in groups[code]:
+			var at := Vector2i(int(row.x_m), int(row.y_m))
+			if not fresh.get(code, {}).has(int(row.slot)) or grid.clear(at, at): continue
+			var moved := false
+			for offset: Vector2i in offsets:
+				var point := at + Vector2i((across * offset.x + back * offset.y).round())
+				if not grid.clear(point, point) or not grid.clear(at, point, [grid.cell_of(at)]) or _crowded(discs, row, point, int(radius[code].radius_m)): continue
+				row.x_m = point.x
+				row.y_m = point.y
+				moved = true
+				break
+			if not moved:
+				return "No open ground within %d pitches for %s near %s" % [rings, code, str(at)]
+	return ""
+
+
+static func _crowded(discs: Array, own: Dictionary, point: Vector2i, own_radius: int) -> bool:
+	for disc: Array in discs:
+		if is_same(disc[0], own): continue
+		var pair := BattleGroupGeometry.pair([point.x, point.y], own_radius,
+			[int(disc[0].x_m), int(disc[0].y_m)], int(disc[1]), 0)
+		if not pair.ok or pair.overlap: return true
+	return false
+
+
+## Whether two rows of `battle` itself overlap (the seed's overlap-only retry test).
+static func _overlapping(repo: DataRepository, state: GameState, battle: Dictionary) -> bool:
+	var discs: Array = []
+	for code: String in battle.get("groups", {}):
+		var footprint := piece(repo, state, code)
+		if not footprint.ok: return false
+		for row: Dictionary in battle.groups[code]: discs.append([row, int(footprint.radius_m)])
+	for disc: Array in discs:
+		if _crowded(discs, disc[0], Vector2i(int(disc[0].x_m), int(disc[0].y_m)), int(disc[1])): return true
+	return false
 
 
 static func _relayout(repo: DataRepository, state: GameState, battle: Dictionary, anchors: Dictionary, rebuild := true) -> String:

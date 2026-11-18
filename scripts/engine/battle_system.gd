@@ -660,7 +660,10 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 	var att: Array = b.att
 	var def: Array = b.def
 	var place := Vector2i(int(b.place_x_m), int(b.place_y_m))
-	if not BattleGroups.refresh(repo, state, b): return
+	var why := {}
+	if not BattleGroups.refresh(repo, state, b, why):
+		_decline(state, p, f, b, String(why.reason), events)
+		return
 	state.foe_next_id += 1
 	state.battles.append(b)
 	for entry_side: String in SIDES:
@@ -677,11 +680,26 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 		"town": town, "place_x_m": place.x, "place_y_m": place.y})
 
 
+## A contact no lawful deployment admits starts no battle and halts no one;
+## the player hears it once per standoff (`contact_declined`: foe -> the last
+## day it was declined, on the player's regiment; a day's gap is a new one) as
+## {kind: "declined", battle_id: -1, att, def, town, place_x_m, place_y_m, reason}.
+static func _decline(state: GameState, p: String, f: String, b: Dictionary, reason: String, events: Array) -> void:
+	var today := state.absolute_day()
+	var seen: Dictionary = _stored(state, p).get_or_add("contact_declined", {})
+	var last := int(seen.get(f, -2))
+	seen[f] = today
+	if last >= today - 1: return
+	events.append({"kind": "declined", "battle_id": -1, "att": (b.att as Array).duplicate(), "def": (b.def as Array).duplicate(),
+		"town": String(b.town), "place_x_m": int(b.place_x_m), "place_y_m": int(b.place_y_m), "reason": reason})
+
+
 ## The day's battles (§4.1): contacts, then one round for every battle in id
 ## order, then who leaves and which battles end; then today's delivered
 ## stances take hold. Returns the day's events, for the battle report:
 ## {kind: "start", battle_id, att, def, town, place_x_m, place_y_m},
 ## {kind: "join", battle_id, code, side},
+## {kind: "declined", ...} (`_decline`),
 ## {kind: "round", battle_id, round, att_power, def_power, odds, roll, eff, tier,
 ##  results (apply_round's), left [{code, side, why}], att, def (who fought it,
 ##  before anyone left), town, place_x_m, place_y_m} and
