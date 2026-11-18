@@ -259,6 +259,8 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 	var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	piece["camp_scale"] = Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
 		piece["reference_height_m"], piece["reference_size"])
+	if piece.has("gap") and not piece.get("candidate_bodies", false):
+		piece["close"] = close_of(ctx, piece, float(piece["gap"]))
 	var box := Rect2()
 	var has_box := false
 	var extent := Vector2.ZERO
@@ -326,7 +328,7 @@ static func _target(ctx: Map3DContext, piece: Dictionary, group: Dictionary) -> 
 	var heading := Vector2.from_angle(deg_to_rad(float(group.yaw_udeg) / BodyMotion.LOCOMOTION_Q)) if group.has("yaw_udeg") \
 		else WarFront.facing_vector(int(group.get("facing_deg", piece["facing_deg"])))
 	var child: Dictionary = group["piece"]
-	return {"xz": saved_xz(ctx, piece, group) + child.get("duel_offset", Vector2.ZERO),
+	return {"xz": stand_xz(ctx, piece, group) + child.get("duel_offset", Vector2.ZERO),
 		"yaw": float(child.get("duel_yaw", Map3DUnits.facing_yaw(heading, child["stand_deg"])))}
 
 
@@ -335,6 +337,35 @@ static func saved_xz(ctx: Map3DContext, piece: Dictionary, group: Dictionary) ->
 	var pack_px := Vector2(group["x_m"], group["y_m"]) / float(ArmySystem.metres_per_pack_px(ctx.repo)) if piece.get("candidate_bodies", false) \
 		else ArmySystem.metres_to_pack(ctx.repo, Vector2i(group["x_m"], group["y_m"]))
 	return ctx.to_world(pack_px)
+
+
+## Where a group's figure STANDS, world XZ (owner 2026-11-18: 行军和对峙时兵人的
+## 位置不变): its saved point drawn in toward the unit's place (`centre`, the
+## layer's) across and along the saved facing by `close`, so neighbours stand
+## the ordinary block's pitch apart. View-only; a piece given neither stands
+## on its saved points.
+static func stand_xz(ctx: Map3DContext, piece: Dictionary, group: Dictionary) -> Vector2:
+	var saved := saved_xz(ctx, piece, group)
+	if not piece.has("close") or not piece.has("centre"):
+		return saved
+	var face := WarFront.facing_vector(int(piece["facing_deg"]))
+	var across := Vector2(-face.y, face.x)
+	var from: Vector2 = saved - piece["centre"]
+	return piece["centre"] + across * from.dot(across) * piece["close"].x + face * from.dot(face) * piece["close"].y
+
+
+## The share of the engine's body pitch at which `piece`'s figures stand, across
+## and back: the ordinary block's pitch (Map3DFormation.piece `pitch` x `gap`,
+## the layer's formation_gap, at the piece's scale) over the arm's
+## unit_footprints.csv pitch_m in world metres; ONE for an arm with no footprint.
+static func close_of(ctx: Map3DContext, piece: Dictionary, gap: float) -> Vector2:
+	var pitch_m := int(ctx.repo.unit_footprints.get(String(piece.get("model", "")), {}).get("pitch_m", 0))
+	if pitch_m <= 0 or (piece["groups"] as Array).is_empty() or not piece.has("camp_scale"):
+		return Vector2.ONE
+	var world := ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(pitch_m, 0))).distance_to(
+		ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i.ZERO)))
+	var pitch: Vector2 = piece["groups"][0]["piece"].get("pitch", Vector2.ZERO)
+	return pitch * gap * float(piece["camp_scale"]) / world if world > 0.0 and pitch != Vector2.ZERO else Vector2.ONE
 
 
 static func evidence(piece: Dictionary) -> Array:
