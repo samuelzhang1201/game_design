@@ -42,6 +42,8 @@ static func load_candidate(repo: DataRepository, source: GameState) -> Dictionar
 
 static func _classified(repo: DataRepository, source: GameState) -> Dictionary:
 	if repo == null or source == null: return _kind(REFUSED, "Load classification requires data and a save")
+	if source.loaded_save_version < GameState.MIN_SAVE_VERSION or source.loaded_save_version > GameState.SAVE_VERSION:
+		return _kind(REFUSED, "Unsupported source save version")
 	var migration: Dictionary = source.military_migration
 	if migration.has("body_placement") and not UnitBodies._placement_control_ok(migration.body_placement):
 		return _kind(REFUSED, "Invalid saved placement control")
