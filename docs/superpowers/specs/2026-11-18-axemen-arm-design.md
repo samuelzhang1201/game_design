@@ -110,10 +110,19 @@ from `certify_locomotion.py`. Goes through `visual-review`.
 
 1. **The arm**: every data row above, pack columns, cluster fill rule, stand-in model / painting /
    certificate. Outcome: raise an axe regiment in the prologue; it fights by its own numbers.
-2. **3D axe soldier** on the map with its own clips.
-3. **First blow** rule and its table, test and report reason.
-4. **Formation 斧前剑后**.
-5. **Card painting** (`assets/2D/paintings/armies/axemen.png`, a B-row in
+2. **Matchups against the foe actually faced** (owner 2026-11-18: "全兵种都改"): today
+   `ArmySystem._arm_base` averages ALL of an arm's matchup rows into one base, so items 1–2 above
+   do nothing situational (the axemen average 1000, the infantry 1050). A new battle factor weights
+   each arm's matchup by the opposing side's arm mix, for every arm (existing battles rebalance);
+   the "X vs axemen" rows of the existing arms land here, not in step 1. New code outside the pinned
+   `army_system.gd` (a `BattleStrength` factor with a reason).
+3. **Storming a town**: `army_town_defence.csv`'s `attack` column is read today by nothing
+   (`terrain_factor` applies works to the defender only). A new factor gives the attacker of a
+   held town its arm's `attack` value for the works there.
+4. **3D axe soldier** on the map with its own clips.
+5. **First blow** rule and its table, test and report reason.
+6. **Formation 斧前剑后**.
+7. **Card painting** (`assets/2D/paintings/armies/axemen.png`, a B-row in
    `docs/references/art_prompt_library.md`): when the desktop is on, Z-Image + Qwen batches, the
    owner picks; ask before queuing.
 
