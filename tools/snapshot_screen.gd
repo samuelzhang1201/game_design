@@ -2153,7 +2153,9 @@ func _frozen_capture() -> void:
 		return
 	var measured := view._units.group_geometry()
 	var final_hash := SaveLoad.state_hash(Game.state)
-	var checked := battle_capture_check(view._ctx, measured, _frozen_loaded_hash, final_hash)
+	var pieces := {}
+	for code: String in measured: pieces[code] = view._units.built_piece(code)
+	var checked := battle_capture_check(view._ctx, measured, _frozen_loaded_hash, final_hash, pieces)
 	if checked.has("error"):
 		_frozen_fail(String(checked["error"]))
 		return
@@ -2197,7 +2199,8 @@ func _frozen_capture() -> void:
 
 
 ## Checks the instantiated nodes against permitted source facts, never hidden rows.
-func battle_capture_check(ctx: Map3DContext, measured: Dictionary, loaded_hash: String, final_hash: String) -> Dictionary:
+## `pieces` ({code: its drawn piece}): each figure stands where Map3DBattleGroups.stand_xz draws its saved point.
+func battle_capture_check(ctx: Map3DContext, measured: Dictionary, loaded_hash: String, final_hash: String, pieces := {}) -> Dictionary:
 	if loaded_hash != final_hash:
 		return {"error": "loaded state changed during capture"}
 	var projection := battle_capture_source(ctx)
@@ -2224,7 +2227,7 @@ func battle_capture_check(ctx: Map3DContext, measured: Dictionary, loaded_hash: 
 			for field: String in ["count", "role", "x_m", "y_m"]:
 				if node[field] != row[field]:
 					return {"error": "source/model field mismatch: " + code + ":" + field}
-			var expected := ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(row["x_m"], row["y_m"])))
+			var expected := Map3DBattleGroups.stand_xz(ctx, pieces.get(code, {}), row)
 			var actual := Vector2(node["xz_world"][0], node["xz_world"][1])
 			var yaw := Map3DUnits.facing_yaw(WarFront.facing_vector(sampled["facing_deg"]))
 			if expected.distance_to(actual) > 0.0001 or absf(wrapf(float(node["yaw_rad"]) - yaw, -PI, PI)) > 0.0001:

@@ -107,7 +107,7 @@ static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 				continue
 			by_id[id]["a" if code in battle["att"] else "b"].append({"key": "%s:%d" % [code, int(group["slot"])],
 				"code": code, "slot": int(group["slot"]), "anim": child["anims"][0], "child": child, "art": art, "piece": piece,
-				"xz": Map3DBattleGroups.saved_xz(ctx, piece, group),
+				"xz": Map3DBattleGroups.stand_xz(ctx, piece, group),
 				"h": float(child["height_m"]) * (child["node"] as Node3D).global_basis.get_scale().y})
 	var ids := by_id.keys()
 	ids.sort()

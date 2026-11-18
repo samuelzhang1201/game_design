@@ -11,6 +11,7 @@ script = ExtResource("3_y4xoy")
 art = Dictionary[String, Resource]({
 "archers": ExtResource("1_y4xoy"),
 "artillery": ExtResource("1_33jbd"),
+"axemen": ExtResource("1_33jbd"),
 "cavalry": ExtResource("2_0vt4k"),
 "infantry": ExtResource("1_33jbd"),
 "royal": ExtResource("3_0vt4k")

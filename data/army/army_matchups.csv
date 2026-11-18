@@ -16,3 +16,8 @@ artillery,archers,900,800,
 artillery,cavalry,800,600,
 artillery,artillery,1000,1000,
 fleet,fleet,1000,1000,
+axemen,infantry,1300,1000,owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): axes break a shield wall but cannot keep a line
+axemen,archers,1100,900,
+axemen,cavalry,900,700,no reach: horse rides them down
+axemen,artillery,1200,900,
+axemen,axemen,1000,1000,

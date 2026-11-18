@@ -83,9 +83,8 @@ func test_entering_a_battle_walks_the_figures_in() -> void:
 	assert_eq(String(piece.get("action", "")), "MARCH", "it walks in, on a stopped clock too")
 	layer.step(repo.bal("map3d_battle_walk_s"))
 	var row: Dictionary = piece["groups"][0]
-	var saved := ctx.to_world(ArmySystem.metres_to_pack(repo, Vector2i(int(row["x_m"]), int(row["y_m"]))))
-	assert_almost_eq(Vector2(node.global_position.x, node.global_position.z), saved, Vector2(0.01, 0.01),
-		"and ends on its saved point")
+	assert_almost_eq(Vector2(node.global_position.x, node.global_position.z), Groups.stand_xz(ctx, piece, row), Vector2(0.01, 0.01),
+		"and ends where it stands for its saved point, at the block's spacing")
 	assert_false(bool(piece.get("easing", false)))
 	layer.step(0.1)
 	assert_ne(String(piece.get("action", "")), "MARCH", "arrived, it stands")

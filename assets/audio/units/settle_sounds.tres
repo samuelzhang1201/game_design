@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ArtTable" format=3]
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://s0cltkcy4ede"]
 
 [ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="1_table"]
 [ext_resource type="AudioStream" uid="uid://dl7a7osovlolr" path="res://assets/audio/units/garrison_equip.wav" id="2_equip"]
@@ -6,5 +6,6 @@
 [resource]
 script = ExtResource("1_table")
 art = Dictionary[String, Resource]({
+"axemen": ExtResource("2_equip"),
 "infantry": ExtResource("2_equip")
 })

@@ -56,7 +56,7 @@ extends SceneTree
 ##
 ## Polygons are filled with an even-odd scanline rasterizer. Deterministic:
 ## same inputs => byte-identical outputs. Hand-edits to the generated CSVs
-## are overwritten; lasting changes belong in Azgaar.
+## are overwritten; lasting changes belong in Azgaar (the game's own arms: data/army/game_arms.csv).
 ##
 ## Usage:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
@@ -64,6 +64,24 @@ extends SceneTree
 ##       [-- --map-id ID --json PATH]   (default id: data/world/maps.csv is_default)
 
 const MAPS := "res://assets/maps"
+
+## The game's own arms (data/army/game_arms.csv, found through `data`'s tables.csv) in the
+## export's unit shape: {"defs": [...]}, or {"error": ...} when the table is missing or malformed,
+## so a re-import fails rather than silently dropping an arm.
+static func game_arm_defs(data: String) -> Dictionary:
+	DataRepository.last_error = ""
+	var path := DataRepository.table_path(data, "game_arms")
+	var rows := DataRepository.parse_csv(path,
+			["unit_code", "label", "type", "rural_rate", "urban_rate", "crew", "power", "separate"])
+	if DataRepository.last_error != "" or rows.is_empty():
+		return {"error": "cannot read the game's own arms at %s: %s" % [path, DataRepository.last_error]}
+	var defs: Array = []
+	for row: Dictionary in rows:
+		defs.append({"name": String(row["unit_code"]), "label": String(row["label"]), "type": String(row["type"]),
+			"rural": float(row["rural_rate"]), "urban": float(row["urban_rate"]), "crew": int(row["crew"]),
+			"power": float(row["power"]), "separate": String(row["separate"]) == "1"})
+	return {"defs": defs}
+
 const DATA := "res://data"
 ## A route endpoint this close (native px) to a burg is "at" that burg.
 const SNAP_RADIUS := 3.0
@@ -565,13 +583,26 @@ func _run() -> int:
 	for g in _active(pack.get("goods", [])):
 		good_code[int(g["i"])] = _take_slug(good_slugs, String(g["name"]))
 	var options: Dictionary = (world["settings"] as Dictionary).get("options", {})
-	var unit_defs: Array = options.get("military", [])
+	var unit_defs: Array = (options.get("military", []) as Array).duplicate(true)
 	var unit_names: Array[String] = []
 	var unit_power: Dictionary = {}
 	for u in unit_defs:
 		if u is Dictionary:
 			unit_names.append(String(u["name"]))
 			unit_power[String(u["name"])] = float(u.get("power", 1))
+	# The game's own arms (data/army/game_arms.csv), which the export does not define: appended
+	# after the export's, with no men in any regiment, so a re-import keeps them.
+	var game_arms := game_arm_defs(DATA)
+	if game_arms.has("error"):
+		push_error("import_azgaar: " + String(game_arms["error"]))
+		return 1
+	for def: Dictionary in game_arms["defs"]:
+		var code := String(def["name"])
+		if code in unit_names:
+			continue
+		unit_defs.append(def)
+		unit_names.append(code)
+		unit_power[code] = float(def["power"])
 
 	# --- political/kingdoms.csv -------------------------------------------
 	var out := _csv_line(["kingdom_code", "state_id", "label", "capital_burg",
@@ -793,7 +824,7 @@ func _run() -> int:
 	for u in unit_defs:
 		if not u is Dictionary:
 			continue
-		out += _csv_line([String(u["name"]), String(u["name"]).capitalize(),
+		out += _csv_line([String(u["name"]), String(u.get("label", String(u["name"]).capitalize())),
 			String(u.get("type", "")), _num2(float(u.get("rural", 0))),
 			_num2(float(u.get("urban", 0))), str(int(u.get("crew", 1))),
 			_num2(float(u.get("power", 1))), "1" if u.get("separate") else "0"])

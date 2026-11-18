@@ -1,17 +1,18 @@
-[gd_resource type="Resource" script_class="ArtTable" format=3]
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://cwl8emht4salw"]
 
-[ext_resource type="PackedScene" path="res://scenes/models/war_room/piece_infantry.tscn" id="1_m3lp0"]
-[ext_resource type="PackedScene" path="res://scenes/models/war_room/piece_archers.tscn" id="2_egp2f"]
-[ext_resource type="PackedScene" path="res://scenes/models/war_room/piece_cavalry.tscn" id="3_8e73k"]
-[ext_resource type="PackedScene" path="res://scenes/models/war_room/piece_royal.tscn" id="4_pu4fm"]
-[ext_resource type="PackedScene" path="res://scenes/models/war_room/piece_trebuchet.tscn" id="5_ctp2r"]
-[ext_resource type="Script" path="res://scripts/engine/art_table.gd" id="6_ka18b"]
+[ext_resource type="PackedScene" uid="uid://b3ij61yfrhct5" path="res://scenes/models/war_room/piece_infantry.tscn" id="1_m3lp0"]
+[ext_resource type="PackedScene" uid="uid://cv05vm7xvfeu1" path="res://scenes/models/war_room/piece_archers.tscn" id="2_egp2f"]
+[ext_resource type="PackedScene" uid="uid://x2kvcgsdhrgn" path="res://scenes/models/war_room/piece_cavalry.tscn" id="3_8e73k"]
+[ext_resource type="PackedScene" uid="uid://b3q7lvadv6t85" path="res://scenes/models/war_room/piece_royal.tscn" id="4_pu4fm"]
+[ext_resource type="PackedScene" uid="uid://chu6jyil41jqn" path="res://scenes/models/war_room/piece_trebuchet.tscn" id="5_ctp2r"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="6_ka18b"]
 
 [resource]
 script = ExtResource("6_ka18b")
 art = Dictionary[String, Resource]({
 "archers": ExtResource("2_egp2f"),
 "artillery": ExtResource("5_ctp2r"),
+"axemen": ExtResource("1_m3lp0"),
 "cavalry": ExtResource("3_8e73k"),
 "infantry": ExtResource("1_m3lp0"),
 "royal": ExtResource("4_pu4fm")

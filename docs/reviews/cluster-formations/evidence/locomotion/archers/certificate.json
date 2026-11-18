@@ -329,7 +329,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "dc4f518fc1fe77163340e184741d150438202ff8aff01b2be1a95a7f0ff40d23",
+  "sha256": "d1285356011764c437e86660ee39074d4fd2d99aff7afaadd94a97d01133d9f7",
   "uniform": 512
  },
  "config": {
@@ -409,11 +409,11 @@
   "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg.import": "3d1b0b7a807b6798161b3ad06e9b4fc9d38f151661dcfd68ad84fa847080348f",
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg.import": "c8dc15fa86145c123bff4e26fef8300d719dfc5d946d22be712cf4d478ce9067",
-  "data/army/balance.csv": "161958b363556cc8d1980517612d61f21434349a6ea7c9a367e9bffdfae24277",
-  "data/army/unit_footprints.csv": "5d7ebb28d0942802e698284eb42817203d66100ad607debc6cbda895485412de",
-  "data/screens/map3d/army_art.csv": "d6a9492405baa0725ab694c06d845fd7b47528c14dbfd1e720313e9789021d1a",
-  "data/screens/map3d/balance.csv": "f128c6999b798ed089e50f888f24f0ee6a9e70646df2a9ff66169430190a3790",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "bfebfc3990e71493840a3d35ea9fc4b2118cf2347bc50afbdf4358798dc59cc4",
+  "data/army/balance.csv": "9568023e30a626cccd5e47c8de1d1b360d1cdb6d1fcc16f4f34548df31c274e5",
+  "data/army/unit_footprints.csv": "358d0da3fbfddb33ade1f42d7eeb8f15d6016873c9220fab18468abf48e1e12e",
+  "data/screens/map3d/army_art.csv": "30dd854eef9f9ef6c56e761a06819fced3685075e3bb994d5d64627efad9a1b1",
+  "data/screens/map3d/balance.csv": "8909525588cdfe925cff1777baef2a8c875fcda6301fc97c40e43c1d07394c2b",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "80d335ba4742cc030dbd993528e7d2e578e8c2c18cdfc5003b5e50e511059f0a",
   "scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
   "scripts/map3d/map3d_archer_locomotion.gd": "747cb3f67d51d7f82f34b6888948022f307022f72060c561dd245d4572182fea",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
@@ -427,11 +427,11 @@
    "MARCH"
   ],
   "contact_um": 28474,
-  "digest": "578b78ea43b99d9ff573bc3557abb8015e96410fec11f69fd114a0ff540da482",
+  "digest": "e2799865ca28b5cbc2625d6258c9dceb906556426ce75620f7d626f43c53f496",
   "radius_m": 932,
   "turn_q": 400000
  },
- "payload_sha256": "578b78ea43b99d9ff573bc3557abb8015e96410fec11f69fd114a0ff540da482",
+ "payload_sha256": "e2799865ca28b5cbc2625d6258c9dceb906556426ce75620f7d626f43c53f496",
  "report": {
   "bounds_um": {
    "contact": 28474,

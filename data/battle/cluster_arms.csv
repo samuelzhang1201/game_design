@@ -1,0 +1,7 @@
+arm,counts_as,word,notes
+infantry,infantry,步兵,"cluster formations (ClusterLayout): which recipe and slot arm a unit of this arm fills, and the word a missing arm reads as; the units row is the word for a missing unit of any arm"
+archers,archers,弓兵,
+cavalry,cavalry,骑兵,
+artillery,artillery,炮兵,
+axemen,infantry,斧兵,"owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): an axe unit fills any infantry slot"
+units,,作战单位,
