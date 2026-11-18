@@ -11,3 +11,6 @@ citadel,infantry,1400,1000,"a citadel: walls and a keep"
 citadel,archers,1350,1000,
 citadel,cavalry,1000,1000,
 citadel,artillery,1300,1000,
+town,axemen,1050,1100,owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): axes hold a town at about half the foot's bonus and break gates when they attack
+walls,axemen,1150,1200,
+citadel,axemen,1200,1250,
