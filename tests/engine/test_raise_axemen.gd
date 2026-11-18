@@ -60,6 +60,11 @@ func test_old_save_without_axemen_loads() -> void:
 	_strip(data)
 	var loaded := GameState.from_dict(data, false)
 	assert_gt(loaded.army_roster.size(), 0)
+	# The steps Game.load_campaign runs after parsing a save.
+	var personnel := MilitaryBootstrap.migrate(repo, loaded)
+	assert_false(personnel.has("error"), str(personnel))
+	var organization := MilitaryReorganization.reconcile(repo, loaded)
+	assert_ne(organization.get("status", "error"), "error", str(organization))
 	for code: String in loaded.army_roster:
 		var reg := ArmySystem.regiment(repo, code, loaded)
 		assert_eq(int(float(reg.get("axemen", 0))), 0, code)

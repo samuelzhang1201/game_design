@@ -64,6 +64,24 @@ extends SceneTree
 ##       [-- --map-id ID --json PATH]   (default id: data/world/maps.csv is_default)
 
 const MAPS := "res://assets/maps"
+
+## The game's own arms (data/army/game_arms.csv, found through `data`'s tables.csv) in the
+## export's unit shape: {"defs": [...]}, or {"error": ...} when the table is missing or malformed,
+## so a re-import fails rather than silently dropping an arm.
+static func game_arm_defs(data: String) -> Dictionary:
+	DataRepository.last_error = ""
+	var path := DataRepository.table_path(data, "game_arms")
+	var rows := DataRepository.parse_csv(path,
+			["unit_code", "label", "type", "rural_rate", "urban_rate", "crew", "power", "separate"])
+	if DataRepository.last_error != "" or rows.is_empty():
+		return {"error": "cannot read the game's own arms at %s: %s" % [path, DataRepository.last_error]}
+	var defs: Array = []
+	for row: Dictionary in rows:
+		defs.append({"name": String(row["unit_code"]), "label": String(row["label"]), "type": String(row["type"]),
+			"rural": float(row["rural_rate"]), "urban": float(row["urban_rate"]), "crew": int(row["crew"]),
+			"power": float(row["power"]), "separate": String(row["separate"]) == "1"})
+	return {"defs": defs}
+
 const DATA := "res://data"
 ## A route endpoint this close (native px) to a burg is "at" that burg.
 const SNAP_RADIUS := 3.0
@@ -574,16 +592,17 @@ func _run() -> int:
 			unit_power[String(u["name"])] = float(u.get("power", 1))
 	# The game's own arms (data/army/game_arms.csv), which the export does not define: appended
 	# after the export's, with no men in any regiment, so a re-import keeps them.
-	for row: Dictionary in DataRepository.parse_csv("res://data/army/game_arms.csv",
-			["unit_code", "label", "type", "rural_rate", "urban_rate", "crew", "power", "separate"]):
-		var code := String(row["unit_code"])
+	var game_arms := game_arm_defs(DATA)
+	if game_arms.has("error"):
+		push_error("import_azgaar: " + String(game_arms["error"]))
+		return 1
+	for def: Dictionary in game_arms["defs"]:
+		var code := String(def["name"])
 		if code in unit_names:
 			continue
-		unit_defs.append({"name": code, "label": String(row["label"]), "type": String(row["type"]),
-			"rural": float(row["rural_rate"]), "urban": float(row["urban_rate"]), "crew": int(row["crew"]),
-			"power": float(row["power"]), "separate": String(row["separate"]) == "1"})
+		unit_defs.append(def)
 		unit_names.append(code)
-		unit_power[code] = float(row["power"])
+		unit_power[code] = float(def["power"])
 
 	# --- political/kingdoms.csv -------------------------------------------
 	var out := _csv_line(["kingdom_code", "state_id", "label", "capital_burg",
