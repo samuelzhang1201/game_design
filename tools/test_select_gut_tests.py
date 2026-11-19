@@ -169,7 +169,8 @@ class SelectionTests(unittest.TestCase):
         chosen = self.select('scripts/engine/army_system.gd')
         jobs = chosen['matrix']['include']
         military = [job for job in jobs if job['category'] == 'engine-military']
-        self.assertEqual([job['batch'] for job in military], [1, 2, 3, 4, 5])
+        self.assertEqual([job['batch'] for job in military], [1, 2, 3, 4, 5, 6])
+        self.assertEqual(self.catalog['engine-body-day'], ['tests/engine/test_body_day_driver.gd'])
         files = []
         body_batches = {}
         for job in military:
@@ -250,7 +251,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_batch_requires_one_category_and_valid_manifest_index(self):
         for args in [['--batch', '1'], ['--category', 'engine-military', '--batch', '0'],
-                     ['--category', 'engine-military', '--batch', '6'],
+                     ['--category', 'engine-military', '--batch', '7'],
                      ['--category', 'engine-military', '--batch', '-1'],
                      ['--category', 'engine-military', '--batch', 'invalid'],
                      ['--category', 'engine-military', '--batch', '1', '--functional'],
