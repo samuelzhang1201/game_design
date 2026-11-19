@@ -5,6 +5,7 @@ extends GutTest
 func after_each() -> void:
 	MarchPath.forget()
 	RoadGraph.forget()
+	ArmySystem.forget_grids()
 
 func _helper(path: String, method: String, args: Array = []) -> Dictionary:
 	var helper: GutTest = load(path).new()
@@ -261,10 +262,10 @@ func test_writer_between_days_is_sealed_or_refused() -> void:
 	var frozen := BodyDayDriver.tactical_day(f.repo, state)
 	assert_eq(BodyDayDriver.publish(f.repo, frozen.candidate, {"kind": "order"}, order).reason, "A writer publishes only at a safe boundary")
 
-## The encounter day opens, blocks at the decision (a saved blocked day waits), resumes after the
-## answer and drives its round; its close then meets the legacy seat reconciliation snapping the
-## fighting garrison to its town, a body writer part B2 installs, so it fails closed, the save kept.
-func test_encounter_day_waits_then_fails_closed_at_the_seat_snap() -> void:
+## The encounter day opens and blocks at the decision (a saved blocked day waits), drives its round
+## after the answer, then closes: the fighting garrisons keep their actual anchors and rows (no seat
+## snap), the seats move only as `_seat_day` allows, and the next safe boundary is sealed.
+func test_encounter_day_completes_with_garrisons_where_they_stand() -> void:
 	var path := "res://tests/engine/test_body_battle_motion.gd"
 	var f := _helper(path, "_world", [1000])
 	var blocked := BodyDayDriver.day(f.repo, f.state)
@@ -279,12 +280,23 @@ func test_encounter_day_waits_then_fails_closed_at_the_seat_snap() -> void:
 	if answered.candidate == null: return
 	var tactical := BodyDayDriver.tactical_day(f.repo, answered.candidate)
 	assert_eq(tactical.status, "complete", tactical.reason)
-	if tactical.candidate != null: assert_eq(int(tactical.candidate.battles[0].rounds), 1)
+	if tactical.candidate == null: return
+	assert_eq(int(tactical.candidate.battles[0].rounds), 1)
 	var kept := _hash(answered.candidate)
 	var closed := BodyDayDriver.day(f.repo, answered.candidate)
-	assert_eq([closed.status, closed.candidate], ["error", null])
-	assert_eq(closed.reason, "The day's closing phases moved, added or removed a body; its body writer is not installed")
-	assert_eq(_hash(answered.candidate), kept)
+	assert_eq(closed.status, "complete", closed.reason)
+	assert_eq(_hash(answered.candidate), kept, "the driver never touches its source")
+	if closed.candidate == null: return
+	for code: String in f.state.army_roster:
+		var end := UnitBodies._entry(tactical.candidate, code)
+		var now := UnitBodies._entry(closed.candidate, code)
+		assert_eq([now.x_m, now.y_m], [end.x_m, end.y_m], code + " keeps its actual anchor")
+		assert_eq(UnitBodies.rows(f.repo, closed.candidate, code), UnitBodies.rows(f.repo, tactical.candidate, code), code + " keeps its rows")
+	for town: String in tactical.candidate.town_seat:
+		var holder: String = tactical.candidate.town_seat[town]
+		if f.state.army_roster.has(holder): assert_eq(closed.candidate.town_seat.get(town), holder, "a fighting garrison keeps its seat")
+	assert_eq(closed.ended, int(answered.candidate.day_resolution.absolute_day))
+	assert_eq(UnitBodies.validate_battle_candidate(f.repo, closed.candidate, BodyBattle.safe_boundary(closed.candidate)).status, "complete")
 
 func test_ordinary_day_refuses_an_admitted_body_world() -> void:
 	var f := _march_world()
@@ -322,12 +334,78 @@ func test_thirtieth_day_settles_the_month_once() -> void:
 	assert_string_contains(refused.reason, "personnel")
 	assert_eq(_hash(wounded.state), before)
 
-## An arrival ends in the legacy garrison snap (`ArmyGround.reconcile` moves the anchor to its
-## town seat, the rows stay): no body writer for it yet, so the day fails closed, the save kept.
-func test_arrival_day_fails_closed_until_its_body_writer() -> void:
+## Hand-computed arrival: the 300 m route fits one day (budget 300), so the row ends ON its
+## destination (50300, 50000), facing 0; the march turns to GARRISON there and settles its camp at
+## that actual anchor, with no seat snap: the anchor equals the row and the day closes sealed. In
+## the field it takes no seat; with a held town's point moved under (50300, 50000) that town's
+## seat goes to the arrival, and its camp is that town.
+func test_arrival_day_garrisons_where_the_column_stands() -> void:
+	for on_point: bool in [false, true]:
+		var f := _march_world()
+		var town := ""
+		if on_point:
+			var realm: String = f.state.army_roster[f.code].kingdom_code
+			var towns: Array = f.repo.burgs.keys()
+			towns.sort()
+			for key: String in towns:
+				if ArmyGround.holds(f.repo, f.state, realm, key):
+					town = key
+					break
+			assert_ne(town, "", "a held town")
+			var px := ArmySystem.metres_to_pack(f.repo, Vector2i(50300, 50000))
+			f.repo.burgs[town].x = px.x
+			f.repo.burgs[town].y = px.y
+			ArmySystem.forget_grids()
+		var before := _hash(f.state)
+		# The fixture keeps the whole campaign's seats for the units it dropped; a seat whose holder
+		# is gone is cleared, as `ArmyGround.reconcile` clears it. No other unit holds one.
+		var seats := {}
+		for key: String in f.state.town_seat:
+			assert_false(f.state.army_roster.has(f.state.town_seat[key]), "only dropped units' seats")
+		var result := BodyDayDriver.day(f.repo, f.state)
+		assert_eq(result.status, "complete", result.reason)
+		assert_eq(_hash(f.state), before, "the driver never touches its source")
+		if result.candidate == null: return
+		var state: GameState = result.candidate
+		var entry: Dictionary = state.regiments[f.code]
+		var row: Dictionary = UnitBodies.rows(f.repo, state, f.code)[0]
+		assert_eq([row.x_m, row.y_m, row.facing_deg, row.count], [50300, 50000, 0, 100])
+		assert_eq([entry.x_m, entry.y_m, entry.order], [50300, 50000, ArmySystem.ORDER_GARRISON], "garrisoned where it stands")
+		assert_true(f.code in result.journal.arrivals)
+		if on_point:
+			seats[town] = f.code
+			assert_eq(String(entry.get("camp_town", "")), town, "its camp is the town under its anchor")
+		assert_eq(state.town_seat, seats, "a seat goes only to the unit on the town's point")
+		assert_eq(UnitBodies.validate_battle_candidate(f.repo, state, BodyBattle.safe_boundary(state)).status, "complete")
+		var copy := BodyDayDriver.day(f.repo, _json(f.state))
+		assert_eq(_hash(copy.candidate), _hash(state), "the JSON save gives the same day")
+
+## The seat rules, hand-built on one crown unit standing at (50000, 50000), off every town point
+## (a garrison whose rows moved in battle): it KEEPS a seat it holds; it loses it on the march
+## (`ArmyGround.leave`'s rule) or once its town is lost; a seat whose holder is gone is cleared.
+func test_seat_day_clears_a_seat_only_as_the_legacy_day_does() -> void:
 	var f := _march_world()
-	var before := _hash(f.state)
-	var refused := BodyDayDriver.day(f.repo, f.state)
-	assert_eq([refused.status, refused.candidate], ["error", null])
-	assert_eq(refused.reason, "The day's closing phases moved, added or removed a body; its body writer is not installed")
-	assert_eq(_hash(f.state), before)
+	var realm: String = f.state.army_roster[f.code].kingdom_code
+	var towns: Array = f.repo.burgs.keys()
+	towns.sort()
+	var town := ""
+	for key: String in towns:
+		if ArmyGround.holds(f.repo, f.state, realm, key):
+			town = key
+			break
+	assert_ne(town, "", "a held town")
+	var other := ""
+	for key: String in f.repo.kingdoms:
+		if key != realm:
+			other = key
+			break
+	for case: String in ["garrison", "march", "lost", "gone"]:
+		var state := UnitBodies._copy(f.state)
+		state.town_seat = {town: f.code if case != "gone" else "no_such_unit"}
+		var entry: Dictionary = state.regiments[f.code]
+		entry.order = ArmySystem.ORDER_MARCH if case == "march" else ArmySystem.ORDER_GARRISON
+		if case == "lost":
+			assert_true(MapOwnership.set_owner(f.repo, state, String(f.repo.burgs[town].province_code), other, "test: town lost"))
+		assert_eq(BodyDayDriver._seat_day(f.repo, state, []), "", case)
+		assert_eq(state.town_seat, {town: f.code} if case == "garrison" else {}, case)
+		assert_eq([entry.x_m, entry.y_m], [50000, 50000], case + ": no anchor moves")
