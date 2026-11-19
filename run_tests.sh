@@ -9,7 +9,7 @@ set -e
 # --fast: all functional engine categories and ledger3d (no campaign replay).
 if [ "${1:-}" = --fast ]; then
   shift
-  set -- --category engine-core --category engine-economy --category engine-military --category ledger3d "$@"
+  set -- --category engine-core --category engine-economy --category engine-military --category engine-body-day --category ledger3d "$@"
 fi
 SELECTED_FILES=$(python3 tools/select_gut_tests.py "$@" --format files)
 if [ -z "$SELECTED_FILES" ]; then
