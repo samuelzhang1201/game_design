@@ -6,6 +6,9 @@ var actions: ActionSystem
 var suggestions: SuggestionGenerator
 var events: EventSystem
 var last_month_report: TickReport
+## ACT-DRIVER: the ordinary day (`resolve_day`, `resolve_decision`, `advance`) refuses an admitted
+## body world (`body_version`); `BodyDayDriver` drives it. No ordinary campaign carries the marker.
+const BODY_WORLD := "An admitted body world is driven by BodyDayDriver"
 
 func _init(d: DataRepository) -> void:
 	data = d
@@ -26,6 +29,8 @@ func advance_day(state: GameState) -> Array:
 
 
 func resolve_decision(state: GameState, token: String, choice: String) -> Dictionary:
+	if state.military_migration.has("body_version"):
+		return {"status": "error", "error": BODY_WORLD}
 	if not state.day_resolution.is_empty():
 		var incompatibility := DayResolution.incompatibility_reason(state.day_resolution)
 		if not incompatibility.is_empty():
@@ -43,6 +48,8 @@ func resolve_decision(state: GameState, token: String, choice: String) -> Dictio
 ## close_month retains advance()'s one-day-plus-month snapshot contract.
 ## Once begun, the saved transaction decides whether this day closes a month.
 func resolve_day(state: GameState, close_month := false) -> Dictionary:
+	if state.military_migration.has("body_version"):
+		return {"status": "error", "error": BODY_WORLD}
 	if not state.day_resolution.is_empty():
 		var incompatibility := DayResolution.incompatibility_reason(state.day_resolution)
 		if not incompatibility.is_empty():
@@ -603,6 +610,8 @@ func _newly_idle(state: GameState, was_idle: Dictionary) -> Array:
 
 
 func advance(state: GameState) -> TickReport:
+	if state.military_migration.has("body_version"):
+		return null
 	if state.tick == 0 and state.day_resolution.is_empty():
 		_restore_day(DayResolution.begin(state.absolute_day(), false)["journal"])
 		return _settle_month(state)

@@ -163,3 +163,171 @@ func test_world_without_land_units_drives_its_day() -> void:
 	var f := _march_world()
 	for code: String in f.state.army_roster: f.state.army_roster[code].is_naval = "1"
 	_day(f.repo, f.state, "complete")
+
+## ACT-DRIVER part B1: the whole sealed day, the writer between days and the ordinary guard.
+
+## A 40 km +x march, longer than a day's pace, so no day of the test ends in an arrival
+## (the legacy arrival/garrison snap is a body writer part B2 replaces; it fails closed here).
+func _long_world() -> Dictionary:
+	var f := _march_world()
+	var entry: Dictionary = f.state.regiments[f.code]
+	entry.dest_x_m = 90000
+	entry.route_m = [[90000, 50000]]
+	return f
+
+func _supplies(state: GameState, code: String) -> int:
+	return int(state.regiments[code].supplies)
+
+
+func test_full_day_marches_eats_once_turns_the_day_and_seals() -> void:
+	var f := _long_world()
+	var source: GameState = f.state
+	# Day 3: 100 men use `use` (10..29) a month, and use*3/30 - use*2/30 >= 1, so a double meal shows.
+	source.day = 3
+	# Even pacing (ArmySystem.day_walk_budget): ceil(40000 / days) for days = ceil(40000 / pace) > 1.
+	var budget := ArmySystem.day_walk_budget(f.repo, source, f.code)
+	assert_between(budget, 1, 39999, "the march does not arrive today")
+	var before := _hash(source)
+	var d := source.day
+	var result := BodyDayDriver.day(f.repo, source)
+	assert_eq(_hash(source), before, "the driver never touches its source")
+	assert_eq(result.status, "complete", result.reason)
+	if result.candidate == null: return
+	var state: GameState = result.candidate
+	var copy := BodyDayDriver.day(f.repo, _json(source))
+	assert_eq(_hash(copy.candidate), _hash(state), "the JSON save drives to the same day")
+	# The straight +x leg needs no pivot, so the row walks its whole budget; the calendar turns once
+	# and the closed day leaves no frozen transaction.
+	assert_eq(state.day, d + 1)
+	assert_true(state.day_resolution.is_empty())
+	var row: Dictionary = UnitBodies.rows(f.repo, state, f.code)[0]
+	assert_eq([row.x_m, row.y_m, row.facing_deg, row.count], [50000 + budget, 50000, 0, 100])
+	# Supply is eaten once, at the day's end position: one day_bite of the month's use.
+	var use := ArmySystem.supply_use(f.repo, ArmySystem.regiment(f.repo, f.code, state), state)
+	# Hand-computed meal: use*d/30 - use*(d-1)/30, at least 1 when use >= 30, so a double meal shows.
+	@warning_ignore("integer_division")
+	var meal := use * d / 30 - use * (d - 1) / 30
+	assert_between(use, 10, 29, "the fixture's month of supply for 100 men")
+	assert_eq(meal, 1)
+	assert_eq(_supplies(source, f.code) - _supplies(state, f.code), meal, "eaten exactly once")
+	assert_eq([result.ticked, result.ended], [false, source.absolute_day()])
+	# Sealed at its next safe boundary: admitted, and the next day walks its own budget and eats
+	# one more meal.
+	assert_eq(UnitBodies.validate_battle_candidate(f.repo, state, BodyBattle.safe_boundary(state)).status, "complete")
+	var budget2 := ArmySystem.day_walk_budget(f.repo, state, f.code)
+	assert_between(budget2, 1, 39999 - budget)
+	var next := BodyDayDriver.day(f.repo, state)
+	assert_eq(next.status, "complete", next.reason)
+	if next.candidate == null: return
+	assert_eq(next.candidate.day, d + 2)
+	assert_eq(UnitBodies.rows(f.repo, next.candidate, f.code)[0].x_m, 50000 + budget + budget2)
+
+func test_writer_between_days_is_sealed_or_refused() -> void:
+	var f := _long_world()
+	var first := BodyDayDriver.day(f.repo, f.state)
+	assert_eq(first.status, "complete", first.reason)
+	if first.candidate == null: return
+	var state: GameState = first.candidate
+	var order := func(_repo: DataRepository, s: GameState) -> void:
+		var entry: Dictionary = s.regiments[f.code]
+		entry.order = ArmySystem.ORDER_MARCH
+		entry.dest_x_m = 130000
+		entry.route_m = [[130000, 50000]]
+	# An unsealed write breaks the endpoint proof: the next day refuses it, the save kept.
+	var raw := UnitBodies._copy(state)
+	order.call(f.repo, raw)
+	var kept := _hash(raw)
+	var refused := BodyDayDriver.day(f.repo, raw)
+	assert_eq([refused.status, refused.candidate], ["error", null])
+	assert_eq(_hash(raw), kept)
+	# Through publish it is the next outer operation; the next day walks the new route's budget.
+	var published := BodyDayDriver.publish(f.repo, state, {"kind": "order", "unit": f.code}, order)
+	assert_eq(published.status, "complete", published.reason)
+	if published.candidate == null: return
+	assert_eq(int(published.candidate.military_migration.body_battle.sequence), int(state.military_migration.body_battle.sequence) + 1)
+	var again := BodyDayDriver.publish(f.repo, published.candidate, {"kind": "order", "unit": f.code}, order)
+	assert_eq([again.status, again.reason, _hash(again.candidate)], ["complete", "Already published", _hash(published.candidate)], "a repeat is a no-op")
+	var x: int = UnitBodies.rows(f.repo, state, f.code)[0].x_m
+	var budget := ArmySystem.day_walk_budget(f.repo, published.candidate, f.code)
+	assert_between(budget, 1, 130000 - x - 1)
+	var marched := BodyDayDriver.day(f.repo, published.candidate)
+	assert_eq(marched.status, "complete", marched.reason)
+	if marched.candidate != null: assert_eq(UnitBodies.rows(f.repo, marched.candidate, f.code)[0].x_m, x + budget)
+	# A writer that moves a body or changes personnel is not a lawful ordinary writer.
+	var shove := func(_repo: DataRepository, s: GameState) -> void: s.regiments[f.code].body_groups[0].x_m += 1
+	assert_string_contains(BodyDayDriver.publish(f.repo, state, {"kind": "shove"}, shove).reason, "moved")
+	var lose := func(_repo: DataRepository, s: GameState) -> void: s.military_cohorts.clear()
+	assert_string_contains(BodyDayDriver.publish(f.repo, state, {"kind": "lose"}, lose).reason, "personnel")
+	var frozen := BodyDayDriver.tactical_day(f.repo, state)
+	assert_eq(BodyDayDriver.publish(f.repo, frozen.candidate, {"kind": "order"}, order).reason, "A writer publishes only at a safe boundary")
+
+## The encounter day opens, blocks at the decision (a saved blocked day waits), resumes after the
+## answer and drives its round; its close then meets the legacy seat reconciliation snapping the
+## fighting garrison to its town, a body writer part B2 installs, so it fails closed, the save kept.
+func test_encounter_day_waits_then_fails_closed_at_the_seat_snap() -> void:
+	var path := "res://tests/engine/test_body_battle_motion.gd"
+	var f := _helper(path, "_world", [1000])
+	var blocked := BodyDayDriver.day(f.repo, f.state)
+	assert_eq(blocked.status, "blocked", blocked.reason)
+	if blocked.candidate == null: return
+	assert_eq(blocked.candidate.day_resolution.body_battle.stage, "round")
+	var saved := BodyDayDriver.day(f.repo, _json(blocked.candidate))
+	assert_eq([saved.status, _hash(saved.candidate)], ["blocked", _hash(blocked.candidate)], "a saved blocked day waits")
+	var pending: Dictionary = blocked.candidate.day_resolution.pending_decision
+	var answered := BodyDayDriver.acknowledge(f.repo, blocked.candidate, pending.token, "continue")
+	assert_eq(answered.status, "complete", answered.reason)
+	if answered.candidate == null: return
+	var tactical := BodyDayDriver.tactical_day(f.repo, answered.candidate)
+	assert_eq(tactical.status, "complete", tactical.reason)
+	if tactical.candidate != null: assert_eq(int(tactical.candidate.battles[0].rounds), 1)
+	var kept := _hash(answered.candidate)
+	var closed := BodyDayDriver.day(f.repo, answered.candidate)
+	assert_eq([closed.status, closed.candidate], ["error", null])
+	assert_eq(closed.reason, "The day's closing phases moved, added or removed a body; its body writer is not installed")
+	assert_eq(_hash(answered.candidate), kept)
+
+func test_ordinary_day_refuses_an_admitted_body_world() -> void:
+	var f := _march_world()
+	var engine := TickEngine.new(f.repo)
+	var before := _hash(f.state)
+	assert_eq(engine.resolve_day(f.state), {"status": "error", "error": TickEngine.BODY_WORLD})
+	assert_eq(engine.resolve_decision(f.state, "t", "continue"), {"status": "error", "error": TickEngine.BODY_WORLD})
+	assert_eq(engine.advance_day(f.state), [])
+	assert_eq(_hash(f.state), before, "no ordinary writer touches it")
+
+## The thirtieth day settles the month once (`ticked`, a report, the tick turned to day 1); a
+## month-end wound recovery changes personnel, so with wounded men the day fails closed.
+func test_thirtieth_day_settles_the_month_once() -> void:
+	var f := _long_world()
+	# Tick 1: the reign's opening tick 0 settles through `advance`, and its day 30 is absolute day 30
+	# while tick 1's first day is absolute day 1.
+	f.state.tick = 1
+	f.state.day = 30
+	var tick: int = f.state.tick
+	var result := BodyDayDriver.day(f.repo, f.state)
+	assert_eq(result.status, "complete", result.reason)
+	if result.candidate == null: return
+	assert_eq([result.ticked, result.report != null], [true, true])
+	assert_eq([result.candidate.tick, result.candidate.day], [tick + 1, 1])
+	assert_eq(UnitBodies.validate_battle_candidate(f.repo, result.candidate, BodyBattle.safe_boundary(result.candidate)).status, "complete")
+	var wounded := _long_world()
+	wounded.state.tick = 1
+	wounded.state.day = 30
+	var hurt := MilitaryRoster.transfer_units(wounded.repo, wounded.state, "test:wound",
+		[{"unit_code": wounded.code, "from": "fit", "to": "wounded", "count": 10}], "Test wounds")
+	assert_false(hurt.has("error"), str(hurt.get("error", "")))
+	var before := _hash(wounded.state)
+	var refused := BodyDayDriver.day(wounded.repo, wounded.state)
+	assert_eq([refused.status, refused.candidate], ["error", null])
+	assert_string_contains(refused.reason, "personnel")
+	assert_eq(_hash(wounded.state), before)
+
+## An arrival ends in the legacy garrison snap (`ArmyGround.reconcile` moves the anchor to its
+## town seat, the rows stay): no body writer for it yet, so the day fails closed, the save kept.
+func test_arrival_day_fails_closed_until_its_body_writer() -> void:
+	var f := _march_world()
+	var before := _hash(f.state)
+	var refused := BodyDayDriver.day(f.repo, f.state)
+	assert_eq([refused.status, refused.candidate], ["error", null])
+	assert_eq(refused.reason, "The day's closing phases moved, added or removed a body; its body writer is not installed")
+	assert_eq(_hash(f.state), before)
