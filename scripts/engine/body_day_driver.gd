@@ -48,6 +48,9 @@ static func tactical_day(repo: DataRepository, source: GameState) -> Dictionary:
 	# one exit per unit and advance; fields never outnumber land units.
 	var limit := int(state.day_resolution.body_battle.substep_count) * (3 + 4 * state.army_roster.size())
 	for i: int in limit + 1:
+		var due := _slice_work(repo, state)
+		if due.status != "complete": return due
+		state = due.candidate
 		if state.day_resolution.body_battle.stage == "complete": return _result("complete", "Candidate tactical day complete", state)
 		if not state.day_resolution.get("pending_decision", {}).is_empty():
 			return _result("blocked", "Encounter awaits the player's decision", state)
@@ -130,10 +133,7 @@ static func _open(repo: DataRepository, engine: TickEngine, source: GameState) -
 static func _close(repo: DataRepository, engine: TickEngine, source: GameState) -> Dictionary:
 	var state := UnitBodies._copy(source)
 	var tx := state.day_resolution
-	# The ordinary tactical phase's day-end work: seats and laws reconciled, delivered stances settled.
-	var seated := _seat_day(repo, state, tx.journal.get("arrivals", []))
-	if not seated.is_empty(): return _result("error", seated)
-	LawSystem.reconcile(repo, state)
+	# The ordinary tactical phase's day-end work: delivered stances settled (seats and laws are per slice).
 	BattleSystem.finish_day(repo, state)
 	for cursor: int in range(DayResolution.PHASES.find("FIXED_TACTICAL_SUBSTEPS") + 1, DayResolution.PHASES.size()):
 		var failed := _phase(engine, state, tx, DayResolution.PHASES[cursor])
@@ -146,6 +146,58 @@ static func _close(repo: DataRepository, engine: TickEngine, source: GameState) 
 	closed.merge({"journal": tx.journal.duplicate(true), "ended": int(tx.absolute_day), "ticked": bool(tx.month_end),
 		"report": engine.last_month_report})
 	return closed
+
+## The slice work the control has passed and the saved cursor `tx.slice_work` ({done: "<slice>:
+## <stage>", arrivals: how many of `journal.arrivals` are settled}) has not: a slice's "move" work
+## once its move committed (stage "contact"), then its "contact" work once its contacts did ("round"
+## or "advance"), in that order. Saved with the day, so a resumed or raw-stepped candidate runs each
+## exactly once; a candidate stepped past a slice without its work fails closed. Nothing due: the
+## source itself.
+static func _slice_work(repo: DataRepository, source: GameState) -> Dictionary:
+	var tx := source.day_resolution
+	var at := String(tx.body_battle.next_substep)
+	var want: Array = {"contact": ["move"], "round": ["move", "contact"], "advance": ["move", "contact"]}.get(tx.body_battle.stage, [])
+	var done: String = tx.get("slice_work", {}).get("done", "")
+	# A slice's move (or the day's end) opens only on the previous slice's finished work.
+	if tx.body_battle.stage in ["move", "complete"] and int(at) > 0 and done != str(int(at) - 1) + ":contact":
+		return _result("error", "Slice %d's tactical work was skipped" % (int(at) - 1))
+	var state := source
+	for stage: String in want:
+		if done == at + ":contact" or (stage == "move" and done == at + ":move"): continue
+		var sliced := _slice(repo, state, stage)
+		if sliced.status != "complete": return sliced
+		state = sliced.candidate
+	return _result("complete", "Slice work current", state)
+
+## One slice's ordinary tactical work (`TickEngine._resolve_battles`' order) on a frozen body day.
+## After its move (`stage` "move"): the arrivals not yet settled camp and the seats settle
+## (`_seat_day`), the laws reconcile, and the king walks his slice of the daily budget
+## (`KingSystem.step_substep`, once per slice by its own cursor). After its contacts ("contact"):
+## search travel paused by battle (`ArmyTasks.pause_battles`) leaves the frozen march, entry and
+## membership both. Metadata only: no body moves and no personnel change; the cursor advances, and
+## the candidate is resealed at its battle boundary and validated there.
+static func _slice(repo: DataRepository, source: GameState, stage: String) -> Dictionary:
+	var state := UnitBodies._copy(source)
+	var tx := state.day_resolution
+	var cursor: Dictionary = tx.get("slice_work", {"done": "", "arrivals": "0"})
+	var arrivals: Array = tx.journal.get("arrivals", [])
+	if stage == "move":
+		var seated := _seat_day(repo, state, arrivals.slice(int(cursor.arrivals)))
+		if not seated.is_empty(): return _result("error", seated)
+		LawSystem.reconcile(repo, state)
+		KingSystem.step_substep(repo, state, tx)
+	else:
+		for code: String in ArmyTasks.pause_battles(state):
+			tx.march_entries.erase(code)
+			tx.marching_codes.erase(code)
+	tx.slice_work = {"done": String(tx.body_battle.next_substep) + ":" + stage, "arrivals": str(arrivals.size())}
+	var moved := _body_change(source, state, "The tactical slice's work")
+	if not moved.is_empty(): return _result("error", moved)
+	BodyBattle._seal_private(repo, state)
+	var checked := UnitBodies.validate_battle_candidate(repo, state, BodyBattleMotion._boundary(state))
+	if checked.status != "complete" and not (checked.status == "deferred" and checked.reason == "Frozen round requires its own settlement consumer"):
+		return _result("error", checked.reason)
+	return _result("complete", "Ran the tactical slice's work", state)
 
 ## The body world's arrival and garrison writer, in place of `ArmyGround.reconcile`'s seat snap.
 ## Each crown land arrival not in a battle (as the legacy march settles) settles its camp at its
