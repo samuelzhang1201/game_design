@@ -83,6 +83,8 @@ the existing record.
 | `militia` | militia unit codes raised for it (§5) |
 | `history` | reasoned day lines, the source of the letters (§9) |
 
+`progress` (0..1000, today's bar) stays on the record as a transitional field from step 1; step 10 removes it.
+
 The hosts' minds keep only `siege_id`. The old figures (`siege_progress`, `siege_days`,
 `siege_town`, `assault`, `assault_due`, `starved`) move into the record. An old save converts once:
 `integrity` = 1000 − `siege_progress` for a walled town, and `days` and the pending assault are kept.
@@ -399,7 +401,7 @@ is named, and each step updates `scripts/engine/guide/siege.md` (or its new topi
 
 | # | Step | Done when |
 |---|---|---|
-| 1 | **Siege record**: `GameState.sieges`, the migration from `ai_hosts`, `SiegeSystem` reads and writes it; behaviour identical | the existing siege, raid and invasion tests pass unchanged; an old save converts once; JSON round-trip |
+| 1 | **Siege record**: `GameState.sieges`, the migration from `ai_hosts`, `SiegeSystem` reads and writes it; behaviour identical | the existing siege, raid and invasion tests keep their expected values (their figure reads move to the record); an old save converts once; JSON round-trip |
 | 2 | **Storming factor** in `BattleStrength` from `army_town_defence.csv` attack, both sides | fixture: axemen attacking walls 1200 with a reason, infantry 1000 unchanged |
 | 3 | **Sides generalised**: `attacker` / `defender` on the record; garrison, capture, HOLD, liberation and `ArmyGround.holds` read the record, not "the crown"; the mirrored no-contact rule and the crown-attacking town battle (§5); the crown's control stopping at its realm; the capture-gains block (§7) | a fixture where a foe-held occupied town is retaken through the shared path; occupation and liberation reasons |
 | 4 | **Militia and woken garrisons** (`TownMilitia`, `town_militia.csv`), the population ledger lines, `EnemyAi` defence counts militia | fixtures: militia size by works and population; people conserved over raise → dead → stand down; the woken unit returns with its losses |

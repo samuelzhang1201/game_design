@@ -255,7 +255,7 @@ func test_a_sieging_host_fights_only_on_its_assault_day() -> void:
 	assert_eq(s.battles.size(), 0, "a host sitting down to a siege does not fight its garrison every day")
 	EnemyAi.ensure_deployments(repo, s)
 	assert_true(SiegeSystem.active(repo, s, "raid_main"), "the assault requires a deployed host")
-	s.ai_hosts["raid_main"]["assault"] = 1
+	SiegeRecord.ensure_for(repo, s, "raid_main")["assault"] = 1
 	BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 1, "its assault is an ordinary battle")
 	# a column of the player's that is NOT the besieged town's garrison (a

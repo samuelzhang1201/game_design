@@ -65,13 +65,16 @@ static func ensure_for(repo: DataRepository, state: GameState, host: String) -> 
 ## The host leaves its town's record; the figures reset once no host is left.
 ## The mind keeps `siege_id` until the end is told (drop).
 static func leave(state: GameState, host: String) -> void:
-	var rec := of_host(state, host)
-	if rec.is_empty():
-		return
-	(rec["hosts"] as Array).erase(host)
-	if (rec["hosts"] as Array).is_empty():
-		for f: String in FIGURES:
-			rec[f] = 0
+	for id: String in state.sieges.keys():
+		var rec: Dictionary = state.sieges[id]
+		var hosts: Array = rec["hosts"]
+		if not host in hosts:
+			continue
+		hosts.erase(host)
+		if hosts.is_empty():
+			for f: String in FIGURES:
+				rec[f] = 0
+			_forget(state, id)
 
 
 ## The mind forgets its record; the record goes once no host is in it and no
@@ -80,12 +83,55 @@ static func drop(state: GameState, host: String) -> void:
 	var mind: Dictionary = state.ai_hosts.get(host, {})
 	var id := String(mind.get("siege_id", ""))
 	mind.erase("siege_id")
-	if id == "" or not state.sieges.has(id) or not (state.sieges[id]["hosts"] as Array).is_empty():
+	_forget(state, id)
+
+
+## Erases record `id` when no host is in it and no mind names it.
+static func _forget(state: GameState, id: String) -> void:
+	if not state.sieges.has(id) or not (state.sieges[id]["hosts"] as Array).is_empty():
 		return
 	for h: String in state.ai_hosts:
 		if String(state.ai_hosts[h].get("siege_id", "")) == id:
 			return
 	state.sieges.erase(id)
+
+
+## An old save's minds, converted once (spec §3): a mind in DEPLOYING or SIEGE
+## before a town joins its record, which takes the larger of its own and the
+## mind's progress, days, assault_due and starved (an armed `assault` is owed:
+## assault_due 1, assault 0; a walled town's integrity is 1000 − progress); a
+## mind in any other mode with a `siege_town` names a record of that town with
+## no host, so its lift is still told once. Every mind loses the six old keys.
+## Logged in military_migration["siege_record"]; a second run changes nothing.
+static func migrate(repo: DataRepository, state: GameState) -> void:
+	var minds := 0
+	for h: String in EnemyAi.host_codes(state):
+		var mind: Dictionary = state.ai_hosts[h]
+		if not LEGACY.any(func(k: String) -> bool: return mind.has(k)):
+			continue
+		var rec := ensure_for(repo, state, h)
+		var town := String(mind.get("siege_town", ""))
+		if not rec.is_empty():
+			for pair: Array in [["progress", "siege_progress"], ["days", "siege_days"],
+					["assault_due", "assault_due"], ["starved", "starved"]]:
+				rec[pair[0]] = maxi(int(rec[pair[0]]), int(mind.get(pair[1], 0)))
+			if int(mind.get("assault", 0)) == 1:
+				rec["assault_due"] = 1
+			rec["assault"] = 0
+			if walled(repo, String(rec["town"])):
+				rec["integrity"] = 1000 - int(rec["progress"])
+			minds += 1
+		elif town != "":
+			var id := of_town(state, town)
+			if id == "":
+				id = _open(repo, state, town, SiegeSystem._kingdom_of(repo, state, h))
+			mind["siege_id"] = id
+			minds += 1
+		for k: String in LEGACY:
+			mind.erase(k)
+	if minds > 0:
+		state.military_migration["siege_record"] = {"day": state.absolute_day(), "minds": minds,
+			"reason": "siege figures moved from ai_hosts to GameState.sieges (player siege spec §3)"}
 
 
 static func _open(repo: DataRepository, state: GameState, town: String, attacker: String) -> String:

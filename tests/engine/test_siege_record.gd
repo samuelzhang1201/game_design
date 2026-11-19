@@ -135,3 +135,70 @@ func test_absent_keys_load_empty() -> void:
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(d)))
 	assert_eq(back.sieges, {})
 	assert_eq(back.siege_next_id, 0)
+
+
+## --- an old save's minds --------------------------------------------------------
+
+func test_old_mind_converts_once() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var main := Play.host(repo, "main")
+	var town := _crown_town(true)
+	_sit(s, main, town)
+	var mind: Dictionary = s.ai_hosts[main]
+	mind["siege_progress"] = 250
+	mind["siege_days"] = 4
+	mind["siege_town"] = town
+	mind["assault"] = 1
+	mind["starved"] = 1
+	SiegeRecord.migrate(repo, s)
+	var rec := SiegeSystem.record_of(s, main)
+	assert_eq([int(rec["progress"]), int(rec["days"]), int(rec["assault"]), int(rec["assault_due"]),
+		int(rec["starved"]), int(rec["integrity"])], [250, 4, 0, 1, 1, 750])
+	for k: String in SiegeRecord.LEGACY:
+		assert_false(mind.has(k), k + " leaves the mind")
+	assert_eq(int(s.military_migration["siege_record"]["minds"]), 1)
+	var hash := SaveLoad.state_hash(s)
+	SiegeRecord.migrate(repo, s)
+	assert_eq(SaveLoad.state_hash(s), hash, "a second run changes nothing")
+
+
+func test_reserve_and_main_minds_merge() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var hs := _two_hosts(s, _crown_town(true))
+	s.ai_hosts[hs[0]]["siege_progress"] = 100
+	s.ai_hosts[hs[0]]["siege_days"] = 2
+	s.ai_hosts[hs[1]]["siege_progress"] = 180
+	s.ai_hosts[hs[1]]["siege_days"] = 3
+	SiegeRecord.migrate(repo, s)
+	assert_eq(s.sieges.size(), 1, "one record for the town")
+	var rec := SiegeSystem.record_of(s, hs[0])
+	assert_eq([int(rec["progress"]), int(rec["days"])], [180, 3], "the most of each, as the lead's adoption kept")
+	assert_eq(String(s.ai_hosts[hs[1]]["siege_id"]), String(s.ai_hosts[hs[0]]["siege_id"]))
+
+
+func test_stray_keys_no_record() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var main := Play.host(repo, "main")
+	s.ai_hosts[main]["mode"] = "ADVANCE"
+	s.ai_hosts[main]["assault"] = 0
+	SiegeRecord.migrate(repo, s)
+	assert_false(s.ai_hosts[main].has("assault"))
+	assert_true(s.sieges.is_empty())
+	assert_false(s.military_migration.has("siege_record"), "nothing converted, nothing logged")
+
+
+func test_pending_lift_kept() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var main := Play.host(repo, "main")
+	var town := _crown_town(true)
+	_sit(s, main, town, "RETREAT")
+	s.ai_hosts[main]["siege_town"] = town
+	SiegeRecord.migrate(repo, s)
+	var rec := SiegeSystem.record_of(s, main)
+	assert_eq(String(rec["town"]), town)
+	assert_eq(rec["hosts"], [], "no host in it")
+	var ev := SiegeSystem.settle_day(repo, s)
+	var lifted := ev.filter(func(e: Dictionary) -> bool:
+		return String(e.get("kind", "")) == "siege_lifted" and String(e["town"]) == town)
+	assert_eq(lifted.size(), 1, "the lift is told once")
+	assert_true(s.sieges.is_empty())
