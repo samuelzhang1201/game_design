@@ -170,7 +170,15 @@ static func _seat_day(repo: DataRepository, state: GameState, arrivals: Array) -
 		if reg.is_empty() or not ArmyGround.holds(repo, state, String(reg.kingdom_code), town) \
 			or String(UnitBodies._entry(state, holder).get("order", "")) == ArmySystem.ORDER_MARCH:
 			state.town_seat.erase(town)
-	towns = repo.burgs.keys()
+	# Only a camp town with an empty seat can be filled (legacy `reconcile`'s list); refilling
+	# every burg of the pack scanned the roster once per burg.
+	var camps := {}
+	var units: Array = ArmySystem.roster(repo, state).keys()
+	units.sort()
+	for code: String in units:
+		var camp := ArmyGround.camped_by(repo, state, code)
+		if camp != "" and ArmyGround.seat_of(repo, state, camp) == "": camps[camp] = true
+	towns = camps.keys()
 	towns.sort()
 	for town: String in towns:
 		var filled := ArmyGround._placement_refill(repo, state, town, false)
