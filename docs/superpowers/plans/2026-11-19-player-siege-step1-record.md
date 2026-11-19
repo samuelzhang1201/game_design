@@ -68,7 +68,7 @@
 - `SiegeRecord.drop(state: GameState, host: String) -> void` erases `mind["siege_id"]`. It then erases the record if `hosts` is empty and no other mind names it.
 - `SiegeRecord.walled(repo: DataRepository, town: String) -> bool` is true when burg `features` (split on `|`) contains `walls` or `citadel`.
 
-- [ ] **Step 1: Write the failing tests** in `tests/engine/test_siege_record.gd` (extends `GutTest`; data from `SuiteData.repo()` / `SuiteData.campaign(repo, 7)`; pick a host with `Play.host(repo, "main")` and a walled and an open crown town from `repo.burgs` features):
+- [ ] **Step 1: Write the failing tests** in `tests/engine/test_siege_record.gd` (extends `GutTest`; data from `SuiteData.repo()` / `SuiteData.campaign(repo, 7)`; pick a host with `Play.host(repo, "main")` (load `Play` as `test_siege.gd` does) and a walled and an open crown town from `repo.burgs` features):
   - `test_first_record_is_s1_and_one_per_town`: put two hosts in SIEGE before the same walled town and call `ensure_for` on each.
     - `of_town(s, town) == "s1"` and `s.siege_next_id == 1`.
     - `hosts` equals the two codes in code order.
