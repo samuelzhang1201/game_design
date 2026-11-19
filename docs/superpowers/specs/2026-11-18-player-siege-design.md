@@ -1,7 +1,7 @@
 # Player siege: besiege, storm and take an enemy town — design
 
 - Date: 2026-11-18
-- Status: draft for the owner's review. Nothing is built.
+- Status: approved by the owner 2026-11-19. Nothing is built.
 - Builds on: `2026-10-16-battle-system-design.md` §13.5 and §14 (approved; the five tactics, blockade by
   real routes, the deadline contract, no unordered assault), its plan
   `plans/2026-10-16-battle-system/06-area-tasks-and-sieges.md` P6.2–P6.3, and
