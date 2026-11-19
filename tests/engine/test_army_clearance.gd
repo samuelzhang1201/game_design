@@ -387,7 +387,7 @@ func test_a_foe_standoff_survives_the_hosts_daily_reaim() -> void:
 	assert_eq(String(s.foes[f]["order"]), ArmySystem.ORDER_GARRISON)
 	s.foes[f]["host"] = "h_test"
 	s.ai_hosts["h_test"] = {"mode": "ADVANCE", "target_kind": "town", "target_id": "", "think_day": 0,
-		"plunder": 0, "siege_progress": 0}
+		"plunder": 0}
 	assert_true(EnemyAi._stands_halted(repo, s, f, s.foes[f], aim), "same aim, the blocker in front: it holds")
 	assert_false(EnemyAi._stands_halted(repo, s, f, s.foes[f], aim + Vector2i(500, 0)), "a new target releases it")
 	_stand(s, r, held + Vector2i(0, 10000))

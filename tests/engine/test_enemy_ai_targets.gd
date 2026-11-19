@@ -683,7 +683,7 @@ func test_siege_begins_with_the_first_deployed_column_and_no_lone_battle() -> vo
 			assert_lt(near, cols.size(), "the siege uses deployed columns while the other columns are still approaching")
 		if String(s.ai_hosts[host]["mode"]) == "DEPLOYING":
 			assert_false(SiegeSystem.besieged(repo, s, town))
-			assert_eq(int(s.ai_hosts[host].get("siege_progress", 0)), 0)
+			assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 0)
 		var fought := BattleSystem.settle_day(repo, s)
 		assert_false(fought.any(func(e: Dictionary) -> bool: return String(e["kind"]) == "start"),
 			"day %d: no lone column fights the town" % n)

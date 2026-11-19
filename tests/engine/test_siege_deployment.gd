@@ -49,8 +49,8 @@ func test_columns_still_on_the_road_do_not_create_a_siege_or_blockade() -> void:
 	assert_true(SiegeSystem.capture(repo, s, host).is_empty())
 	assert_true(SupplyLines.siege_cut(repo, s, guard).is_empty())
 	SiegeSystem.settle_day(repo, s)
-	assert_eq(int(s.ai_hosts[host].get("siege_days", 0)), 0)
-	assert_eq(int(s.ai_hosts[host].get("siege_progress", 0)), 0)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("days", 0)), 0)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 0)
 	assert_eq(String(s.foes[late]["order"]), ArmySystem.ORDER_MARCH)
 	assert_true(BattleSystem.prepare_day(repo, s).is_empty())
 
@@ -67,7 +67,7 @@ func test_established_deployment_survives_json_and_later_arrivals() -> void:
 	EnemyAi.step_day(repo, s)
 	assert_eq(s.ai_hosts[host]["mode"], "SIEGE")
 	assert_true(SiegeSystem.besieged(repo, s, town))
-	assert_eq(int(s.ai_hosts[host].get("assault", 0)), 0)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("assault", 0)), 0)
 
 func test_destroyed_only_deployed_column_cannot_maintain_a_blockade() -> void:
 	EnemyAi.step_day(repo, s)
@@ -84,9 +84,9 @@ func test_legacy_siege_without_deployed_columns_preserves_history_but_pauses() -
 	s.ai_hosts[host]["assault"] = 1
 	EnemyAi.step_day(repo, s)
 	assert_eq(s.ai_hosts[host]["mode"], "DEPLOYING")
-	assert_eq(int(s.ai_hosts[host]["siege_progress"]), 250)
-	assert_eq(int(s.ai_hosts[host]["siege_days"]), 4)
-	assert_eq(int(s.ai_hosts[host]["assault"]), 0)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 250)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("days", 0)), 4)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("assault", 0)), 0)
 	assert_false(SiegeSystem.besieged(repo, s, town))
 
 func test_deployed_columns_can_be_attacked_in_the_field() -> void:
@@ -126,14 +126,14 @@ func test_only_arrived_personnel_contribute_and_late_reinforcements_do_not_reset
 	TownStores.sync_metrics(repo, s)
 	EnemyAi.step_day(repo, s)
 	SiegeSystem.settle_day(repo, s)
-	assert_eq(int(s.ai_hosts[host]["siege_progress"]), 33)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 33)
 	Play.place(repo, s, late, Play.town_m(repo, town) + Vector2i(-3000, 0), ArmySystem.ORDER_STANDBY)
 	s.day += 1
 	EnemyAi.step_day(repo, s)
 	assert_eq(SiegeSystem.attack_power(repo, s, town), 300)
 	assert_eq(SiegeSystem.defend_power(repo, s, town), 200)
 	SiegeSystem.settle_day(repo, s)
-	assert_eq(int(s.ai_hosts[host]["siege_progress"]), 93)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 93)
 	var deployment: Dictionary = s.ai_hosts[host]["deployment"].duplicate(true)
 	var reserve := "deployment_reinforcement"
 	s.army_roster[reserve] = s.army_roster[first].duplicate(true)
@@ -149,7 +149,7 @@ func test_only_arrived_personnel_contribute_and_late_reinforcements_do_not_reset
 	assert_eq(s.ai_hosts[host]["mode"], "SIEGE")
 	assert_eq(SiegeSystem.attack_power(repo, s, town), 1300)
 	SiegeSystem.settle_day(repo, s)
-	assert_eq(int(s.ai_hosts[host]["siege_progress"]), 179, "33 + 60 + floor(100*1300/1500)")
+	assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 179, "33 + 60 + floor(100*1300/1500)")
 	assert_eq(s.ai_hosts[host]["deployment"], deployment)
 
 func test_legacy_restore_keeps_transaction_cursor_and_defers_assault() -> void:
@@ -162,16 +162,16 @@ func test_legacy_restore_keeps_transaction_cursor_and_defers_assault() -> void:
 	var cursor := s.day_resolution.duplicate(true)
 	EnemyAi.ensure_deployments(repo, s)
 	assert_eq(s.day_resolution, cursor)
-	assert_eq(int(s.ai_hosts[host]["assault_due"]), 1)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("assault_due", 0)), 1)
 	Play.place(repo, s, late, Play.town_m(repo, town) + Vector2i(-3000, 0), ArmySystem.ORDER_STANDBY)
 	s.day += 1
 	EnemyAi.step_day(repo, s)
-	assert_eq(int(s.ai_hosts[host]["assault"]), 0, "deployment completed before battles; no immediate assault")
+	assert_eq(int(SiegeSystem.record_of(s, host).get("assault", 0)), 0, "deployment completed before battles; no immediate assault")
 	assert_true(BattleSystem.prepare_day(repo, s).is_empty())
-	assert_eq(int(s.ai_hosts[host]["siege_progress"]), 250)
-	assert_eq(int(s.ai_hosts[host]["siege_days"]), 4)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 250)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("days", 0)), 4)
 	SiegeSystem.settle_day(repo, s)
-	assert_eq(int(s.ai_hosts[host]["assault"]), 1, "owed assault armed after today's battles")
+	assert_eq(int(SiegeSystem.record_of(s, host).get("assault", 0)), 1, "owed assault armed after today's battles")
 	assert_eq(s.day_resolution, cursor)
 
 func test_completed_deployment_with_no_column_present_cannot_blockade_or_capture() -> void:
@@ -182,11 +182,11 @@ func test_completed_deployment_with_no_column_present_cannot_blockade_or_capture
 		Play.place(repo, s, code, Play.town_m(repo, town) + Vector2i(46000, 0), ArmySystem.ORDER_STANDBY)
 	assert_false(SiegeSystem.besieged(repo, s, town))
 	assert_true(SupplyLines.siege_cut(repo, s, guard).is_empty())
-	s.ai_hosts[host]["siege_progress"] = 1000
+	SiegeRecord.ensure_for(repo, s, host)["progress"] = 1000
 	assert_true(SiegeSystem.capture(repo, s, host).is_empty())
-	var days := int(s.ai_hosts[host].get("siege_days", 0))
+	var days := int(SiegeSystem.record_of(s, host).get("days", 0))
 	SiegeSystem.settle_day(repo, s)
-	assert_eq(int(s.ai_hosts[host].get("siege_days", 0)), days)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("days", 0)), days)
 
 func test_routing_an_outer_camp_is_a_field_victory_not_a_breach_of_the_town() -> void:
 	var at := Play.town_m(repo, town)
@@ -197,7 +197,7 @@ func test_routing_an_outer_camp_is_a_field_victory_not_a_breach_of_the_town() ->
 	EnemyAi.step_day(repo, s)
 	assert_eq(s.ai_hosts[host]["mode"], "SIEGE")
 	assert_eq(BattleSystem.town_contact(repo, s, town, first), "", "the attacker has not reached the town's actual defences")
-	s.ai_hosts[host]["assault"] = 1
+	SiegeRecord.ensure_for(repo, s, host)["assault"] = 1
 	var rout: Dictionary = {}
 	for row: Dictionary in repo.battle_outcomes:
 		if String(row["tier"]) == "defender_routed":
@@ -217,7 +217,7 @@ func test_routing_an_outer_camp_is_a_field_victory_not_a_breach_of_the_town() ->
 	var siege_events := SiegeSystem.settle_day(repo, s, events)
 	assert_true(siege_events.filter(func(e: Dictionary) -> bool: return e.get("kind", "") == "siege_fallen").is_empty())
 	assert_true(EnemyAi.target_held(repo, s, "town", town))
-	assert_lt(int(s.ai_hosts[host]["siege_progress"]), 1000)
+	assert_lt(int(SiegeSystem.record_of(s, host).get("progress", 0)), 1000)
 
 func test_a_column_held_in_a_field_battle_cannot_remotely_occupy_the_empty_town() -> void:
 	EnemyAi.step_day(repo, s)
@@ -232,7 +232,7 @@ func test_a_column_held_in_a_field_battle_cannot_remotely_occupy_the_empty_town(
 	assert_false(BattleSystem.battle_of(s, first).is_empty())
 	Play.place(repo, s, guard, at + Vector2i(-50000, 0), ArmySystem.ORDER_MARCH)
 	var before := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, first, s))
-	s.ai_hosts[host]["siege_progress"] = 300
+	SiegeRecord.ensure_for(repo, s, host)["progress"] = 300
 	for day in 3:
 		ArmySystem.march_day(repo, s)
 		EnemyAi.step_day(repo, s)
@@ -240,7 +240,7 @@ func test_a_column_held_in_a_field_battle_cannot_remotely_occupy_the_empty_town(
 		s.day += 1
 	assert_eq(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, first, s)), before)
 	assert_eq(s.ai_hosts[host]["mode"], "SIEGE")
-	assert_eq(int(s.ai_hosts[host]["siege_progress"]), 300)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 300)
 	assert_true(s.manor_log.is_empty())
 
 func _arriving_day(late_distance: int) -> Dictionary:
@@ -289,8 +289,8 @@ func test_tactical_arrivals_station_both_columns_and_invest_once_that_day() -> v
 	assert_eq(int(s.foes[late]["x_m"]), Play.town_m(repo, town).x + 5000)
 	assert_eq(String(s.foes[first]["order"]), ArmySystem.ORDER_GARRISON)
 	assert_eq(String(s.foes[late]["order"]), ArmySystem.ORDER_GARRISON)
-	assert_eq(int(s.ai_hosts[host].get("siege_progress", 0)), 60, "floor(100 * 300 / (300 + 200)), settled once")
-	assert_eq(int(s.ai_hosts[host].get("siege_days", 0)), 1)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 60, "floor(100 * 300 / (300 + 200)), settled once")
+	assert_eq(int(SiegeSystem.record_of(s, host).get("days", 0)), 1)
 	assert_eq(int(s.foes[first]["supplies"]), supplies - bite, "one meal despite ten arrival scans")
 	assert_eq(int(s.ai_hosts[host]["think_day"]), today)
 	assert_eq(int(s.ai_hosts[host]["deployment"].get("completed_day", -1)), today)
@@ -306,8 +306,8 @@ func test_remote_column_keeps_frozen_route_and_contributes_no_siege_power() -> v
 	assert_eq(String(s.foes[late]["order"]), ArmySystem.ORDER_MARCH)
 	assert_eq(int(tx["march_entries"][late]["dest_x_m"]), int(remote["dest_x_m"]))
 	assert_eq(int(tx["march_entries"][late].get("day_walked_m", 0)), 2000)
-	assert_eq(int(s.ai_hosts[host].get("siege_progress", 0)), 33, "floor(100 * 100 / (100 + 200))")
-	assert_eq(int(s.ai_hosts[host].get("siege_days", 0)), 1)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 33, "floor(100 * 100 / (100 + 200))")
+	assert_eq(int(SiegeSystem.record_of(s, host).get("days", 0)), 1)
 
 func test_substep_arrivals_and_retired_walk_survive_json_before_reinforcement() -> void:
 	var tx := _arriving_day(6600)
@@ -337,5 +337,5 @@ func test_substep_arrivals_and_retired_walk_survive_json_before_reinforcement() 
 			assert_eq(String(tx["march_entries"][late]["order"]), ArmySystem.ORDER_GARRISON)
 			assert_eq(int(tx["march_entries"][late].get("day_walked_m", 0)), 1600)
 	SiegeSystem.settle_day(repo, s)
-	assert_eq(int(s.ai_hosts[host]["siege_progress"]), 60)
-	assert_eq(int(s.ai_hosts[host]["siege_days"]), 1)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("progress", 0)), 60)
+	assert_eq(int(SiegeSystem.record_of(s, host).get("days", 0)), 1)

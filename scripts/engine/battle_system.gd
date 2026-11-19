@@ -422,7 +422,7 @@ static func siege_town_of(repo: DataRepository, state: GameState, code: String) 
 	if host == "" or not state.ai_hosts.has(host):
 		return ""
 	var h: Dictionary = state.ai_hosts[host]
-	if String(h.get("mode", "")) not in ["DEPLOYING", "SIEGE"] or (SiegeSystem.active(repo, state, host) and SiegeSystem.deployed_at(repo, state, code, String(h.get("target_id", ""))) and int(h.get("assault", 0)) == 1):
+	if String(h.get("mode", "")) not in ["DEPLOYING", "SIEGE"] or (SiegeSystem.active(repo, state, host) and SiegeSystem.deployed_at(repo, state, code, String(h.get("target_id", ""))) and SiegeSystem.assault_armed(state, host)):
 		return ""
 	return String(h.get("target_id", ""))
 

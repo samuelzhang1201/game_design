@@ -346,8 +346,14 @@ var regiments: Dictionary = {}
 ## map) never see a foe. ArmySystem.state_of reads both.
 var foes: Dictionary = {}
 ## The enemy hosts' minds (§2, EnemyAi): host code -> {mode, target_kind,
-## target_id, think_day, plunder, siege_progress}, ints and strings.
+## target_id, think_day, plunder, siege_id (the record in `sieges` it is in)},
+## ints and strings.
 var ai_hosts: Dictionary = {}
+## One record per besieged town (SiegeRecord, player siege spec §3): id "s<n>"
+## -> {town, attacker, defender, hosts, task_id, opened_day, days, integrity,
+## progress, assault, assault_due, starved}, ints and strings.
+var sieges: Dictionary = {}
+var siege_next_id := 0
 ## The battles being fought (§4, BattleSystem): an Array of {id, att, def
 ## (regiment codes), start_day, rounds, place_x_m, place_y_m, town}.
 var battles: Array = []
@@ -519,6 +525,8 @@ func to_dict() -> Dictionary:
 		"regiments": _encode_values(regiments.duplicate(true)),
 		"foes": _encode_values(foes.duplicate(true)),
 		"ai_hosts": _encode_values(ai_hosts.duplicate(true)),
+		"sieges": _encode_values(sieges.duplicate(true)),
+		"siege_next_id": siege_next_id,
 		"battles": _encode_values(battles.duplicate(true)),
 		"battle_aliases": battle_aliases.duplicate(true),
 		"battle_orders": battle_orders.duplicate(true),
@@ -705,6 +713,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# Saves from before the raiders carry none of these: no foe in the field.
 	s.foes = _decode_values(d.get("foes", {}))
 	s.ai_hosts = _decode_values(d.get("ai_hosts", {}))
+	s.sieges = _decode_values(d.get("sieges", {}))
+	s.siege_next_id = int(d.get("siege_next_id", 0))
 	s.battles = _decode_values(d.get("battles", []))
 	for i: int in s.battles.size():
 		var raw: Variant = d.battles[i]
