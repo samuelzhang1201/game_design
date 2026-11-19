@@ -14,8 +14,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[2]
-HELPER_SHA = 'a8678036793b5588b99e9a43fa825283bd41d80b75bf20a28cfbb1d51c41eec9'
-SCALAR_SHA = '37f34e84334c12ed9194539d4e16505e461927ad17fd84553931f2e60ff9dc4f'
+HELPER_SHA = 'd1db403f89bbb00ead6bef9595d7fa415ba00497461b7b8bb1111f290c0f5f24'
+SCALAR_SHA = 'f744a364c250df6df14ba4c306711d23502eb2b32a78147685f69f1d1a239a89'
 EXCLUDED = 'THIS_WITNESS_EXCLUDED_BY_NATIVE_RELATION'
 NOT_EXCLUDED = 'NOT_EXCLUDED_BY_THIS_BOUND'
 
@@ -605,7 +605,7 @@ def load_inputs(args):
         if path!='project.godot':require(index['resource:'+path]['sha256']==pin,'Captured native source-resource binding differs')
         role('resource:'+path,False)
     sources=[('tools/units3d/cavalry_march_phase.py',HELPER_SHA),('tools/units3d/check_cavalry_march_capture.py',NATIVE_SHA),
-             ('tools/units3d/royal_native_arithmetic/prove.py',SCALAR_SHA),('tools/units3d/analyze_cavalry_matrix_boxes.py','02a91af95af913d553562740da30afa45912d46411a8446b38b0adfedf74c75f')]
+             ('tools/units3d/royal_native_arithmetic/prove.py',SCALAR_SHA),('tools/units3d/analyze_cavalry_matrix_boxes.py','95adf0286c911bc02a8a648174435df93447c3cc14026ab2431c89190e69b429')]
     for path,pin in sources:read_checked(ROOT/path,pin,watched,parse=False)
     for file,key in [('capture.c','source_sha256'),('capture.gd','script_sha256')]:
         read_checked(ROOT/'tools/units3d/royal_native_arithmetic'/file,inputs['arithmetic_capture']['acquisition'][key],watched,parse=False)

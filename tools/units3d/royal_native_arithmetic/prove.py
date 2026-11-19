@@ -105,7 +105,9 @@ MAC_PROFILE = {
 
 
 # Actual Ubuntu Godot-process code and operands; semantics are checked below.
-LINUX_ID = "cfae91b4a956116b64e2a41607671c1eeb3cc292"
+# Reviewed libm build IDs whose captured code/operands are byte-identical to LINUX_PROFILE.
+LINUX_IDS = ("cfae91b4a956116b64e2a41607671c1eeb3cc292",  # ubuntu-26.04 runner 20261111.196.1
+             "bbeba405e9eab172ef5b7f215c698d58eb3cc292")  # ubuntu-26.04 runner 20261116.202.1
 LINUX_PROFILE = {
     'sin': {
         'code_offset': 449552,
@@ -1011,7 +1013,8 @@ def prove(capture):
     platform = capture.get("native", {}).get("platform")
     require(platform in ("macos-arm64", "linux-x86_64"), "unknown_profile")
     linux = platform == "linux-x86_64"
-    profile_id = LINUX_ID if linux else MAC_ID
+    profile_ids = LINUX_IDS if linux else (MAC_ID,)
+    profile_id = None
     expected_profiles = LINUX_PROFILE if linux else MAC_PROFILE
     image_path = "/usr/lib/x86_64-linux-gnu/libm.so.6" if linux else "/usr/lib/system/libsystem_m.dylib"
     require(capture.get("schema") == SCHEMA, "capture_schema")
@@ -1045,7 +1048,9 @@ def prove(capture):
         for record in slots:
             require(isinstance(record, dict), "import_record_" + name)
             require(record.get("symbol") == name, "import_symbol_" + name)
-            require(record.get("image_id") == profile_id, "unknown_profile_" + name)
+            require(record.get("image_id") in profile_ids, "unknown_profile_" + name)
+            profile_id = profile_id or record["image_id"]
+            require(record["image_id"] == profile_id, "mixed_profile_" + name)
             require(record.get("image_path") == image_path, "import_image_" + name)
             require(record.get("dlsym_equal") is (not (linux and name == "acosf")), "unresolved_import_" + name)
             require(int(record["target"], 16) - int(record["image_base"], 16) == record.get("entry_offset"), "import_address_" + name)
