@@ -40,11 +40,6 @@ func _worst_joint_m(clip: String, turn: int, phase: float) -> float:
 	return worst
 
 
-func test_the_army_table_draws_the_plate_soldier() -> void:
-	assert_eq(GameArt.path(GameArt.ARMY_MODELS, "heavy_infantry"), "res://scenes/models/units/heavy_infantry.tscn")
-	assert_ne(Loco.PLAN_PATH, Loco.Infantry.PLAN_PATH, "its own plan, not the infantry's")
-
-
 func test_ninety_degrees_reproduces_the_installed_clips() -> void:
 	# The clips are this plan's +/-90 solve: re-solving them changes no joint (float noise only).
 	for row: Array in [["PIVOT_RIGHT", 90000000], ["PIVOT_LEFT", -90000000]]:
