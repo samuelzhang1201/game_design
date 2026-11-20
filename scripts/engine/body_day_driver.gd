@@ -131,7 +131,8 @@ static func _close(repo: DataRepository, engine: TickEngine, source: GameState) 
 	var state := UnitBodies._copy(source)
 	var tx := state.day_resolution
 	# The ordinary tactical phase's day-end work: seats and laws reconciled, delivered stances settled.
-	ArmyGround.reconcile(repo, state)
+	var seated := _seat_day(repo, state, tx.journal.get("arrivals", []))
+	if not seated.is_empty(): return _result("error", seated)
 	LawSystem.reconcile(repo, state)
 	BattleSystem.finish_day(repo, state)
 	for cursor: int in range(DayResolution.PHASES.find("FIXED_TACTICAL_SUBSTEPS") + 1, DayResolution.PHASES.size()):
@@ -145,6 +146,44 @@ static func _close(repo: DataRepository, engine: TickEngine, source: GameState) 
 	closed.merge({"journal": tx.journal.duplicate(true), "ended": int(tx.absolute_day), "ticked": bool(tx.month_end),
 		"report": engine.last_month_report})
 	return closed
+
+## The body world's arrival and garrison writer, in place of `ArmyGround.reconcile`'s seat snap.
+## Each crown land arrival not in a battle (as the legacy march settles) settles its camp at its
+## ACTUAL anchor. A seat is then cleared only as the legacy day clears it: its holder gone, its town
+## no longer held, or the holder on the march (`ArmyGround.leave`); a holder standing off the point
+## keeps it (a garrison's rows move in battle). An empty seat goes only to a camped unit standing
+## on the town's point. No anchor or row moves. "" or the error.
+static func _seat_day(repo: DataRepository, state: GameState, arrivals: Array) -> String:
+	var codes: Array = []
+	for code: Variant in arrivals:
+		if code is String and state.regiments.has(code) and not UnitBodies._naval(state, code) \
+			and BattleSystem.battle_of(state, code).is_empty() and code not in codes: codes.append(code)
+	codes.sort()
+	for code: String in codes:
+		var settled := ArmyGround._placement_metadata(repo, state, {"operation": "settle", "unit": code})
+		if settled.status != "complete": return "Arrival of " + code + ": " + settled.reason
+	var towns: Array = state.town_seat.keys()
+	towns.sort()
+	for town: String in towns:
+		var holder := String(state.town_seat[town])
+		var reg := ArmySystem.regiment(repo, holder, state)
+		if reg.is_empty() or not ArmyGround.holds(repo, state, String(reg.kingdom_code), town) \
+			or String(UnitBodies._entry(state, holder).get("order", "")) == ArmySystem.ORDER_MARCH:
+			state.town_seat.erase(town)
+	# Only a camp town with an empty seat can be filled (legacy `reconcile`'s list); refilling
+	# every burg of the pack scanned the roster once per burg.
+	var camps := {}
+	var units: Array = ArmySystem.roster(repo, state).keys()
+	units.sort()
+	for code: String in units:
+		var camp := ArmyGround.camped_by(repo, state, code)
+		if camp != "" and ArmyGround.seat_of(repo, state, camp) == "": camps[camp] = true
+	towns = camps.keys()
+	towns.sort()
+	for town: String in towns:
+		var filled := ArmyGround._placement_refill(repo, state, town, false)
+		if filled.status != "complete": return filled.reason
+	return ""
 
 ## One ordinary phase on the frozen day, its outputs restored as `resolve_day` does. "" or the error.
 static func _phase(engine: TickEngine, state: GameState, tx: Dictionary, phase: String) -> String:
