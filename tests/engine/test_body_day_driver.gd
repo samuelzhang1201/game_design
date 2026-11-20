@@ -519,3 +519,131 @@ func test_contact_slice_pauses_search_travel_out_of_the_frozen_march() -> void:
 	skipped.day_resolution.substep_index = 1
 	BodyBattle._seal_private(f.repo, skipped)
 	assert_eq(BodyDayDriver._slice_work(f.repo, skipped).reason, "Slice 0's tactical work was skipped")
+
+## B2b2 fixture: a host's one column (100 men, one row facing +x) marches +x on a 300 m route, 30 m
+## a slice over the 10 slices, toward a town the crown holds whose point is moved onto the test
+## grid 5150 m ahead of it, at (50000, `town_y`). The crown's own row stands at (50000, 50000)
+## under a garrison order: on the point it garrisons the town, 30 km off it does not.
+func _host_world(town_y: int) -> Dictionary:
+	var f := _helper("res://tests/engine/test_body_marches.gd", "_fixture", [[100, 100]])
+	var state: GameState = f.state
+	f.crown = f.codes[0]
+	f.foe = f.codes[1]
+	var towns: Array = f.repo.burgs.keys()
+	towns.sort()
+	for key: String in towns:
+		if ArmyGround.holds(f.repo, state, String(state.army_roster[f.crown].kingdom_code), key):
+			f.town = key
+			break
+	var px := ArmySystem.metres_to_pack(f.repo, Vector2i(50000, town_y))
+	f.repo.burgs[f.town].x = px.x
+	f.repo.burgs[f.town].y = px.y
+	ArmySystem.forget_grids()
+	assert_eq(EnemyAi.target_point_m(f.repo, EnemyAi.KIND_TOWN, f.town), Vector2i(50000, town_y))
+	var mine: Dictionary = state.regiments[f.crown]
+	mine.order = ArmySystem.ORDER_GARRISON
+	mine.dest_x_m = 50000
+	mine.erase("route_m")
+	# On the point it camps there and takes the seat, as the driver's own arrival writer settles it.
+	if town_y == 50000: assert_eq(BodyDayDriver._seat_day(f.repo, state, [f.crown]), "")
+	var entry: Dictionary = state.regiments[f.foe]
+	state.regiments.erase(f.foe)
+	state.foes[f.foe] = entry
+	state.army_roster[f.foe].kingdom_code = f.repo.resolve_realm("raider_realm")
+	f.host = String(f.repo.raid_hosts[0].host_code)
+	entry.host = f.host
+	for row: Dictionary in [entry, entry.body_groups[0]]:
+		row.x_m = 44850
+		row.y_m = town_y
+	entry.dest_x_m = 45150
+	entry.dest_y_m = town_y
+	entry.route_m = [[45150, town_y]]
+	state.ai_hosts = {f.host: {"mode": EnemyAi.MODE_ADVANCE, "target_kind": EnemyAi.KIND_TOWN, "target_id": f.town,
+		"think_day": 0, "plunder": 0, "siege_progress": 0}}
+	return f
+
+func _host_events(state: GameState) -> Array:
+	var out: Array = []
+	for record: Dictionary in state.day_resolution.journal.get("reports", []):
+		if record.kind == "host_events": out.append_array(record.events)
+	return out
+
+## B2b2: a host's column arrives in the slice that brings it up, not at the day's end. The town's
+## point is 5150 m ahead and the crown garrisons it; the column walks 30 m a slice, so it touches
+## the town (`battle_contact_km` 5 km, over the town's own reach) once 5150 - 30k <= 5000: after
+## its 5th move (slice 4), at x = 45000. In that slice's work the host deploys, the column is
+## stationed where it stands and retired from the frozen march, and the siege is laid; the body
+## then holds, so the day ends at 45000, not at the route's end 45150, and the siege begins at the
+## day's close. Not a body moves by the arrival.
+func test_host_column_arrives_in_its_slice_and_holds_the_rest_of_the_day() -> void:
+	var f := _host_world(50000)
+	assert_eq([int(f.repo.bal("battle_substeps")), f.repo.bal("battle_contact_km")], [10, 5.0])
+	assert_lt(float(f.repo.army_town_reach.get(String(f.repo.burgs[f.town].group), 0.0)), 5.0, "contact outreaches the town")
+	assert_eq(EnemyAi.garrison_of(f.repo, f.state, f.town), [f.crown])
+	assert_eq(ArmySystem.day_walk_budget(f.repo, f.state, f.foe), 300)
+	var state: GameState = BodyBattle.begin_candidate(f.repo, f.state).candidate
+	var today := state.absolute_day()
+	var told: Array = [
+		{"type": "host_mode", "host": f.host, "mode": EnemyAi.MODE_DEPLOYING, "why": "first column arrived; remaining columns are deploying", "day": today},
+		{"type": "host_mode", "host": f.host, "mode": EnemyAi.MODE_SIEGE, "why": "leading columns deployed at the town", "day": today}]
+	for slice: int in 10:
+		while state.day_resolution.body_battle.stage != "contact":
+			state = BodyDayDriver._slice_work(f.repo, state).candidate
+			var stepped := BodyBattle.step_candidate(f.repo, state)
+			assert_eq(stepped.status, "complete", stepped.reason)
+			if stepped.candidate == null: return
+			state = stepped.candidate
+		var rows := BodyMotion._hash([BodyLifecycle.snapshot(state), state.military_cohorts])
+		var worked := BodyDayDriver._slice_work(f.repo, state)
+		assert_eq(worked.status, "complete", worked.reason)
+		if worked.candidate == null: return
+		state = worked.candidate
+		assert_eq(state.day_resolution.slice_work.done, "%d:move" % slice)
+		assert_eq(BodyMotion._hash([BodyLifecycle.snapshot(state), state.military_cohorts]), rows, "the arrival moves no body")
+		var entry: Dictionary = state.foes[f.foe]
+		var saved: Dictionary = state.day_resolution.march_entries[f.foe]
+		assert_eq(entry.x_m, 44850 + 30 * mini(slice + 1, 5), "slice %d" % slice)
+		if slice < 4:
+			assert_eq([state.ai_hosts[f.host].mode, entry.order, saved.order, _host_events(state)],
+				[EnemyAi.MODE_ADVANCE, ArmySystem.ORDER_MARCH, ArmySystem.ORDER_MARCH, []], "slice %d" % slice)
+		else:
+			assert_eq([state.ai_hosts[f.host].mode, entry.order, saved.order], [EnemyAi.MODE_SIEGE, ArmySystem.ORDER_GARRISON, ArmySystem.ORDER_GARRISON], "slice %d" % slice)
+			assert_eq([entry.dest_x_m, entry.dest_y_m, entry.has("route_m"), saved.x_m, saved.has("route_m")], [45000, 50000, false, 45000, false])
+			assert_eq(state.ai_hosts[f.host].deployment, {"town": f.town, "started_day": today, "complete": true, "completed_day": today})
+			assert_eq(_host_events(state), told, "told once")
+		assert_eq(BodyDayDriver._slice_work(f.repo, state).candidate, state, "the slice's work runs once")
+		var next := BodyBattle.step_candidate(f.repo, state)
+		assert_eq(next.status, "complete", next.reason)
+		if next.candidate == null: return
+		state = next.candidate
+	# The driver alone, and from the JSON save, reaches the same day.
+	var driven := _day(f.repo, f.state, "complete")
+	if driven == null: return
+	assert_eq(_hash(driven), _hash(BodyDayDriver.tactical_day(f.repo, state).candidate))
+	assert_eq([driven.foes[f.foe].x_m, UnitBodies.rows(f.repo, driven, f.foe)[0].x_m, driven.battles], [45000, 45000, []])
+	assert_eq(_host_events(driven), told)
+	# The day closes on it: the siege begins the same day, and the day's reports tell the host's news once.
+	var closed := BodyDayDriver.day(f.repo, driven)
+	assert_eq(closed.status, "complete", closed.reason)
+	if closed.candidate == null: return
+	assert_eq([closed.candidate.ai_hosts[f.host].mode, closed.candidate.ai_hosts[f.host].siege_days], [EnemyAi.MODE_SIEGE, 1])
+	assert_eq(closed.journal.sieges.map(func(e: Dictionary) -> String: return String(e.kind)), ["siege_begin", "siege_day"])
+	assert_eq(closed.journal.reports, [{"kind": "host_events", "events": told}])
+	assert_eq(closed.candidate.missives.filter(func(m: Dictionary) -> bool:
+		return m.kind == "host_news" and int(m.id) >= f.state.next_missive_id).size(), 1)
+	assert_eq(closed.candidate.foes[f.foe].x_m, 45000, "the close moves no one")
+
+## B2b2: at a town the crown holds but does not garrison, the same column turns its host to the
+## raid in the same slice (5150 - 30k <= 5000: slice 4) and is NOT stationed: it walks its whole
+## 300 m, and the frozen march keeps it.
+func test_host_at_an_undefended_town_raids_and_marches_on() -> void:
+	var f := _host_world(80000)
+	assert_eq(EnemyAi.garrison_of(f.repo, f.state, f.town), [])
+	var state := _day(f.repo, f.state, "complete")
+	if state == null: return
+	var today := state.absolute_day()
+	assert_eq(state.ai_hosts[f.host].mode, EnemyAi.MODE_RAID)
+	assert_eq(_host_events(state), [{"type": "host_mode", "host": f.host, "mode": EnemyAi.MODE_RAID, "why": "reached an undefended target", "day": today}])
+	assert_eq([state.foes[f.foe].x_m, state.foes[f.foe].order, state.day_resolution.march_entries[f.foe].order],
+		[45150, ArmySystem.ORDER_GARRISON, ArmySystem.ORDER_GARRISON], "arrived at its route's end")
+	assert_true(state.ai_hosts[f.host].get("deployment", {}).is_empty())
