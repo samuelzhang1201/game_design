@@ -583,7 +583,13 @@ func test_host_column_arrives_in_its_slice_and_holds_the_rest_of_the_day() -> vo
 	assert_eq(ArmySystem.day_walk_budget(f.repo, f.state, f.foe), 300)
 	var state: GameState = BodyBattle.begin_candidate(f.repo, f.state).candidate
 	var today := state.absolute_day()
-	var told: Array = [
+	# The morning's AI phase has already told an event: the arrival's join its one record, after it.
+	var morning := {"type": "host_advance", "host": f.host, "day": today}
+	state.day_resolution.journal.reports = [{"kind": "host_events", "events": [morning]}]
+	BodyBattle._seal_private(f.repo, state)
+	var begun := state
+	var saved_before: GameState = null
+	var told: Array = [morning,
 		{"type": "host_mode", "host": f.host, "mode": EnemyAi.MODE_DEPLOYING, "why": "first column arrived; remaining columns are deploying", "day": today},
 		{"type": "host_mode", "host": f.host, "mode": EnemyAi.MODE_SIEGE, "why": "leading columns deployed at the town", "day": today}]
 	for slice: int in 10:
@@ -594,6 +600,7 @@ func test_host_column_arrives_in_its_slice_and_holds_the_rest_of_the_day() -> vo
 			if stepped.candidate == null: return
 			state = stepped.candidate
 		var rows := BodyMotion._hash([BodyLifecycle.snapshot(state), state.military_cohorts])
+		if slice == 4: saved_before = _json(state)
 		var worked := BodyDayDriver._slice_work(f.repo, state)
 		assert_eq(worked.status, "complete", worked.reason)
 		if worked.candidate == null: return
@@ -605,7 +612,7 @@ func test_host_column_arrives_in_its_slice_and_holds_the_rest_of_the_day() -> vo
 		assert_eq(entry.x_m, 44850 + 30 * mini(slice + 1, 5), "slice %d" % slice)
 		if slice < 4:
 			assert_eq([state.ai_hosts[f.host].mode, entry.order, saved.order, _host_events(state)],
-				[EnemyAi.MODE_ADVANCE, ArmySystem.ORDER_MARCH, ArmySystem.ORDER_MARCH, []], "slice %d" % slice)
+				[EnemyAi.MODE_ADVANCE, ArmySystem.ORDER_MARCH, ArmySystem.ORDER_MARCH, [morning]], "slice %d" % slice)
 		else:
 			assert_eq([state.ai_hosts[f.host].mode, entry.order, saved.order], [EnemyAi.MODE_SIEGE, ArmySystem.ORDER_GARRISON, ArmySystem.ORDER_GARRISON], "slice %d" % slice)
 			assert_eq([entry.dest_x_m, entry.dest_y_m, entry.has("route_m"), saved.x_m, saved.has("route_m")], [45000, 50000, false, 45000, false])
@@ -616,10 +623,12 @@ func test_host_column_arrives_in_its_slice_and_holds_the_rest_of_the_day() -> vo
 		assert_eq(next.status, "complete", next.reason)
 		if next.candidate == null: return
 		state = next.candidate
-	# The driver alone, and from the JSON save, reaches the same day.
-	var driven := _day(f.repo, f.state, "complete")
+	# The driver alone, from the day's start and from a JSON save taken right before the arrival
+	# slice's work, reaches the same day.
+	var driven := _day(f.repo, begun, "complete")
 	if driven == null: return
 	assert_eq(_hash(driven), _hash(BodyDayDriver.tactical_day(f.repo, state).candidate))
+	assert_eq(_hash(driven), _hash(BodyDayDriver.tactical_day(f.repo, saved_before).candidate), "resumed at the arrival slice")
 	assert_eq([driven.foes[f.foe].x_m, UnitBodies.rows(f.repo, driven, f.foe)[0].x_m, driven.battles], [45000, 45000, []])
 	assert_eq(_host_events(driven), told)
 	# The day closes on it: the siege begins the same day, and the day's reports tell the host's news once.
@@ -633,17 +642,60 @@ func test_host_column_arrives_in_its_slice_and_holds_the_rest_of_the_day() -> vo
 		return m.kind == "host_news" and int(m.id) >= f.state.next_missive_id).size(), 1)
 	assert_eq(closed.candidate.foes[f.foe].x_m, 45000, "the close moves no one")
 
+## Steps to the next slice's committed move (stage "contact"), each step after its owed slice work,
+## and runs that move's work.
+func _next_move_work(f: Dictionary, state: GameState) -> GameState:
+	var first := true
+	while first or state.day_resolution.body_battle.stage != "contact":
+		first = false
+		state = BodyDayDriver._slice_work(f.repo, state).candidate
+		var stepped := BodyBattle.step_candidate(f.repo, state)
+		assert_eq(stepped.status, "complete", stepped.reason)
+		state = stepped.candidate
+	return BodyDayDriver._slice_work(f.repo, state).candidate
+
 ## B2b2: at a town the crown holds but does not garrison, the same column turns its host to the
-## raid in the same slice (5150 - 30k <= 5000: slice 4) and is NOT stationed: it walks its whole
-## 300 m, and the frozen march keeps it.
+## raid in the same slice (5150 - 30k <= 5000: after the 5th move, not the 4th at 5030 m) and is
+## NOT stationed: it walks its whole 300 m, and the frozen march keeps it.
 func test_host_at_an_undefended_town_raids_and_marches_on() -> void:
 	var f := _host_world(80000)
 	assert_eq(EnemyAi.garrison_of(f.repo, f.state, f.town), [])
+	var manual: GameState = BodyBattle.begin_candidate(f.repo, f.state).candidate
+	for slice: int in 4: manual = _next_move_work(f, manual)
+	assert_eq([manual.foes[f.foe].x_m, manual.ai_hosts[f.host].mode, _host_events(manual)], [44970, EnemyAi.MODE_ADVANCE, []])
+	manual = _next_move_work(f, manual)
+	assert_eq([manual.foes[f.foe].x_m, manual.ai_hosts[f.host].mode, manual.foes[f.foe].order], [45000, EnemyAi.MODE_RAID, ArmySystem.ORDER_MARCH])
 	var state := _day(f.repo, f.state, "complete")
 	if state == null: return
+	assert_eq(_hash(state), _hash(BodyDayDriver.tactical_day(f.repo, manual).candidate))
 	var today := state.absolute_day()
 	assert_eq(state.ai_hosts[f.host].mode, EnemyAi.MODE_RAID)
 	assert_eq(_host_events(state), [{"type": "host_mode", "host": f.host, "mode": EnemyAi.MODE_RAID, "why": "reached an undefended target", "day": today}])
 	assert_eq([state.foes[f.foe].x_m, state.foes[f.foe].order, state.day_resolution.march_entries[f.foe].order],
 		[45150, ArmySystem.ORDER_GARRISON, ArmySystem.ORDER_GARRISON], "arrived at its route's end")
 	assert_true(state.ai_hosts[f.host].get("deployment", {}).is_empty())
+
+## B2b2: another host already deploys at the garrisoned town, so the column's host drops its target
+## in the arrival slice and stands aside (no second siege): no event, the live order turns to
+## garrison and it is kept out of contact today. Its frozen entry is NOT retired, so, as the
+## ordinary day walks a changed order's saved route out, the body walks the day's whole 300 m and
+## garrisons at its end; no battle starts.
+func test_host_finding_its_town_besieged_stands_aside_and_walks_its_frozen_day() -> void:
+	var f := _host_world(50000)
+	var other := String(f.repo.raid_hosts[1].host_code)
+	assert_ne(EnemyAi.role_of(f.repo, other), EnemyAi.ROLE_RESERVE)
+	var today: int = f.state.absolute_day()
+	f.state.ai_hosts[other] = {"mode": EnemyAi.MODE_DEPLOYING, "target_kind": EnemyAi.KIND_TOWN, "target_id": f.town,
+		"think_day": 0, "plunder": 0, "siege_progress": 0, "deployment": {"town": f.town, "started_day": today, "complete": false}}
+	var manual: GameState = BodyBattle.begin_candidate(f.repo, f.state).candidate
+	for slice: int in 5: manual = _next_move_work(f, manual)
+	var entry: Dictionary = manual.foes[f.foe]
+	assert_eq([manual.ai_hosts[f.host].mode, manual.ai_hosts[f.host].target_id, _host_events(manual)], [EnemyAi.MODE_ADVANCE, "", []])
+	assert_eq([entry.x_m, entry.order, entry.dest_x_m, entry.disengaged_until, manual.day_resolution.march_entries[f.foe].order],
+		[45000, ArmySystem.ORDER_GARRISON, 45000, today, ArmySystem.ORDER_MARCH])
+	var state := _day(f.repo, f.state, "complete")
+	if state == null: return
+	assert_eq(_hash(state), _hash(BodyDayDriver.tactical_day(f.repo, manual).candidate))
+	entry = state.foes[f.foe]
+	assert_eq([entry.x_m, entry.order, entry.dest_x_m, UnitBodies.rows(f.repo, state, f.foe)[0].x_m, state.battles], [45150, ArmySystem.ORDER_GARRISON, 45150, 45150, []])
+	assert_eq([state.ai_hosts[f.host].mode, state.ai_hosts[other].mode, _host_events(state)], [EnemyAi.MODE_ADVANCE, EnemyAi.MODE_DEPLOYING, []])
