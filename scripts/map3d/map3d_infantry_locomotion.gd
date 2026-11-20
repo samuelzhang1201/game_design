@@ -6,7 +6,8 @@ extends RefCounted
 ## -turn x the swing's end, pivot_mapping.py `expand`) and Map3DInfantryPivot.sample_transition
 ## re-solves the legs, with the clip's own pose at the phase as the authored reference.
 ## Entry and exit stay the clip's endpoints (MARCH at PLAN.march_phase). The plan is generated
-## by tools/units3d/soldier_arp/pivot_mapping.py `plan`.
+## by tools/units3d/soldier_arp/pivot_mapping.py `plan`. Another body on the same rig contract
+## (Map3DHeavyInfantryLocomotion) solves through `solve_plan` with its own plan.
 
 const Pivot = preload("res://scripts/map3d/map3d_infantry_pivot.gd")
 const Provider = preload("res://scripts/map3d/map3d_pivot_provider.gd")
@@ -14,7 +15,7 @@ const PLAN_PATH := "res://assets/3D/units/infantry/infantry_pivot_plan.json"
 const SWING_STEPS := 16
 const LIFT_M := 0.05
 
-static var _plan: Dictionary = {}
+static var _plans: Dictionary = {}  ## plan path -> the decoded plan
 
 
 ## Certifier provider (tools/units3d/certify_locomotion.py), through the shared shell.
@@ -25,7 +26,12 @@ static func pose(player: AnimationPlayer, skeleton: Skeleton3D, request: Diction
 ## Solves one phase of a `turn_udeg` pivot on `clip` (the clip whose sign matches the turn).
 static func solve(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, turn_udeg: int,
 		phase: float) -> Dictionary:
-	var plan := _load()
+	return solve_plan(_load(), player, skeleton, clip, turn_udeg, phase)
+
+
+## `solve` on a given plan (`load_plan`).
+static func solve_plan(plan: Dictionary, player: AnimationPlayer, skeleton: Skeleton3D, clip: String,
+		turn_udeg: int, phase: float) -> Dictionary:
 	var length := player.get_animation(clip).length
 	var rest: Dictionary = plan.rest
 	var entry := Provider.locals(player, skeleton, clip, 0.0, rest.bones)
@@ -116,9 +122,14 @@ static func _interval(a: float, z: float, kind: String, p0: Vector3, p1: Vector3
 
 
 static func _load() -> Dictionary:
-	if not _plan.is_empty():
-		return _plan
-	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PLAN_PATH))
+	return load_plan(PLAN_PATH)
+
+
+## The decoded plan at `path` (a `pivot_mapping.py plan` file), read once.
+static func load_plan(path: String) -> Dictionary:
+	if _plans.has(path):
+		return _plans[path]
+	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
 	for bone: Dictionary in raw.rest.bones:
 		bone.local = _transform(bone.local)
 	for leg: Dictionary in raw.rest.legs:
@@ -133,8 +144,8 @@ static func _load() -> Dictionary:
 			swing.place = _vector(swing.place)
 			swing.sole = _basis(swing.sole)
 			swing.toe = _basis(swing.toe)
-	_plan = raw
-	return _plan
+	_plans[path] = raw
+	return raw
 
 
 static func _vector(a: Array) -> Vector3:

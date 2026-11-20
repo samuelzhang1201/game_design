@@ -99,6 +99,59 @@
    "rider": "heat per sub-group (cloth coat)"
   }
  },
+ "heavy_infantry": {
+  "actions": {
+   "MARCH": [
+    0,
+    33
+   ],
+   "GARRISON": [
+    0,
+    108
+   ],
+   "STANDBY": [
+    0,
+    75
+   ],
+   "DEFEND": [
+    0,
+    90
+   ],
+   "ATTACK": [
+    0,
+    30
+   ],
+   "SLASH": [
+    0,
+    45
+   ],
+   "ATTACK_VAR1": [
+    0,
+    52
+   ],
+   "ATTACK_2": [
+    0,
+    39
+   ],
+   "SLASH_2": [
+    0,
+    47
+   ],
+   "SLASH_3": [
+    0,
+    41
+   ]
+  },
+  "bones": 70,
+  "fps": 30,
+  "height_m": 1.599,
+  "kind": "humanoid",
+  "label": "Heavy man-at-arms",
+  "source": "The owner's Tripo plate soldier (heavy_infantry_parts.glb, 79 parts, decimated per part 53,269 -> 11,410 tris with maps baked from the high mesh) with the infantry's short sword and round shield, rigged with Auto-Rig Pro and driven by the infantry's clips: assets/3D/model_wip/blender_output/heavy_infantry_parts/hip_shortsword_shield.blend (git-ignored), tools/units3d/infantry_arp/game_export.py ARM heavy_infantry; PIVOT_RIGHT / PIVOT_LEFT baked by tools/units3d/soldier_arp/pivot.py",
+  "stride_m": 1.473,
+  "tris": 14709,
+  "weights": "ARP skin limited to 4 influences; sword and shield rigid on cc_weapon.r / cc_weapon.l"
+ },
  "infantry": {
   "actions": {
    "MARCH": [

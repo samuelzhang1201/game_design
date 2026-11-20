@@ -6,6 +6,7 @@
    and R-A contact audit.
 3. Baking the committed solve onto the installed GLB's own nineteen-clip prefix reproduces it byte for byte.
 4. The committed runtime plan (infantry_pivot_plan.json) is what the mapping generates.
+2-4 hold for every arm on the rig contract (ARMS: the infantry and the heavy infantry).
 """
 import base64
 import hashlib
@@ -22,14 +23,30 @@ import pivot  # noqa: E402
 import pivot_mapping as pm  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
-FIXTURE = ROOT / 'tests/fixtures/infantry_pivot_mapping.json'
-GLB = ROOT / 'assets/3D/units/infantry/infantry.glb'
-PLAN = ROOT / 'assets/3D/units/infantry/infantry_pivot_plan.json'
-HASHES = {'baseline-native.json': '62922f40c2bb48668a86ac11cb13cdb9fde791623685de1176c613ae777b24cc',
-          'native-march.json': '9ddf149a2627a7fa4a0e75abc8b9134ca004b9c97e1d1876c8d9652310d2b370',
-          'canonical-samples.json': 'a28adcaa27a5195c37a09848b7c6766e4bf2825ea8fc0631b2a96692e2960176'}
-MAIN_GLB_SHA256 = '3916b9c6fac405d3d1d4ff48713c229c63bcacee8dd0f2b2ee143c035d8f4d0e'  # nineteen clips (game_export.py)
-OLD = {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6616856}
+# per arm: the committed captures' hashes, the nineteen-clip export (game_export.py) and its sizes
+ARMS = {
+    'infantry': {
+        'hashes': {'baseline-native.json': '62922f40c2bb48668a86ac11cb13cdb9fde791623685de1176c613ae777b24cc',
+                   'native-march.json': '9ddf149a2627a7fa4a0e75abc8b9134ca004b9c97e1d1876c8d9652310d2b370',
+                   'canonical-samples.json': 'a28adcaa27a5195c37a09848b7c6766e4bf2825ea8fc0631b2a96692e2960176'},
+        'glb_sha256': '3916b9c6fac405d3d1d4ff48713c229c63bcacee8dd0f2b2ee143c035d8f4d0e',
+        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6616856}},
+    'heavy_infantry': {
+        'hashes': {'baseline-native.json': '0c7a23867119c33a0bb83413b31598a43409a73c100d527672e7af70b518c77f',
+                   'native-march.json': '2688e1df5f0bcbad358b224440598d5425f9988fee4d9fa30f62baa43249c32d',
+                   'canonical-samples.json': 'b485e90a1c045f201605111271c84b187b046789f5204c7c6840e816cf0e4fab'},
+        'glb_sha256': 'd341a878a313ae3256694a25de5f134c67d3eb67d498b2d98032ed3384bf5a4b',
+        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 5776552}},
+}
+
+
+def bind(arm):
+    global FIXTURE, GLB, PLAN, HASHES, MAIN_GLB_SHA256, OLD
+    pm.use(arm)
+    FIXTURE = ROOT / f'tests/fixtures/{arm}_pivot_mapping.json'
+    GLB = ROOT / f'assets/3D/units/{arm}/{arm}.glb'
+    PLAN = ROOT / f'assets/3D/units/{arm}/{arm}_pivot_plan.json'
+    HASHES, MAIN_GLB_SHA256, OLD = (ARMS[arm][k] for k in ('hashes', 'glb_sha256', 'old'))
 
 
 def sources():
@@ -72,6 +89,12 @@ def close(a, b):
 
 def main():
     pm.self_check(pm.frozen_model())
+    for arm in ARMS:
+        bind(arm)
+        check(arm)
+
+
+def check(arm):
     data = sources()
     model = pm.installed_model(data['baseline-native.json'], [data['native-march.json']])
     cases = pm.build(model)
@@ -96,7 +119,7 @@ def main():
     assert committed['march_phase'] == pm.CANONICAL_PHASE and close(committed['rest'], pm.encode(cases[0]['rest'])), \
         'infantry_pivot_plan.json rest is stale: rerun pivot_mapping.py plan'
     assert close(committed['legs'], mine), 'infantry_pivot_plan.json is stale: rerun pivot_mapping.py plan'
-    print('PIVOT_MAPPING_MATCH', json.dumps([{k: r[k] for k in ('turn_udeg', 'skin', 'contact_um')} for r in report]))
+    print('PIVOT_MAPPING_MATCH', arm, json.dumps([{k: r[k] for k in ('turn_udeg', 'skin', 'contact_um')} for r in report]))
 
 
 if __name__ == '__main__':
