@@ -80,30 +80,30 @@ func test_arm_permille_sums_and_floors() -> void:
 func test_power_of_arms_scales_one_arm() -> void:
 	# Artillery 1000 guns, 8000 crew all fit, training 50 (500+50*10 = 1000), morale 50
 	# (500+50*5 = 750), no terrain (1000). Base: the artillery rows' mean
-	# ((1100+700)/2 + (900+800)/2 + (800+600)/2 + 1000 + (1100+700)/2) / 5 = 4350/5 = 870.
-	# p = 1000*1000*1000/1000 = 1,000,000 -> *870/1000 = 870,000 -> *1000/1000
-	# -> *750/1000 = 652,500 -> *1000/1000 = 652,500.
-	# base = ceil(652500/1000) = 653; at 1100: ceil(652500*1100/1e6) = ceil(717.75) = 718.
+	# ((1100+700)/2 + (900+800)/2 + (800+600)/2 + 1000 + (1100+700)/2 + (1200+700)/2) / 6 = 5300/6 = 883.
+	# p = 1000*1000*1000/1000 = 1,000,000 -> *883/1000 = 883,000 -> *1000/1000
+	# -> *750/1000 = 662,250 -> *1000/1000 = 662,250.
+	# base = ceil(662250/1000) = 663; at 1100: ceil(662250*1100/1e6) = ceil(728.475) = 729.
 	var arms := {"artillery": 1000}
 	var base := ArmySystem.power_of_arms(repo, arms, 8000, 50, 50, "defend", "", "")
-	assert_eq(base, 653)
-	assert_eq(ArmySystem.power_of_arms(repo, arms, 8000, 50, 50, "defend", "", "", "", 0, {}), 653)
-	assert_eq(ArmySystem.power_of_arms(repo, arms, 8000, 50, 50, "defend", "", "", "", 0, {"artillery": 1100}), 718)
+	assert_eq(base, 663)
+	assert_eq(ArmySystem.power_of_arms(repo, arms, 8000, 50, 50, "defend", "", "", "", 0, {}), 663)
+	assert_eq(ArmySystem.power_of_arms(repo, arms, 8000, 50, 50, "defend", "", "", "", 0, {"artillery": 1100}), 729)
 
 
 func test_ranged_penalty_hits_archers_only() -> void:
 	# Archers 1000 + cavalry 1000 elements: 1000 + 2000 crew, all 3000 fit.
-	# p is 1,000,000 per arm. Archers base (1000+1000+750+950+1000)/5 = 940: p ->
-	# 940,000 -> *750/1000 = 705,000; at 900: ceil(705000*900/1e6) =
-	# ceil(634.5) = 635. Cavalry base (850+1250+1000+1200+1150)/5 = 1090: p ->
-	# 1,090,000 -> 817,500; ceil(817.5) = 818. Hit host = 818 + 635 = 1453.
+	# p is 1,000,000 per arm. Archers base (1000+1000+750+950+1000+850)/6 = 925: p ->
+	# 925,000 -> *750/1000 = 693,750; at 900: ceil(693750*900/1e6) =
+	# ceil(624.375) = 625. Cavalry base (850+1250+1000+1200+1150+800)/6 = 1041: p ->
+	# 1,041,000 -> 780,750; ceil(780.75) = 781. Hit host = 781 + 625 = 1406.
 	var arms := {"archers": 1000, "cavalry": 1000}
 	var hit := ArmySystem.power_of_arms(repo, arms, 3000, 50, 50, "defend", "", "", "", 0, {"archers": 900})
 	var only_cav := ArmySystem.power_of_arms(repo, {"cavalry": 1000}, 2000, 50, 50, "defend", "", "")
 	var scaled_archers := ArmySystem.power_of_arms(repo, {"archers": 1000}, 1000, 50, 50, "defend", "", "", "", 0, {"archers": 900})
-	assert_eq(only_cav, 818)
-	assert_eq(scaled_archers, 635)
-	assert_eq(hit, 1453)
+	assert_eq(only_cav, 781)
+	assert_eq(scaled_archers, 625)
+	assert_eq(hit, 1406)
 	assert_eq(hit, only_cav + scaled_archers)
 
 

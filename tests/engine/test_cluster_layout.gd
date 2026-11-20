@@ -183,6 +183,19 @@ func test_authored_tables_and_large_surplus_have_no_duplicate_positions() -> voi
 			seen[point] = true
 		assert_false(view.has("damage"), "query creates no combat benefit")
 
+func test_heavy_infantry_fills_an_infantry_slot() -> void:
+	# data/battle/cluster_arms.csv: a heavy unit counts as infantry for recipes and slots.
+	assert_true(_option("steady_line", _units(["heavy_infantry", "heavy_infantry", "archers"])).eligible)
+	assert_true(_option("strong_wing", _units(["heavy_infantry", "axemen", "infantry"])).eligible)
+	var short: Dictionary = _option("strong_wing", _units(["heavy_infantry", "heavy_infantry", "archers"]))
+	assert_false(short.eligible)
+	assert_string_contains(String(short.reason), "步兵")
+	assert_false(String(short.reason).contains("重甲步兵"), short.reason)
+	var placed: Dictionary = subject.layout(repo, "steady_line", _units(["heavy_infantry", "infantry", "archers"]),
+		Vector2i.ZERO, 0, "")
+	assert_eq(placed.blocked, {}, "the heavy unit gets an infantry slot")
+	assert_eq(String(placed.roles.get("u00", "")), "front")
+
 func test_axe_fills_an_infantry_slot() -> void:
 	# data/battle/cluster_arms.csv: an axe unit counts as infantry for recipes and slots.
 	assert_true(_option("steady_line", _units(["axemen", "axemen", "infantry"])).eligible)

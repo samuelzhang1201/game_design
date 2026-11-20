@@ -34,5 +34,10 @@ func test_importer_reads_the_game_arms_or_fails() -> void:
 	if axemen.size() == 1:
 		assert_eq(axemen[0], {"name": "axemen", "label": "Axemen", "type": "melee", "rural": 0.3, "urban": 0.05,
 			"crew": 1, "power": 1.0, "separate": false})
+	var heavy: Array = (defs.get("defs", []) as Array).filter(func(d: Dictionary) -> bool: return d["name"] == "heavy_infantry")
+	assert_eq(heavy.size(), 1)
+	if heavy.size() == 1:
+		assert_eq(heavy[0], {"name": "heavy_infantry", "label": "Heavy infantry", "type": "melee", "rural": 0.05,
+			"urban": 0.15, "crew": 1, "power": 1.0, "separate": false})
 	var missing: Dictionary = importer.call("game_arm_defs", "res://tests/fixtures/no_such_data")
 	assert_true(missing.has("error"), "a missing game_arms table fails the import")
