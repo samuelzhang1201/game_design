@@ -822,7 +822,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "500da3ae3c93273ee227655a916bb4b1f7e651673cecdb711a58eb4c5ffb5c07",
+  "sha256": "508b73e36735cc9dc09b3003b46983ed41175a89464707e5f32d39c0b2d2b94f",
   "uniform": 512
  },
  "config": {
@@ -898,11 +898,11 @@
   "assets/3D/units/royal/royal_royal_atlas_mr.jpg.import": "ce415cba84687cbd3bf659d4dec769d6a054d6d9462172e3b45a0f0f8c5bed92",
   "assets/3D/units/royal/royal_royal_atlas_n.jpg": "87dae2d5426bf52b5f4dd43676ce6a2bf92b9ff22e922e1ba98a8628caffe2ed",
   "assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
-  "data/army/balance.csv": "9568023e30a626cccd5e47c8de1d1b360d1cdb6d1fcc16f4f34548df31c274e5",
-  "data/army/unit_footprints.csv": "358d0da3fbfddb33ade1f42d7eeb8f15d6016873c9220fab18468abf48e1e12e",
-  "data/screens/map3d/army_art.csv": "f880fead7c4df475f069b7c550e059f8ad40cc96349f2f9967f85a68e1220a8e",
+  "data/army/balance.csv": "45c39fb6a948abd38400151346ec960155f0429e14fcaad1e38e0d3005f61c68",
+  "data/army/unit_footprints.csv": "81971028b03d63c2031c55f983f74df8d114414d13e461d61981ddce744aaf03",
+  "data/screens/map3d/army_art.csv": "55d10daa52a501f6718805950a3c7e20e7648ee1dbe3887e57209c05a17352a0",
   "data/screens/map3d/balance.csv": "f128c6999b798ed089e50f888f24f0ee6a9e70646df2a9ff66169430190a3790",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "c60268279327954aa32504a1aa7e2a734fdd8ceb4d456a6fa88616f03c15b302",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "f30b82b64571c8e602c2de97d534917404e66ac69600db4f1ffff26004836fad",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
   "scripts/map3d/map3d_cavalry_pivot.gd": "b210d21b965ff11830e290d81b526eb7e713b9ddf2c285467b9838e27a96197d",
   "scripts/map3d/map3d_cavalry_pivot_math.gd": "0c9ae12d36755d2d9b5928d6343c7a6c4bdb871aa62d7c6e0013c729d65911e1",
@@ -919,11 +919,11 @@
    "MARCH"
   ],
   "contact_um": 29338,
-  "digest": "ebaa1e3fb525f6c72628c596a15dface0e5c815c74d99324ff9acf720a380424",
+  "digest": "7a1a800c60030578bb8276292a53397b27e8b54f4df14f8279008b28a491ea34",
   "radius_m": 749,
   "turn_q": 400000
  },
- "payload_sha256": "ebaa1e3fb525f6c72628c596a15dface0e5c815c74d99324ff9acf720a380424",
+ "payload_sha256": "7a1a800c60030578bb8276292a53397b27e8b54f4df14f8279008b28a491ea34",
  "report": {
   "bounds_um": {
    "contact": 29338,
