@@ -5,3 +5,4 @@ cavalry,30,120,"cavalry reach farthest"
 artillery,12,120,
 fleet,0,0,"a fleet never scouts"
 axemen,15,120,"owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): the axemen are infantry-sized foot, so the infantry's value"
+heavy_infantry,12,120,"owner 2026-11-20 (spec 2026-11-20-heavy-infantry-arm-design): a slow column sees less far ahead"

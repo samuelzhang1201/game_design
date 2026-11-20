@@ -4,3 +4,4 @@ archers,2,archers,Archers,0,
 cavalry,3,horse,Horse,0,
 artillery,1,royal_train,Royal Train of {kingdom},1,"pooled (owner choice B): every gun of a kingdom is ONE unit at its capital; {kingdom} is the kingdom's label"
 axemen,1,axe,Axemen,0,
+heavy_infantry,1,heavy,Heavy foot,0,

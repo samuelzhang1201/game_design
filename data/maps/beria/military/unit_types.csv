@@ -5,3 +5,4 @@ cavalry,Cavalry,mounted,0.12,0.03,2,2,0
 artillery,Artillery,machinery,0,0.03,8,12,0
 fleet,Fleet,naval,0,0.01,100,50,1
 axemen,Axemen,melee,0.3,0.05,1,1,0
+heavy_infantry,Heavy infantry,melee,0.05,0.15,1,1,0
