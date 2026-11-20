@@ -59,7 +59,9 @@ func test_no_factors_preserves_base_and_input_is_not_mutated() -> void:
 	Strength.combine(630, factors)
 	assert_eq(factors, original)
 
-func test_unit_applies_identity_training_morale_discipline_supply_and_action_once() -> void:
+## A 600-man infantry regiment (570 commoners, 30 nobles: base 630) at training 30, morale 80,
+## full supplies, on flat ground with no matchup, terrain or works tables: [repo, state, code].
+func _unit_fixture() -> Array:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
 	var state := SuiteData.campaign(repo, 7)
 	repo.balance["battle_strength_factor_min_permille"] = 0
@@ -95,6 +97,14 @@ func test_unit_applies_identity_training_morale_discipline_supply_and_action_onc
 	state.regiments[code]["morale"] = 80
 	state.regiments[code]["supplies"] = 100000
 	state.king_state["mode"] = "court"
+	return [repo, state, code]
+
+func test_unit_applies_identity_training_morale_discipline_supply_and_action_once() -> void:
+	var fixture := _unit_fixture()
+	var repo: DataRepository = fixture[0]
+	var state: GameState = fixture[1]
+	var code: String = fixture[2]
+	var row: Dictionary = state.army_roster[code]
 	var extra: Array[Dictionary] = [{"category": "action", "source": "action:attack", "permille": 800,
 		"reason": "Attack exposes the line"}]
 	var result := Strength.unit(repo, state, code, true, extra)
@@ -114,3 +124,50 @@ func test_unit_applies_identity_training_morale_discipline_supply_and_action_onc
 		"reason": "A duplicate must be refused"}]
 	assert_true(Strength.unit(repo, state, code, true, duplicate).has("error"))
 	assert_false(extra[0].has("min_permille"), "unit never mutates caller factors")
+
+## Player siege step 2 (spec 2026-11-18-player-siege-design §4.4): a unit attacking a town
+## gets its arm's army_town_defence attack_permille for the town's works; nobody else does.
+func test_unit_storming_weights_attack_permille_for_the_attacker_only() -> void:
+	var fixture := _unit_fixture()
+	var repo: DataRepository = fixture[0]
+	var state: GameState = fixture[1]
+	var code: String = fixture[2]
+	var row: Dictionary = state.army_roster[code]
+	var towns := repo.burgs.keys()
+	towns.sort()
+	var town := String(towns[0])
+	repo.burgs[town]["features"] = "walls"
+	var label := String(repo.burgs[town].get("label", town))
+	repo.army_town_defence["walls|axemen"] = {"defend": 1150, "attack": 1200}
+	repo.army_town_defence["walls|infantry"] = {"defend": 1300, "attack": 1000}
+	repo.world_table("military", "unit_types")["axemen"]["crew"] = "1"
+	state.battles.append({"id": 1, "att": [code], "def": ["strength_foe"], "town": town})
+	row["infantry"] = "0"
+	row["axemen"] = "600"
+	var axes := Strength.unit(repo, state, code, true)
+	assert_false(axes.has("error"), str(axes))
+	assert_eq(axes.get("power"), 570, "630 -> 504 training -> 453 morale -> 475 discipline -> 570 terrain 1000 + storming 1200")
+	var storm := _source(axes, "town:storming")
+	assert_eq(storm.get("permille"), 1200)
+	assert_eq(storm.get("category"), "formation_terrain")
+	assert_eq(storm.get("reason"), "storming the walls of %s (axemen 1200)" % label)
+	row["axemen"] = "0"
+	row["infantry"] = "600"
+	var foot := Strength.unit(repo, state, code, true)
+	assert_eq(foot.get("power"), 475, "infantry storm at 1000: no change")
+	assert_eq(_source(foot, "town:storming").get("permille"), 1000)
+	assert_eq(_source(foot, "town:storming").get("reason"), "storming the walls of %s (infantry 1000)" % label)
+	assert_true(_source(Strength.unit(repo, state, code, false), "town:storming").is_empty(), "holding this round: no storming")
+	row["infantry"] = "0"
+	row["axemen"] = "600"
+	state.battles[0]["att"] = ["strength_foe"]
+	state.battles[0]["def"] = [code]
+	var sally := Strength.unit(repo, state, code, true)
+	assert_eq(sally.get("power"), 475, "a defender attacking out of its town gets no storming factor")
+	assert_true(_source(sally, "town:storming").is_empty())
+
+func _source(result: Dictionary, source: String) -> Dictionary:
+	for factor: Dictionary in result.get("factors", []):
+		if String(factor.get("source", "")) == source:
+			return factor
+	return {}
