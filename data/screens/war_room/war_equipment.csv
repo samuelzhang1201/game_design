@@ -17,3 +17,8 @@ axemen,helmet,Kettle helm,round steel cap with a narrow brim
 axemen,mail,Mail hauberk,mail to the knee under a green tabard
 axemen,shield,Round shield,planked wood with an iron boss
 axemen,axe,Hand axe,a bearded head on a short ash haft
+heavy_infantry,helmet,Morion,"a crested steel morion with a swept brim"
+heavy_infantry,cuirass,Breastplate,"plate with pauldrons at the shoulders and tassets over the thighs"
+heavy_infantry,clothes,Sleeves and breeches,"puffed and slashed cloth under the plate"
+heavy_infantry,shield,Round shield,"a steel-faced round shield"
+heavy_infantry,sword,Short sword,"a broad short blade for the press"

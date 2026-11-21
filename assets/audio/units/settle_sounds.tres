@@ -7,5 +7,6 @@
 script = ExtResource("1_table")
 art = Dictionary[String, Resource]({
 "axemen": ExtResource("2_equip"),
+"heavy_infantry": ExtResource("2_equip"),
 "infantry": ExtResource("2_equip")
 })

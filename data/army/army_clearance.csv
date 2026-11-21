@@ -5,3 +5,4 @@ cavalry,2200,
 artillery,1140,
 fleet,0,"a fleet holds no ground"
 axemen,1140,"owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): the axemen are infantry-sized foot, so the infantry's value"
+heavy_infantry,1140,"owner 2026-11-20 (spec 2026-11-20-heavy-infantry-arm-design): the infantry's value until the installed plate soldier is measured"

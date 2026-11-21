@@ -4,4 +4,5 @@ archers,archers,弓兵,
 cavalry,cavalry,骑兵,
 artillery,artillery,炮兵,
 axemen,infantry,斧兵,"owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): an axe unit fills any infantry slot"
+heavy_infantry,infantry,重甲步兵,"owner 2026-11-20 (spec 2026-11-20-heavy-infantry-arm-design): a heavy unit fills any infantry slot"
 units,,作战单位,

@@ -14,3 +14,6 @@ citadel,artillery,1300,1000,
 town,axemen,1050,1100,owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): axes hold a town at about half the foot's bonus and break gates when they attack
 walls,axemen,1150,1200,
 citadel,axemen,1200,1250,
+town,heavy_infantry,1150,1000,"owner 2026-11-20 (spec 2026-11-20-heavy-infantry-arm-design): the armoured core is at its best behind works"
+walls,heavy_infantry,1350,1000,
+citadel,heavy_infantry,1450,1000,

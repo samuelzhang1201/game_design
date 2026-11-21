@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "9f1aac77244c098d441b28548c3ea4f283b0664445f38d022432a5ad90f841ec",
+  "sha256": "1f41d55eeea52d51805f22e70c099eda91c7041d6ccf424346ad1cd636812b64",
   "uniform": 512
  },
  "config": {
@@ -423,11 +423,11 @@
   "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "532ca77c142fe4620751d00195e2c62f1ebb476ef523b41fa5a27ae813259f27",
   "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg.import": "88390be297d3271f1f4a43cccfd9d37dc68bdc5cec98712d00f552c9b6cf1542",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
-  "data/army/balance.csv": "9568023e30a626cccd5e47c8de1d1b360d1cdb6d1fcc16f4f34548df31c274e5",
-  "data/army/unit_footprints.csv": "358d0da3fbfddb33ade1f42d7eeb8f15d6016873c9220fab18468abf48e1e12e",
-  "data/screens/map3d/army_art.csv": "f880fead7c4df475f069b7c550e059f8ad40cc96349f2f9967f85a68e1220a8e",
+  "data/army/balance.csv": "45c39fb6a948abd38400151346ec960155f0429e14fcaad1e38e0d3005f61c68",
+  "data/army/unit_footprints.csv": "81971028b03d63c2031c55f983f74df8d114414d13e461d61981ddce744aaf03",
+  "data/screens/map3d/army_art.csv": "55d10daa52a501f6718805950a3c7e20e7648ee1dbe3887e57209c05a17352a0",
   "data/screens/map3d/balance.csv": "f128c6999b798ed089e50f888f24f0ee6a9e70646df2a9ff66169430190a3790",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "c60268279327954aa32504a1aa7e2a734fdd8ceb4d456a6fa88616f03c15b302",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "f30b82b64571c8e602c2de97d534917404e66ac69600db4f1ffff26004836fad",
   "scenes/models/units/infantry.tscn": "69256e86dfd2d93050522bdcef422afa3ce3d4c2472d063752b7b085da848921",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
   "scripts/map3d/map3d_infantry_locomotion.gd": "b5ab0bfa95ce6a4cf6e676df09c9872ea438638216f89070bf93dc9ba5f9d419",
@@ -443,11 +443,11 @@
    "MARCH"
   ],
   "contact_um": 23217,
-  "digest": "a11d58bdf03d8fe7474c0c5df3decd4d80fb9369a97fe74f28e108e686b1a3a5",
+  "digest": "8caa39fefc03f56ab1cb029d5d51d956c7cf93cd8884fa6ccdccf90394a4d19e",
   "radius_m": 875,
   "turn_q": 400000
  },
- "payload_sha256": "a11d58bdf03d8fe7474c0c5df3decd4d80fb9369a97fe74f28e108e686b1a3a5",
+ "payload_sha256": "8caa39fefc03f56ab1cb029d5d51d956c7cf93cd8884fa6ccdccf90394a4d19e",
  "report": {
   "bounds_um": {
    "contact": 23217,

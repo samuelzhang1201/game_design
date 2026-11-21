@@ -10,3 +10,6 @@ marsh,artillery,700,700,
 sea,fleet,1000,1000,
 forest,axemen,1150,1150,owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): woodsmen
 jungle,axemen,1000,1000,axes clear the undergrowth: no jungle penalty
+jungle,heavy_infantry,700,700,"owner 2026-11-20 (spec 2026-11-20-heavy-infantry-arm-design): plate is poor in rough, wet or close ground"
+marsh,heavy_infantry,800,800,
+forest,heavy_infantry,900,900,
