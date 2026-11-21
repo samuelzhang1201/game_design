@@ -864,8 +864,9 @@ func test_locomotion_march_hand_l_and_atomic_json_retry() -> void:
 		assert_eq(p.units[0].used_m, 6 if budget == 80 else 7, "B8: 3+3 moves plus two 100000 pivots fit; full 3+4 cannot")
 		if budget == 100:
 			var ops: Array = p.motion.moves[0].ops
-			assert_eq(ops.map(func(op: Dictionary) -> int: return int(op.t1_q)), [300000, 400000, 800000, 900000, 1000000])
-			assert_eq(ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "pivot", "hold"])
+			# B2e: a march in no battle ends facing its road (90), with no pivot back.
+			assert_eq(ops.map(func(op: Dictionary) -> int: return int(op.t1_q)), [300000, 400000, 800000, 1000000])
+			assert_eq(ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "hold"])
 		var committed := _loco_commit(f, state, p)
 		if committed.candidate == null: return
 		var loaded := _json(committed.candidate)
@@ -892,16 +893,19 @@ func test_locomotion_march_long_leg_lost_pivot_time_never_returns() -> void:
 	for body: Dictionary in f.state.regiments[f.code].body_groups: body.facing_deg = 90
 	var state := _loco_begin(f, 100)
 	if state == null: return
+	# B2e: the first slice turns east and keeps it. The row prefix still keeps room for a pivot
+	# back (ArmySystem's probe), so 0.1 + d/10 + 0.1 <= 1 gives 8 m; every later slice faces its
+	# road and walks its whole 10 m. The 2 m the first slice ceded never return.
 	for slice: int in 10:
 		var p := _loco_plan(f, state)
 		assert_eq(p.units[0].step_budget_m, 10, "no catchup allowance on last slice")
-		assert_eq(p.units[0].used_m, 8, "two quarter-turns cost 200000 of the same million time units")
+		assert_eq(p.units[0].used_m, 8 if slice == 0 else 10, "a quarter turn and room for one back cost 200000 of the first slice")
 		state = _loco_commit(f, state, p).candidate
 		if state == null: return
 		state = _json(state)
-		assert_eq(state.regiments[f.code].x_m, 50000 + (slice + 1) * 8)
-		assert_eq(state.regiments[f.code].body_groups[0].facing_deg, 90)
-	assert_eq(state.day_resolution.march_entries[f.code].day_walked_m, 80)
+		assert_eq(state.regiments[f.code].x_m, 50000 + 8 + slice * 10)
+		assert_eq(state.regiments[f.code].body_groups[0].facing_deg, 0, "the row keeps facing its road")
+	assert_eq(state.day_resolution.march_entries[f.code].day_walked_m, 98)
 	assert_eq(state.day_resolution.march_entries[f.code].route_m, [[60000, 50000]])
 	var done: Dictionary = TickEngine.new(f.repo).call("step_locomotion_march_candidate", state)
 	assert_eq(done.status, "complete")
@@ -1158,7 +1162,11 @@ func test_locomotion_march_oblique_prefix_advances_anchor_with_bodies_and_json()
 			assert_eq(state.day_resolution.march_entries[f.code].route_m, [destination])
 			assert_eq(result.plan.arrivals, [])
 			if destination == [60000, 53333]:
-				assert_eq([body.x_m, body.y_m], [50000 + 90 * (slice + 1), 50000 + 30 * (slice + 1)], "rounded 90,30 costs95; both heading pivots fit B100")
+				# Slice 0 turns 18.43 degrees out (and the row prefix keeps room to turn back), so its
+				# rounded prefix is 90,30 (costs 95). B2e: the row then faces 18 and keeps it, so each
+				# later slice turns only a sub-degree residual each way (its rounded prefix 94,31
+				# heads 18.25 degrees): 94,31 (costs 99).
+				assert_eq([body.x_m, body.y_m], [50000 + 90 + 94 * slice, 50000 + 30 + 31 * slice], "the first slice pays the turn, later ones only the sub-degree residual")
 
 func test_locomotion_march_oblique_prefix_reaches_real_destination_once() -> void:
 	if not _loco_api(): return

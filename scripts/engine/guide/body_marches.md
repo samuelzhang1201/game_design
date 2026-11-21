@@ -46,11 +46,18 @@ reservation. Its closed v2 plan is `{version,cursor,policy_digest,moves,reasons}
 cursor is `{abs_day,substep,basis,intents,priority,boundary}`. Every body, including
 unrequested stationary peers, has a complete integer partition of the slice.
 Time precision is `BodyMotion.LOCOMOTION_Q`, angles are integer microdegrees,
-shortest 180-degree ties turn positively, and a final pivot restores row facing.
-The first yaw and final facing both come from that same authoritative row.
+shortest 180-degree ties turn positively. A row in no battle (`face_heading`) ends
+facing its last leg's nearest whole degree, and the commit writes that to its facing,
+so a march's turn persists; a row in a battle (or one that never moved) pivots back
+to its row facing. The first yaw comes from the authoritative row and is a whole degree;
+the final facing is the start's or the last leg's whole degree, nothing else.
 Saved v2 controls must match the current endpoint rows at both plan and commit
-admission, including successor cursors; rehashing claimed headings cannot skip
-the initial pivot or replace the row's actual facing.
+admission, including successor cursors. The start yaw is bound when the commit replans
+from its source; afterwards only its whole-degree form is checkable, since the row now
+carries the new facing. The body day's row prefix (`ArmySystem._body_locomotion_slice`)
+keeps room for a pivot back, so a slice that turns cedes that pivot's time; a straight
+slice is exact. A facing is a whole degree, so a leg off one (an oblique road) turns its
+fraction of a degree out and back each slice.
 Only complete affordable waypoint prefixes execute; unused time is a hold.
 Each move's budget and start match its recorded intent. Unrequested peers have
 zero budget, and a row with no translation has exactly one full-slice hold.

@@ -147,6 +147,19 @@ func _carrier_packet() -> Dictionary:
 	assert_true(result.ok)
 	return result.packet
 
+## The suite's two schedules: one royal row in a battle, deploying, over two slices (or two
+## days). A row in a battle keeps the timeline B2e left for battles: it pivots back to its row
+## facing, so each slice is pivot out / move / pivot back and slice 0's pivot back meets slice 1's
+## pivot out (the pivot/pivot seam). A row in no battle ends its slice facing its road instead,
+## with no full pivot back (test_a_row_in_no_battle_ends_on_no_full_pivot_back); on an oblique
+## road it keeps only a sub-degree pivot to its whole degree, which this suite does not build.
+## The battle path stages the same ops as the earlier standalone fixture did: the same start,
+## facing, legs, per-slice budgets and turn_q, and ArmySystem's row prefix keeps room for a pivot
+## back exactly as the battle timeline spends it. Hand-checked for (90, [[50,0],[50,0]], 100):
+## turn_q = Q, so a quarter turn is 250000; 0.25 + 50/100 + 0.25 = 1, the whole 50 m, no hold.
+## abs_day / substep are the same too (tick 3, day = first_day - 60: Calendar gives first_day),
+## and the phase seed is the unit and slot, so every phase-derived hand value is unchanged
+## (7.75, the .125 / .375 durations, the +/-TAU yaw_S).
 func _commits(facing: int, legs: Array, budgets: Array, day_cross: bool = false, start: Array = [100,100], first_day: int = 70) -> Array:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo,319)
@@ -162,33 +175,97 @@ func _commits(facing: int, legs: Array, budgets: Array, day_cross: bool = false,
 	var cohorts: Dictionary = {}
 	for id: String in state.military_rosters[code].cohort_ids: cohorts[id] = state.military_cohorts[id]
 	state.military_cohorts = cohorts
+	state.tick = 3
+	state.day = first_day-60
+	assert_eq(state.absolute_day(),first_day)
+	state.day_resolution = {}
+	state.military_migration.erase("body_motion")
 	state.military_migration.body_version = 1
-	state.regiments[code].group_next_slot = 1
-	state.regiments[code].body_groups = [{"slot":0,"home_slot":0,"count":100,"x_m":start[0],"y_m":start[1],"role":"front","facing_deg":facing,"path_m":[]}]
+	var entry: Dictionary = state.regiments[code]
+	entry.x_m = start[0]; entry.y_m = start[1]
+	entry.erase("departure"); entry.erase("camp_state")
+	entry.group_next_slot = 1
+	entry.body_groups = [{"slot":0,"home_slot":0,"count":100,"x_m":start[0],"y_m":start[1],"role":"front","facing_deg":facing,"path_m":[]}]
 	var piece: String = MapObjects.army_piece(repo,state.army_roster[code])
 	repo.unit_footprints[piece] = {"radius_m":10,"pitch_m":40,"width_m":180,"depth_m":60,"files":5,"ranks":2,
 		"locomotion_certificate":{"digest":"a".repeat(64),"turn_q":Q,"contact_um":100,"radius_m":10,"clips":["PIVOT_LEFT","PIVOT_RIGHT","MARCH"],"all_turns":true}}
 	repo.balance["body_locomotion_"+piece+"_turn_q"] = Q
 	repo.balance["body_locomotion_"+piece+"_contact_um"] = 100
 	repo.balance.army_march_grid_px = 1
+	var count: int = 1 if day_cross else 10
+	repo.balance.battle_deploy_step_m = int(budgets.max())*count
 	var slopes := PackedByteArray(); slopes.resize(10000)
 	MarchPath.use(repo,MarchPath.build(repo,100,100,maxi(10,ceili(float(maxi(start[0],start[1])+1000)/90.0)),slopes))
 	assert_eq(UnitBodies.migrate_candidate(repo,state).status,"complete")
+	state.battles = [{"id":8,"att":[code],"def":[],"groups":{code:state.regiments[code].body_groups},
+		"body_version":1,"group_size_version":2,"group_size_men":100,"group_anchor_m":{code:[start[0],start[1]]},"group_facing":{code:facing},
+		"actions":{"att":{"kind":"hold","reason":"Hold"},"def":{"kind":"hold","reason":"Hold"}}}]
+	state.regiments[code].erase("body_groups")
+	_open_day(state,code,count,budgets[0],"0")
 	var out: Array = []
 	for i: int in legs.size():
-		var row: Dictionary = state.regiments[code].body_groups[0]
-		var intent := {"unit":code,"slot":0,"path_m":[[row.x_m,row.y_m],[row.x_m+legs[i][0],row.y_m+legs[i][1]]],"budget_m":budgets[i],"hostile":false}
-		var plan: Dictionary = BodyMotion.plan_locomotion_candidate(repo,state,[intent],first_day+i if day_cross else first_day,0 if day_cross else i)
-		assert_true(BodyMotion._loco_plan_ok(plan),str(plan))
-		if not BodyMotion._loco_plan_ok(plan): return []
-		var committed: Dictionary = BodyMotion.commit_locomotion_candidate(repo,state,plan)
+		if i > 0:
+			var closed: Dictionary = BodyMotion.close_battle_locomotion_candidate(repo,state,BodyBattleMotion._boundary(state))
+			assert_eq(closed.status,"complete",str(closed.get("reason")))
+			if closed.status != "complete": return []
+			state = closed.candidate
+			_seal(repo,state)
+			if day_cross:
+				state.day += 1
+				_open_day(state,code,count,budgets[i],state.day_resolution.body_battle.sequence)
+				state.military_migration.body_battle.result = UnitBodies._battle_result_hash(repo,state)
+			else:
+				assert_eq(budgets[i],budgets[0],"one day's slices share its budget")
+				_successor(repo,state)
+		var leg: Array = legs[i]
+		var deploy := func(_repo: DataRepository, source: GameState, _battle_id: int, unit: String, _budget: int) -> Dictionary:
+			var anchor: Array = BattleSystem.battle_of(source,unit).group_anchor_m[unit]
+			return {"status":"complete","reason":"Fixture deployment leg","error":"","unit":unit,
+				"path_m":[anchor.duplicate(),[int(anchor[0])+int(leg[0]),int(anchor[1])+int(leg[1])]]}
+		var boundary: Dictionary = BodyBattleMotion._boundary(state)
+		var planned: Dictionary = BodyBattleMotion.plan_candidate(repo,state,boundary,{"deployment":deploy})
+		assert_eq(planned.status,"complete",str(planned.get("reason")))
+		if planned.status != "complete": return []
+		assert_false(planned.plan.motion.moves[0].ops.any(func(op: Dictionary) -> bool: return op.kind == "hold" and op.t0_q == 0),"the row walks")
+		assert_eq(planned.plan.motion.moves[0].budget_m,budgets[i],"the slice's budget is the schedule's")
+		var committed: Dictionary = BodyBattleMotion.commit_candidate(repo,state,planned.plan,boundary,{"deployment":deploy})
 		assert_eq(committed.status,"complete",str(committed.get("reason")))
 		if committed.status != "complete": return []
 		state = committed.candidate
 		var saved: Dictionary = state.military_migration.body_motion.duplicate(true)
-		out.append({"saved":saved,"admission":{"unit":code,"slot":"0","receipt":saved.receipt,"piece":piece,"substep_count":1 if day_cross else 10,
-			"classification":"production_bound","identity":{"caller":"actual accepted fixture commit","source":plan.cursor.basis.result},"future_authorized":true},"carrier":_placement})
+		assert_true(BodyMotion._loco_saved_ok(saved,true),"a battle receipt")
+		out.append({"saved":saved,"admission":{"unit":code,"slot":"0","receipt":saved.receipt,"piece":piece,"substep_count":count,
+			"classification":"production_bound","identity":{"caller":"actual accepted fixture commit","source":planned.plan.motion.cursor.basis.result},"future_authorized":true},"carrier":_placement})
 	return out
+
+## A move-stage day header for the battle movement transaction (test_body_battle_budget's shape).
+func _open_day(state: GameState, code: String, count: int, budget: int, sequence: String) -> void:
+	var tx := DayResolution.begin(state.day,false,state.absolute_day(),count)
+	tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+	tx.phase_cursor = 5
+	tx.march_entries = {code:state.regiments[code].duplicate(true)}
+	tx.march_budgets = {code:budget*count}
+	tx.marching_codes = [code]
+	tx.body_battle = {"version":"1","abs_day":str(state.absolute_day()),"sequence":sequence,
+		"next_substep":"0","substep_count":str(count),"stage":"move","battle_ids":[],"battle_index":"0","processed_units":[]}
+	state.day_resolution = tx
+
+## The enclosing transaction's seal and the next slice (test_body_battle_closure's helpers).
+func _seal(repo: DataRepository, state: GameState) -> void:
+	var outer: Dictionary = state.military_migration.body_battle
+	outer.sequence = state.day_resolution.body_battle.sequence
+	state.day_resolution.body_battle.sequence = str(int(outer.sequence)+1)
+	outer.receipt = BodyMotion._hash(["test enclosing transaction",state.day_resolution.body_battle])
+	outer.result = UnitBodies._battle_result_hash(repo,state)
+
+func _successor(repo: DataRepository, state: GameState) -> void:
+	state.day_resolution.substep_index += 1
+	state.day_resolution.battle_step = ""
+	state.day_resolution.battle_ids = []
+	state.day_resolution.body_battle.battle_ids = []
+	state.day_resolution.body_battle.next_substep = str(state.day_resolution.substep_index)
+	state.day_resolution.body_battle.stage = "move"
+	_seal(repo,state)
 
 func _request(projections: Array, receipt_index: int = 0, op_index: int = 2) -> Dictionary:
 	return {"unit":projections[receipt_index].admission.unit,"slot":"0","receipt":projections[receipt_index].saved.receipt,"op_index":op_index,
@@ -584,3 +661,16 @@ func test_scalar_native_rates_translation_and_xy_rotation_hand_values() -> void:
 	assert_true(result.ok)
 	assert_lte(result.materials[0][0][0],.3); assert_gte(result.materials[0][0][1],.3)
 	assert_lte(result.materials[0][1][0],-.2); assert_gte(result.materials[0][1][1],-.2)
+
+## Why the schedules above are a battle's: B2e ends a row in no battle facing its road, so the
+## same slice (facing 90, 50 m east, turn_q = Q) closes on a hold, not a pivot back, and the
+## builder's current op 2 would be no pivot. A row in a battle keeps the pivot back.
+func test_a_row_in_no_battle_ends_on_no_full_pivot_back() -> void:
+	var body := {"unit":"royal","slot":0,"start":[100,100],"budget_m":100,"start_yaw_udeg":90*Q,"final_facing_deg":90}
+	var kept: Dictionary = BodyMotion._loco_timeline(body,[[100,100],[150,100]],Q)
+	assert_eq(kept.ops.map(func(op: Dictionary) -> String: return op.kind),["pivot","move","pivot"],"in a battle: pivot back, the seam's left pivot")
+	assert_eq(kept.ops.map(func(op: Dictionary) -> int: return int(op.t1_q)),[250000,750000,Q])
+	body.face_heading = true
+	var faced: Dictionary = BodyMotion._loco_timeline(body,[[100,100],[150,100]],Q)
+	assert_eq(faced.ops.map(func(op: Dictionary) -> String: return op.kind),["pivot","move","hold"],"in no battle: no pivot ends the slice")
+	assert_eq(faced.final_facing_deg,0)
