@@ -24,9 +24,12 @@ func _init() -> void:
 			quit(1)
 			return
 	var art_dir := "res://assets/maps/%s" % map
-	var json_path := _export_json(art_dir)
+	# The Azgaar export is a source: it sits in the maps work folder, assets/maps/model_wip/<id>/.
+	var json_path := _export_json("res://assets/maps/model_wip/%s" % map)
 	if json_path == "":
-		push_error("bake_manors: no *Full*.json in " + art_dir)
+		json_path = _export_json(art_dir)
+	if json_path == "":
+		push_error("bake_manors: no *Full*.json in assets/maps/model_wip/%s or %s" % [map, art_dir])
 		quit(1)
 		return
 	var world := AzgaarJson.load_export(json_path)

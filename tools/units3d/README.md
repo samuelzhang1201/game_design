@@ -119,13 +119,13 @@ budget:
 
 ```
 blender -b --factory-startup --python tools/units3d/cavalry_scan.py
-CAV_BLEND=assets/3D/units/cavalry/model_wip/cc0/cavalry_knight.blend blender -b --factory-startup --python tools/units3d/cavalry_scan.py
+CAV_BLEND=assets/3D/model_wip/sources/units/cavalry/cc0/cavalry_knight.blend blender -b --factory-startup --python tools/units3d/cavalry_scan.py
 ```
 
 writes `assets/3D/units/cavalry/cavalry.glb` and `units3d.json`'s entry; `CAV_BLEND`
 also saves an openable `.blend` (the piece alone, GARRISON playing);
 `CAV_OUT=dir` writes a trial glb elsewhere. It needs the two scans in
-`assets/3D/units/cavalry/model_wip/cc0/` (Sketchfab `faca2ad5…` Cleveland armour, whose
+`assets/3D/model_wip/sources/units/cavalry/cc0/` (Sketchfab `faca2ad5…` Cleveland armour, whose
 knight is kept, and `1cd8a30c…` Hunt Museum horse, whose shape is kept),
 downloaded with the owner's Sketchfab key; both CC0-1.0. `model_cavalry.py`
 stays as the library of lofts, tiles, rig helpers and actions it reuses.

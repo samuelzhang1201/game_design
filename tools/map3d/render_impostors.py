@@ -1,4 +1,4 @@
-"""SPIKE: render each Poly Haven tree (assets/3D/terrain/model_wip/polyhaven/models/<id>/<id>_1k.gltf)
+"""SPIKE: render each Poly Haven tree (assets/3D/model_wip/sources/terrain/polyhaven/models/<id>/<id>_1k.gltf)
 as a transparent side view for a Terrain3D texture card, into
 tools/map3d/trees/<id>[_<n>].png, and write trees.json with each
 card's size in metres. One file may hold several trees (each root object
@@ -14,7 +14,7 @@ import bpy
 from mathutils import Vector
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-SRC = os.path.join(ROOT, "assets", "3D", "terrain", "model_wip", "polyhaven", "models")
+SRC = os.path.join(ROOT, "assets", "3D", "model_wip", "sources", "terrain", "polyhaven", "models")
 OUT = os.path.join(ROOT, "assets", "3D", "terrain", "trees")
 MAX_PX = 1024
 ids = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []

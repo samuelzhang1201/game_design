@@ -14,7 +14,7 @@ Tiers (all Apache-2.0, see claude/t2i-model-evaluation-2026-09.md):
   qwen     Qwen-Image-2512 Q6_K full, 50 steps             Mac,    ~18 min / image (run overnight)
 Each tier runs on its machine (owner 2026-10-12/13: Z-Image only on the Windows desktop,
 Qwen there by default): the desktop at ZIMAGE_URL, the Mac at COMFY_HOST.
-Output: assets/3D/units/cavalry/model_wip/cavalry_v2/<tier>_<id>_s<n>.png, then a contact sheet
+Output: assets/3D/model_wip/comfy-out/units/cavalry/references/cavalry_v2/<tier>_<id>_s<n>.png, then a contact sheet
 contact_sheet.png if Pillow is importable. Existing files are kept unless --force.
 Needs the desktop's ComfyUI at ZIMAGE_URL (default http://192.168.4.85:8188) for the desktop
 tiers and the Mac's at COMFY_HOST (default http://127.0.0.1:8188) for the Mac tiers.
@@ -24,7 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 IMAGEGEN = ROOT / "assets" / "imagegen"
-OUT = IMAGEGEN.parent / "3D" / "units" / "cavalry" / "model_wip" / "cavalry_v2"
+OUT = IMAGEGEN.parent / "3D" / "model_wip" / "comfy-out" / "units" / "cavalry" / "references" / "cavalry_v2"
 HOST = os.environ.get("COMFY_HOST", "http://127.0.0.1:8188")  # the Mac
 DESK_HOST = os.environ.get("ZIMAGE_URL", "http://192.168.4.85:8188").rstrip("/")  # the Windows desktop
 SEED = 20260925

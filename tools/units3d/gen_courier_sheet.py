@@ -7,7 +7,7 @@ build, not game art.
 
   python3 tools/units3d/gen_courier_sheet.py [--who courier|spy] [--tiers zimage] [--only R1,M1] [--force] [--dry-run]
 
-Output: assets/3D/units/courier/model_wip/sheet/<tier>_<who>_<view>.png and contact_sheet.png.
+Output: assets/3D/model_wip/comfy-out/units/courier/references/sheet/<tier>_<who>_<view>.png and contact_sheet.png.
 """
 import csv, re, sys, urllib.parse
 from pathlib import Path
@@ -18,7 +18,7 @@ import gen_cavalry_v2 as v2  # TIERS, graph, run, call
 ROOT = Path(__file__).resolve().parents[2]
 DESIGNS = ROOT / "assets" / "imagegen" / "courier_design_prompts.csv"
 VIEWS = ROOT / "assets" / "imagegen" / "courier_sheet_prompts.csv"
-OUT = ROOT / "assets" / "3D" / "units" / "courier" / "model_wip" / "sheet"
+OUT = ROOT / "assets" / "3D" / "model_wip" / "comfy-out" / "units" / "courier" / "references" / "sheet"
 SEED = 20260928
 TIERS = ["zimage", "qwendesk", "qwenfast"]
 MINUTES = {"zimage": 0.2, "qwendesk": 0.3, "qwenfast": 2.0}

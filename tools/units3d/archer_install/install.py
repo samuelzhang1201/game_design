@@ -2,7 +2,7 @@
 
     python3 tools/units3d/archer_install/install.py [SRC.glb]
 
-SRC defaults to assets/3D/units/archers/model_wip/tripo_v2/archer_rigged.glb:
+SRC defaults to assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/archers/tripo_v2/archer_rigged.glb:
 tools/units3d/archer_tripo/export.py's export of archer_tripo_work.blend (the
 v2 archer: Tripo's own rig and skin, the v1 bow and quiver put on, the clips
 of tools/units3d/archer_tripo/).
@@ -25,7 +25,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[3]
-SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "assets/3D/units/archers/model_wip/tripo_v2/archer_rigged.glb"
+SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/archers/tripo_v2/archer_rigged.glb"
 OUT = ROOT / "assets/3D/units/archers/archers.glb"
 UNITS = ROOT / "assets/3D/units/units3d.json"
 STRIDE_M = 2.0          # archer_tripo/actions.py march(): one loop of MARCH carries the body this far

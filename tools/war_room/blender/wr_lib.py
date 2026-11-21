@@ -7,7 +7,7 @@ import os
 WR = globals().get("WR", "/Users/samuelzhang/game_design/tools/war_room/blender")
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(WR)))   # the checkout
 EXP = ROOT + "/assets/3D/war_room"                    # <name>/<name>.glb
-TEX = EXP + "/model_wip/textures"                     # Poly Haven 2k sources + the painted atlases
+TEX = ROOT + "/assets/3D/model_wip/tripo_inbox/war_room/_shared/textures"                     # Poly Haven 2k sources + the painted atlases
 
 
 def G(x, y, z):

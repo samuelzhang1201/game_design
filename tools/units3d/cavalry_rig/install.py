@@ -4,7 +4,7 @@ over the cavalry piece.
     python3 tools/units3d/cavalry_rig/install.py [SRC.glb]
     python3 tools/units3d/cavalry_rig/install.py --pivots BASE_INSTALLED.glb PIVOT_EXPORT.glb
 
-SRC defaults to the main checkout's assets/3D/units/cavalry/model_wip/rig/cavalry_rigged.glb (git-ignored,
+SRC defaults to the main checkout's assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/cavalry/rig/cavalry_rigged.glb (git-ignored,
 exported from cavalry_rig_work.blend). Writes assets/3D/units/cavalry/cavalry.glb with:
   * the clips named as the game plays them: cavalry_MARCH -> MARCH (the import's loops are by name);
   * the head bones renamed: the chip hangs over the bone named `head` (Map3DUnitRig.head_m, any case),
@@ -30,7 +30,7 @@ sys.path.insert(0, str(ROOT / "tools/units3d/royal_install"))
 from install import read_glb, write_glb  # noqa: E402  (the king's GLB reader / writer)
 
 MAIN = Path("/Users/samuelzhang/game_design")      # the git-ignored source lives in the main checkout
-SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else MAIN / "assets/3D/units/cavalry/model_wip/rig/cavalry_rigged.glb"
+SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else MAIN / "assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/cavalry/rig/cavalry_rigged.glb"
 OUT = ROOT / "assets/3D/units/cavalry/cavalry.glb"
 QUALITY = 92
 BONES = {"Head": "head_h", "R_Head": "head"}
