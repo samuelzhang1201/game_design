@@ -143,6 +143,8 @@ static func _close(repo: DataRepository, engine: TickEngine, source: GameState) 
 	state.day_resolution = {}
 	var organization := MilitaryReorganization.reconcile(repo, state)
 	if organization.get("status", "error") == "error": return _result("error", str(organization.get("error", "Cannot reconcile military organization")))
+	var healed := _battle_heals(repo, source, state, tx)
+	if not healed.is_empty(): return _result("error", healed)
 	var fitted := _refit(repo, source, state)
 	if fitted.status != "complete": return fitted
 	var closed := _sealed(repo, source, fitted.candidate, {"kind": "close", "abs_day": str(tx.absolute_day)}, "The day's closing phases", fitted.units, false)
@@ -151,19 +153,43 @@ static func _close(repo: DataRepository, engine: TickEngine, source: GameState) 
 		"report": engine.last_month_report})
 	return closed
 
+## The month's heal of a unit in a battle that the legacy recovery dropped (part B2d). Legacy
+## `ArmySystem._recover_month` heals a battle member only if `BattleGroups.refresh` can lay the
+## legacy rows, so legacy geometry would decide whether a body-world unit heals. The body world
+## heals it here as the ordinary recovery would (the same share, event and marker) and its rows
+## follow through `_refit`. A battle with a frozen round heals no one, as in legacy. "" or the error.
+# ponytail: it heals after the month's foraging and hazards, not before them, so a harassment or a
+# hazard counted on the unit's fit can differ by the healed men; move it if those ever meet in battle.
+static func _battle_heals(repo: DataRepository, before: GameState, state: GameState, tx: Dictionary) -> String:
+	if not bool(tx.month_end) and not bool(tx.get("settle_month_compat", false)): return ""
+	var owners: Dictionary = UnitBodies._owners(before).owners
+	var codes: Array = state.military_rosters.keys()
+	codes.sort()
+	for code: String in codes:
+		if not owners.has(code) or not (owners[code].get("pending_round", {}) as Dictionary).is_empty(): continue
+		if int(state.conduct_marks.get("recovery:" + code, -1)) == before.tick: continue
+		var restored := ArmySystem.wound_recovery(repo, ArmySystem.wounded_count(repo, state, code))
+		if restored <= 0: continue
+		var result := MilitaryRoster.transfer_units(repo, state, "recovery:%d:%s" % [before.tick, code],
+			[{"unit_code": code, "from": "wounded", "to": "fit", "count": restored}], "Monthly wound recovery: " + code)
+		if result.has("error"): return "The month's heal of %s in battle: %s" % [code, result.error]
+		state.conduct_marks["recovery:" + code] = before.tick
+	return ""
+
 ## The personnel writer of the close (parts B2c, B2d). Its ordinary phases change who is fit in the
 ## ordinary way: a paid assembly completes (`RecruitmentSystem.step_day`: cohorts turn active, a new
 ## unit gets its roster row, entry and camp), men desert, and at the month's end the wounded
 ## recover and foraging and hazards wound. Bodies follow the fit count, whoever changed it: each
-## land unit whose fit differs from `before` goes through the placement protocol's "recruit"
-## operation at the turned day's safe boundary, from its fit then to its fit now. Survivors keep
-## their rows, a loss empties the last rows, growth takes new slots and poses, and a new unit
-## starts from no rows. The protocol admits one unit's change at a time, so the changes are
-## replayed in unit order: every changed unit's people and rows set back as they were (a new
-## cohort to "assembling"; a legacy writer, the month's recovery of a unit in a battle, rewrites
-## the battle's rows itself), then each unit's people put as they are and placed. The result adds
-## `units`, the only units whose rows the close may have changed. A unit that finds no room fails
-## the day closed.
+## land unit whose fit differs from the close's start (after the tactical part) goes through the
+## placement protocol's "recruit" operation at the turned day's safe boundary, from its fit then
+## to its fit now. Survivors keep their rows, a loss empties the last rows, growth takes new slots
+## and poses, and a new unit starts from no rows. The protocol admits one unit's change at a time,
+## so the changes are replayed in unit order: every changed unit's people and rows set back as they
+## were (a new cohort to "assembling"), and every battle holding one wholly back to its rows,
+## facings, anchors, geometry and members' slot counters (the legacy recovery's
+## `BattleGroups.refresh` rewrites the whole battle), then each unit's people put as they are and
+## placed. The result adds `units`, the only units whose rows the close may have changed. A unit
+## that finds no room fails the day closed.
 static func _refit(repo: DataRepository, before: GameState, state: GameState) -> Dictionary:
 	var out := _result("complete", "Bodies follow the day's personnel", state)
 	out.units = []
@@ -171,26 +197,37 @@ static func _refit(repo: DataRepository, before: GameState, state: GameState) ->
 	codes.sort()
 	var now := {}
 	var owners: Dictionary = UnitBodies._owners(before).owners
+	var battles := {}
 	for code: String in codes:
 		if UnitBodies._naval(state, code) or MilitaryRoster.fit(state, code) == MilitaryRoster.fit(before, code): continue
+		if not state.military_rosters.get(code) is Dictionary: return _result("error", "Unit %s has no roster" % code)
 		out.units.append(code)
 		var was := UnitBodies._entry(before, code)
 		var entry := UnitBodies._entry(state, code)
 		if was.is_empty(): entry.merge({"body_groups": [], "group_next_slot": 0})
+		elif owners.has(code): battles[int(owners[code].id)] = owners[code]
 		else:
 			entry.group_next_slot = was.group_next_slot
-			if owners.has(code): UnitBodies._battle(state, int(owners[code].id)).groups[code] = owners[code].groups[code].duplicate(true)
-			else: entry.body_groups = was.body_groups.duplicate(true)
+			entry.body_groups = was.body_groups.duplicate(true)
 		for id: String in state.military_rosters[code].cohort_ids:
 			now[id] = state.military_cohorts[id]
 			state.military_cohorts[id] = before.military_cohorts[id].duplicate(true) if before.military_cohorts.has(id) else now[id].merged({"stage": "assembling"}, true)
+	for id: int in battles:
+		var battle := UnitBodies._battle(state, id)
+		if battle.is_empty(): return _result("error", "Battle %d ended in the close" % id)
+		for field: String in ["groups", "group_facing", "group_anchor_m", "geometry_version", "deployment_axis_deg"]:
+			if battles[id].has(field): battle[field] = battles[id][field].duplicate(true) if battles[id][field] is Dictionary else battles[id][field]
+			else: battle.erase(field)
+		for member: String in battle.groups:
+			if UnitBodies._entry(before, member).has("group_next_slot"): UnitBodies._entry(state, member).group_next_slot = UnitBodies._entry(before, member).group_next_slot
 	for code: String in out.units:
 		var fit := MilitaryRoster.fit(state, code)
 		if fit != MilitaryRoster.fit(before, code): return _result("error", "Unit %s changed its roster in the close" % code)
 		for id: String in state.military_rosters[code].cohort_ids: state.military_cohorts[id] = now[id]
 		var control: Dictionary = state.military_migration.get("body_placement", {})
-		var placed := ArmyGround.body_placement_candidate(repo, state, {"version": 1, "operation_id": "placement:day:%d:%s" % [state.absolute_day(), code],
-			"sequence": "0" if control.is_empty() else str(int(control.sequence) + 1), "operation": "recruit", "unit": code, "host": "",
+		var sequence := "0" if control.is_empty() else str(int(control.sequence) + 1)
+		var placed := ArmyGround.body_placement_candidate(repo, state, {"version": 1, "operation_id": "placement:refit:%s:%s" % [sequence, code],
+			"sequence": sequence, "operation": "recruit", "unit": code, "host": "",
 			"previous_fit": str(fit)}, {"version": 1, "kind": "safe", "abs_day": str(state.absolute_day())})
 		if placed.status != "complete": return _result("error", "Unit %s cannot follow its personnel: %s" % [code, placed.reason])
 		state = placed.candidate

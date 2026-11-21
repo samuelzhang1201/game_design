@@ -134,7 +134,7 @@ func test_recruit_orders_reserve_people_and_completion_places_their_bodies() -> 
 	assert_eq(int(repo.bal("army_slot_spacing_m")), 4400)
 	# Two placement operations in unit code order: the unit in the pack sorts before "recruited:".
 	assert_lt(f.code, raised)
-	assert_eq([done.military_migration.body_placement.sequence, done.military_migration.body_placement.operation_id], ["1", "placement:day:%d:%s" % [done.absolute_day(), raised]])
+	assert_eq([done.military_migration.body_placement.sequence, done.military_migration.body_placement.operation_id], ["1", "placement:refit:1:" + raised])
 	assert_eq(UnitBodies.validate_battle_candidate(repo, done, BodyBattle.safe_boundary(done)).status, "complete")
 	# The close's guard lets through the refitted units' rows, and nothing else of any body.
 	assert_eq(BodyDayDriver._body_change(state, done, "X", [f.code, raised], false), "")
