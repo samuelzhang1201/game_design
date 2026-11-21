@@ -297,22 +297,31 @@ request, writer)` runs an ordinary writer between days (an order, a decree) on a
 the safe boundary and seals it as the next outer operation (its `request` is the receipt, so the same request again is an
 "Already published" no-op; make it unique per act); an unsealed write fails the next
 admission ("Battle endpoint proof mismatch") and the save is kept. Every seal and phase group must
-leave `BodyLifecycle.snapshot` and everyone under arms exactly as they were: a phase or writer that
-moves, adds or removes a body or changes personnel (desertion, month-end wound recovery) fails
-closed, because its body writer is not installed yet. **Creation (part B2c).** People under arms
-are every cohort but an "assembling" one, so `ARMY_RECRUIT` is an ordinary `publish` writer: it
-reserves people and pays, and gives no one a body. The close then gives bodies to what
-`RecruitmentSystem.step_day` completed in its supply phase (`_recruits`): each land unit that
-people of a project completed that day joined goes through the placement protocol's "recruit" operation
-(`ArmyGround.body_placement_candidate`, `placement:recruit:<project>:<unit>`, the next
-`body_placement` sequence, the turned day's safe boundary). A reinforced unit's survivors keep
-their rows and growth takes new slots; a new unit starts from no rows at the camp the completion
-gave it. The protocol admits one unit's change at a time, so a day's completions are replayed in
-project order (all stood down to "assembling", then each unit's activated and placed). A unit that
-finds no room fails the day closed. Of the recruits the close's guard lets through only this: the
-units' new rows and commander (a new unit, all its bodies) and the cohorts' turn from "assembling"
-to "active". A loss among them the same day, a veteran's or a recruit's, still fails closed. A
-fleet gets no bodies. Hosts
+leave `BodyLifecycle.snapshot` as it was, and the opening, the slices and every `publish` writer
+everyone under arms too: one that moves, adds or removes a body or changes personnel fails closed,
+because its body writer is not installed. People under arms are every cohort but an "assembling" one, so `ARMY_RECRUIT` is an
+ordinary `publish` writer: it reserves people and pays, and gives no one a body. **The close's
+personnel (parts B2c, B2d).** Its ordinary phases change who is fit in the ordinary way: a paid
+assembly completes (`RecruitmentSystem.step_day`: cohorts turn active, a new unit gets its roster
+row, entry and camp), men desert (`Desertion.daily_loss`), and at the month's end the wounded
+recover (`ArmySystem._recover_month`) and foraging and hazards wound (`ArmyConduct.settle_units`,
+`Hazards.settle_regiments`). Legacy heals a unit in a battle only if `BattleGroups.refresh` can
+lay its legacy rows; the body world heals one it dropped the same way (`_battle_heals`: share,
+event and marker; a battle with a frozen round heals no one), after the month's foraging and
+hazards. Bodies follow the fit count, whoever changed it (`_refit`): each land unit whose fit
+differs from the close's start (after the tactical part, so a battle's casualties are not
+refitted here) goes through the placement protocol's "recruit" operation
+(`ArmyGround.body_placement_candidate`, `placement:refit:<sequence>:<unit>`, the next
+`body_placement` sequence, the turned day's safe boundary), from its fit then to its fit now.
+Survivors keep their rows, a loss empties the last rows, growth takes new slots, and a new unit
+starts from no rows at the camp its completion gave it. The protocol admits one unit's change at a
+time, so the changes are replayed in unit order: every changed unit's people and rows set back as
+they were (a new cohort to "assembling"), and every battle holding one wholly back to its rows,
+facings, anchors, geometry and members' slot counters (the legacy recovery's `BattleGroups.refresh`
+rewrites the whole battle), then each unit's people put as they are and placed. A unit that finds
+no room fails the day closed, for good, since the day replays the same. The close's
+guard then lets through those units' rows and slot counters (a new unit, all its bodies) and no
+other body change; its people are the ordinary phases' to write. A fleet gets no bodies. Hosts
 spawn only in `GameState.new_campaign`, whose bodies `BodyLoad.initialize_campaign` places through
 the admission seam, so no day writer spawns one.
 **Each slice's own work (part B2b)** runs in the legacy `TickEngine._resolve_battles` order, owed
@@ -343,6 +352,6 @@ holder on the march, `ArmyGround.leave`'s rule), so a holder standing off the to
 A departing holder's seat is cleared without `LawSystem.on_leave` (the order writer's). Tick 0's day 30 fails closed too (the opening month settles through `advance`, and the
 absolute day falls back to 1). `TickEngine.resolve_day`, `resolve_decision` and `advance` refuse a world with `body_version` (`BODY_WORLD`),
 so no ordinary writer is its alternate authority; no ordinary campaign carries the marker. Still
-not here (B2d, B2e): body writers for non-battle losses, and the march staging the CF04c visual review asks for (whole
+not here (B2e): the march staging the CF04c visual review asks for (whole
 strides, front-first column order, facing written to the heading); the Game bridges are
 ACT-CUTOVER's. Nothing in ordinary dispatch calls the driver.
