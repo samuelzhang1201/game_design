@@ -96,7 +96,7 @@
 		"res://assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg.import": "3d1b0b7a807b6798161b3ad06e9b4fc9d38f151661dcfd68ad84fa847080348f",
 		"res://assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
 		"res://assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg.import": "c8dc15fa86145c123bff4e26fef8300d719dfc5d946d22be712cf4d478ce9067",
-		"res://assets/3D/units/army_models.tres": "ee27a669250a8d49a8e42e406d01ca296f09d27ef85367619f5aa69fc882f08f",
+		"res://assets/3D/units/army_models.tres": "dd009e4a194c15d429419ecc285d9a9e4fc8caf772e57dd73115dffef31edf07",
 		"res://assets/3D/units/cavalry/cavalry.glb": "358faa790b53f0157cc74691d57f92223a65fedbcf437cf2395be948c0ac3397",
 		"res://assets/3D/units/cavalry/cavalry.glb.import": "a0aaba5c3411f28d80a62a11e8f11037d362d222ce7adfb977e5c9c10c233d30",
 		"res://assets/3D/units/cavalry/cavalry_cavalry_atlas.jpg": "0119d3b0e7bc66ef68877c7375ab405f9d9d2230722a89645fed2952ea719cf1",
@@ -121,7 +121,7 @@
 		"res://assets/3D/units/royal/royal_royal_atlas_mr.jpg.import": "ce415cba84687cbd3bf659d4dec769d6a054d6d9462172e3b45a0f0f8c5bed92",
 		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg": "87dae2d5426bf52b5f4dd43676ce6a2bf92b9ff22e922e1ba98a8628caffe2ed",
 		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
-		"res://data/screens/map3d/army_art.csv": "bd196c9736adeff6ceaa68f8527380f075ac99082949cb583e2b3ad28af31168",
+		"res://data/screens/map3d/army_art.csv": "00fd652c0e58fb0c37ca8b4d627ba94cc3ece706e7da7241d4bea0c78a1e27c0",
 		"res://data/screens/map3d/balance.csv": "f128c6999b798ed089e50f888f24f0ee6a9e70646df2a9ff66169430190a3790",
 		"res://data/world/maps.csv": "cd856ebde844cdac7b8f370c5a51b414eecbb091b3a48bcc12de9a23bd775443",
 		"res://scenes/map3d/worlds/beria.tscn": "c665914748691603c93ba9dfda0aacf6887c36f9b022e80a6a382d00f7237e81",
@@ -131,10 +131,10 @@
 		"res://scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
 		"res://scripts/engine/army_system.gd": "8ca9982a4c5db6a2c792d76c87caab046c488934dc48c22360dfecbf7c540532",
 		"res://scripts/engine/art_table.gd": "ae374d656f22d6542b66b8a6176e608c8112d4f6711bb847f1bb72dd7cae531a",
-		"res://scripts/map3d/map3d_formation.gd": "374f643878041d8e3140506e7a06854fe295538b2431abdb6c449af617bbb970",
+		"res://scripts/map3d/map3d_formation.gd": "f86ed5dda46368df3c40823804337c6589517934be1411d67fac27e6d8ad20d6",
 		"res://scripts/map3d/map3d_geometry.gd": "64797a53505cff9bd849e9245107f9be9f73fbb78cc2d27ab9f58b71bfce9e4c",
 		"res://scripts/map3d/map3d_units.gd": "e842566f033267ae5cbb8bf548bed2aefc88103a9234b344cdc1b3554e32fb4d",
-		"res://tools/units3d/measure_unit_bodies.gd": "dd220f99395542072f0477eb917f6a4b957baffeedbccc8c59493e1d8030b03a"
+		"res://tools/units3d/measure_unit_bodies.gd": "0424f4ff16899fc8d8f68a701fd41b5565df5aa45314ef3cded122d315637ed4"
 	},
 	"map_info": {
 		"distance_scale": "1",
@@ -245,14 +245,14 @@
 			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
 		},
 		"artillery": {
-			"all_mesh_radius_m": 1029.62429864503,
+			"all_mesh_radius_m": 1247.25110323974,
 			"attack_only_vertices": 2009,
-			"body_radius_m": 912,
-			"deploy_min_depth_m": 3738,
-			"deploy_min_width_m": 9480,
-			"model_hash": "671854eda32f441f56a7cc1abe567882570949fd2af33ca496f5d6d1063b963c",
-			"radius_m": 911.83447419201,
-			"rank_pitch_m": 1914,
+			"body_radius_m": 998,
+			"deploy_min_depth_m": 4082,
+			"deploy_min_width_m": 10340,
+			"model_hash": "e35c1bf97aed32b85650eb908be09cb3f0a94aca801b1700df73f05dcdca72a3",
+			"radius_m": 997.2861748235,
+			"rank_pitch_m": 2086,
 			"sampled_clips": [
 				{
 					"clip": "ATTACK",
@@ -273,6 +273,42 @@
 					"samples": 17
 				},
 				{
+					"clip": "BLOCK",
+					"length_s": 0.566666662693024,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_2",
+					"length_s": 0.5,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_3",
+					"length_s": 0.466666668653488,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_4",
+					"length_s": 0.666666686534882,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEATH",
+					"length_s": 2.29999995231628,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEATH_2",
+					"length_s": 3.90000009536743,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
 					"clip": "DEFEND",
 					"length_s": 3.0,
 					"player": "AnimationPlayer",
@@ -281,6 +317,24 @@
 				{
 					"clip": "GARRISON",
 					"length_s": 3.66666674613953,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT",
+					"length_s": 0.699999988079071,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT_2",
+					"length_s": 0.966666638851166,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT_3",
+					"length_s": 0.699999988079071,
 					"player": "AnimationPlayer",
 					"samples": 17
 				},
@@ -347,19 +401,19 @@
 				"world_per_sim_m": 0.05,
 				"world_scale": 25.8437468293282
 			},
-			"slot_pitch_m": 1914,
+			"slot_pitch_m": 2086,
 			"status": "ok",
 			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
 		},
 		"axemen": {
-			"all_mesh_radius_m": 1029.62429864503,
+			"all_mesh_radius_m": 1247.25110323974,
 			"attack_only_vertices": 2009,
-			"body_radius_m": 912,
-			"deploy_min_depth_m": 3738,
-			"deploy_min_width_m": 9480,
-			"model_hash": "671854eda32f441f56a7cc1abe567882570949fd2af33ca496f5d6d1063b963c",
-			"radius_m": 911.83447419201,
-			"rank_pitch_m": 1914,
+			"body_radius_m": 998,
+			"deploy_min_depth_m": 4082,
+			"deploy_min_width_m": 10340,
+			"model_hash": "e35c1bf97aed32b85650eb908be09cb3f0a94aca801b1700df73f05dcdca72a3",
+			"radius_m": 997.2861748235,
+			"rank_pitch_m": 2086,
 			"sampled_clips": [
 				{
 					"clip": "ATTACK",
@@ -380,6 +434,42 @@
 					"samples": 17
 				},
 				{
+					"clip": "BLOCK",
+					"length_s": 0.566666662693024,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_2",
+					"length_s": 0.5,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_3",
+					"length_s": 0.466666668653488,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_4",
+					"length_s": 0.666666686534882,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEATH",
+					"length_s": 2.29999995231628,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEATH_2",
+					"length_s": 3.90000009536743,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
 					"clip": "DEFEND",
 					"length_s": 3.0,
 					"player": "AnimationPlayer",
@@ -388,6 +478,24 @@
 				{
 					"clip": "GARRISON",
 					"length_s": 3.66666674613953,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT",
+					"length_s": 0.699999988079071,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT_2",
+					"length_s": 0.966666638851166,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT_3",
+					"length_s": 0.699999988079071,
 					"player": "AnimationPlayer",
 					"samples": 17
 				},
@@ -454,7 +562,7 @@
 				"world_per_sim_m": 0.05,
 				"world_scale": 25.8437468293282
 			},
-			"slot_pitch_m": 1914,
+			"slot_pitch_m": 2086,
 			"status": "ok",
 			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
 		},
@@ -535,15 +643,15 @@
 			"status": "ok",
 			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
 		},
-		"infantry": {
-			"all_mesh_radius_m": 1029.62429864503,
+		"heavy_infantry": {
+			"all_mesh_radius_m": 1247.25110323974,
 			"attack_only_vertices": 2009,
-			"body_radius_m": 912,
-			"deploy_min_depth_m": 3738,
-			"deploy_min_width_m": 9480,
-			"model_hash": "671854eda32f441f56a7cc1abe567882570949fd2af33ca496f5d6d1063b963c",
-			"radius_m": 911.83447419201,
-			"rank_pitch_m": 1914,
+			"body_radius_m": 998,
+			"deploy_min_depth_m": 4082,
+			"deploy_min_width_m": 10340,
+			"model_hash": "e35c1bf97aed32b85650eb908be09cb3f0a94aca801b1700df73f05dcdca72a3",
+			"radius_m": 997.2861748235,
+			"rank_pitch_m": 2086,
 			"sampled_clips": [
 				{
 					"clip": "ATTACK",
@@ -564,6 +672,42 @@
 					"samples": 17
 				},
 				{
+					"clip": "BLOCK",
+					"length_s": 0.566666662693024,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_2",
+					"length_s": 0.5,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_3",
+					"length_s": 0.466666668653488,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_4",
+					"length_s": 0.666666686534882,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEATH",
+					"length_s": 2.29999995231628,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEATH_2",
+					"length_s": 3.90000009536743,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
 					"clip": "DEFEND",
 					"length_s": 3.0,
 					"player": "AnimationPlayer",
@@ -572,6 +716,24 @@
 				{
 					"clip": "GARRISON",
 					"length_s": 3.66666674613953,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT",
+					"length_s": 0.699999988079071,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT_2",
+					"length_s": 0.966666638851166,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT_3",
+					"length_s": 0.699999988079071,
 					"player": "AnimationPlayer",
 					"samples": 17
 				},
@@ -638,7 +800,168 @@
 				"world_per_sim_m": 0.05,
 				"world_scale": 25.8437468293282
 			},
-			"slot_pitch_m": 1914,
+			"slot_pitch_m": 2086,
+			"status": "ok",
+			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
+		},
+		"infantry": {
+			"all_mesh_radius_m": 1247.25110323974,
+			"attack_only_vertices": 2009,
+			"body_radius_m": 998,
+			"deploy_min_depth_m": 4082,
+			"deploy_min_width_m": 10340,
+			"model_hash": "e35c1bf97aed32b85650eb908be09cb3f0a94aca801b1700df73f05dcdca72a3",
+			"radius_m": 997.2861748235,
+			"rank_pitch_m": 2086,
+			"sampled_clips": [
+				{
+					"clip": "ATTACK",
+					"length_s": 1.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "ATTACK_2",
+					"length_s": 1.29999995231628,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "ATTACK_VAR1",
+					"length_s": 1.73333334922791,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK",
+					"length_s": 0.566666662693024,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_2",
+					"length_s": 0.5,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_3",
+					"length_s": 0.466666668653488,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "BLOCK_4",
+					"length_s": 0.666666686534882,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEATH",
+					"length_s": 2.29999995231628,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEATH_2",
+					"length_s": 3.90000009536743,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEFEND",
+					"length_s": 3.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "GARRISON",
+					"length_s": 3.66666674613953,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT",
+					"length_s": 0.699999988079071,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT_2",
+					"length_s": 0.966666638851166,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT_3",
+					"length_s": 0.699999988079071,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "MARCH",
+					"length_s": 1.10000002384186,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "PIVOT_LEFT",
+					"length_s": 4.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "PIVOT_RIGHT",
+					"length_s": 4.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "SLASH",
+					"length_s": 1.5,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "SLASH_2",
+					"length_s": 1.56666672229767,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "SLASH_3",
+					"length_s": 1.36666667461395,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "STANDBY",
+					"length_s": 2.5,
+					"player": "AnimationPlayer",
+					"samples": 17
+				}
+			],
+			"scale_inputs": {
+				"attack_bones": [
+					"cc_weapon.r"
+				],
+				"fov_deg": 45.0,
+				"max_stature": 1.06,
+				"max_tilt_deg": 14.0,
+				"model_height": 1.63570427894592,
+				"ref_m": 10973.6980107868,
+				"ref_px": 12.0,
+				"simulation_scale": 516.874936586564,
+				"size": 0.62,
+				"stand_extent": [
+					0.540916740894318,
+					0.59935462474823
+				],
+				"view_h_px": 1600.0,
+				"world_per_sim_m": 0.05,
+				"world_scale": 25.8437468293282
+			},
+			"slot_pitch_m": 2086,
 			"status": "ok",
 			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
 		},

@@ -7,9 +7,9 @@
     T["frame"]()     # face +Y, the horse 2.45 m nose to tail, hooves on z = 0
 
 The owner generated it on the PAID Tripo plan (terms 5.2.2) from
-assets/3D/units/cavalry/model_wip/tripo_kit/zimage_threequarter_s1.png (Z-Image, our own render:
+assets/3D/model_wip/comfy-out/units/cavalry/references/tripo_kit/zimage_threequarter_s1.png (Z-Image, our own render:
 the in-game design, WITHOUT the shield -- owner: 盾牌单独做，骑士不带盾出图). Two exports of
-the same generation, git-ignored in assets/3D/units/cavalry/model_wip/tripo/:
+the same generation, git-ignored in assets/3D/model_wip/tripo_inbox/units/no-rigging/cavalry/tripo/:
   * armored+knight+3d+model.glb -- one 98k-tri mesh with its PBR maps: the TEXTURE source;
   * medieval+knight+on+horse+parts.glb -- the same shape as 69 untextured parts (48k tris):
     the GAME MESH, one part per plate / leg / strap, so a rider's plate rides its own bone
@@ -22,7 +22,7 @@ from mathutils import Vector, Matrix
 from mathutils.bvhtree import BVHTree
 
 ROOT = "/Users/samuelzhang/game_design/"
-SRC = ROOT + "assets/3D/units/cavalry/model_wip/tripo/"
+SRC = ROOT + "assets/3D/model_wip/tripo_inbox/units/no-rigging/cavalry/tripo/"
 TEX_FILE = SRC + "armored+knight+3d+model.glb"
 PARTS_FILE = SRC + "medieval+knight+on+horse+parts.glb"
 HERE = os.path.dirname(os.path.abspath(globals().get("__file__") or ROOT + "tools/units3d/cavalry_tripo/tripo.py"))

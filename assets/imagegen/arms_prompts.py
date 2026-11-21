@@ -339,9 +339,10 @@ def _read_csv(path: Path) -> list[dict]:
 
 def build(pack: str) -> tuple[list[dict], list[dict]]:
     data = ROOT / "data" / "maps" / pack
-    exports = sorted((ROOT / "assets" / "maps" / pack).glob("*Full*.json"))
+    exports = sorted((ROOT / "assets" / "maps" / "model_wip" / pack).glob("*Full*.json")) \
+        or sorted((ROOT / "assets" / "maps" / pack).glob("*Full*.json"))
     if not exports:
-        raise SystemExit("no *Full*.json export in assets/maps/%s" % pack)
+        raise SystemExit("no *Full*.json export in assets/maps/model_wip/%s" % pack)
     js = json.loads(exports[-1].read_text(encoding="utf-8"))["pack"]
     states = {s["i"]: s for s in js["states"] if isinstance(s, dict)}
     provinces_js = {p["i"]: p for p in js["provinces"] if isinstance(p, dict)}

@@ -6,12 +6,12 @@ rig's helpers are exec'd first, then this file points them at the cavalry:
     for f in ("royal_rig/common", "cavalry_rig/common", ...):
         G["__file__"] = ".../tools/units3d/%s.py" % f; exec(open(G["__file__"]).read(), G)
 
-Source: the game mesh `cavalry` of assets/3D/units/cavalry/model_wip/tripo/cavalry_tripo_work.blend
+Source: the game mesh `cavalry` of assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/cavalry/tripo/cavalry_tripo_work.blend
 (69 Tripo parts + the hand-built lance and back shield, one 2048 atlas, ~19k tris), every vertex
 carrying `tripo_part` (the part id; -1 the shield, -2 the lance) -- the labels come with it.
 """
 ROOT = "/Users/samuelzhang/game_design/"
-CAV = ROOT + "assets/3D/units/cavalry/model_wip/"
+CAV = ROOT + "assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/cavalry/"
 SRC_BLEND = CAV + "tripo/cavalry_tripo_work.blend"
 SRC = CAV + "rig/"
 WORK = SRC + "cavalry_rig_work.blend"

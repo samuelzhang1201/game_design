@@ -22,7 +22,7 @@ then `tools/units3d/archer_install/install.py` (→ `assets/3D/units/archers/arc
 (`scenes/models/units/archers.tscn`, `army_models.tres`'s `archers`; an `-s` run drops the
 `ext_resource` UIDs — put them back from the `.import` files). The `.glb.import` loops all five clips.
 
-## Sources (git-ignored, `assets/3D/units/archers/model_wip/tripo/`)
+## Sources (git-ignored, `assets/3D/model_wip/tripo_inbox/units/no-rigging/archers/tripo/`)
 
 | file | what it is |
 | --- | --- |

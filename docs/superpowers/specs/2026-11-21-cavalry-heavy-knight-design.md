@@ -35,7 +35,7 @@ infantry's (`2026-11-16-infantry-arp-shortsword-design.md`).
   `Map3DCavalryLocomotion.bind` (below). The royal piece's solver is not touched.
 - `tools/units3d/measure_unit_bodies.gd`: the cavalry's attack bone is `cc_weapon.r` (was `Lance`).
 - Re-issued: the cf01 measurement of the cavalry (`measurements.json`, the cavalry entry and the hashes of
-  the files this step changed), every locomotion certificate, `data/army/unit_locomotion.csv`,
+  the files this step changed), all seven locomotion certificates, `data/army/unit_locomotion.csv`,
   `units3d.json`, the art kit's cavalry spec (`specs.json`, the zip).
 
 ## Export findings
@@ -109,7 +109,7 @@ fuse into one head) and its slivers (27 %) equal the source's (28 %).
 
 `tools/units3d/certify_locomotion.py` on `…/locomotion/cavalry/certificate.config.json` (provider
 `Map3DCavalryLocomotion`, entry = exit = hold at MARCH 63/104, stride 2.4224): **NUMERIC_PASS**, digest
-`11b6890d…`. k 18.1876, so the R-A bounds are contact 32,990 µm and seam 2,750 µm
+`f22b7e81…`. k 18.1876, so the R-A bounds are contact 32,990 µm and seam 2,750 µm
 (`body_locomotion_cavalry_contact_um` follows).
 
 | Quantity | Sampled | Total (with margin) | Bound |
@@ -125,8 +125,9 @@ fuse into one head) and its slivers (27 %) equal the source's (28 %).
 Planting band inherited from the shipped MARCH: H = -1.61 / -2.72 / -0.08 / -0.41 mm (fore left, fore
 right, hind left, hind right). The first run on this figure failed slide at 427 mm: the left fore lay
 inside the band for 30 keys after its locked stance and skated there; off its stance a hoof now clears
-the ground (README, `LOCK`). Every other arm's certificate is re-issued for the hashed inputs this step
-moves (`army_art.csv`, `data/army/balance.csv`, the cf01 measurements), measuring as before.
+the ground (README, `LOCK`). Every other arm's certificate (infantry, artillery, archers, axemen, heavy infantry, royal) is
+re-issued for the hashed inputs this step moves (`army_art.csv`, `data/army/balance.csv`, the cf01
+measurements), measuring as before.
 
 ## Review
 
@@ -166,5 +167,3 @@ the battle and the march:
 - DEATH and the other authored clips wait for their callers (a cavalry duel / fall column).
 - STANDBY's hind hooves stand 11 mm off the ground in the source (the solver seats its own stand; the
   resting figure shows the gap only at close zoom).
-- The committed cf01 `measurements.json` is stale for the infantry / artillery / axemen on main
-  (re-measured today: 998 m against the recorded 912 m); only the cavalry entry is refreshed here.

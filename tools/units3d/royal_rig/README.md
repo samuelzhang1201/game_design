@@ -11,7 +11,7 @@ for f in ("common", "labels", "weights", "validate", "armature", "actions"):
     G["__file__"] = ".../tools/units3d/royal_rig/%s.py" % f; exec(open(G["__file__"]).read(), G)
 ```
 
-## Sources (git-ignored, `assets/3D/units/royal/model_wip/tripo/`)
+## Sources (git-ignored, `assets/3D/model_wip/tripo_inbox/units/no-rigging/royal/tripo/`)
 
 | file | what it is |
 | --- | --- |

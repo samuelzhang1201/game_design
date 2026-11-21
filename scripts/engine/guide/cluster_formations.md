@@ -297,9 +297,24 @@ request, writer)` runs an ordinary writer between days (an order, a decree) on a
 the safe boundary and seals it as the next outer operation (its `request` is the receipt, so the same request again is an
 "Already published" no-op; make it unique per act); an unsealed write fails the next
 admission ("Battle endpoint proof mismatch") and the save is kept. Every seal and phase group must
-leave `BodyLifecycle.snapshot` and the cohorts exactly as they were: a phase or writer that moves,
-adds or removes a body (a spawned host, a recruit) or changes personnel
-(desertion, month-end wound recovery) fails closed, because its body writer is not installed yet.
+leave `BodyLifecycle.snapshot` and everyone under arms exactly as they were: a phase or writer that
+moves, adds or removes a body or changes personnel (desertion, month-end wound recovery) fails
+closed, because its body writer is not installed yet. **Creation (part B2c).** People under arms
+are every cohort but an "assembling" one, so `ARMY_RECRUIT` is an ordinary `publish` writer: it
+reserves people and pays, and gives no one a body. The close then gives bodies to what
+`RecruitmentSystem.step_day` completed in its supply phase (`_recruits`): each land unit that
+people of a project completed that day joined goes through the placement protocol's "recruit" operation
+(`ArmyGround.body_placement_candidate`, `placement:recruit:<project>:<unit>`, the next
+`body_placement` sequence, the turned day's safe boundary). A reinforced unit's survivors keep
+their rows and growth takes new slots; a new unit starts from no rows at the camp the completion
+gave it. The protocol admits one unit's change at a time, so a day's completions are replayed in
+project order (all stood down to "assembling", then each unit's activated and placed). A unit that
+finds no room fails the day closed. Of the recruits the close's guard lets through only this: the
+units' new rows and commander (a new unit, all its bodies) and the cohorts' turn from "assembling"
+to "active". A loss among them the same day, a veteran's or a recruit's, still fails closed. A
+fleet gets no bodies. Hosts
+spawn only in `GameState.new_campaign`, whose bodies `BodyLoad.initialize_campaign` places through
+the admission seam, so no day writer spawns one.
 **Each slice's own work (part B2b)** runs in the legacy `TickEngine._resolve_battles` order, owed
 by the control and recorded in the saved cursor `day_resolution.slice_work` ({done: "<slice>:<stage>",
 arrivals: how many of `journal.arrivals` are settled}): `tactical_day` runs whatever the control has
@@ -307,7 +322,11 @@ passed and the cursor has not (`_slice_work`) before each step, so a resumed or 
 candidate runs each piece once; a slice's move or the day's end opening without the previous
 slice's finished work fails closed. After a slice's move, `_slice` settles the arrivals not yet
 settled and the seats (`_seat_day`, below), reconciles the laws and walks the king his slice of the
-daily budget (`KingSystem.step_substep`, its own `king_substep_index` cursor); after its contacts, a
+daily budget (`KingSystem.step_substep`, its own `king_substep_index` cursor), then lets the hosts'
+columns that came up arrive (`EnemyAi.arrival_substep` on the frozen `march_entries`, part B2b2: the
+host's mode and deployment, an arrived column stationed at its actual anchor and its frozen entry
+retired to GARRISON so the body holds from the next slice, its events appended to the journal's
+`host_events` record); after its contacts, a
 unit whose search travel `ArmyTasks.pause_battles` stops leaves the frozen march (`march_entries` and
 `marching_codes` together, or the motion's membership check refuses the day). Metadata only, guarded
 by `_body_change`, resealed by `BodyBattle._seal_private` at the battle boundary (like the opening,
@@ -324,7 +343,6 @@ holder on the march, `ArmyGround.leave`'s rule), so a holder standing off the to
 A departing holder's seat is cleared without `LawSystem.on_leave` (the order writer's). Tick 0's day 30 fails closed too (the opening month settles through `advance`, and the
 absolute day falls back to 1). `TickEngine.resolve_day`, `resolve_decision` and `advance` refuse a world with `body_version` (`BODY_WORLD`),
 so no ordinary writer is its alternate authority; no ordinary campaign carries the marker. Still
-not here (B2b2..B2e): the hosts' per-slice arrivals (`EnemyAi.arrival_substep`), body writers for creation (spawn,
-recruit) and non-battle losses, and the march staging the CF04c visual review asks for (whole
+not here (B2d, B2e): body writers for non-battle losses, and the march staging the CF04c visual review asks for (whole
 strides, front-first column order, facing written to the heading); the Game bridges are
 ACT-CUTOVER's. Nothing in ordinary dispatch calls the driver.

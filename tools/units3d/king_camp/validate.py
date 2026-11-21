@@ -4,6 +4,7 @@ from pathlib import Path
 from mathutils import Vector
 ROOT=Path(__file__).resolve().parents[3]
 KING=ROOT/'assets/3D/characters/king'; CAMP=ROOT/'assets/3D/buildings/field_camp'
+KW=ROOT/'assets/3D/model_wip/blender_output/characters/king'; CW=ROOT/'assets/3D/model_wip/blender_output/buildings/field_camp'
 
 def glb(path):
  b=path.read_bytes(); n=struct.unpack_from('<I',b,12)[0]; return json.loads(b[20:20+n])
@@ -76,5 +77,5 @@ tris=sum(j['accessors'][p['indices']]['count']//3 for m in j['meshes'] for p in 
 bounds={o.name:box(o) for o in meshes}; assert all(v['min'][2]>=-1e-5 for v in bounds.values()),bounds
 camp={'tris':tris,'materials':len(j['materials']),'bounds':bounds,'nodes':[o.name for o in meshes]}
 report={'king':king,'camp':camp,'limits':['Preserved donor GLTF seam splits; welded donor audit has 15 inherited non-manifold edges.','Foot anchors are bone heads, not hoof sole surface; do not interpret their height as ground penetration.','In-place stride inferred from low-phase anchors; runtime 2.4 m gait distance, not old map display calibration 5.9 m.','No game-window flat/slope/near-water review performed by this asset task.']}
-(KING/'model_wip/roundtrip.json').write_text(json.dumps(report,indent=2)); (CAMP/'model_wip/roundtrip.json').write_text(json.dumps(report,indent=2))
+(KW/'roundtrip.json').write_text(json.dumps(report,indent=2)); (CW/'roundtrip.json').write_text(json.dumps(report,indent=2))
 print('P33_ROUNDTRIP',json.dumps(report))

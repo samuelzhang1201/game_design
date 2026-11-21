@@ -1,9 +1,9 @@
 # The WAR ROOM's furniture
 
 Modelled by hand in the owner's Blender (2026-10-01) against the Qwen-Image-2512
-concept the owner chose (`model_wip/concept/room_qwen2512fast.png`), one object
+concept the owner chose (`assets/3D/model_wip/comfy-out/war_room/_shared/references/concept/room_qwen2512fast.png`), one object
 per folder, `<name>/<name>.glb` used by `scenes/war_room/war_room.tscn`; the
-`.blend` work file and its renders sit in that folder's git-ignored `model_wip/`.
+`.blend` work file and its renders sit in `assets/3D/model_wip/blender_output/war_room/<name>/`.
 
 | object | what | in the scene |
 |---|---|---|
@@ -15,7 +15,7 @@ per folder, `<name>/<name>.glb` used by `scenes/war_room/war_room.tscn`; the
 
 ## Textures — Poly Haven, CC0
 
-Embedded in `room.glb` and `table.glb` (2k; the sources in `model_wip/textures/`):
+Embedded in `room.glb` and `table.glb` (2k; the sources in `assets/3D/model_wip/tripo_inbox/war_room/_shared/textures/`):
 
 - `stone_brick_wall_001` — the walls — https://polyhaven.com/a/stone_brick_wall_001
 - `weathered_planks` — the floor — https://polyhaven.com/a/weathered_planks

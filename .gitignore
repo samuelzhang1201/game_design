@@ -7,17 +7,23 @@ assets/imagegen/out/
 
 # macOS archive junk from unzipped asset packs
 assets/__MACOSX/
-# The asset layout (owner 2026-09-30): assets/3D/{category}/{object}/ holds what
-# the game uses, and its model_wip/ what produced it — Comfy reference art,
-# Tripo exports, .blend work files, CC0 scans, downloaded sources. model_wip is
-# local work, never committed, except its .gdignore (Godot must not import a
-# work file) and the terrain's aerial pictures, the committed source of the
-# ground's packed layers (tools/map3d/pack_aerial.py).
+# The work folders (tools/CLAUDE.md): art is developed only in assets/3D/model_wip/,
+# assets/2D/model_wip/ and assets/maps/model_wip/ — Comfy references, Tripo exports,
+# .blend work files, CC0 downloads. A work folder is local, never committed, except its
+# .gdignore (Godot must not import a work file), the terrain's aerial pictures (the
+# committed source of the ground's packed layers, tools/map3d/pack_aerial.py) and the
+# Azgaar export the map pack is imported from (tools/import_azgaar.gd).
 assets/3D/**/model_wip/**
 !assets/3D/**/model_wip/**/
 !assets/3D/**/model_wip/.gdignore
 !assets/3D/model_wip/tripo_inbox/README.md
-!assets/3D/terrain/model_wip/aerial/**
+!assets/3D/model_wip/sources/terrain/aerial/**
+assets/2D/model_wip/**
+!assets/2D/model_wip/.gdignore
+assets/maps/model_wip/**
+!assets/maps/model_wip/.gdignore
+!assets/maps/model_wip/**/
+!assets/maps/model_wip/*/*Full*.json
 # The 3D map's Terrain3D build and its packed ground textures ARE committed
 # (owner 2026-10-02: a developer on another machine pulls and runs the game
 # with no Blender, ComfyUI or Python build) — tools/map3d/build_pack.sh still

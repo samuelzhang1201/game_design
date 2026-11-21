@@ -11,9 +11,10 @@ spec = importlib.util.spec_from_file_location('quadkit', SKILL)
 qk = importlib.util.module_from_spec(spec); spec.loader.exec_module(qk)
 KING = ROOT/'assets/3D/characters/king'
 CAMP = ROOT/'assets/3D/buildings/field_camp'
-for d in (KING,CAMP):
- (d/'model_wip').mkdir(parents=True, exist_ok=True)
- (d/'model_wip/.gdignore').touch()
+KW = ROOT/'assets/3D/model_wip/blender_output/characters/king'   # blends, renders, reports
+CW = ROOT/'assets/3D/model_wip/blender_output/buildings/field_camp'
+for d in (KING,CAMP,KW,CW):
+ d.mkdir(parents=True, exist_ok=True)
 REPORT = {}
 
 def reset():
@@ -218,14 +219,14 @@ def king():
  for t in rig.animation_data.nla_tracks: t.mute=False
  bpy.context.scene.frame_set(0)
  REPORT['king']={'audits':audits,'tris':total,'bones':len(rig.data.bones),'stride_m':2.4,'clips':{a.name:float(a.frame_range[1]-a.frame_range[0])/30 for a in keep},'bounds':bounds(body),'attachments':{b:rig.data.bones[b].parent.name if rig.data.bones[b].parent else None for b in ['Lance','Shield','Saddle','head']}}
- bpy.ops.wm.save_as_mainfile(filepath=str(KING/'model_wip/king.blend'),compress=True)
+ bpy.ops.wm.save_as_mainfile(filepath=str(KW/'king.blend'),compress=True)
  export(KING/'king.glb',[rig,body]+additions,True)
  for t in rig.animation_data.nla_tracks: t.mute=True
  for name in ('MARCH','STANDBY','OBSERVE','COMMAND','INSPIRE'):
   rig.animation_data.action=actions[name]
   for view,az in ([('side',1.57),('front',3.14)] if name=='MARCH' else [('quarter',.8)]):
    for f in (list(range(0,16,2)) if name=='MARCH' else [0,30,60,90]):
-    bpy.context.scene.frame_set(f); render(KING/f'model_wip/{name}_{view}_{f:03}.png',[body],(0,0,1.6),5.2,az)
+    bpy.context.scene.frame_set(f); render(KW/f'{name}_{view}_{f:03}.png',[body],(0,0,1.6),5.2,az)
  rig.animation_data.action=None
 
 def camp():
@@ -322,7 +323,7 @@ def camp():
  assert sum(a['tris'] for a in audits.values())<=11000
  REPORT['camp']={'audits':audits,'tris':sum(a['tris'] for a in audits.values()),'bounds':{o.name:bounds(o) for o in facilities}}
  assert all(b['min'][2]>=-1e-5 for b in REPORT['camp']['bounds'].values()),REPORT['camp']['bounds']
- bpy.ops.wm.save_as_mainfile(filepath=str(CAMP/'model_wip/field_camp.blend'),compress=True)
+ bpy.ops.wm.save_as_mainfile(filepath=str(CW/'field_camp.blend'),compress=True)
  export(CAMP/'field_camp.glb',facilities)
  # Keep Godot's already-extracted texture names current on a material-only rebuild.
  import struct
@@ -332,11 +333,11 @@ def camp():
   view=document['bufferViews'][image['bufferView']]; offset=view.get('byteOffset',0)
   (CAMP/('field_camp_'+image['name']+'.png')).write_bytes(binary[offset:offset+view['byteLength']])
  for o,pos in zip(facilities,[(0,3,0),(-4,-2,0),(0,-3,0),(4,0,0),(3,-3,0),(-4,2,0)]): o.location=pos
- render(CAMP/'model_wip/overview.png',facilities,(0,0,1),19,.65)
- render(CAMP/'model_wip/overview_side.png',facilities,(0,0,1),19,1.8)
+ render(CW/'overview.png',facilities,(0,0,1),19,.65)
+ render(CW/'overview_side.png',facilities,(0,0,1),19,1.8)
 
 if '--camp-only' not in sys.argv: king()
 camp()
-if 'king' in REPORT: (KING/'model_wip/build_report.json').write_text(json.dumps(REPORT,indent=2))
-(CAMP/'model_wip/build_report.json').write_text(json.dumps(REPORT,indent=2))
+if 'king' in REPORT: (KW/'build_report.json').write_text(json.dumps(REPORT,indent=2))
+(CW/'build_report.json').write_text(json.dumps(REPORT,indent=2))
 print('P33_REPORT',json.dumps(REPORT))

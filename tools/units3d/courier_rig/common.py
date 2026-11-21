@@ -13,7 +13,7 @@ tools/units3d/courier/tripo_parts.csv) -- the labels come with it. The mesh was 
 the near foreleg raised, the near hind hoof lifted.
 """
 ROOT = "/Users/samuelzhang/game_design/"
-COU = ROOT + "assets/3D/units/courier/model_wip/"
+COU = ROOT + "assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/courier/"
 SRC_BLEND = COU + "tripo/courier_rigged_tripo.blend"
 SRC = COU + "rig/"
 WORK = SRC + "courier_rig_work.blend"

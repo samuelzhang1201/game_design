@@ -12,7 +12,7 @@ from pathlib import Path
 import bpy
 from mathutils import Matrix
 
-OUT = Path("/Users/samuelzhang/game_design/assets/3D/units/soldier/model_wip/arp_knight_20261018/export")
+OUT = Path("/Users/samuelzhang/game_design/assets/3D/model_wip/blender_output/units/soldier/arp_knight_20261018/export")
 CLIPS = ("WALK", "IDLE", "SLASH", "ATTACK", "ATTACK_VAR1")
 # the names the map's units ask for (Map3DUnits.clip_named matches the END of a clip's name):
 # the walk is the MARCH, the sword-and-shield guard stance the GARRISON (STANDBY and DEFEND fall

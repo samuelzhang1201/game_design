@@ -7,7 +7,7 @@ The cavalry piece is now the ARP heavy knight on the armoured horse
 `certificate.json` is `certify_locomotion.py` on the updated `certificate.config.json`: MARCH is the
 run (13 frames keyed 8 a frame, each hoof's stance locked on the ground), stride 2.4224, entry = exit =
 hold at MARCH 63/104 (left hind and right fore planted), the provider's stand seated from that held
-pose (`cavalry_pivot_plan.json` `stand_clip`). Status **NUMERIC_PASS**, digest `11b6890d…`; k 18.1876,
+pose (`cavalry_pivot_plan.json` `stand_clip`). Status **NUMERIC_PASS**, digest `f22b7e81…`; k 18.1876,
 bounds contact 32,990 µm, seam 2,750 µm. Totals: slide MARCH 16,683 / PIVOT_LEFT 25,546 / PIVOT_RIGHT
 25,819 µm, hover 9,902, penetration 25,127, seams 1 µm, envelope 733 ≤ 804 sim m, 0 introduced skin
 flags. Planting band H: -1.61 / -2.72 / -0.08 / -0.41 mm (fl, fr, hl, hr).

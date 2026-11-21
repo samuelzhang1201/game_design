@@ -1,7 +1,7 @@
 """Tile the Blender-rendered canter frames; run with Python and Pillow."""
 from pathlib import Path
 from PIL import Image, ImageDraw
-base = Path(__file__).resolve().parents[3] / 'assets/3D/characters/king/model_wip'
+base = Path(__file__).resolve().parents[3] / 'assets/3D/model_wip/blender_output/characters/king'
 files = [base / f'MARCH_{view}_{frame:03}.png'
          for view in ('side', 'front') for frame in range(0, 16, 2)]
 sheet = Image.new('RGB', (1920, 520), (35, 35, 35))

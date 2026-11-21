@@ -2,7 +2,7 @@
 phases in the owner's open Blender (owner 2026-10-06: 用 blender-auto-rig 技能重新操作).
 Every phase script execs this file first: MCP namespaces do not persist between calls.
 
-Sources (git-ignored, assets/3D/units/royal/model_wip/tripo/): the Tripo generation from
+Sources (git-ignored, assets/3D/model_wip/tripo_inbox/units/no-rigging/royal/tripo/): the Tripo generation from
 REF_royal_qwenfast_s1.png on the owner's paid plan --
   medieval+knight+on+horse+3d+model.glb   the textured fused mesh: THE DELIVERABLE
   medieval+knight+3d+model+parts.glb      47 untextured parts: a LABEL SOURCE only (Phase 1d)
@@ -12,9 +12,10 @@ import numpy as np
 from mathutils import Vector, Matrix
 
 ROOT = "/Users/samuelzhang/game_design/"
-SRC = ROOT + "assets/3D/units/royal/model_wip/tripo/"
-TEX_FILE = SRC + "medieval+knight+on+horse+3d+model.glb"
-PARTS_FILE = SRC + "medieval+knight+3d+model+parts.glb"
+RAW = ROOT + "assets/3D/model_wip/tripo_inbox/units/no-rigging/royal/tripo/"      # the Tripo exports
+SRC = ROOT + "assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/royal/tripo/"   # the work file, shots and rigged export
+TEX_FILE = RAW + "medieval+knight+on+horse+3d+model.glb"
+PARTS_FILE = RAW + "medieval+knight+3d+model+parts.glb"
 WORK = SRC + "royal_rig_work.blend"
 SHOTS = SRC + "shots/"
 SCENE = "Royal_Rig"

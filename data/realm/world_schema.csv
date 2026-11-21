@@ -38,6 +38,7 @@ political.provinces.*.kingdom_code,enum,,,,0,0,,,Owner,engine-only: MapOwnership
 political.diplomacy.*.stance,enum,,,Ally|Friendly|Neutral|Suspicion|Rival|Enemy|Vassal|Suzerain|Unknown,0,0,,,Stance,engine-only for now
 military.kingdoms.*.infantry,int,0,10000000,,1,500,,,Infantry,
 military.kingdoms.*.axemen,int,0,10000000,,1,500,,,Axemen,
+military.kingdoms.*.heavy_infantry,int,0,10000000,,1,500,,,Heavy infantry,
 military.kingdoms.*.archers,int,0,10000000,,1,500,,,Archers,
 military.kingdoms.*.cavalry,int,0,10000000,,1,300,,,Cavalry,
 military.kingdoms.*.artillery,int,0,10000000,,1,10,,,Artillery,

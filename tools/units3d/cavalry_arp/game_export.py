@@ -1050,7 +1050,7 @@ def install(root):
     scn = bpy.context.scene
     fps = scn.render.fps
     scn.render.fps = fps * DENSE
-    tmp = out / "model_wip/cavalry_march_dense.glb"
+    tmp = root / "assets/3D/model_wip/blender_output/heavy_cavalry/export/cavalry_march_dense.glb"  # the work folder
     tmp.parent.mkdir(parents=True, exist_ok=True)
     try:
         bpy.ops.export_scene.gltf(filepath=str(tmp), **{**kw, "export_image_format": "NONE"})

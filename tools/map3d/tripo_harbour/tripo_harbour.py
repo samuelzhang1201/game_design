@@ -44,7 +44,7 @@ T = {"CC_ROOT": ROOT}
 exec(open(ROOT + "/tools/map3d/tripo_houses/tripo_houses.py").read(), T)
 K = T["K"]
 
-# type: category, source glb (under assets/3D/<cat>/<type>/model_wip/tripo/), yaw degrees,
+# type: category, source glb (under assets/3D/model_wip/tripo_inbox/<cat>/<type>/tripo/), yaw degrees,
 # fit (metres, the longer ground span before any trim), z0 (metres over the fitted
 # source's bottom that becomes z = 0), triangle budget, atlas px, voxel metres,
 # (0: no shell — the source is open sheets, welded, filled and collapsed like the palaces),
@@ -100,7 +100,7 @@ def _dir(t):
 
 
 def _src_path(t):
-    return SRC_ROOT + "/assets/3D/" + JOBS[t]["cat"] + "/" + t + "/model_wip/tripo/" + JOBS[t]["src"]
+    return SRC_ROOT + "/assets/3D/model_wip/tripo_inbox/" + JOBS[t]["cat"] + "/" + t + "/tripo/" + JOBS[t]["src"]
 
 
 def _vbounds(obs):
@@ -352,7 +352,6 @@ def build(t):
     _scene()
     j = JOBS[t]
     T["HOUSES"] = ROOT + "/assets/3D/" + j["cat"] + "/"   # where _bake saves the atlas
-    os.makedirs(_dir(t) + "model_wip/tripo", exist_ok=True)
     src = bpy.data.objects[t + "_src"]
     for n in (t + "_game", t + "_high"):
         if n in bpy.data.objects:

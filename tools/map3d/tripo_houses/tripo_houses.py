@@ -15,7 +15,7 @@ owner's open Blender through the Blender MCP (owner: 你在blender里的操作�
     T["export"]("cottage_a")         # assets/3D/buildings/<type>/<type>.glb + the CSV + houses.json
     T["build_all"](); T["export_all"]()
 
-The sources are git-ignored: assets/3D/buildings/<type>/model_wip/tripo/*.glb
+The sources are git-ignored: assets/3D/model_wip/tripo_inbox/buildings/<type>/tripo/*.glb
 (~100k triangles, one 2K PBR texture each). What a type becomes:
 
   * REDUCED to its triangle budget (JOBS) by a collapse decimation — at map
@@ -47,6 +47,18 @@ from mathutils import Matrix, Vector, kdtree
 
 ROOT = globals().get("CC_ROOT", "/Users/samuelzhang/game_design")   # a worktree passes its own
 HOUSES = ROOT + "/assets/3D/buildings/"
+
+
+def _inbox(t):
+    """A type's Tripo source folder: assets/3D/model_wip/tripo_inbox/<category>/<type>/tripo/."""
+    return HOUSES.replace("/assets/3D/", "/assets/3D/model_wip/tripo_inbox/", 1) + t + "/tripo/"
+
+
+def _work(t):
+    """Blender's intermediates for a type: assets/3D/model_wip/blender_output/<category>/<type>/."""
+    d = HOUSES.replace("/assets/3D/", "/assets/3D/model_wip/blender_output/", 1) + t + "/"
+    os.makedirs(d, exist_ok=True)
+    return d
 SCENE = "Tripo_Houses"
 K = {"CC_ROOT": ROOT}
 exec(open(ROOT + "/tools/map3d/blender_houses/kit.py").read(), K)
@@ -102,8 +114,8 @@ def _rows():
 def _source_path(src):
     t, _, v = src.partition("_v")
     if v.isdigit():
-        return HOUSES + t + "/model_wip/tripo/" + t + "_tripo_v" + v + ".glb"
-    return HOUSES + src + "/model_wip/tripo/" + src + "_tripo.glb"
+        return _inbox(t) + t + "_tripo_v" + v + ".glb"
+    return _inbox(src) + src + "_tripo.glb"
 
 
 def _bounds(ob):
@@ -528,7 +540,7 @@ def _bake(low, high, img, extrusion):
     low.select_set(True)
     bpy.context.view_layer.objects.active = low
     bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"}, use_clear=False, margin=BAKE_MARGIN)
-    img.filepath_raw = HOUSES + low["house_type"] + "/model_wip/tripo/" + low["house_type"] + "_atlas.png"
+    img.filepath_raw = _work(low["house_type"]) + low["house_type"] + "_atlas.png"
     img.file_format = "PNG"
     img.save()
 
@@ -813,7 +825,7 @@ def _sharpened(img, t):
         bpy.data.images.remove(bpy.data.images[name])
     new = bpy.data.images.new(name, w, h)
     new.pixels.foreach_set(out.ravel())
-    new.filepath_raw = HOUSES + t + "/model_wip/tripo/" + t + "_colour.png"
+    new.filepath_raw = _work(t) + t + "_colour.png"
     new.file_format = "PNG"
     new.save()
     return new
@@ -900,7 +912,7 @@ def build_hd(t):
     filled = _uv_new_faces(low, src)
     sharp = _sharpened(colour, t)
     if normal is not None:
-        normal.filepath_raw = HOUSES + t + "/model_wip/tripo/" + t + "_normal.png"
+        normal.filepath_raw = _work(t) + t + "_normal.png"
         normal.file_format = "PNG"
         normal.save()
     low.data.materials.clear()
@@ -1040,7 +1052,7 @@ def _slate_roofs(ob, colour, t):
         bpy.data.images.remove(bpy.data.images[name])
     slate = bpy.data.images.new(name, bw, bh)
     slate.pixels.foreach_set(bp.ravel())
-    slate.filepath_raw = HOUSES + t + "/model_wip/tripo/" + t + "_slate.png"
+    slate.filepath_raw = _work(t) + t + "_slate.png"
     slate.file_format = "PNG"
     slate.save()
     up = Vector((0.0, 0.0, 1.0))
