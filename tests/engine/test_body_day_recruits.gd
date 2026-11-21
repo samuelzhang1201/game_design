@@ -20,10 +20,10 @@ func _json(state: GameState) -> GameState:
 func _hash(state: GameState) -> String:
 	return BodyMotion._hash(state.to_dict())
 
-## B2c: the garrisoned crown unit of 100 on the point of a town it holds, a
+## B2c: the garrisoned crown unit of `men` (100 a row, the first on the point) at a town it holds, a
 ## treasury, 1000 eligible civilians and a two-day infantry contract at 2 gold a commoner, 10 a noble.
-func _recruit_world() -> Dictionary:
-	var f := _helper("res://tests/engine/test_body_marches.gd", "_fixture", [[100]])
+func _recruit_world(men: int = 100) -> Dictionary:
+	var f := _helper("res://tests/engine/test_body_marches.gd", "_fixture", [[men]])
 	var state: GameState = f.state
 	var realm: String = f.repo.resolve_realm("player_realm")
 	assert_eq(String(state.army_roster[f.code].kingdom_code), realm)
@@ -42,9 +42,10 @@ func _recruit_world() -> Dictionary:
 	MarchPath.use(f.repo, MarchPath.build(f.repo, size.x, size.y, 10000, slopes))
 	f.at = ArmyGround.town_point_m(f.repo, f.town)
 	var entry: Dictionary = state.regiments[f.code]
-	for row: Dictionary in [entry, entry.body_groups[0]]:
-		row.x_m = f.at.x
-		row.y_m = f.at.y
+	var shift: Vector2i = f.at - Vector2i(entry.x_m, entry.y_m)
+	for row: Dictionary in [entry] + entry.body_groups:
+		row.x_m += shift.x
+		row.y_m += shift.y
 	entry.order = ArmySystem.ORDER_GARRISON
 	entry.dest_x_m = f.at.x
 	entry.dest_y_m = f.at.y
@@ -131,23 +132,17 @@ func test_recruit_orders_reserve_people_and_completion_places_their_bodies() -> 
 	var camp := Vector2i(done.regiments[raised].x_m, done.regiments[raised].y_m)
 	assert_eq([done.regiments[raised].camp_town, MarchClearance.dist2(camp, f.at)], [f.town, 4400 * 4400], "camped on the town's first ring")
 	assert_eq(int(repo.bal("army_slot_spacing_m")), 4400)
-	assert_eq([done.military_migration.body_placement.sequence, done.military_migration.body_placement.operation_id], ["1", "placement:recruit:raise:" + raised],
-		"two placement operations, in project order")
+	# Two placement operations in unit code order: the unit in the pack sorts before "recruited:".
+	assert_lt(f.code, raised)
+	assert_eq([done.military_migration.body_placement.sequence, done.military_migration.body_placement.operation_id], ["1", "placement:day:%d:%s" % [done.absolute_day(), raised]])
 	assert_eq(UnitBodies.validate_battle_candidate(repo, done, BodyBattle.safe_boundary(done)).status, "complete")
-	# The close's guard lets through exactly the recruits: nothing else may gain a body or change.
-	var cohorts: Array = done.recruitment_projects.grow.cohort_ids + done.recruitment_projects.raise.cohort_ids
-	assert_eq(BodyDayDriver._body_change(state, done, "X", [f.code, raised], cohorts), "")
-	assert_string_contains(BodyDayDriver._body_change(state, done, "X"), "X moved, added or removed a body")
+	# The close's guard lets through the refitted units' rows, and nothing else of any body.
+	assert_eq(BodyDayDriver._body_change(state, done, "X", [f.code, raised], false), "")
+	assert_string_contains(BodyDayDriver._body_change(state, done, "X", [], false), "X moved, added or removed a body")
 	assert_string_contains(BodyDayDriver._body_change(state, done, "X", [f.code, raised]), "X changed personnel")
-	# Of the recruits only that is let through: a lost veteran or recruit, or a moved unit, is not.
-	var veteran: String = done.military_rosters[f.code].cohort_ids.filter(func(id: String) -> bool: return id not in cohorts and int(done.military_cohorts[id].fit) > 0)[0]
-	for lost: String in [veteran, "recruit:grow:commoners", "recruit:raise:commoners"]:
-		var hungry := UnitBodies._copy(done)
-		hungry.military_cohorts[lost].fit -= 1
-		assert_string_contains(BodyDayDriver._body_change(state, hungry, "X", [f.code, raised], cohorts), "X changed personnel", lost)
 	var shoved := UnitBodies._copy(done)
 	shoved.regiments[f.code].x_m += 1
-	assert_string_contains(BodyDayDriver._body_change(state, shoved, "X", [f.code, raised], cohorts), "X moved, added or removed a body")
+	assert_string_contains(BodyDayDriver._body_change(state, shoved, "X", [f.code, raised], false), "X moved, added or removed a body")
 	# Day three is admitted and leaves both units' bodies where they stand.
 	var third := BodyDayDriver.day(repo, done)
 	assert_eq(third.status, "complete", third.reason)
