@@ -328,8 +328,9 @@ func test_ordinary_day_refuses_an_admitted_body_world() -> void:
 	assert_eq(engine.advance_day(f.state), [])
 	assert_eq(_hash(f.state), before, "no ordinary writer touches it")
 
-## The thirtieth day settles the month once (`ticked`, a report, the tick turned to day 1); a
-## month-end wound recovery changes personnel, so with wounded men the day fails closed.
+## The thirtieth day settles the month once (`ticked`, a report, the tick turned to day 1). Its
+## wound recovery is the close's personnel (B2d, `test_body_day_losses.gd`); a saved world whose
+## rows disagree with its fit people is refused at admission, the save kept.
 func test_thirtieth_day_settles_the_month_once() -> void:
 	var f := _long_world()
 	# Tick 1: the reign's opening tick 0 settles through `advance`, and its day 30 is absolute day 30
@@ -352,7 +353,7 @@ func test_thirtieth_day_settles_the_month_once() -> void:
 	var before := _hash(wounded.state)
 	var refused := BodyDayDriver.day(wounded.repo, wounded.state)
 	assert_eq([refused.status, refused.candidate], ["error", null])
-	assert_string_contains(refused.reason, "personnel")
+	assert_string_contains(refused.reason, "Bodies disagree with fit personnel")
 	assert_eq(_hash(wounded.state), before)
 
 ## Hand-computed arrival: the 300 m route fits one day (budget 300), so the row ends ON its

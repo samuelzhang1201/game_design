@@ -1,6 +1,6 @@
 {
- "note": "Map3DCavalryLocomotion (LOCO-CAV-PROVIDER), read by the royal solver Map3DRoyalPivot.sample; same keys and meaning as royal_pivot_plan.json. march_phase: the one MARCH phase a cavalry pivot leaves and rejoins MARCH at, which is also the hold pose (coordinator ruling 2026-11-11): key 7/16, the left fore and right hind down (-5.9, -6.3 mm), the right fore and left hind barely up (4.5, 10.8 mm). At 8/16 (three hooves down) the left hind is 151 mm up and flexed, and its swing to the stand dragged the toe through the planting band (pivot slide 196 mm); at 7/16 the pivots slide 15 mm. The other values are the royal piece's.",
- "march_phase": 0.4375,
+ "note": "Map3DCavalryLocomotion (LOCO-CAV-PROVIDER), read by the royal solver Map3DRoyalPivot.sample; same keys and meaning as royal_pivot_plan.json. march_phase: the one MARCH phase a cavalry pivot leaves and rejoins MARCH at, which is also the hold pose: the heavy knight's run (2026-11-21, 104 keys a loop) at key 63/104, where the left hind and the right fore are planted (the only phases with two hooves down are keys 63-70 and 84-91; at 84-91 both hinds are 0.26-0.56 m up and flexed) and the left fore and right hind 131 / 124 mm up. The other values are the royal piece's. stand_clip MARCH: the turn's stand is the held MARCH pose with every hoof seated (Map3DCavalryLocomotion.bind); STANDBY's horse stands with its left fore 22 cm ahead of the right, and from the run's body the solver could not set that hoof down (FrontHoof.L constraints_not_solved on 39-51 of 650 sampled turn phases at every two-hooves-down key).",
+ "march_phase": 0.6057692307692307,
  "step_deg": 15.0,
  "lift_m": 0.06,
  "support_m": 0.003,
@@ -8,5 +8,6 @@
  "rider_root": "Saddle",
  "lift_share": 0.4,
  "patch_share": 0.8,
- "patch_band_m": 0.005
+ "patch_band_m": 0.005,
+ "stand_clip": "MARCH"
 }
