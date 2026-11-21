@@ -32,10 +32,10 @@ ARMS = {
         'glb_sha256': '3916b9c6fac405d3d1d4ff48713c229c63bcacee8dd0f2b2ee143c035d8f4d0e',
         'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6616856}},
     'heavy_infantry': {
-        'hashes': {'baseline-native.json': '0c7a23867119c33a0bb83413b31598a43409a73c100d527672e7af70b518c77f',
-                   'native-march.json': '2688e1df5f0bcbad358b224440598d5425f9988fee4d9fa30f62baa43249c32d',
-                   'canonical-samples.json': 'b485e90a1c045f201605111271c84b187b046789f5204c7c6840e816cf0e4fab'},
-        'glb_sha256': 'd341a878a313ae3256694a25de5f134c67d3eb67d498b2d98032ed3384bf5a4b',
+        'hashes': {'baseline-native.json': '2455c300d486217ac0882a42506ed152c8829298b6465bd0717c706a85dc433e',
+                   'native-march.json': '4f4d4d4c68c1f7cd4225d867e763a8350a7bba2bf72377161876e5dd86742a35',
+                   'canonical-samples.json': '795711ba5352dd9e093bf924e742b8fa2439e38d859037c20118eb42d10716aa'},
+        'glb_sha256': '899ecf39af52019db6a273f8ea35badc9d94455e8d25a60c316b59f46086343f',
         'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 5776552}},
 }
 

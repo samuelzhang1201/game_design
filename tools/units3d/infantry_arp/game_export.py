@@ -66,6 +66,14 @@ LOCK = {"WALK": {"legs": [(s, "thigh_twist" + s, "thigh_stretch" + s, "leg_stret
                  "stance_m": 0.004, "deep_m": 0.002, "clear_m": 0.012, "ease_frames": 3, "min_knee_deg": 2.0,
                  "land_frames": 2, "stance": {".l": (0.20, 0.86), ".r": (0.90, 0.35)}}}
 ARM = "infantry"                         # the output's name; install() sets it
+# What another body needs of LOCK on its own MARCH (merged over the clip's entry for that ARM; the
+# INFANTRY_LOCK environment variable, a JSON object, overrides both for a bracketed trial).
+# `approach_frames`: the last swing frames before a touchdown already travel back with the ground,
+# still above it (the stance itself is not moved; the swing before them eases onto the first). The plate soldier's sole sinks 3 mm under the lock's ground (its boot is skinned
+# across the ankle), so it enters the certifier's planting band a sixth of a frame before its
+# touchdown key, while the foot still closes on its landing place at 0.09 m a frame: 12.1 mm of
+# slide and a 11.6 mm margin, 23.7 against a bound of 22.7.
+ARM_LOCK = {"heavy_infantry": {"WALK": {"approach_frames": 1}}}
 BODY = "Infantry_body"
 GEAR = {"sword": "Weapon", "shield": "Shield"}
 REST = ("IDLE", 1)                       # the guard stance, GARRISON's first frame
@@ -358,8 +366,15 @@ def _turn(a, b):
     return a.normalized().rotation_difference(b.normalized()).to_matrix().to_4x4()
 
 
-def _lock_feet(src, clip, poses):
+def _lock_cfg(clip):
     cfg = LOCK.get(clip)
+    if cfg:
+        cfg = {**cfg, **ARM_LOCK.get(ARM, {}).get(clip, {}), **json.loads(os.environ.get("INFANTRY_LOCK", "{}"))}
+    return cfg
+
+
+def _lock_feet(src, clip, poses):
+    cfg = _lock_cfg(clip)
     if not cfg:
         return {}
     n = len(poses) - 1                    # unique frames (the last is the first again)
@@ -412,6 +427,17 @@ def _lock_feet(src, clip, poses):
             if stance[f] and win:
                 acc.z = -float(world[f][:, 2].min())          # the sole on the ground, z = 0
             off[f] = acc.copy() if stance[f] else None
+        # approach: the last `approach_frames` swing frames before each touchdown are moved so the
+        # sole already travels back with the ground from there to its landing place (its height
+        # kept): the foot arrives over that place a frame early and only comes down
+        lead = int(cfg.get("approach_frames", 0))
+        for f in [g for g in range(n) if stance[g] and not stance[g - 1]]:
+            for k in range(1, lead + 1):
+                q, nxt = (f - k) % n, (f - k + 1) % n
+                a, b = world[q], world[nxt]
+                deep = a[:, 2] <= a[:, 2].min() + cfg["deep_m"]
+                d = b[deep].mean(axis=0) - a[deep].mean(axis=0)
+                off[q] = Vector((off[nxt].x + d[0], off[nxt].y + d[1] - v, 0.0))
         # ease each stance's final offset back to zero through the swing that follows
         f = start
         for _ in range(n):
@@ -426,6 +452,8 @@ def _lock_feet(src, clip, poses):
                 for g in range(a + 1, z):
                     u = (g - a) / span
                     off[g % n] = off[a] * (1 - (u * u * (3 - 2 * u)))
+                    if lead:  # the swing eases onto its first approach frame's offset
+                        off[g % n] += off[z % n] * (u * u * (3 - 2 * u))
                 f = z % n
             f = (f + 1) % n
         # swing lift: each swing frame raised to clear_m, spread to its neighbours on a cos^2 falloff;
@@ -658,7 +686,7 @@ def install(root, pivot_samples=None, pivot_seconds=None, arm="infantry"):
         if clip == "WALK":
             info["march"] = _march_measure(src, poses, keep)
             info["march"]["lock"] = lock = LOCKED.get(clip)
-            if lock and LOCK[clip].get("stance"):
+            if lock and _lock_cfg(clip).get("stance"):
                 # authored stances: every planted sole travels back at exactly the lock's speed, so
                 # the stride is that speed over the loop and the footfalls are the stances' starts
                 info["march"]["stride_m"] = round(lock["speed_m_per_frame"] * (len(poses) - 1), 4)

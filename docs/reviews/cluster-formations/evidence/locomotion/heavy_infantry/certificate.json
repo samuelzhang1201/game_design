@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "d14c38bec72386076684c8d72ff866d753dcd16080ef339883f39b27409c05f4",
+  "sha256": "885f53ed17a1c462b5f84488bf1819aa0528a7427e6bbb49b765efa33b84a293",
   "uniform": 512
  },
  "config": {
@@ -414,7 +414,7 @@
  },
  "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
  "input_sha256": {
-  "assets/3D/units/heavy_infantry/heavy_infantry.glb": "b6960d632ca48adcab0b98327c295db007a1ff388dffc6c1249241f362dd6844",
+  "assets/3D/units/heavy_infantry/heavy_infantry.glb": "bf7fd9a543e2978b1a33d119b2240a9f0ce90a0c9e9a17b9386dd740cb9d94e4",
   "assets/3D/units/heavy_infantry/heavy_infantry.glb.import": "47bb047dfeef5c919a3d48099123bb641822b3dfe1c971bac0ce9e95d7fbe38d",
   "assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas.jpg": "0c3352999ab9db3bc4f104f559b33a8e73b14c11e4965c1e49f579668e138617",
   "assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas.jpg.import": "0fec429730e8e17d717aff46983c02c5f8fbd8d69d495ef1608c34c11c6a515f",
@@ -422,13 +422,13 @@
   "assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas_mr.jpg.import": "95d1913c96bd3e83d6062a022f6f356a87a8f5ce70c00f23f0f60ee81501f0ca",
   "assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas_n.jpg": "7771c87b67fe2a840a81c571597db68113961245487e94f6d4aa592dd0540e9d",
   "assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas_n.jpg.import": "d6ea70623a453c74cd002452f6e045666cf5debc84294cff5bd36c42172f08af",
-  "assets/3D/units/heavy_infantry/heavy_infantry_pivot_plan.json": "10189fba13499821eb5db54690a3a66e491133279e3112b6645b1baa6bbce347",
+  "assets/3D/units/heavy_infantry/heavy_infantry_pivot_plan.json": "50de38d600f4a616e4027d274930a904a28ad748379b8cf7b784288e270e1fef",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
   "data/army/balance.csv": "4bc86039fc255e313f0376b0a7ff4a96da3c80d0e59d0a2b87bd4a8a851ff1c1",
   "data/army/unit_footprints.csv": "81971028b03d63c2031c55f983f74df8d114414d13e461d61981ddce744aaf03",
   "data/screens/map3d/army_art.csv": "4cb23a2c3b0d7e024626a17179a9af73bb95d9354ee53ab97adb64725ce9da06",
   "data/screens/map3d/balance.csv": "f128c6999b798ed089e50f888f24f0ee6a9e70646df2a9ff66169430190a3790",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "a20aabb22c5991d143741a17377659f54a7ab0007861585a90ccfd8f7e9b6c02",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "d10d8bb6e6b5b6948a4845457e12cdc5b8b499c894391f2c76547bf4da444118",
   "scenes/models/units/heavy_infantry.tscn": "3efc8e2c93ee9c5b3ac833e09b61a174a3e2190637d9f5ad5219dba362d662a4",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
   "scripts/map3d/map3d_heavy_infantry_locomotion.gd": "0ba8678c2b758a993bd0dfe3d983fd8a18f4e4c042bf936f2bc98c5219f1786f",
@@ -437,8 +437,19 @@
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
- "locomotion_certificate": null,
- "payload_sha256": "218381c9a5181f940f4aafac865bc98ce35a69559f80aa6ea09a9fa9217822c7",
+ "locomotion_certificate": {
+  "all_turns": true,
+  "clips": [
+   "PIVOT_LEFT",
+   "PIVOT_RIGHT",
+   "MARCH"
+  ],
+  "contact_um": 22699,
+  "digest": "ee39fb764ecd74329ecf9dae995cc436fa4dac32723623e3124f72a109e77b7c",
+  "radius_m": 927,
+  "turn_q": 400000
+ },
+ "payload_sha256": "ee39fb764ecd74329ecf9dae995cc436fa4dac32723623e3124f72a109e77b7c",
  "report": {
   "bounds_um": {
    "contact": 22699,
@@ -446,7 +457,7 @@
   },
   "envelope": {
    "footprint_radius_m": 927,
-   "margin_um": 7849,
+   "margin_um": 8593,
    "pass": true,
    "radius_model_um": 777198,
    "radius_simulation_m": 416,
@@ -472,7 +483,7 @@
     "turn_udeg": -135000000
    }
   },
-  "pass": false,
+  "pass": true,
   "patches": {
    "l": {
     "first": [
@@ -527,10 +538,10 @@
   },
   "penetration": {
    "bound_um": 22699,
-   "margin_um": 4639,
+   "margin_um": 4638,
    "pass": true,
    "sampled_um": 0,
-   "total_um": 4639,
+   "total_um": 4638,
    "witness": {
     "clip": "PIVOT_LEFT",
     "mesh": "heavy_infantry",
@@ -543,7 +554,7 @@
   "planting_band": {
    "feet": {
     "l": {
-     "H_m": -0.0030568619232294748,
+     "H_m": -0.0030568323009905907,
      "band_m": 0.0005
     },
     "r": {
@@ -597,7 +608,7 @@
        0.0
       ],
       "turn_udeg": -1,
-      "vertex": 9065
+      "vertex": 6016
      }
     },
     {
@@ -618,7 +629,7 @@
        0.0
       ],
       "turn_udeg": -2000000,
-      "vertex": 9065
+      "vertex": 6016
      }
     },
     {
@@ -639,7 +650,7 @@
        0.0
       ],
       "turn_udeg": -45000000,
-      "vertex": 9065
+      "vertex": 6016
      }
     },
     {
@@ -660,7 +671,7 @@
        0.0
       ],
       "turn_udeg": -90000000,
-      "vertex": 18160
+      "vertex": 6016
      }
     },
     {
@@ -681,7 +692,7 @@
        0.0
       ],
       "turn_udeg": -135000000,
-      "vertex": 18160
+      "vertex": 6016
      }
     },
     {
@@ -702,7 +713,7 @@
        0.0
       ],
       "turn_udeg": -179999999,
-      "vertex": 18160
+      "vertex": 6016
      }
     },
     {
@@ -849,7 +860,7 @@
        0.0
       ],
       "turn_udeg": 1,
-      "vertex": 9065
+      "vertex": 6016
      }
     },
     {
@@ -870,7 +881,7 @@
        0.0
       ],
       "turn_udeg": 2000000,
-      "vertex": 9065
+      "vertex": 6016
      }
     },
     {
@@ -891,7 +902,7 @@
        0.0
       ],
       "turn_udeg": 45000000,
-      "vertex": 9065
+      "vertex": 6016
      }
     },
     {
@@ -912,7 +923,7 @@
        0.0
       ],
       "turn_udeg": 90000000,
-      "vertex": 18160
+      "vertex": 6016
      }
     },
     {
@@ -933,7 +944,7 @@
        0.0
       ],
       "turn_udeg": 135000000,
-      "vertex": 18160
+      "vertex": 6016
      }
     },
     {
@@ -954,7 +965,7 @@
        0.0
       ],
       "turn_udeg": 179999999,
-      "vertex": 18160
+      "vertex": 6016
      }
     },
     {
@@ -975,7 +986,7 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 18160
+      "vertex": 6016
      }
     },
     {
@@ -996,7 +1007,7 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 18160
+      "vertex": 6016
      }
     },
     {
@@ -1203,18 +1214,18 @@
    "by_clip": {
     "MARCH": {
      "bound_um": 22699,
-     "margin_um": 11584,
-     "pass": false,
-     "sampled_um": 12129,
-     "total_um": 23713,
+     "margin_um": 11813,
+     "pass": true,
+     "sampled_um": 5155,
+     "total_um": 16968,
      "witness": {
       "clip": "MARCH",
       "mesh": "heavy_infantry",
-      "phase": 0.212121208426709,
+      "phase": 0.791015625,
       "surface": 0,
-      "touchdown_phase": 0.20703125,
+      "touchdown_phase": 0.658203125,
       "turn_udeg": null,
-      "vertex": 462
+      "vertex": 5995
      }
     },
     "PIVOT_LEFT": {
@@ -1250,18 +1261,18 @@
      }
     }
    },
-   "margin_um": 11584,
-   "pass": false,
-   "sampled_um": 12129,
-   "total_um": 23713,
+   "margin_um": 11813,
+   "pass": true,
+   "sampled_um": 10166,
+   "total_um": 21979,
    "witness": {
-    "clip": "MARCH",
+    "clip": "PIVOT_LEFT",
     "mesh": "heavy_infantry",
-    "phase": 0.212121208426709,
+    "phase": 0.44624999165535,
     "surface": 0,
-    "touchdown_phase": 0.20703125,
-    "turn_udeg": null,
-    "vertex": 462
+    "touchdown_phase": 0.215624999254942,
+    "turn_udeg": -1,
+    "vertex": 10
    }
   },
   "stance": {
@@ -1377,7 +1388,7 @@
   "simulation_scale": 528.659946702788
  },
  "schema": 1,
- "status": "FAIL",
+ "status": "NUMERIC_PASS",
  "tool_sha256": "e3b2de36f443b4d3b5a0fab1bee396433b6c951473f38be03922561bf3960231",
  "visual_review": "PENDING: R-C requires the real-window review after this numeric pass"
 }

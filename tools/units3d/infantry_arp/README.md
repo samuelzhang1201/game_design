@@ -151,7 +151,23 @@ Tripo plate soldier, `assets/3D/model_wip/blender_output/heavy_infantry_parts/hi
 (README there: 79 parts joined, decimated per part 53,269 → 11,410 tris, maps baked from the high
 mesh, the infantry's 30 clips retargeted): 14,709 tris with the gear, 70 bones, rest height
 1.599 m, MARCH `stride_m` 1.473 (0.044636 m a frame × 33), `steps` 0.2121;0.9091, foot lock
-offsets 66 / 55 mm, blade–leg gap 0.49 m. Steps after the export:
+offsets 73 / 55 mm, blade–leg gap 0.49 m.
+
+Its MARCH lock adds one thing (`ARM_LOCK`, `approach_frames` 1; `INFANTRY_LOCK` overrides it as
+JSON for a trial): the last swing frame before each touchdown is moved so the sole already travels
+back with the ground to its landing place, its height kept, and the swing before it eases onto
+that offset; the stance is not moved. This boot is skinned across the ankle, so its sole sinks
+3 mm under the lock's ground and enters the certifier's planting band a sixth of a frame before
+the touchdown key, the foot still closing on its landing place at 0.09 m a frame: 12.1 mm of
+slide and an 11.6 mm margin against a 22.7 mm bound. With the approach the left foot's worst is
+5.2 + 11.8 mm (a pinned approach point 9 mm past the leg's reach is pulled back to it, in the
+air). Moving the whole stance back instead (integrating the lock from the approach frame) left
+the leg 16 mm short at the end of its stance; two approach frames 36 mm short. A quick reading of
+the certifier's MARCH slide without its full run: capture MARCH with `pivot_native.gd` (keys,
+quarter points and a 512 grid, `"baseline": true`) and feed each foot's vertices to
+`certify_locomotion.vertex_slide`.
+
+Steps after the export:
 
 1. `.import` files: copies of the infantry's (loops, `force_disable_compression`, the pivot
    post-import script) with the paths renamed and `uid` / `path` / `dest_files` removed; one
