@@ -130,6 +130,15 @@ static func _start(repo: DataRepository, source: GameState, player: String, enem
 	var besieged := BattleSystem.siege_town_of(repo, staged, enemy)
 	if not besieged.is_empty() and ArmyGround.garrison_town(repo, staged, player) == besieged:
 		return _result("deferred", "Besieged garrison waits for the assault")
+	# the mirror (player siege spec §5): a crown besieger waits for its assault
+	# before the town's defenders, and storms them at the town once it is up
+	var investing := SiegeSystem.investing(repo, staged, player)
+	if not investing.is_empty() and enemy in SiegeSystem.defenders_of(repo, staged, investing):
+		return _result("deferred", "The besiegers wait for the order to storm")
+	var stormed := SiegeSystem.storming(repo, staged, player)
+	var storms := not stormed.is_empty() and enemy in SiegeSystem.defenders_of(repo, staged, stormed)
+	if storms:
+		town = stormed
 	var at_town := BattleSystem._battle_at(staged, town) if not town.is_empty() else {}
 	if not at_town.is_empty():
 		var contacts: Array = []
@@ -140,7 +149,7 @@ static func _start(repo: DataRepository, source: GameState, player: String, enem
 			at_town = UnitBodies._battle(staged, int(at_town.id))
 			contacts.append_array(joined.plan.contacts)
 		return _result("complete", "Joined the existing town battle", staged, {"contacts": contacts})
-	var skeleton := BattleSystem.contact_skeleton_candidate(repo, staged, player, enemy, town)
+	var skeleton := BattleSystem.contact_skeleton_candidate(repo, staged, player, enemy, town, storms)
 	if town.is_empty():
 		var defender := UnitBodies._entry(staged, skeleton.def[0])
 		skeleton.place_x_m = int(defender.x_m)

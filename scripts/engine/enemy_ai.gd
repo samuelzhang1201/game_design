@@ -449,16 +449,15 @@ static func target_cell(repo: DataRepository, _state: GameState, kind: String, i
 	return int((_town_cells[key] as Dictionary).get(id, -1))
 
 
-## True while the player's realm holds the target: a town's province
-## (MapOwnership), a manor's province as it stands now (MapManors.province_of)
-## — and no host OCCUPIES its manor (SiegeSystem.occupier_of: a town taken by
-## a siege and its manors around it are no target while the host holds them).
+## True while the player's realm holds the target: a town's holder
+## (SiegeSystem.holder_of: its occupier while occupied, else its province's
+## owner), a manor's province as it stands now (MapManors.province_of) — and no
+## one OCCUPIES that manor (SiegeSystem.occupier_of: a town taken by a siege
+## and its manors around it are no target while the occupier holds them).
 static func target_held(repo: DataRepository, state: GameState, kind: String, id: String) -> bool:
 	var player := repo.resolve_realm("player_realm")
 	if kind == KIND_TOWN:
-		var b: Dictionary = repo.burgs.get(id, {})
-		return not b.is_empty() and MapOwnership.owner_of(repo, state, String(b.get("province_code", ""))) == player \
-			and SiegeSystem.occupier_of(state, target_cell(repo, state, kind, id)) == ""
+		return repo.burgs.has(id) and SiegeSystem.holder_of(repo, state, id) == player
 	var cell := int(id)
 	if not repo.manors.has(cell):
 		return false
