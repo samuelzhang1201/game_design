@@ -701,7 +701,7 @@ def install(root, pivot_samples=None, pivot_seconds=None, arm="infantry"):
     bpy.context.view_layer.objects.active = rig
     target = out / (ARM + ".glb")
     if pivot_samples is not None:
-        target = out / "model_wip/pivot_export/source.glb"
+        target = root / "assets/3D/model_wip/blender_output/units/infantry/pivot_export/source.glb"
         target.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=str(target), export_format="GLB", use_selection=True,
                               export_yup=True, export_skins=True, export_animations=True,

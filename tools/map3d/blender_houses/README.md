@@ -6,7 +6,7 @@ looking at Hunyuan3D meshes as reference (no geometry or texture copied);
 those meshes and the whole Hunyuan3D pipeline were DELETED later that day
 over the licence (owner 2026-09-24). The references now are the generated
 pictures `tools/map3d/gen_house_refs.py` renders into
-`assets/3D/buildings/<type>/model_wip/`.
+`assets/3D/model_wip/comfy-out/buildings/<type>/references/`.
 
 Why: the Hunyuan3D community licence does not cover the EU, the UK or South
 Korea, and its meshes were heavy (2,000 to 9,000 triangles after decimation,

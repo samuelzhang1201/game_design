@@ -2,7 +2,7 @@
 """The WAR ROOM's reference pictures (owner 2026-10-01: Qwen-Image-2512 only),
 rendered on ComfyUI (the Windows desktop for the default
 qwen2512desk4, the Mac for qwen2512fast) from assets/imagegen/war_room_ref_prompts.csv into
-assets/3D/war_room/<type>/model_wip/<type>_ref_<model>.png — what the room,
+assets/3D/model_wip/comfy-out/war_room/<type>/references/<type>_ref_<model>.png — what the room,
 table, candlestick, rake and pennant in tools/war_room/blender/ were modelled
 against.
 
@@ -61,7 +61,7 @@ def main():
     gen.switch_model(preset["unet"])
     jobs = []
     for row in rows:
-        wip = os.path.join(OUT, row["type"], "model_wip")
+        wip = os.path.join(ROOT, "assets", "3D", "model_wip", "comfy-out", "war_room", row["type"], "references")
         os.makedirs(wip, exist_ok=True)
         dest = os.path.join(wip, "%s_ref_%s.png" % (row["type"], model))
         if os.path.exists(dest) and "--force" not in args:

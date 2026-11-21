@@ -2,7 +2,7 @@
 previews (metal needs something to reflect). exec() in the owner's Blender."""
 import bpy
 
-D = "/Users/samuelzhang/game_design/assets/3D/units/soldier/model_wip/arp_knight_20261018/"
+D = "/Users/samuelzhang/game_design/assets/3D/model_wip/blender_output/units/soldier/arp_knight_20261018/"
 HDRI = "/Applications/Blender.app/Contents/Resources/5.2/datafiles/studiolights/world/"
 
 

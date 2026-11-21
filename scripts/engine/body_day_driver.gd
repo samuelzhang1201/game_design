@@ -48,6 +48,9 @@ static func tactical_day(repo: DataRepository, source: GameState) -> Dictionary:
 	# one exit per unit and advance; fields never outnumber land units.
 	var limit := int(state.day_resolution.body_battle.substep_count) * (3 + 4 * state.army_roster.size())
 	for i: int in limit + 1:
+		var due := _slice_work(repo, state)
+		if due.status != "complete": return due
+		state = due.candidate
 		if state.day_resolution.body_battle.stage == "complete": return _result("complete", "Candidate tactical day complete", state)
 		if not state.day_resolution.get("pending_decision", {}).is_empty():
 			return _result("blocked", "Encounter awaits the player's decision", state)
@@ -70,8 +73,9 @@ const _OPENING: Array[String] = ["WORKS", "COURIERS", "AI_AND_SCOUT", "SIGHTING_
 ## (sieges to the calendar, supply eaten once, the day turned, sealed at the next safe boundary).
 ## Works run after the march setup, which they never read. A result carries one detached
 ## candidate (`blocked` mid-day resumes exactly) plus, once complete, `journal`, `ticked` and
-## `report` as `TickEngine.resolve_day` gives them. An ordinary phase that moves a body or
-## changes personnel fails closed: its body writer is not here yet.
+## `report` as `TickEngine.resolve_day` gives them. The close's bodies follow its personnel
+## (`_refit`: recruits, deserters, the month's wounds and recoveries); any other ordinary phase
+## that moves a body or changes personnel fails closed: its body writer is not here yet.
 static func day(repo: DataRepository, source: GameState) -> Dictionary:
 	var admitted := admit(repo, source)
 	if admitted.status != "complete": return admitted
@@ -88,7 +92,8 @@ static func day(repo: DataRepository, source: GameState) -> Dictionary:
 	return _close(repo, engine, state)
 
 ## An ordinary writer at the safe boundary between days (an order, a decree): `writer(repo,
-## state)` runs on a detached copy, may move no body and change no personnel, and is sealed as
+## state)` runs on a detached copy, may move no body and change no one under arms (a recruit
+## order's reserved, assembling people are not: `_under_arms`), and is sealed as
 ## the next outer operation (`request`, unique per act, e.g. with its order id, is its receipt;
 ## the same request again is an "Already published" no-op), so the next day's admission holds.
 ## No publisher leaves the previous result digest on a changed save.
@@ -130,10 +135,7 @@ static func _open(repo: DataRepository, engine: TickEngine, source: GameState) -
 static func _close(repo: DataRepository, engine: TickEngine, source: GameState) -> Dictionary:
 	var state := UnitBodies._copy(source)
 	var tx := state.day_resolution
-	# The ordinary tactical phase's day-end work: seats and laws reconciled, delivered stances settled.
-	var seated := _seat_day(repo, state, tx.journal.get("arrivals", []))
-	if not seated.is_empty(): return _result("error", seated)
-	LawSystem.reconcile(repo, state)
+	# The ordinary tactical phase's day-end work: delivered stances settled (seats and laws are per slice).
 	BattleSystem.finish_day(repo, state)
 	for cursor: int in range(DayResolution.PHASES.find("FIXED_TACTICAL_SUBSTEPS") + 1, DayResolution.PHASES.size()):
 		var failed := _phase(engine, state, tx, DayResolution.PHASES[cursor])
@@ -141,11 +143,155 @@ static func _close(repo: DataRepository, engine: TickEngine, source: GameState) 
 	state.day_resolution = {}
 	var organization := MilitaryReorganization.reconcile(repo, state)
 	if organization.get("status", "error") == "error": return _result("error", str(organization.get("error", "Cannot reconcile military organization")))
-	var closed := _sealed(repo, source, state, {"kind": "close", "abs_day": str(tx.absolute_day)}, "The day's closing phases")
+	var healed := _battle_heals(repo, source, state, tx)
+	if not healed.is_empty(): return _result("error", healed)
+	var fitted := _refit(repo, source, state)
+	if fitted.status != "complete": return fitted
+	var closed := _sealed(repo, source, fitted.candidate, {"kind": "close", "abs_day": str(tx.absolute_day)}, "The day's closing phases", fitted.units, false)
 	if closed.status != "complete": return closed
 	closed.merge({"journal": tx.journal.duplicate(true), "ended": int(tx.absolute_day), "ticked": bool(tx.month_end),
 		"report": engine.last_month_report})
 	return closed
+
+## The month's heal of a unit in a battle that the legacy recovery dropped (part B2d). Legacy
+## `ArmySystem._recover_month` heals a battle member only if `BattleGroups.refresh` can lay the
+## legacy rows, so legacy geometry would decide whether a body-world unit heals. The body world
+## heals it here as the ordinary recovery would (the same share, event and marker) and its rows
+## follow through `_refit`. A battle with a frozen round heals no one, as in legacy. "" or the error.
+# ponytail: it heals after the month's foraging and hazards, not before them, so a harassment or a
+# hazard counted on the unit's fit can differ by the healed men; move it if those ever meet in battle.
+static func _battle_heals(repo: DataRepository, before: GameState, state: GameState, tx: Dictionary) -> String:
+	if not bool(tx.month_end) and not bool(tx.get("settle_month_compat", false)): return ""
+	var owners: Dictionary = UnitBodies._owners(before).owners
+	var codes: Array = state.military_rosters.keys()
+	codes.sort()
+	for code: String in codes:
+		if not owners.has(code) or not (owners[code].get("pending_round", {}) as Dictionary).is_empty(): continue
+		if int(state.conduct_marks.get("recovery:" + code, -1)) == before.tick: continue
+		var restored := ArmySystem.wound_recovery(repo, ArmySystem.wounded_count(repo, state, code))
+		if restored <= 0: continue
+		var result := MilitaryRoster.transfer_units(repo, state, "recovery:%d:%s" % [before.tick, code],
+			[{"unit_code": code, "from": "wounded", "to": "fit", "count": restored}], "Monthly wound recovery: " + code)
+		if result.has("error"): return "The month's heal of %s in battle: %s" % [code, result.error]
+		state.conduct_marks["recovery:" + code] = before.tick
+	return ""
+
+## The personnel writer of the close (parts B2c, B2d). Its ordinary phases change who is fit in the
+## ordinary way: a paid assembly completes (`RecruitmentSystem.step_day`: cohorts turn active, a new
+## unit gets its roster row, entry and camp), men desert, and at the month's end the wounded
+## recover and foraging and hazards wound. Bodies follow the fit count, whoever changed it: each
+## land unit whose fit differs from the close's start (after the tactical part) goes through the
+## placement protocol's "recruit" operation at the turned day's safe boundary, from its fit then
+## to its fit now. Survivors keep their rows, a loss empties the last rows, growth takes new slots
+## and poses, and a new unit starts from no rows. The protocol admits one unit's change at a time,
+## so the changes are replayed in unit order: every changed unit's people and rows set back as they
+## were (a new cohort to "assembling"), and every battle holding one wholly back to its rows,
+## facings, anchors, geometry and members' slot counters (the legacy recovery's
+## `BattleGroups.refresh` rewrites the whole battle), then each unit's people put as they are and
+## placed. The result adds `units`, the only units whose rows the close may have changed. A unit
+## that finds no room fails the day closed.
+static func _refit(repo: DataRepository, before: GameState, state: GameState) -> Dictionary:
+	var out := _result("complete", "Bodies follow the day's personnel", state)
+	out.units = []
+	var codes: Array = state.regiments.keys() + state.foes.keys()
+	codes.sort()
+	var now := {}
+	var owners: Dictionary = UnitBodies._owners(before).owners
+	var battles := {}
+	for code: String in codes:
+		if UnitBodies._naval(state, code) or MilitaryRoster.fit(state, code) == MilitaryRoster.fit(before, code): continue
+		if not state.military_rosters.get(code) is Dictionary: return _result("error", "Unit %s has no roster" % code)
+		out.units.append(code)
+		var was := UnitBodies._entry(before, code)
+		var entry := UnitBodies._entry(state, code)
+		if was.is_empty(): entry.merge({"body_groups": [], "group_next_slot": 0})
+		elif owners.has(code): battles[int(owners[code].id)] = owners[code]
+		else:
+			entry.group_next_slot = was.group_next_slot
+			entry.body_groups = was.body_groups.duplicate(true)
+		for id: String in state.military_rosters[code].cohort_ids:
+			now[id] = state.military_cohorts[id]
+			state.military_cohorts[id] = before.military_cohorts[id].duplicate(true) if before.military_cohorts.has(id) else now[id].merged({"stage": "assembling"}, true)
+	for id: int in battles:
+		var battle := UnitBodies._battle(state, id)
+		if battle.is_empty(): return _result("error", "Battle %d ended in the close" % id)
+		for field: String in ["groups", "group_facing", "group_anchor_m", "geometry_version", "deployment_axis_deg"]:
+			if battles[id].has(field): battle[field] = battles[id][field].duplicate(true) if battles[id][field] is Dictionary else battles[id][field]
+			else: battle.erase(field)
+		for member: String in battle.groups:
+			if UnitBodies._entry(before, member).has("group_next_slot"): UnitBodies._entry(state, member).group_next_slot = UnitBodies._entry(before, member).group_next_slot
+	for code: String in out.units:
+		var fit := MilitaryRoster.fit(state, code)
+		if fit != MilitaryRoster.fit(before, code): return _result("error", "Unit %s changed its roster in the close" % code)
+		for id: String in state.military_rosters[code].cohort_ids: state.military_cohorts[id] = now[id]
+		var control: Dictionary = state.military_migration.get("body_placement", {})
+		var sequence := "0" if control.is_empty() else str(int(control.sequence) + 1)
+		var placed := ArmyGround.body_placement_candidate(repo, state, {"version": 1, "operation_id": "placement:refit:%s:%s" % [sequence, code],
+			"sequence": sequence, "operation": "recruit", "unit": code, "host": "",
+			"previous_fit": str(fit)}, {"version": 1, "kind": "safe", "abs_day": str(state.absolute_day())})
+		if placed.status != "complete": return _result("error", "Unit %s cannot follow its personnel: %s" % [code, placed.reason])
+		state = placed.candidate
+	out.candidate = state
+	return out
+
+## The slice work the control has passed and the saved cursor `tx.slice_work` ({done: "<slice>:
+## <stage>", arrivals: how many of `journal.arrivals` are settled}) has not: a slice's "move" work
+## once its move committed (stage "contact"), then its "contact" work once its contacts did ("round"
+## or "advance"), in that order. Saved with the day, so a resumed or raw-stepped candidate runs each
+## exactly once; a candidate stepped past a slice without its work fails closed. Nothing due: the
+## source itself.
+static func _slice_work(repo: DataRepository, source: GameState) -> Dictionary:
+	var tx := source.day_resolution
+	var at := String(tx.body_battle.next_substep)
+	var want: Array = {"contact": ["move"], "round": ["move", "contact"], "advance": ["move", "contact"]}.get(tx.body_battle.stage, [])
+	var done: String = tx.get("slice_work", {}).get("done", "")
+	# A slice's move (or the day's end) opens only on the previous slice's finished work.
+	if tx.body_battle.stage in ["move", "complete"] and int(at) > 0 and done != str(int(at) - 1) + ":contact":
+		return _result("error", "Slice %d's tactical work was skipped" % (int(at) - 1))
+	var state := source
+	for stage: String in want:
+		if done == at + ":contact" or (stage == "move" and done == at + ":move"): continue
+		var sliced := _slice(repo, state, stage)
+		if sliced.status != "complete": return sliced
+		state = sliced.candidate
+	return _result("complete", "Slice work current", state)
+
+## One slice's ordinary tactical work (`TickEngine._resolve_battles`' order) on a frozen body day.
+## After its move (`stage` "move"): the arrivals not yet settled camp and the seats settle
+## (`_seat_day`), the laws reconcile, the king walks his slice of the daily budget
+## (`KingSystem.step_substep`, once per slice by its own cursor), and the hosts' columns that came
+## up arrive (`EnemyAi.arrival_substep`: the host's mode, a column stationed where it stands and
+## retired from the frozen march, its events kept in the journal). After its contacts ("contact"):
+## search travel paused by battle (`ArmyTasks.pause_battles`) leaves the frozen march, entry and
+## membership both. Metadata only: no body moves and no personnel change; the cursor advances, and
+## the candidate is resealed at its battle boundary and validated there.
+static func _slice(repo: DataRepository, source: GameState, stage: String) -> Dictionary:
+	var state := UnitBodies._copy(source)
+	var tx := state.day_resolution
+	var cursor: Dictionary = tx.get("slice_work", {"done": "", "arrivals": "0"})
+	var arrivals: Array = tx.journal.get("arrivals", [])
+	if stage == "move":
+		var seated := _seat_day(repo, state, arrivals.slice(int(cursor.arrivals)))
+		if not seated.is_empty(): return _result("error", seated)
+		LawSystem.reconcile(repo, state)
+		KingSystem.step_substep(repo, state, tx)
+		var hosts := EnemyAi.arrival_substep(repo, state, tx.march_entries)
+		if not hosts.is_empty():
+			var engine := TickEngine.new(repo)
+			engine._restore_day_outputs(tx)
+			engine._save_host_events(tx.journal, engine.day_ai + hosts)
+	else:
+		for code: String in ArmyTasks.pause_battles(state):
+			tx.march_entries.erase(code)
+			tx.marching_codes.erase(code)
+	tx.slice_work = {"done": String(tx.body_battle.next_substep) + ":" + stage, "arrivals": str(arrivals.size())}
+	var moved := _body_change(source, state, "The tactical slice's work")
+	if not moved.is_empty(): return _result("error", moved)
+	BodyBattle._seal_private(repo, state)
+	var checked := UnitBodies.validate_battle_candidate(repo, state, BodyBattleMotion._boundary(state))
+	if checked.status != "complete" and not (checked.status == "deferred" and checked.reason == "Frozen round requires its own settlement consumer"):
+		return _result("error", checked.reason)
+	return _result("complete", "Ran the tactical slice's work", state)
 
 ## The body world's arrival and garrison writer, in place of `ArmyGround.reconcile`'s seat snap.
 ## Each crown land arrival not in a battle (as the legacy march settles) settles its camp at its
@@ -193,9 +339,10 @@ static func _phase(engine: TickEngine, state: GameState, tx: Dictionary, phase: 
 	return "%s: %s" % [phase, outcome.get("error", "")] if outcome.get("status", "") == "error" else ""
 
 ## Seals `state` (a safe boundary) as the next outer operation after `before`, once it is shown
-## to have moved no body and changed no personnel, and validates it at its new safe boundary.
-static func _sealed(repo: DataRepository, before: GameState, state: GameState, request: Dictionary, what: String) -> Dictionary:
-	var moved := _body_change(before, state, what)
+## to have moved no body and changed no one under arms, and validates it at its new safe boundary.
+## The close passes the `units` its personnel writer refitted and frees the people (`people` false).
+static func _sealed(repo: DataRepository, before: GameState, state: GameState, request: Dictionary, what: String, units: Array = [], people: bool = true) -> Dictionary:
+	var moved := _body_change(before, state, what, units, people)
 	if not moved.is_empty(): return _result("error", moved)
 	var outer: Dictionary = state.military_migration.get("body_battle", {})
 	state.military_migration.body_battle = {"version": "1", "sequence": BodyBattle.safe_boundary(state).sequence,
@@ -205,20 +352,50 @@ static func _sealed(repo: DataRepository, before: GameState, state: GameState, r
 	if checked.status != "complete": return _result("error", checked.reason)
 	return _result("complete", "Sealed " + what.to_lower(), state)
 
-## "" when every land unit's bodies, owners, anchors and position and all personnel are as they were.
-# ponytail: any cohort or roster change fails closed (fleets too); narrow to land units when a fleet writer needs it.
-static func _body_change(before: GameState, after: GameState, what: String) -> String:
-	if BodyMotion._hash([BodyLifecycle.snapshot(before), _positions(before)]) != BodyMotion._hash([BodyLifecycle.snapshot(after), _positions(after)]):
+## "" when every land unit's bodies, owners, anchors and position are as they were (`units`, the
+## refitted ones, but for their rows and slot counter; one of them not there before, wholly) and,
+## with `people`, so is everyone under arms.
+# ponytail: any cohort or roster change outside the close fails closed (fleets too); narrow to land units when a fleet writer needs it.
+static func _body_change(before: GameState, after: GameState, what: String, units: Array = [], people: bool = true) -> String:
+	var fresh := units.filter(func(code: String) -> bool: return UnitBodies._entry(before, code).is_empty())
+	if BodyMotion._hash(_bodies(before, units, fresh)) != BodyMotion._hash(_bodies(after, units, fresh)):
 		return what + " moved, added or removed a body; its body writer is not installed"
-	if BodyMotion._hash([before.military_cohorts, before.military_rosters]) != BodyMotion._hash([after.military_cohorts, after.military_rosters]):
+	if people and BodyMotion._hash(_under_arms(before)) != BodyMotion._hash(_under_arms(after)):
 		return what + " changed personnel; its body loss writer is not installed"
 	return ""
 
-static func _positions(state: GameState) -> Dictionary:
-	var out := {}
+## Every land unit's rows, owner, anchors and position: `refitted` units without their rows and
+## slot counter, `fresh` ones (not there before) left out.
+static func _bodies(state: GameState, refitted: Array, fresh: Array) -> Array:
+	var rows := BodyLifecycle.snapshot(state)
+	var at := {}
 	for code: String in state.regiments.keys() + state.foes.keys():
-		if not UnitBodies._naval(state, code): out[code] = [UnitBodies._entry(state, code).get("x_m"), UnitBodies._entry(state, code).get("y_m")]
-	return out
+		if not UnitBodies._naval(state, code): at[code] = [UnitBodies._entry(state, code).get("x_m"), UnitBodies._entry(state, code).get("y_m")]
+	for code: String in refitted:
+		if rows.has(code): rows[code].merge({"rows": null, "next_slot": null}, true)
+	for code: String in fresh:
+		rows.erase(code)
+		at.erase(code)
+	return [rows, at]
+
+## The people who have bodies: every cohort but an "assembling" one (paid and reserved, not yet a
+## soldier: a recruit order adds them and moves no one), and each unit's roster over those. A
+## roster holding none of them and no unit is a new unit still assembling.
+static func _under_arms(state: GameState) -> Array:
+	var cohorts := {}
+	for id: Variant in state.military_cohorts:
+		var cohort: Variant = state.military_cohorts[id]
+		if not (cohort is Dictionary and cohort.get("stage") == "assembling"): cohorts[id] = cohort
+	var rosters := {}
+	for code: Variant in state.military_rosters:
+		var roster: Variant = state.military_rosters[code]
+		if roster is Dictionary and roster.get("cohort_ids") is Array:
+			roster = roster.duplicate()
+			roster.erase("living_cap_men")  # the balance's cap, mirrored at each enlistment
+			roster.cohort_ids = roster.cohort_ids.filter(func(id: Variant) -> bool: return cohorts.has(id))
+			if roster.cohort_ids.is_empty() and not state.army_roster.has(code): continue
+		rosters[code] = roster
+	return [cohorts, rosters]
 
 ## The player's answer to the pending encounter decision of a frozen body day.
 static func acknowledge(repo: DataRepository, source: GameState, token: String, choice: String) -> Dictionary:

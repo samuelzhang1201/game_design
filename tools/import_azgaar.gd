@@ -2,7 +2,7 @@ extends SceneTree
 ## Import an Azgaar Fantasy Map Generator full export into game data.
 ##
 ## Reads the newest "*Full*.json" and newest map render PNG in assets/maps/
-## (or in any pack folder under it) and writes (all committed to git; re-run
+## (or in any pack folder under it, or under assets/maps/model_wip/) and writes (all committed to git; re-run
 ## after every re-export):
 ##
 ## Tables are grouped by domain (spec 2026-09-09 §1.1); <pack> = data/maps/<map-id>:
@@ -465,13 +465,15 @@ func _run() -> int:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_data))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_art))
 	_ensure_domains(out_data)
-	# Raw exports may sit directly in assets/maps/ or inside the pack's own
-	# folder next to the generated art; scan both so a re-import needs no
+	# Raw exports sit in assets/maps/model_wip/<id>/ (the maps work folder),
+	# or directly in assets/maps/ or the pack's own folder; scan all three so a re-import needs no
 	# arguments either way.
 	var jsons: Array[String] = []
 	var dirs: Array[String] = [MAPS]
 	for sub in DirAccess.get_directories_at(MAPS):
 		dirs.append(MAPS + "/" + sub)
+	for sub in DirAccess.get_directories_at(MAPS + "/model_wip"):
+		dirs.append(MAPS + "/model_wip/" + sub)
 	for dir_path in dirs:
 		for file in DirAccess.get_files_at(dir_path):
 			var path: String = dir_path + "/" + file

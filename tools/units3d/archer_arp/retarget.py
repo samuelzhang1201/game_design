@@ -28,7 +28,7 @@ def curves(action):
 def main():
     root, out = map(Path, sys.argv[sys.argv.index("--") + 1:])
     out.mkdir(parents=True, exist_ok=True)
-    source = root / "assets/3D/units/soldier/model_wip/arp_draw_arrow_equipped_20261018/soldier_arp_equipped.blend"
+    source = root / "assets/3D/model_wip/blender_output/units/soldier/arp_draw_arrow_equipped_20261018/soldier_arp_equipped.blend"
     bpy.ops.wm.open_mainfile(filepath=str(source))
     scene = bpy.context.scene
     rig, motion = (bpy.data.objects[n] for n in ("Soldier_ARP", "Motion_Source"))

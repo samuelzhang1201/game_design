@@ -8,10 +8,10 @@ every Blender step in the owner's instance, never headless). They are plain
 | script | builds | collection |
 |---|---|---|
 | `wr_lib.py` | helpers, read by every other script: game ↔ Blender axes (`G(x, y, z)`: game x, y up, z south → Blender x, −z, y), `new_obj`, `mat_flat`, `mat_tex`, image loading | — |
-| `wr_room.py` | the stone chamber: four inward walls, the floor, the window recess with its leaded glass (painted into `model_wip/textures/leaded_glass.png`), two wall sconces | `WR_room` |
+| `wr_room.py` | the stone chamber: four inward walls, the floor, the window recess with its leaded glass (painted into `TEX/leaded_glass.png`), two wall sconces | `WR_room` |
 | `wr_table.py` | the oak trestle table, top 1.8 × 1.7 m at y −0.045, iron clamps | `WR_table` |
 | `wr_candle.py` | the three-candle iron candlestick, origin at the base | `WR_candle` |
-| `wr_props.py` | the rake (origin at the head's bottom centre, shaft toward game +Z) and the 35 mm pennant (its atlas and ORM painted into `model_wip/textures/pennant_*.png`) | `WR_rake`, `WR_pennant` |
+| `wr_props.py` | the rake (origin at the head's bottom centre, shaft toward game +Z) and the 35 mm pennant (its atlas and ORM painted into `TEX/pennant_*.png`) | `WR_rake`, `WR_pennant` |
 | `wr_pieces.py` | the wooden unit pieces (spec `2026-10-06-war-room-wooden-pieces.md`): each Tripo source turned to face game −Z, its plinth's foot centred and 1 across, welded, collapsed to 15k triangles on Tripo's UVs, maps cut to 1024, the lacquer mask read off the blue; `export` writes `assets/3D/war_room/piece_<arm>/`, then `tools/war_room/make_piece_scenes.gd` (not headless) dresses the scenes. Its work file is `assets/3D/war_room/model_wip/pieces_wip.blend` | `WP_<arm>` |
 | `wr_assemble.py` | a preview only: instances of everything where the game puts them, stand-in sheet and chart, lights, the game's opening camera — never exported | `WR_assembly` |
 | `wr_view.py` | `wr_view(names, …)`: frames the viewport on some objects for a screenshot | — |
@@ -21,7 +21,7 @@ every Blender step in the owner's instance, never headless). They are plain
 1. In the owner's Blender, with the MCP add-on's server started: a scene named
    `WarRoomArt` (`bpy.data.scenes.new("WarRoomArt")`, made current).
 2. The textures, 2k JPG from Poly Haven (CC0), into
-   `assets/3D/war_room/model_wip/textures/`: `stone_brick_wall_001`,
+   `assets/3D/model_wip/tripo_inbox/war_room/_shared/textures/`: `stone_brick_wall_001`,
    `weathered_planks`, `dark_wooden_planks` (diffuse, nor_gl, rough, ao).
    `dark_wooden_planks_diffuse_2k_oak.jpg` is that diffuse RE-TONED toward a
    warmer oak by hand (not scripted); the one the game uses is embedded in
@@ -37,7 +37,7 @@ every Blender step in the owner's instance, never headless). They are plain
 4. Export each object ALONE (select it, File > Export > glTF 2.0): glTF Binary
    `.glb`, +Y up, apply modifiers, materials exported with their images, no
    animation, no skin — to `assets/3D/war_room/<name>/<name>.glb`. The `.blend`
-   is saved beside it as `model_wip/<name>_wip.blend`.
+   is saved as `assets/3D/model_wip/blender_output/war_room/<name>/<name>_wip.blend`.
 5. In Godot, `Godot --headless --path . --import` once. The room's and the
    table's `.import` carry `gltf/embedded_image_handling=2` (their textures stay
    INSIDE the imported scene as Basis Universal, VRAM-compressed — see
@@ -56,9 +56,9 @@ image) and re-export; nothing in the game names the texture size.
 ## The references
 
 The Qwen-Image-2512 pictures these were modelled against are each object's
-`model_wip/<name>_ref_qwen2512fast.png` (git-ignored), rendered by
+`assets/3D/model_wip/comfy-out/war_room/<name>/references/<name>_ref_qwen2512fast.png` (git-ignored), rendered by
 
     python3 tools/war_room/gen_room_refs.py --model qwen2512fast --seed 20261001
 
 (ask the owner before queuing any generation). The concept the owner chose is
-`assets/3D/war_room/model_wip/concept/room_qwen2512fast.png`.
+`assets/3D/model_wip/comfy-out/war_room/_shared/references/concept/room_qwen2512fast.png`.

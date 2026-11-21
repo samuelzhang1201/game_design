@@ -10,7 +10,7 @@ importer can choose a different skeleton origin. Do not add another grip offset 
 copy the equipment's skeleton into the assembled scene.
 
 The owner-provided source is the corrected, equipped ARP soldier. The source
-blend, FBXs and intermediate blends remain local under `model_wip/`; playing
+blend, FBXs and intermediate blends remain local under `assets/3D/model_wip/`; playing
 a fresh checkout uses only the committed models and extracted textures.
 No generation service or Blender add-on is needed to play.
 
@@ -90,7 +90,7 @@ The installed meshes retain generated LODs and the scene's existing visibility
 settings and material overrides. No scene edit is needed for a mesh delivery.
 
 Build settings are `archer_gear_lod` in the data index. Keep the original
-high-resolution GLBs in a local `model_wip/` source directory; the installed
+high-resolution GLBs in `assets/3D/model_wip/` (git-ignored); the installed
 GLBs are the simplified deliveries, not the inputs for another simplification.
 The build writes both candidates outside the installed assets and rejects any
 failed default decikit topology/surface/skin audit before export. It requires

@@ -19,14 +19,14 @@ Dimensions including ropes/protrusions (Blender XYZ, metres):
 King meshes: KingBody, Crown, Mantle, RoyalStandardPole, RoyalStandard, RoyalStandardStripe. Rig: king_rig. Standard is saddle mounted; crown follows head; mantle follows R_Chest. Retains donor Lance/Shield bones with original fixed gear.
 
 Validation/source evidence (git-ignored; rebuild recreates):
-- assets/3D/characters/king/model_wip/king.blend
-- assets/3D/characters/king/model_wip/build_report.json
-- assets/3D/characters/king/model_wip/roundtrip.json
-- assets/3D/characters/king/model_wip/MARCH_contact_sheet.jpg and MARCH.gif
-- assets/3D/characters/king/model_wip/{MARCH_side,MARCH_front,STANDBY_quarter,OBSERVE_quarter,COMMAND_quarter,INSPIRE_quarter}_*.png
-- assets/3D/buildings/field_camp/model_wip/field_camp.blend
-- assets/3D/buildings/field_camp/model_wip/overview.png and overview_side.png
-- assets/3D/buildings/field_camp/model_wip/build_report.json and roundtrip.json
+- assets/3D/model_wip/blender_output/characters/king/king.blend
+- assets/3D/model_wip/blender_output/characters/king/build_report.json
+- assets/3D/model_wip/blender_output/characters/king/roundtrip.json
+- assets/3D/model_wip/blender_output/characters/king/MARCH_contact_sheet.jpg and MARCH.gif
+- assets/3D/model_wip/blender_output/characters/king/{MARCH_side,MARCH_front,STANDBY_quarter,OBSERVE_quarter,COMMAND_quarter,INSPIRE_quarter}_*.png
+- assets/3D/model_wip/blender_output/buildings/field_camp/field_camp.blend
+- assets/3D/model_wip/blender_output/buildings/field_camp/overview.png and overview_side.png
+- assets/3D/model_wip/blender_output/buildings/field_camp/build_report.json and roundtrip.json
 
 Limits: donor mounted-idle vertex bounds reach roughly -0.036 m; no sole-contact penetration or brand-new hoof calibration is claimed. Cloth remains rigidly skinned. Gait is inherited and numerically preserved, not newly authored FK locomotion. Ground contact on slopes/water, close-up gesture feel, Godot loop/compression imports and independent visual critic remain the root integration owner’s real-window checks. No game suite or commit performed.
 

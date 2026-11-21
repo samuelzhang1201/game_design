@@ -75,6 +75,10 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 	var terrain := ArmySystem.terrain_of(repo, reg, state)
 	var works := ArmySystem.works_of(repo, reg, state)
 	var stance := "attack" if attacking else "defend"
+	var storm_town := _storming_town(state, code) if attacking else ""
+	var storm_works := _works_of_town(repo, storm_town)
+	var storm_weight := 0
+	var storm_arms: Array[String] = []
 	if capacity > 0:
 		for arm: String in repo.world_table("military", "unit_types"):
 			var count := int(float(reg.get(arm, 0)))
@@ -96,6 +100,10 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 				power = (milli * dev + 999999) / 1000000
 			equipment += power
 			terrain_weight += power * ArmySystem.terrain_factor(repo, terrain, arm, stance, works)
+			if storm_town != "":
+				var attack := int((repo.army_town_defence.get("%s|%s" % [storm_works, arm], {}) as Dictionary).get("attack", 1000))
+				storm_weight += power * attack
+				storm_arms.append("%s %d" % [arm, attack])
 	@warning_ignore("integer_division")
 	var base := equipment * int(quality["power_permille"]) / 1000
 	@warning_ignore("integer_division")
@@ -113,11 +121,32 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 			int(entry["supplies"]), ArmySystem.supply_use(repo, reg, state)), "reason": "Food in hand against living personnel demand"},
 		{"category": "formation_terrain", "source": "unit:terrain", "permille": terrain_permille,
 			"reason": "Equipment-weighted terrain and defensive works"}]
+	if storm_town != "":
+		@warning_ignore("integer_division")
+		factors.append({"category": "formation_terrain", "source": "town:storming",
+			"permille": storm_weight / equipment if equipment > 0 else 1000,
+			"reason": "storming the %s of %s (%s)" % [storm_works,
+				String((repo.burgs[storm_town] as Dictionary).get("label", storm_town)), ", ".join(storm_arms)]})
 	factors.append_array(extra_factors.duplicate(true))
 	for factor: Dictionary in factors:
 		factor["min_permille"] = int(repo.bal("battle_strength_factor_min_permille"))
 		factor["max_permille"] = int(repo.bal("battle_strength_factor_max_permille"))
 	return combine(base, factors)
+
+
+## The town `code` storms: the battle's town when it stands on the attacking side, "" else
+## (spec 2026-11-18-player-siege-design §4.4; a defender attacking out of its town storms nothing).
+static func _storming_town(state: GameState, code: String) -> String:
+	var battle := BattleSystem.battle_of(state, code)
+	return String(battle.get("town", "")) if code in (battle.get("att", []) as Array) else ""
+
+
+## A town's best works, "citadel" over "walls" over "town" (as ArmySystem.works_of for a seat).
+static func _works_of_town(repo: DataRepository, town: String) -> String:
+	if town == "":
+		return ""
+	var feats := String((repo.burgs[town] as Dictionary).get("features", "")).split("|")
+	return "citadel" if "citadel" in feats else ("walls" if "walls" in feats else "town")
 
 
 ## One arm's candidate rounding chain, [m0, m1, p]: m0 = trunc(N*E*H*1000/(C*F)),

@@ -8,7 +8,7 @@ and one spy (S*). The pick goes in the CSV's `picked` column as <tier>_s<n>.
   python3 tools/units3d/gen_courier_designs.py --tiers zimage --only C1,S2 --seeds 1
   python3 tools/units3d/gen_courier_designs.py --dry-run  # list the jobs, queue nothing
 
-Output: assets/3D/units/courier/model_wip/designs/<tier>_<id>_s<n>.png and contact_sheet.png.
+Output: assets/3D/model_wip/comfy-out/units/courier/references/designs/<tier>_<id>_s<n>.png and contact_sheet.png.
 Existing files are kept unless --force. Each tier runs on its machine (gen_cavalry_v2.host_of).
 """
 import csv, sys, urllib.parse
@@ -19,7 +19,7 @@ import gen_cavalry_v2 as v2  # the Z-Image graph, call / run
 
 ROOT = Path(__file__).resolve().parents[2]
 ROWS = ROOT / "assets" / "imagegen" / "courier_design_prompts.csv"
-OUT = ROOT / "assets" / "3D" / "units" / "courier" / "model_wip" / "designs"
+OUT = ROOT / "assets" / "3D" / "model_wip" / "comfy-out" / "units" / "courier" / "references" / "designs"
 SEED = 20260928
 TIERS = ["zimage", "qwendesk", "qwenfast"]  # Z-Image Turbo first: its row is done in minutes
 MINUTES = {"zimage": 0.2, "qwendesk": 0.3, "qwenfast": 2.0}

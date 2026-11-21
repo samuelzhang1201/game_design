@@ -96,16 +96,36 @@ func test_admission_fails_closed_and_takes_the_load_seam() -> void:
 ## The contact world: begin, move, contacts found the field, the encounter waits for the player;
 ## the answer, then round ready, plan, settle and the rest of the day. The driver's candidates
 ## equal the stepwise control transitions, and a saved blocked day resumes exactly.
+## The manual reference: one engine transition, then the slice work it makes due
+## (`_slice_work`), as the driver runs it.
+func _manual_step(f: Dictionary, state: GameState) -> Dictionary:
+	var step: Dictionary = f.engine.step_body_battle_candidate(state)
+	if step.candidate != null:
+		var due := BodyDayDriver._slice_work(f.repo, step.candidate)
+		assert_eq(due.status, "complete", due.reason)
+		step.candidate = due.candidate
+	return step
+
 func test_encounter_blocks_then_resumes_to_the_stepped_day() -> void:
 	var path := "res://tests/engine/test_body_battle_motion.gd"
 	var f := _helper(path, "_world", [1000])
 	var helper: GutTest = load(path).new()
-	var stepped: Array = helper.call("_to_ready", f, false)
-	var manual: GameState = stepped[4]
+	# Begin, move, contact, the encounter block, acknowledgement, round-ready (the motion suite's
+	# `_to_ready`), each move and contact followed by the slice's work.
+	var stepped: Array = []
+	var manual: GameState = f.engine.begin_body_battle_candidate(f.state).candidate
+	for expected: String in ["complete", "complete", "blocked", "ack", "blocked"]:
+		if expected == "ack":
+			manual = helper.call("_acknowledge", f, manual)
+		else:
+			var step := _manual_step(f, manual)
+			assert_eq(step.status, expected, step.reason)
+			manual = step.candidate
+		stepped.append(manual)
 	var guard := 0
 	while manual.day_resolution.body_battle.stage != "complete" and guard < 200:
 		guard += 1
-		var step: Dictionary = f.engine.step_body_battle_candidate(manual)
+		var step := _manual_step(f, manual)
 		assert_true(step.status in ["complete", "blocked"] and step.candidate != null, step.reason)
 		if step.candidate == null: break
 		manual = step.candidate
@@ -140,7 +160,10 @@ func test_failed_settlement_waits_on_its_frozen_pending() -> void:
 	BodyBattle._seal_private(f.repo, broken)
 	var held := _day(f.repo, broken, "blocked")
 	if held == null: return
-	assert_eq(_hash(held), _hash(broken), "nothing changes while the settlement fails")
+	# The fixture is stepped raw, so the slice's owed work (B2b) runs once; nothing else changes.
+	var owed := BodyDayDriver._slice_work(f.repo, broken)
+	assert_eq(owed.status, "complete", owed.reason)
+	assert_eq(_hash(held), _hash(owed.candidate), "nothing changes while the settlement fails")
 	held.military_events.erase(stale)
 	BodyBattle._seal_private(f.repo, held)
 	var done := _day(f.repo, held, "complete")
@@ -305,8 +328,9 @@ func test_ordinary_day_refuses_an_admitted_body_world() -> void:
 	assert_eq(engine.advance_day(f.state), [])
 	assert_eq(_hash(f.state), before, "no ordinary writer touches it")
 
-## The thirtieth day settles the month once (`ticked`, a report, the tick turned to day 1); a
-## month-end wound recovery changes personnel, so with wounded men the day fails closed.
+## The thirtieth day settles the month once (`ticked`, a report, the tick turned to day 1). Its
+## wound recovery is the close's personnel (B2d, `test_body_day_losses.gd`); a saved world whose
+## rows disagree with its fit people is refused at admission, the save kept.
 func test_thirtieth_day_settles_the_month_once() -> void:
 	var f := _long_world()
 	# Tick 1: the reign's opening tick 0 settles through `advance`, and its day 30 is absolute day 30
@@ -329,7 +353,7 @@ func test_thirtieth_day_settles_the_month_once() -> void:
 	var before := _hash(wounded.state)
 	var refused := BodyDayDriver.day(wounded.repo, wounded.state)
 	assert_eq([refused.status, refused.candidate], ["error", null])
-	assert_string_contains(refused.reason, "personnel")
+	assert_string_contains(refused.reason, "Bodies disagree with fit personnel")
 	assert_eq(_hash(wounded.state), before)
 
 ## Hand-computed arrival: the 300 m route fits one day (budget 300), so the row ends ON its
@@ -402,3 +426,97 @@ func test_seat_day_clears_a_seat_only_as_the_legacy_day_does() -> void:
 	assert_eq(state.town_seat, {town: f.code}, "an arrival on the point takes the seat")
 	assert_eq(String(state.regiments[f.code].get("camp_town", "")), town, "its camp is the town under its anchor")
 	assert_eq([state.regiments[f.code].x_m, state.regiments[f.code].y_m], [50000, 50000], "arrive: no anchor moves")
+
+## B2b: the king walks his daily budget in slice shares, once each. 100000 m left at
+## 30 km a day is ceil(100000 / 30000) = 4 days, so ceil(100000 / 4) = 25000 m today, from
+## (10000, 20000) east: 2500 m a slice over the 10 slices, (12500, 20000) after the first, and
+## (35000, 20000) at the day's end. His route is set through `publish` (an ordinary writer).
+func test_king_walks_his_daily_budget_in_slice_shares() -> void:
+	var f := _march_world()
+	f.repo.balance["king_travel_km_per_day"] = 30.0
+	assert_eq(int(f.repo.bal("battle_substeps")), 10, "the hand case's slice count")
+	var route := func(_repo: DataRepository, s: GameState) -> void:
+		s.king_state = {"x_m": 10000, "y_m": 20000, "route": [[110000, 20000]], "follow_code": "",
+			"travel_state": "travelling", "last_advanced_day": 0}
+	var routed := BodyDayDriver.publish(f.repo, f.state, {"kind": "king_route"}, route)
+	assert_eq(routed.status, "complete", routed.reason)
+	if routed.candidate == null: return
+	var opened := BodyDayDriver._open(f.repo, TickEngine.new(f.repo), routed.candidate)
+	assert_eq(opened.status, "complete", opened.reason)
+	if opened.candidate == null: return
+	var moved := BodyBattle.step_candidate(f.repo, opened.candidate)
+	assert_eq(moved.status, "complete", moved.reason)
+	var first := BodyDayDriver._slice_work(f.repo, moved.candidate)
+	assert_eq(first.status, "complete", first.reason)
+	if first.candidate == null: return
+	assert_eq([first.candidate.king_state.x_m, first.candidate.king_state.y_m, first.candidate.day_resolution.king_substep_index],
+		[12500, 20000, 0], "the first slice's share")
+	assert_eq(BodyDayDriver._slice_work(f.repo, first.candidate).candidate, first.candidate, "done once")
+	var result := BodyDayDriver.day(f.repo, routed.candidate)
+	assert_eq(result.status, "complete", result.reason)
+	if result.candidate == null: return
+	var king: Dictionary = result.candidate.king_state
+	assert_eq([king.x_m, king.y_m, king.route, king.travel_state, king.last_advanced_day],
+		[35000, 20000, [[110000, 20000]], "travelling", result.ended])
+	assert_eq(result.journal.king_state, king, "the day's journal keeps the king")
+	var copy := BodyDayDriver.day(f.repo, _json(routed.candidate))
+	assert_eq(_hash(copy.candidate), _hash(result.candidate), "the JSON save gives the same day")
+
+## B2b: after a slice's contacts, a unit on search travel caught in a battle leaves the frozen
+## march (entry and membership) and its task pauses, as `ArmyTasks.pause_battles` does in the
+## ordinary day; nothing moves. Saved before that work ran (the cursor at the slice's move), the
+## driver runs it before waiting on the encounter, and the answered day then completes on the
+## edited march. A candidate stepped past a slice without its work is refused.
+func test_contact_slice_pauses_search_travel_out_of_the_frozen_march() -> void:
+	var f := _helper("res://tests/engine/test_body_battle_motion.gd", "_world", [1000])
+	var blocked := BodyDayDriver.day(f.repo, f.state)
+	assert_eq(blocked.status, "blocked", blocked.reason)
+	if blocked.candidate == null: return
+	var state := UnitBodies._copy(blocked.candidate)
+	var code := ""
+	for key: String in state.regiments:
+		if not BattleSystem.battle_of(state, key).is_empty():
+			code = key
+			break
+	assert_ne(code, "", "a crown unit in the battle")
+	var entry: Dictionary = state.regiments[code]
+	var issued := ArmyTasks.issue(f.repo, state, {"id": "", "kind": "search", "unit_codes": [code],
+		"center_x_m": int(entry.x_m) + 40000, "center_y_m": int(entry.y_m), "radius_m": 2000})
+	assert_true(issued.ok, str(issued))
+	var id := String(issued.get("id", ""))
+	assert_eq(ArmyTasks.receive(f.repo, state, id, 1, code).status, "received")
+	entry.travel_task_id = id
+	var tx := state.day_resolution
+	var saved: Dictionary = entry.duplicate(true)
+	saved.order = ArmySystem.ORDER_MARCH
+	tx.march_entries[code] = saved
+	tx.marching_codes.append(code)
+	tx.marching_codes.sort()
+	tx.slice_work.done = "0:move"
+	BodyBattle._seal_private(f.repo, state)
+	var at := [entry.x_m, entry.y_m]
+	var before := _hash(state)
+	var waited := BodyDayDriver.tactical_day(f.repo, state)
+	assert_eq(waited.status, "blocked", waited.reason)
+	assert_eq(_hash(state), before, "the driver never touches its source")
+	if waited.candidate == null: return
+	var out: GameState = waited.candidate
+	assert_false(out.day_resolution.march_entries.has(code), "out of the frozen march")
+	assert_false(code in out.day_resolution.marching_codes, "and out of its membership")
+	assert_eq(out.army_tasks[id].units[code].phase, "paused_battle")
+	assert_false(out.regiments[code].has("travel_task_id"))
+	assert_eq([out.regiments[code].x_m, out.regiments[code].y_m], at, "nothing moves")
+	assert_eq(out.day_resolution.slice_work.done, "0:contact")
+	var answered := BodyDayDriver.acknowledge(f.repo, out, out.day_resolution.pending_decision.token, "continue")
+	assert_eq(answered.status, "complete", answered.reason)
+	if answered.candidate == null: return
+	var done := BodyDayDriver.tactical_day(f.repo, answered.candidate)
+	assert_eq(done.status, "complete", done.reason)
+	# Stepped past slice 0 with its work undone, the next slice is refused.
+	var skipped := UnitBodies._copy(answered.candidate)
+	skipped.day_resolution.slice_work.done = "0:move"
+	skipped.day_resolution.body_battle.stage = "move"
+	skipped.day_resolution.body_battle.next_substep = "1"
+	skipped.day_resolution.substep_index = 1
+	BodyBattle._seal_private(f.repo, skipped)
+	assert_eq(BodyDayDriver._slice_work(f.repo, skipped).reason, "Slice 0's tactical work was skipped")

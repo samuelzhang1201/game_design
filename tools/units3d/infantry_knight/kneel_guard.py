@@ -2,7 +2,7 @@
 
 The guard is the owner's own Tripo animation (owner 2026-10-13: 驻防的动作我这里有了) — "士兵单膝跪地，
 左手持盾，右手持矛戒备", a crouched guard on the same 65-bone Mixamo skeleton as the game's knight —
-with the shield and spear fitted in assets/3D/units/model_wip/knight_kneel_guard.blend (owner, in
+with the shield and spear fitted in assets/3D/model_wip/blender_output/units/knight_kneel_guard.blend (owner, in
 turn: 左手持盾，右手架矛 / 矛靠上盾牌边缘，指向视线前方，手腕弯曲的角度再小一点 / 盾牌稍微降低一点，露出士兵的眼睛 / 完美):
 
 * the shield's frame follows Spine2, its place the left fist (IK'd 12 cm down so the visor shows);

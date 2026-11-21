@@ -9,7 +9,7 @@ import os
 import bpy
 from mathutils import Vector
 
-OUT = "/Users/samuelzhang/game_design/assets/3D/units/soldier/model_wip/arp_knight_20261018/preview"
+OUT = "/Users/samuelzhang/game_design/assets/3D/model_wip/blender_output/units/soldier/arp_knight_20261018/preview"
 
 
 def setup(size=420):

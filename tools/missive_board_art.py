@@ -9,7 +9,7 @@ No new generation: every output is a refit of an existing picture.
                   clear, the moulding's inner shadow kept as a dark fade, so the
                   wood below shows through (ScaledNineSlice.hollow).
   board_wood.jpg  the backboard: Poly Haven rough_wood (CC0; the houses'
-                  source in assets/3D/buildings/model_wip/polyhaven/ — the
+                  source in assets/3D/model_wip/sources/buildings/polyhaven/ — the
                   critic ranked it over old_planks_02, whose even seams read
                   as ruled lines), its grain laid across, its splits lifted, warmed toward the frame's own oak and darkened
                   so the notes and the frame read on it. Seamless (the source
@@ -32,7 +32,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BOARD = os.path.join(ROOT, "assets/2D/ui/missive_board")
-POLYHAVEN = os.path.join(ROOT, "assets/3D/buildings/model_wip/polyhaven")
+POLYHAVEN = os.path.join(ROOT, "assets/3D/model_wip/sources/buildings/polyhaven")
 WOODS = {"planks": "old_planks_02_Diffuse_1k.jpg", "rough": "rough_wood_Diffuse_1k.jpg"}
 
 # The frame's cream opening starts ~66 px in (measured on frame.png's 512 px).

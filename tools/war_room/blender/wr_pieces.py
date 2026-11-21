@@ -18,7 +18,7 @@ import numpy as np
 
 CC_ROOT = globals().get("CC_ROOT", "/Users/samuelzhang/game_design")
 # The git-ignored sources live in the main checkout's inbox, or after
-# processing in each piece's model_wip/tripo/.
+# processing in each piece's tripo_inbox/war_room/piece_<arm>/tripo/.
 SRC_ROOT = globals().get("SRC_ROOT", "/Users/samuelzhang/game_design")
 INBOX = SRC_ROOT + "/assets/3D/model_wip/tripo_inbox/war_room"
 OUT = CC_ROOT + "/assets/3D/war_room"
@@ -56,7 +56,7 @@ def _col(name):
 
 
 def _source(arm):
-    for d in (f"{INBOX}/piece_{arm}", f"{SRC_ROOT}/assets/3D/war_room/piece_{arm}/model_wip/tripo"):
+    for d in (f"{INBOX}/piece_{arm}", f"{INBOX}/piece_{arm}/tripo"):
         found = sorted(glob.glob(d + "/*.glb"))
         if found:
             return found[-1]

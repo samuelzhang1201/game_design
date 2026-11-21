@@ -6,7 +6,7 @@ folder (`pivot*.py`, `pivot_native.gd`, `pivot_solve.gd`) are the infantry's and
 installed model; the knight's frozen feasibility capture remains only the mapping port's self-check.
 
 Source: `assets/3D/model_wip/tripo_inbox/units/no-rigging/soldier/tripo/medieval+knight+3d+model no rig.glb`.
-Work file (git-ignored): `assets/3D/units/soldier/model_wip/arp_knight_20261018/soldier_knight_arp.blend`
+Work file (git-ignored): `assets/3D/model_wip/blender_output/units/soldier/arp_knight_20261018/soldier_knight_arp.blend`
 (`soldier_knight_arp_palmfwd_backup.blend` = before the rest-pose fix). Not installed in the game. Game GLBs: `…/arp_knight_20261018/export/` (`export.py`).
 
 Done in the owner's Blender through the MCP (`ctx.py` gives ARP's operators the 3D viewport they need):

@@ -17,7 +17,7 @@ UIDs: put them back (or re-save from the editor). A re-delivery is `decimate.py`
 the scene, its material and the `.import` (MARCH / GARRISON / STANDBY loop; ATTACK and DEFEND one
 shot; `force_disable_compression`, as the cavalry's) all carry over.
 
-## Sources (`assets/3D/units/royal/model_wip/tripo/`, git-ignored)
+## Sources (`assets/3D/model_wip/tripo_inbox/units/no-rigging/royal/tripo/`, git-ignored)
 
 | file | what it is |
 | --- | --- |

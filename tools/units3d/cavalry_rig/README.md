@@ -14,7 +14,7 @@ G["rig"] = lambda: bpy.data.objects["cavalry_rig"]
 G["load"](); G["build"](); G["cav_weights"](); G["all_clips"]()
 ```
 
-## Files (`assets/3D/units/cavalry/model_wip/rig/`, git-ignored)
+## Files (`assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/cavalry/rig/`, git-ignored)
 
 | file | what it is |
 | --- | --- |

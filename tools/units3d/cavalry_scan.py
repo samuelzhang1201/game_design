@@ -8,7 +8,7 @@ ruled "太丑太简陋"; and "最终要适合在游戏里使用，太高的多�
   blender -b --factory-startup --python tools/units3d/cavalry_scan.py
 
 Sources, both CC0-1.0 (credit not required), downloaded from Sketchfab into
-assets/3D/units/cavalry/model_wip/cc0/ (git-ignored, .gdignore'd):
+assets/3D/model_wip/sources/units/cavalry/cc0/ (git-ignored, .gdignore'd):
   * cleveland_armor/ — Cleveland Museum of Art 1964.88 "Armor for Man and
     Horse": the KNIGHT and his hands are taken from it (the scan is 123
     loose shells; RIDER_PARTS are the rider's, found by position and checked
@@ -48,7 +48,7 @@ import model_cavalry as mc
 importlib.reload(mc)
 from unit_common import OUT, glb_path, log, tri_count
 
-SRC = "/Users/samuelzhang/game_design/assets/3D/units/cavalry/model_wip/cc0/"
+SRC = "/Users/samuelzhang/game_design/assets/3D/model_wip/sources/units/cavalry/cc0/"
 NAME = mc.NAME
 HORSE_TRIS = 7000
 RIDER_TRIS = 5600

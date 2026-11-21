@@ -9,9 +9,9 @@ only — paid-plan outputs are ours (Tripo terms §5.2.2), free-tier ones are Tr
 
 | step | where |
 | --- | --- |
-| reference picture | `tools/map3d/gen_house_refs.py` (Z-Image and Qwen-Image-2512 side by side; the owner picked Qwen) → `assets/3D/buildings/<type>/model_wip/<type>_ref_<model>[_vN].png` |
+| reference picture | `tools/map3d/gen_house_refs.py` (Z-Image and Qwen-Image-2512 side by side; the owner picked Qwen) → `assets/3D/model_wip/comfy-out/buildings/<type>/references/<type>_ref_<model>[_vN].png` |
 | Tripo generation | the owner, in Tripo's web studio: single image, high-detail model, texture 2K, de-lighting ON, PBR, private |
-| GLB | `assets/3D/buildings/<type>/model_wip/tripo/<type>_tripo[_vN].glb` (git-ignored, ~100k triangles) |
+| GLB | `assets/3D/model_wip/tripo_inbox/buildings/<type>/tripo/<type>_tripo[_vN].glb` (git-ignored, ~100k triangles) |
 
 `JOBS` in `tripo_houses.py` names each game type's source, its yaw (the door to -Y), its
 triangle budget, its atlas size and whether its roof takes the runtime's roof tints.

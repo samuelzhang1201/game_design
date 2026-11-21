@@ -81,18 +81,18 @@ func test_keep_pace_drives_each_figure_by_the_map() -> void:
 	assert_eq((anims[0] as AnimationPlayer).speed_scale, 1.0, "at rest it plays as authored")
 
 
-## No installed arm needs a map: the re-authored cavalry MARCH (LOCO-CAV-MARCH, owner ruling
-## 2026-11-13) holds each planted hoof at the canter's own constant 2.4 model m a loop, so it is
-## paced by stride_m like every other arm.
+## No installed arm needs a map: the heavy knight's run (2026-11-21, tools/units3d/cavalry_arp/)
+## holds each planted hoof at the run's own constant 2.4224 model m a loop, so it is paced by
+## stride_m like every other arm.
 func test_no_installed_arm_carries_a_phase_map() -> void:
 	for piece: String in repo.army_art:
 		assert_true(Map3DMarchPhase.of_art(repo.army_art[piece]).is_empty(), piece)
-	assert_almost_eq(float(repo.army_art["cavalry"]["stride_m"]), 2.4, 1e-9)
+	assert_almost_eq(float(repo.army_art["cavalry"]["stride_m"]), 2.4224, 1e-9)
 
 
-## The re-keyed cavalry MARCH keeps its dense keys through the import (cavalry.glb.import bakes at
-## animation/fps 240: 129 keys a loop, of which the importer drops the collinear ones; at 30 Godot
-## re-bakes every track to 17 and the planted hooves slide between keys again).
+## The cavalry MARCH keeps its dense keys through the import (cavalry.glb.import bakes at
+## animation/fps 240: 105 keys a loop, 8 a frame of the 13-frame run, of which the importer drops
+## the collinear ones; at 30 Godot re-bakes every track to 14 and the locked hooves slide between keys).
 func test_the_cavalry_march_keeps_its_dense_keys() -> void:
 	var model: Node = load("res://scenes/models/units/cavalry.tscn").instantiate()
 	var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]

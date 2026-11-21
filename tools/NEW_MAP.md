@@ -11,7 +11,7 @@ committed files byte for byte (checked 2026-09-18).
 
 ## 1. Import and bake — automatic, in this order
 
-1. Put the export in `assets/maps/<id>/` and add a `data/world/maps.csv` row
+1. Put the export in `assets/maps/model_wip/<id>/` (the maps work folder) and add a `data/world/maps.csv` row
    (copy beria's, swap the id; set `is_default` to 1 to make it the game's map).
 2. `G --script res://tools/import_azgaar.gd -- --map-id <id>` — every pack
    table and the index bitmaps.

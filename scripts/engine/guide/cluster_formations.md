@@ -287,7 +287,7 @@ opens (the ordinary day's prisoner steps, reconciliation, `ArmySystem.ensure` an
 sealed as an outer operation; `begin` freezes the march budgets; then works, couriers, the enemy
 and sighting on the frozen day, resealed by `BodyBattle._seal_private` under begin's receipt, a
 departure from cf05's "begin changes nothing"), drives `tactical_day`, then closes (the tactical
-phase's day-end work once: the seat writer `_seat_day`, `LawSystem.reconcile`, `BattleSystem.finish_day`;
+phase's day-end work once: `BattleSystem.finish_day`;
 then `DayResolution.PHASES` after the tactical part through the calendar: supply eaten once, the day
 turned or the month settled; the transaction cleared, reconciled and sealed at the next safe
 boundary). Works run after the march setup, which never reads them. Its complete result adds
@@ -297,10 +297,49 @@ request, writer)` runs an ordinary writer between days (an order, a decree) on a
 the safe boundary and seals it as the next outer operation (its `request` is the receipt, so the same request again is an
 "Already published" no-op; make it unique per act); an unsealed write fails the next
 admission ("Battle endpoint proof mismatch") and the save is kept. Every seal and phase group must
-leave `BodyLifecycle.snapshot` and the cohorts exactly as they were: a phase or writer that moves,
-adds or removes a body (a spawned host, a recruit) or changes personnel
-(desertion, month-end wound recovery) fails closed, because its body writer is not installed yet.
-**Arrival and garrison stand where they are (part B2a).** `ArmyGround.reconcile` is legacy: its
+leave `BodyLifecycle.snapshot` as it was, and the opening, the slices and every `publish` writer
+everyone under arms too: one that moves, adds or removes a body or changes personnel fails closed,
+because its body writer is not installed. People under arms are every cohort but an "assembling" one, so `ARMY_RECRUIT` is an
+ordinary `publish` writer: it reserves people and pays, and gives no one a body. **The close's
+personnel (parts B2c, B2d).** Its ordinary phases change who is fit in the ordinary way: a paid
+assembly completes (`RecruitmentSystem.step_day`: cohorts turn active, a new unit gets its roster
+row, entry and camp), men desert (`Desertion.daily_loss`), and at the month's end the wounded
+recover (`ArmySystem._recover_month`) and foraging and hazards wound (`ArmyConduct.settle_units`,
+`Hazards.settle_regiments`). Legacy heals a unit in a battle only if `BattleGroups.refresh` can
+lay its legacy rows; the body world heals one it dropped the same way (`_battle_heals`: share,
+event and marker; a battle with a frozen round heals no one), after the month's foraging and
+hazards. Bodies follow the fit count, whoever changed it (`_refit`): each land unit whose fit
+differs from the close's start (after the tactical part, so a battle's casualties are not
+refitted here) goes through the placement protocol's "recruit" operation
+(`ArmyGround.body_placement_candidate`, `placement:refit:<sequence>:<unit>`, the next
+`body_placement` sequence, the turned day's safe boundary), from its fit then to its fit now.
+Survivors keep their rows, a loss empties the last rows, growth takes new slots, and a new unit
+starts from no rows at the camp its completion gave it. The protocol admits one unit's change at a
+time, so the changes are replayed in unit order: every changed unit's people and rows set back as
+they were (a new cohort to "assembling"), and every battle holding one wholly back to its rows,
+facings, anchors, geometry and members' slot counters (the legacy recovery's `BattleGroups.refresh`
+rewrites the whole battle), then each unit's people put as they are and placed. A unit that finds
+no room fails the day closed, for good, since the day replays the same. The close's
+guard then lets through those units' rows and slot counters (a new unit, all its bodies) and no
+other body change; its people are the ordinary phases' to write. A fleet gets no bodies. Hosts
+spawn only in `GameState.new_campaign`, whose bodies `BodyLoad.initialize_campaign` places through
+the admission seam, so no day writer spawns one.
+**Each slice's own work (part B2b)** runs in the legacy `TickEngine._resolve_battles` order, owed
+by the control and recorded in the saved cursor `day_resolution.slice_work` ({done: "<slice>:<stage>",
+arrivals: how many of `journal.arrivals` are settled}): `tactical_day` runs whatever the control has
+passed and the cursor has not (`_slice_work`) before each step, so a resumed or raw-stepped
+candidate runs each piece once; a slice's move or the day's end opening without the previous
+slice's finished work fails closed. After a slice's move, `_slice` settles the arrivals not yet
+settled and the seats (`_seat_day`, below), reconciles the laws and walks the king his slice of the
+daily budget (`KingSystem.step_substep`, its own `king_substep_index` cursor), then lets the hosts'
+columns that came up arrive (`EnemyAi.arrival_substep` on the frozen `march_entries`, part B2b2: the
+host's mode and deployment, an arrived column stationed at its actual anchor and its frozen entry
+retired to GARRISON so the body holds from the next slice, its events appended to the journal's
+`host_events` record); after its contacts, a
+unit whose search travel `ArmyTasks.pause_battles` stops leaves the frozen march (`march_entries` and
+`marching_codes` together, or the motion's membership check refuses the day). Metadata only, guarded
+by `_body_change`, resealed by `BodyBattle._seal_private` at the battle boundary (like the opening,
+under begin's receipt) and validated there. **Arrival and garrison stand where they are (part B2a).** `ArmyGround.reconcile` is legacy: its
 `refill` snaps a camped unit's anchor (never its rows) onto the town's point, so the body day never
 calls it. `_seat_day` writes the seats instead, metadata only: each crown land arrival of the day
 (`journal.arrivals`, turned to GARRISON at its actual anchor by the body march) that is in no
@@ -310,14 +349,9 @@ seat is cleared only as the legacy day clears it (its holder gone, its town no l
 holder on the march, `ArmyGround.leave`'s rule), so a holder standing off the town's point keeps it
 (a garrison's rows move in battle); an empty seat goes only to a camped unit standing on the point
 (`ArmyGround._placement_refill`). No anchor or row moves, so arrival and encounter days complete.
-They settle once at the close, not per slice (B2b): a column that arrives and is touched later the
-same day fights in the field, not from its camp; a departing holder's seat is cleared without
-`LawSystem.on_leave` (the order writer's). Tick 0's day 30 fails closed too (the opening month settles through `advance`, and the
+A departing holder's seat is cleared without `LawSystem.on_leave` (the order writer's). Tick 0's day 30 fails closed too (the opening month settles through `advance`, and the
 absolute day falls back to 1). `TickEngine.resolve_day`, `resolve_decision` and `advance` refuse a world with `body_version` (`BODY_WORLD`),
 so no ordinary writer is its alternate authority; no ordinary campaign carries the marker. Still
-not here (B2b..B2e): the ordinary tactical phase's per-slice work (the king's `step_substep`, host
-`arrival_substep`, per-slice seat and law reconciliation — the seats settle once at the close —,
-`ArmyTasks.pause_battles`), body writers for creation (spawn,
-recruit) and non-battle losses, and the march staging the CF04c visual review asks for (whole
+not here (B2e): the march staging the CF04c visual review asks for (whole
 strides, front-first column order, facing written to the heading); the Game bridges are
 ACT-CUTOVER's. Nothing in ordinary dispatch calls the driver.
