@@ -302,15 +302,17 @@ moves, adds or removes a body or changes personnel (desertion, month-end wound r
 closed, because its body writer is not installed yet. **Creation (part B2c).** People under arms
 are every cohort but an "assembling" one, so `ARMY_RECRUIT` is an ordinary `publish` writer: it
 reserves people and pays, and gives no one a body. The close then gives bodies to what
-`RecruitmentSystem.step_day` completed in its supply phase (`_recruits`): each land unit of a
-project completed that day goes through the placement protocol's "recruit" operation
+`RecruitmentSystem.step_day` completed in its supply phase (`_recruits`): each land unit that
+people of a project completed that day joined goes through the placement protocol's "recruit" operation
 (`ArmyGround.body_placement_candidate`, `placement:recruit:<project>:<unit>`, the next
 `body_placement` sequence, the turned day's safe boundary). A reinforced unit's survivors keep
 their rows and growth takes new slots; a new unit starts from no rows at the camp the completion
 gave it. The protocol admits one unit's change at a time, so a day's completions are replayed in
-project order (all stood down to "assembling", then each activated and placed). A unit that finds
-no room fails the day closed. The close's guard exempts exactly those units' bodies and rosters and
-those projects' cohorts; a recruited unit's veterans stay guarded. A fleet gets no bodies. Hosts
+project order (all stood down to "assembling", then each unit's activated and placed). A unit that
+finds no room fails the day closed. Of the recruits the close's guard lets through only this: the
+units' new rows and commander (a new unit, all its bodies) and the cohorts' turn from "assembling"
+to "active". A loss among them the same day, a veteran's or a recruit's, still fails closed. A
+fleet gets no bodies. Hosts
 spawn only in `GameState.new_campaign`, whose bodies `BodyLoad.initialize_campaign` places through
 the admission seam, so no day writer spawns one.
 **Each slice's own work (part B2b)** runs in the legacy `TickEngine._resolve_battles` order, owed

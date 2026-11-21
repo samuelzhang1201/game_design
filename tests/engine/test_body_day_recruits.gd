@@ -139,10 +139,15 @@ func test_recruit_orders_reserve_people_and_completion_places_their_bodies() -> 
 	assert_eq(BodyDayDriver._body_change(state, done, "X", [f.code, raised], cohorts), "")
 	assert_string_contains(BodyDayDriver._body_change(state, done, "X"), "X moved, added or removed a body")
 	assert_string_contains(BodyDayDriver._body_change(state, done, "X", [f.code, raised]), "X changed personnel")
-	var hungry := UnitBodies._copy(done)
-	var veteran: String = hungry.military_rosters[f.code].cohort_ids.filter(func(id: String) -> bool: return id not in cohorts and int(hungry.military_cohorts[id].fit) > 0)[0]
-	hungry.military_cohorts[veteran].fit -= 1
-	assert_string_contains(BodyDayDriver._body_change(state, hungry, "X", [f.code, raised], cohorts), "X changed personnel", "a recruited unit's veterans stay guarded")
+	# Of the recruits only that is let through: a lost veteran or recruit, or a moved unit, is not.
+	var veteran: String = done.military_rosters[f.code].cohort_ids.filter(func(id: String) -> bool: return id not in cohorts and int(done.military_cohorts[id].fit) > 0)[0]
+	for lost: String in [veteran, "recruit:grow:commoners", "recruit:raise:commoners"]:
+		var hungry := UnitBodies._copy(done)
+		hungry.military_cohorts[lost].fit -= 1
+		assert_string_contains(BodyDayDriver._body_change(state, hungry, "X", [f.code, raised], cohorts), "X changed personnel", lost)
+	var shoved := UnitBodies._copy(done)
+	shoved.regiments[f.code].x_m += 1
+	assert_string_contains(BodyDayDriver._body_change(state, shoved, "X", [f.code, raised], cohorts), "X moved, added or removed a body")
 	# Day three is admitted and leaves both units' bodies where they stand.
 	var third := BodyDayDriver.day(repo, done)
 	assert_eq(third.status, "complete", third.reason)
