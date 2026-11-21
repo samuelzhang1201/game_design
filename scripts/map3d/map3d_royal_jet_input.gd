@@ -5,7 +5,7 @@ extends RefCounted
 const Source = preload("res://scripts/map3d/map3d_royal_locomotion_source.gd")
 const Math = preload("res://scripts/map3d/map3d_royal_jet_math.gd")
 # Accepted #244 exact instruction profiles AND recomputable theorem, not guessed ULPs.
-const VERIFIER: String = "37f34e84334c12ed9194539d4e16505e461927ad17fd84553931f2e60ff9dc4f"
+const VERIFIER: String = "f744a364c250df6df14ba4c306711d23502eb2b32a78147685f69f1d1a239a89"
 const COLLECTOR: String = "efe3205cd8d745c4a417c8db0b19ac7865f7e3132fe4754e4409b83368405b28"
 const CAPTURE_SCRIPT: String = "32a552af84726cb5fe921397ab48e2c3d1460e84f0e76cae28a9a4bfac0f502e"
 # Both official builds have identical Animation::_find/_interpolate, slerp,
@@ -13,9 +13,11 @@ const CAPTURE_SCRIPT: String = "32a552af84726cb5fe921397ab48e2c3d1460e84f0e76cae
 const BUILDS: Dictionary = {
 	"ed1daf0bf001b61586d9930840f2f1394092c079": "c7cccbf8fb143e34e02fd6521e09be2c2b974f0d5db080b19071c9c570718ccf",
 	"5b4e0cb0fd279832bbdd69fed5354d4e5ad26f88": "f85bbc6b15e22416c7d797cd60b63286dd67b9cb13498847056c18520ae55a75"}
+# [reviewed libm image ids, instruction-profile digest, theorem digest, libm path]. The Linux ids
+# are runner-image libm rebuilds whose captured code and operands are byte-identical.
 const PROFILES: Dictionary = {
-	"macos-arm64": ["a3fb340f3ed530f48b649d5860f64d35", "7392ed11d47e03ef48984fe3bdd8b557336c6aa458b8bfdc377b4b7423bad65f", "09a05d8d7e98cd2c303e0a60f22a468371d13f91ef4796692796cc1c7684dea4", "/usr/lib/system/libsystem_m.dylib"],
-	"linux-x86_64": ["cfae91b4a956116b64e2a41607671c1eeb3cc292", "a9e22f227c9a3a114f4fe0cd53a6777397d402a4caa8575c407186687fe9e90a", "fd4d9b804425c7009093b235d9da17eb7fcd1064a9afb7eff900e0a85e44aea8", "/usr/lib/x86_64-linux-gnu/libm.so.6"]}
+	"macos-arm64": [["a3fb340f3ed530f48b649d5860f64d35"], "7392ed11d47e03ef48984fe3bdd8b557336c6aa458b8bfdc377b4b7423bad65f", "09a05d8d7e98cd2c303e0a60f22a468371d13f91ef4796692796cc1c7684dea4", "/usr/lib/system/libsystem_m.dylib"],
+	"linux-x86_64": [["cfae91b4a956116b64e2a41607671c1eeb3cc292", "bbeba405e9eab172ef5b7f215c698d58eb3cc292"], "a9e22f227c9a3a114f4fe0cd53a6777397d402a4caa8575c407186687fe9e90a", "fd4d9b804425c7009093b235d9da17eb7fcd1064a9afb7eff900e0a85e44aea8", "/usr/lib/x86_64-linux-gnu/libm.so.6"]}
 
 
 static func validate(source: Variant, identity: Variant, arithmetic: Variant) -> Dictionary:
@@ -100,7 +102,10 @@ static func _proof_check(arithmetic: Variant, identity: Dictionary) -> Dictionar
 	var engine: Dictionary = capture.engine
 	var acquisition: Dictionary = capture.acquisition
 	var platform: Variant = native.get("platform")
-	if not platform is String or not PROFILES.has(platform) or receipt.get("schema") != "royal-native-arithmetic/1" or receipt.get("status") != "closed_scalar_value_proof" or receipt.get("verifier_sha256") != VERIFIER or receipt.get("profile") != platform + "/" + PROFILES[platform][0]:
+	if not platform is String or not PROFILES.has(platform) or receipt.get("schema") != "royal-native-arithmetic/1" or receipt.get("status") != "closed_scalar_value_proof" or receipt.get("verifier_sha256") != VERIFIER or not receipt.get("profile") is String or not receipt.profile.begins_with(platform + "/"):
+		return {"ok": false, "reason": "arithmetic_profile"}
+	var libm_id: String = receipt.profile.trim_prefix(platform + "/")
+	if libm_id not in PROFILES[platform][0]:
 		return {"ok": false, "reason": "arithmetic_profile"}
 	if receipt.get("scope") != "scalar values only; no derivative, source-domain, JETS or physical E acceptance" or receipt.get("assumptions") != "IEEE binary32/binary64 basic operations/FMA/sqrt; all rounding directions; explicit FTZ allowances; intermediates below 2^100":
 		return {"ok": false, "reason": "arithmetic_receipt_assumptions"}
@@ -157,7 +162,7 @@ static func _proof_check(arithmetic: Variant, identity: Dictionary) -> Dictionar
 		if not native.imports[i] is Array or native.imports[i].is_empty():
 			return {"ok": false, "reason": "arithmetic_imports"}
 		for record: Variant in native.imports[i]:
-			if not record is Dictionary or record.get("symbol") != name or record.get("image_id") != PROFILES[platform][0] or record.get("image_path") != PROFILES[platform][3] or record.get("dlsym_equal") != (not (platform == "linux-x86_64" and name == "acosf")) or not _address(record.get("target")) or not _address(record.get("image_base")):
+			if not record is Dictionary or record.get("symbol") != name or record.get("image_id") != libm_id or record.get("image_path") != PROFILES[platform][3] or record.get("dlsym_equal") != (not (platform == "linux-x86_64" and name == "acosf")) or not _address(record.get("target")) or not _address(record.get("image_base")):
 				return {"ok": false, "reason": "arithmetic_import_binding"}
 			if record.target.hex_to_int() - record.image_base.hex_to_int() != record.get("entry_offset"):
 				return {"ok": false, "reason": "arithmetic_import_address"}

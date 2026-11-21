@@ -21,7 +21,7 @@ import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-RELATIVE_SHA = 'd141a909f66b92739b438b744e091c4aec2f8ce10f2f8eec79cca1d4fdeee873'
+RELATIVE_SHA = '57dc244f11d654132c52632a6c7991d114e7c9d53d5106c581b308a5beca9a0d'
 
 
 @lru_cache(maxsize=1)

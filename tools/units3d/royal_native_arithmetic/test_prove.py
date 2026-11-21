@@ -17,14 +17,16 @@ if TOOL.exists():
     SPEC.loader.exec_module(proof)
 
 
-def fixture(platform="macos-arm64"):
+def fixture(platform="macos-arm64", libm_id=None):
     """Synthetic identity envelope; native integration supplies the actual process."""
     records = []
     linux = platform == "linux-x86_64"
     profiles = proof.LINUX_PROFILE if linux else proof.MAC_PROFILE
     image_id = "" if linux else "01" * 16
+    if libm_id is None:
+        libm_id = proof.LINUX_IDS[0] if linux else proof.MAC_ID
     for name, profile in profiles.items():
-        records.append([dict(profile, symbol=name, image_id=proof.LINUX_ID if linux else proof.MAC_ID,
+        records.append([dict(profile, symbol=name, image_id=libm_id,
                              image_path="/usr/lib/x86_64-linux-gnu/libm.so.6" if linux else "/usr/lib/system/libsystem_m.dylib",
                              dlsym_equal=not (linux and name == "acosf"),
                              image_base="0x100000", slot="0x200000",
@@ -128,13 +130,29 @@ class NativeArithmeticTests(unittest.TestCase):
             proof.linux_acos_bound(profile)
 
     def test_linux_closed_receipt_includes_wrapper_endpoint_and_rounding_paths(self):
-        capture = fixture("linux-x86_64")
-        receipt = proof.prove(capture)
-        self.assertEqual(receipt["profile"], "linux-x86_64/" + proof.LINUX_ID)
-        for name, upper in [("sin", F(2) ** -48), ("sinf", F(2) ** -22), ("acosf", F(2) ** -22)]:
-            self.assertGreater(F(receipt["theorems"][name]["derived_absolute_error"]), 0)
-            self.assertLessEqual(F(receipt["theorems"][name]["derived_absolute_error"]), upper)
-        proof.verify_receipt(receipt, capture)
+        theorems = []
+        for libm_id in proof.LINUX_IDS:
+            capture = fixture("linux-x86_64", libm_id)
+            receipt = proof.prove(capture)
+            self.assertEqual(receipt["profile"], "linux-x86_64/" + libm_id)
+            for name, upper in [("sin", F(2) ** -48), ("sinf", F(2) ** -22), ("acosf", F(2) ** -22)]:
+                self.assertGreater(F(receipt["theorems"][name]["derived_absolute_error"]), 0)
+                self.assertLessEqual(F(receipt["theorems"][name]["derived_absolute_error"]), upper)
+            proof.verify_receipt(receipt, capture)
+            theorems.append(receipt["theorems"])
+        # Each admitted build carries the same captured bytes, so the same exact theorem.
+        self.assertEqual(theorems[0], theorems[1])
+
+    def test_linux_unknown_or_mixed_libm_build_rejects(self):
+        for libm_id in ("00" * 20, proof.MAC_ID, ""):
+            with self.assertRaisesRegex(proof.Rejected, "unknown_profile_sin"):
+                proof.prove(fixture("linux-x86_64", libm_id))
+        with self.assertRaisesRegex(proof.Rejected, "unknown_profile_sin"):
+            proof.prove(fixture("macos-arm64", proof.LINUX_IDS[1]))
+        bad = fixture("linux-x86_64", proof.LINUX_IDS[0])
+        bad["native"]["imports"][2][0]["image_id"] = proof.LINUX_IDS[1]
+        with self.assertRaisesRegex(proof.Rejected, "mixed_profile_acosf"):
+            proof.prove(bad)
 
     def test_linux_control_table_coefficient_and_resolution_mutations_reject(self):
         original = fixture("linux-x86_64")

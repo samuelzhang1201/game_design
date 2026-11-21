@@ -82,7 +82,7 @@ func test_new_campaign_spawns_every_host() -> void:
 		var code := String(h["host_code"])
 		assert_true(s.ai_hosts.has(code), code)
 		assert_eq(s.ai_hosts[code], {"mode": "ASSEMBLE", "target_kind": "", "target_id": "",
-			"think_day": 0, "plunder": 0, "siege_progress": 0}, "the mind of " + code)
+			"think_day": 0, "plunder": 0}, "the mind of " + code)
 		var start := ArmySystem.pack_to_metres(repo, Vector2(float(h["start_x"]), float(h["start_y"])))
 		var first := true
 		for rc: String in EnemyAi.host_units(repo, s, h):
