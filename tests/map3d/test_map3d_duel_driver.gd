@@ -350,3 +350,25 @@ func test_a_paused_step_stands_still() -> void:
 	driver.run(_battle(a, b), DT, false, TUNE)
 	assert_eq((a[0]["anim"] as AnimationPlayer).speed_scale, 0.0, "its feet stop")
 	assert_almost_eq(float(child["walk"]["t0"]), 1.0 + DT, 0.00001, "and its walk waits with the clock")
+
+
+func test_a_waiting_figure_walking_up_into_a_fallen_row_duels_on() -> void:
+	# the engine trims a loss from the tail: the waiting flank man takes the fallen duellist's row
+	# (Map3DBattleGroups.fall_swap: his child now stands for A:0, walking up), and must duel there,
+	# never be released by his old key nor handed back to his chain on arrival
+	var a := [_fig("A", 0, Vector2(0, 10)), _fig("A", 1, Vector2(5, 10))]
+	var b := [_fig("B", 0, Vector2(0, -10))]
+	var driver := Map3DDuelDriver.new()
+	driver.run(_battle(a, b), DT, true, TUNE)
+	var waiting: Dictionary = a[1]
+	(a[0]["anim"] as AnimationPlayer).set_meta("fallen", true)  # the body
+	waiting["child"]["step_up"] = true
+	var walker := {"key": "A:0", "code": "A", "slot": 0, "anim": waiting["anim"], "child": waiting["child"],
+		"xz": Vector2(0, 10), "h": 1.0, "art": ART, "piece": {}}
+	driver.run(_battle([walker], b), DT, true, TUNE)
+	assert_false(waiting["child"].get("step_facing", false), "his walk up turns into his way: no release by his old key")
+	var turn: Dictionary = driver._pairs["A:0|B:0"]["turn"]
+	assert_true(is_same(turn["s"], walker["anim"]) or is_same(turn["d"], walker["anim"]), "the pair's turn plays on him, not the body")
+	waiting["child"]["walking"] = false  # arrived
+	driver.run(_battle([walker], b), DT, true, TUNE)
+	assert_true(driver.is_duelling(walker["anim"]), "and he is not handed back to his chain on arrival")

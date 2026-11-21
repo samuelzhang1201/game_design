@@ -183,16 +183,18 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 		if not wanted.has(key):
 			for f: Dictionary in _pairs[key]["figs"]:
 				if waiting.has(f["key"]) and is_instance_valid(f["anim"]) and (f["anim"] as AnimationPlayer).has_meta("duel"):
-					_unstep(f)  # its partner gone: it steps back and waits, still off its chain
+					Map3DDuelMelee.unstep(f)  # its partner gone: it steps back and waits, still off its chain
 					placed[f["code"]] = true
 				elif _release(f):
 					placed[f["code"]] = true
 					_stepping.append(f)
 			_pairs.erase(key)
+	var kept := func(f: Dictionary) -> bool:  # by its figure, not its key (a fall swap gives it another row)
+		return waiting.values().any(func(w: Dictionary) -> bool: return is_same(w["f"]["anim"], f["anim"])) \
+			or wanted.values().any(func(pair: Array) -> bool: return pair.any(func(g: Dictionary) -> bool: return is_same(g["anim"], f["anim"])))
 	for key: String in _waiting:
 		var f: Dictionary = _waiting[key]
-		if not waiting.has(key) and not wanted.values().any(func(pair: Array) -> bool: return pair.any(
-				func(g: Dictionary) -> bool: return String(g["key"]) == key)) and _release(f):
+		if not kept.call(f) and _release(f):
 			placed[f["code"]] = true
 			_stepping.append(f)
 	_waiting = {}
@@ -203,7 +205,7 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 		if was_stepping or not (f["anim"] as AnimationPlayer).has_meta("duel"):
 			_stepping = _stepping.filter(func(w: Dictionary) -> bool: return not is_same(w["anim"], f["anim"]))
 			_claim(f)
-		if _face(f, waiting[key]["foes"]):
+		if Map3DDuelMelee.face(f, waiting[key]["foes"]):
 			placed[f["code"]] = true
 		if not _pace(f, delta, running):  # it turns (or steps back) paced; standing, it keeps the clock
 			(f["anim"] as AnimationPlayer).speed_scale = 1.0 if running else 0.0
@@ -213,12 +215,15 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 			# each pair opens after its own hashed guard, so a front never strikes in unison
 			_pairs[key] = {"figs": figs, "t": -Map3DMarchLag.unit(key + "|open") * float(tune["open_max"]), "n": 0}
 			for f: Dictionary in figs:
-				_stepping = _stepping.filter(func(w: Dictionary) -> bool: return not is_same(w["anim"], f["anim"]))
 				_claim(f)
 			_begin(_pairs[key], key, tune)
+		for f: Dictionary in figs:  # a paired figure never walks back on its own
+			_stepping = _stepping.filter(func(w: Dictionary) -> bool: return not is_same(w["anim"], f["anim"]))
+		var was: Array = _pairs[key]["figs"]
 		_pairs[key]["figs"] = figs
-		if figs.any(func(f: Dictionary) -> bool: return not (f["anim"] as AnimationPlayer).has_meta("duel")):
-			for f: Dictionary in figs:  # a figure built again (its piece rebuilt): claimed, the turn restarted on it
+		if figs.any(func(f: Dictionary) -> bool: return not (f["anim"] as AnimationPlayer).has_meta("duel")) \
+				or not is_same(was[0]["anim"], figs[0]["anim"]) or not is_same(was[1]["anim"], figs[1]["anim"]):
+			for f: Dictionary in figs:  # a figure built again, or another in its row (a fall): claimed, the turn restarted on it
 				_claim(f)
 				(f["child"] as Dictionary).erase("knock_offset")
 			_pairs[key]["t"] = 0.0
@@ -275,30 +280,6 @@ func _wait_for_bodies(figs: Array, tune: Dictionary) -> void:
 			if String(body["key"]) == String(f["key"]) and float(body["t"]) \
 					< maxf(clip_s, clip_s + float(tune["fall_hold"]) + float(tune["fall_fade"]) - walk_s):
 				child["walk"]["t0"] = float((f["piece"] as Dictionary).get("clock", 0.0))
-
-
-## A figure whose partner is gone steps back to its stand, facing its foe, its knock cleared.
-static func _unstep(f: Dictionary) -> void:
-	var child: Dictionary = f["child"]
-	child.erase("duel_offset")
-	child.erase("knock_offset")
-	child["step_facing"] = true
-	child["walking"] = true  # its walk back starts when its piece is placed (paced as it waits)
-
-
-## A waiting figure turns toward the nearest of `foes`; whether its facing changed.
-static func _face(f: Dictionary, foes: Array) -> bool:
-	var me: Vector2 = f["xz"]
-	var near: Vector2 = foes[0]["xz"]
-	for g: Dictionary in foes:
-		if me.distance_squared_to(g["xz"]) < me.distance_squared_to(near):
-			near = g["xz"]
-	var child: Dictionary = f["child"]
-	var yaw := Map3DUnits.facing_yaw(near - me, float(child.get("stand_deg", 0.0)))
-	if child.has("duel_yaw") and is_equal_approx(float(child["duel_yaw"]), yaw):
-		return false
-	child["duel_yaw"] = yaw
-	return true
 
 
 static func _claim(f: Dictionary) -> void:
@@ -438,7 +419,7 @@ func _advance(p: Dictionary, key: String, delta: float, running: bool, tune: Dic
 			(f["anim"] as AnimationPlayer).speed_scale = 1.0 if running else 0.0
 	if not running:
 		return ""  # paused: the turn, the hold and the knock stand
-	var knocked := _knock(p, delta, tune)
+	var knocked := Map3DDuelMelee.knock(p, delta, tune)
 	if stepping:
 		return knocked  # still stepping in: the turn waits
 	var use := minf(hold, delta)  # a hit-stop's remainder first: the turn clock stands through it
@@ -450,7 +431,7 @@ func _advance(p: Dictionary, key: String, delta: float, running: bool, tune: Dic
 		if not tt["contacted"] and t >= float(tt["contact_at"]):
 			tt["contacted"] = true  # the blow meets: the hit-stop holds from here, the overshoot spent on it
 			var over := t - float(tt["contact_at"])
-			_contact(p, tt, over, tune)
+			Map3DDuelMelee.contact(p, tt, over, tune, _impacts, bursts)
 			hold = float(tune.get("hitstop", 0.0))
 			use = minf(hold, over)
 			hold -= use
@@ -472,62 +453,8 @@ func _advance(p: Dictionary, key: String, delta: float, running: bool, tune: Dic
 		p["n"] = int(p["n"]) + 1
 		_begin(p, key, tune)
 	p["hold"] = hold
-	_speed(anims, 0.0 if hold > 0.0 else 1.0)
+	Map3DDuelMelee.speed(anims, 0.0 if hold > 0.0 else 1.0)
 	return knocked if knocked != "" else String(p.get("impact", {}).get("code", ""))
-
-
-static func _speed(anims: Array, scale: float) -> void:
-	for anim: AnimationPlayer in anims:
-		if is_instance_valid(anim):
-			anim.speed_scale = scale
-
-
-## The blow of turn `tt` meets, `over` seconds ago: told as an impact; near the
-## camera the struck figure is knocked back and a burst shows at the meeting point.
-func _contact(p: Dictionary, tt: Dictionary, over: float, tune: Dictionary) -> void:
-	var s: Dictionary = tt["sf"]
-	var d: Dictionary = tt["df"]
-	var h := maxf(float(s["h"]), float(d["h"]))
-	var at := (_drawn(s) + _drawn(d)) / 2.0 + Vector3.UP * h * float(tune.get("at_h", 0.5))  # where blade meets shield
-	var kind := String(tt["kind"])
-	_impacts.append({"kind": kind, "at": at, "striker": s, "struck": d})
-	var old: Dictionary = p.get("impact", {})
-	if not old.is_empty():
-		(old["child"] as Dictionary).erase("knock_offset")
-	p.erase("impact")
-	if tune.has("eye") and at.distance_to(tune["eye"]) > float(tune.get("near_m", INF)):
-		return  # far out: the hit-stop alone
-	var away := (d["xz"] as Vector2) - (s["xz"] as Vector2)
-	p["impact"] = {"child": d["child"], "code": d["code"], "since": over,
-		"away": away.normalized() * float(tune.get("knock_h", 0.0)) * h * (float(tune.get("block_knock", 1.0)) if kind == "BLOCK" else 1.0)}
-	if bursts != null:
-		bursts.burst(kind, at, h)
-
-
-## The knock-back's clock (real seconds since contact) and its offset on the
-## struck figure's child; the struck piece's code while it moved, else "".
-func _knock(p: Dictionary, delta: float, tune: Dictionary) -> String:
-	var imp: Dictionary = p.get("impact", {})
-	if imp.is_empty():
-		return ""
-	imp["since"] = float(imp["since"]) + delta
-	var k := Map3DImpact.knock(float(imp["since"]), float(tune["knock_out"]), float(tune["knock_back"]))
-	var child: Dictionary = imp["child"]
-	if k <= 0.0 and float(imp["since"]) > 0.0:
-		child.erase("knock_offset")
-		p.erase("impact")
-	else:
-		child["knock_offset"] = (imp["away"] as Vector2) * k
-	return String(imp["code"])
-
-
-## Where a figure is drawn now (its group node), else its stand point at ground 0.
-static func _drawn(f: Dictionary) -> Vector3:
-	var node: Variant = (f["child"] as Dictionary).get("node")
-	if is_instance_valid(node):
-		return (node as Node3D).global_position
-	var xz: Vector2 = (f["xz"] as Vector2) + (f["child"] as Dictionary).get("duel_offset", Vector2.ZERO)
-	return Vector3(xz.x, 0.0, xz.y)
 
 
 static func _length(anim: AnimationPlayer, clip: String) -> float:
