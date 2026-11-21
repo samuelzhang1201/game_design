@@ -75,17 +75,16 @@ func test_locomotion_hand_computed_l_shared_time() -> void:
 		assert_eq(p.get("version"), 2, str(p))
 		if not p.has("version"): continue
 		var move: Dictionary = p.moves[0]
-		if budget == 8:
-			assert_ne(move.end, [103, 104], "1075000 quanta cannot fit")
-			assert_eq(move.ops.back().t1_q, 1000000)
-			continue
+		# A row in no battle ends facing its last leg (90): no pivot back, so 3/8 + 0.1 + 4/8 of
+		# the slice fits at budget 8, where the pivot back made it 1.075.
 		assert_eq(move.used_m, 7)
 		assert_eq(move.end, [103, 104])
-		var endpoints: Array = [300000, 400000, 800000, 900000, 1000000] if budget == 10 else [150000, 250000, 450000, 550000, 1000000]
+		assert_eq(move.final_facing_deg, 90)
+		var endpoints: Array = {10: [300000, 400000, 800000, 1000000], 8: [375000, 475000, 975000, 1000000], 20: [150000, 250000, 450000, 1000000]}[budget]
 		assert_eq(move.ops.map(func(op: Dictionary) -> int: return int(op.t1_q)), endpoints)
-		assert_eq(move.ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "pivot", "hold"])
+		assert_eq(move.ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "hold"])
 		if budget == 10:
-			for example: Array in [[350000, 103.0, 100.0, 45000000.0, "pivot"], [500000, 103.0, 101.0, 90000000.0, "move"], [850000, 103.0, 104.0, 45000000.0, "pivot"]]:
+			for example: Array in [[350000, 103.0, 100.0, 45000000.0, "pivot"], [500000, 103.0, 101.0, 90000000.0, "move"], [850000, 103.0, 104.0, 90000000.0, "hold"]]:
 				var sample: Dictionary = _api().call("sample_locomotion_candidate", {"version": 2, "moves": [move]}, example[0])
 				assert_eq(sample.get("status"), "complete", str(sample))
 				if sample.get("rows", []).is_empty(): continue

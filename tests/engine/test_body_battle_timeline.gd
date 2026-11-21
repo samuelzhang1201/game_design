@@ -54,9 +54,12 @@ func test_real_timeline_pivot_prefix_and_boundary_json_equality() -> void:
 		assert_eq(planned.status, "complete", planned.reason)
 		if planned.plan.is_empty(): continue
 		var move: Dictionary = planned.plan.motion.moves[0]
+		# The row prefix still reserves a pivot back (ArmySystem._body_locomotion_slice), so 51 m
+		# walks 50; the row, in no battle, then ends facing its leg (90) and holds there.
 		assert_eq(move.used_m, 50)
-		assert_eq(move.ops.map(func(op: Dictionary) -> String: return op.kind), ["pivot", "move", "pivot"])
+		assert_eq(move.ops.map(func(op: Dictionary) -> String: return op.kind), ["pivot", "move", "hold"])
 		assert_eq(move.ops.map(func(op: Dictionary) -> int: return op.t1_q), [250000, 750000, 1000000])
+		assert_eq(move.final_facing_deg, 90)
 		var committed := BodyBattleMotion.commit_candidate(f.repo, f.state, planned.plan, _boundary(f))
 		assert_eq(committed.status, "complete", committed.reason)
 		if committed.candidate == null: continue
