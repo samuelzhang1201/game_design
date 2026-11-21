@@ -59,9 +59,10 @@ func test_loading_legacy_siege_checks_actual_deployment_without_replaying_day() 
 	if not loaded:
 		return
 	assert_eq(Game.state.ai_hosts[host]["mode"], "DEPLOYING")
-	assert_eq(int(Game.state.ai_hosts[host]["siege_progress"]), 250)
-	assert_eq(int(Game.state.ai_hosts[host]["siege_days"]), 4)
-	assert_eq(int(Game.state.ai_hosts[host]["assault"]), 0)
+	assert_eq(int(SiegeSystem.record_of(Game.state, host).get("progress", 0)), 250)
+	assert_eq(int(SiegeSystem.record_of(Game.state, host).get("days", 0)), 4)
+	assert_eq(int(SiegeSystem.record_of(Game.state, host).get("assault", 0)), 0)
+	assert_eq(int(SiegeSystem.record_of(Game.state, host).get("assault_due", 0)), 1)
 	assert_eq(Game.state.foes, before_foes, "loading does not move or feed columns")
 	assert_eq(Game.state.day_resolution, journal, "completed daily work is not replayed")
 	assert_eq(Game.state.day, state.day)

@@ -335,7 +335,7 @@ func test_capture_pays_the_cost_of_the_loss() -> void:
 	s.metrics["treasury"] = 10000.0
 	s.event_state["scheduled"] = []
 	var town := _besiege(s, main)
-	s.ai_hosts[main]["siege_progress"] = 1000
+	SiegeRecord.ensure_for(repo, s, main)["progress"] = 1000
 	var ev := SiegeSystem.settle_day(repo, s, [])
 	assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD", "the town fell")
 	assert_eq(int(s.metrics["treasury"]), 8500, "and the crown paid for it")
@@ -379,7 +379,7 @@ func test_recapture_refunds_nothing() -> void:
 	var town := _besiege(s, main)
 	var cell := EnemyAi.target_cell(repo, s, "town", town)
 	var was := MapManors.owner_of(repo, s, cell)
-	s.ai_hosts[main]["siege_progress"] = 1000
+	SiegeRecord.ensure_for(repo, s, main)["progress"] = 1000
 	SiegeSystem.settle_day(repo, s, [])
 	var after := [int(s.metrics["treasury"]), int(s.metrics["peasant_contentment"]), _opinions(s),
 		_log_of(s, "metrics.treasury", "defeat").size(), s.town_losses.size()]
@@ -404,7 +404,7 @@ func test_campaign_continues_after_losing_a_town() -> void:
 	s.event_state["scheduled"] = []
 	s.pending_event = {}
 	_besiege(s, main)
-	s.ai_hosts[main]["siege_progress"] = 1000
+	SiegeRecord.ensure_for(repo, s, main)["progress"] = 1000
 	SiegeSystem.settle_day(repo, s, [])
 	assert_eq(s.town_losses.size(), 1, "a town is lost")
 	var tick0 := s.tick

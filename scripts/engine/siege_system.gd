@@ -8,25 +8,23 @@ extends RefCounted
 ##   step  = siege_rate x A / (A + D)        (0 when A + D == 0)
 ##   gain  = step, + step x siege_starve_bonus_permille / 1000 while the town
 ##           starves (its own stores AND its garrison's carried ones spent)
-##   siege_progress (of 1000, on the leading host's mind) += gain
+##   progress (of 1000, on the town's record in GameState.sieges) += gain
 ##
 ## A = the besiegers' columns at the town, ArmySystem.power "attack"; D = the
 ## garrison's ArmySystem.power "defend" (the town's works are inside it). Every
 ## siege_assault_days days of siege the host STORMS the town: the assault is the
-## ordinary town battle (Ruling 3), let through BattleSystem by the mind's
-## `assault` flag; each of its rounds moves the siege by its tier's `siege`
+## ordinary town battle (Ruling 3), let through BattleSystem by the record's
+## `assault` flag (assault_armed); each of its rounds moves the siege by its tier's `siege`
 ## column (data/battle/battle_outcomes.csv). At 1000, or with the garrison slain to the
 ## last man, the town falls — at the MANOR level (capture): the province, its
 ## border and its capital never move. Whole numbers, host code order, no random
 ## number.
 ##
-## Mind fields (GameState.ai_hosts[h], saved, whole numbers and strings):
-## siege_progress, siege_days (days sat), siege_town (the town besieged, kept
-## until the siege's end is told), assault (1: tomorrow's battles may storm),
-## assault_due (an assault owed and not yet fought), starved (1: the town's
-## hunger was told); on a host that took a town, occupied (manor cell as a
-## string -> the house that held it before) and occupied_house (the house it
-## gave them to).
+## The figures live on the town's record (SiegeRecord, GameState.sieges:
+## progress, days, assault, assault_due, starved); a besieger's mind keeps
+## only siege_id, until the siege's end is told. On a host that took a town,
+## occupied (manor cell as a string -> the house that held it before) and
+## occupied_house (the house it gave them to).
 
 const SIEGE := "SIEGE"
 const HOLD := "HOLD"
@@ -57,15 +55,24 @@ static func day_gain(atk: int, dfn: int, rate: int, hungry: bool, bonus_permille
 	return g
 
 
-## Clears a mind's siege figures (progress, days, the assault); `siege_town`
-## stays for settle_day to tell the siege's end. EnemyAi.set_mode calls it
-## whenever a host leaves SIEGE — the one place a siege's figures are cleared.
-static func clear(mind: Dictionary) -> void:
-	mind["siege_progress"] = 0
-	mind["siege_days"] = 0
-	mind["assault"] = 0
-	mind["assault_due"] = 0
-	mind["starved"] = 0
+## The host leaves its town's record (SiegeRecord.leave): the figures reset
+## once no host is left; `siege_id` stays for settle_day to tell the siege's
+## end. EnemyAi.set_mode calls it whenever a host leaves SIEGE or DEPLOYING —
+## the one place a siege's figures are cleared.
+static func clear(state: GameState, host: String) -> void:
+	SiegeRecord.leave(state, host)
+
+
+## The record the host's mind names (live), {} for none.
+static func record_of(state: GameState, host: String) -> Dictionary:
+	return SiegeRecord.of_host(state, host)
+
+
+## True when the host is in its record and the record's assault flag is up:
+## tomorrow's battles may storm the town.
+static func assault_armed(state: GameState, host: String) -> bool:
+	var rec := SiegeRecord.of_host(state, host)
+	return not rec.is_empty() and host in (rec["hosts"] as Array) and int(rec["assault"]) == 1
 
 
 ## True while any host sits in SIEGE before `town`.
@@ -201,9 +208,9 @@ static func news(events: Array) -> Array:
 ##  1. a reserve follows its main host: out of a SIEGE when it goes home
 ##     (WITHDRAW, RETREAT) or takes the town (HOLD), out of a HOLD when it goes
 ##     home;
-##  2. each town's siege, by its leading host (lead_of; it takes over any
-##     figures another besieger kept — a reserve that sat down first — and a
-##     reserve beside its main host adds its columns): the town no longer the
+##  2. each town's siege, by its leading host (lead_of; every besieger joins
+##     the town's one record, SiegeRecord.ensure_for — a reserve that sat down
+##     first opened it — and a reserve beside its main host adds its columns): the town no longer the
 ##     crown's → the besiegers WITHDRAW (no progress, no capture); today's
 ##     assault rounds (a tier `repulsed`: less siege_assault_fail_permille,
 ##     never below 0; `breach`, or the besiegers keeping the field: 1000); the
@@ -243,7 +250,7 @@ static func settle_day(repo: DataRepository, state: GameState, battle_events: Ar
 		else:
 			if not (mind.get("occupied", {}) as Dictionary).is_empty():
 				_liberate(repo, state, h, mode.to_lower(), events)
-			if String(mind.get("siege_town", "")) != "":
+			if mind.has("siege_id"):
 				_lifted(repo, state, h, mode.to_lower(), events)
 	return events
 
@@ -274,8 +281,9 @@ static func capture(repo: DataRepository, state: GameState, host_code: String, e
 	var b: Dictionary = repo.burgs[town]
 	var label := String(b.get("label", town))
 	var reason := "taken by %s: siege of %s" % [host_label(repo, host_code), label]
-	var days := int(mind.get("siege_days", 0))
-	var progress := int(mind.get("siege_progress", 0))
+	var rec: Dictionary = state.sieges.get(SiegeRecord.of_town(state, town), {})
+	var days := int(rec.get("days", 0))
+	var progress := int(rec.get("progress", 0))
 	var hosts := besiegers(repo, state, town)
 	# the assault under way ends with the town
 	for bt: Dictionary in state.battles.duplicate():
@@ -303,7 +311,7 @@ static func capture(repo: DataRepository, state: GameState, host_code: String, e
 			out += 1
 	for h: String in hosts:
 		EnemyAi.set_mode(state, h, HOLD, "took " + label, events)
-		state.ai_hosts[h]["siege_town"] = ""
+		SiegeRecord.drop(state, h)
 	# what the fall costs the crown, once the manors have moved (spec §6)
 	events.append_array(DefeatSystem.on_town_lost(repo, state, town, host_code))
 	return {"kind": "siege_fallen", "host": host_code, "town": town, "day": state.absolute_day(),
@@ -376,7 +384,7 @@ static func follow_main(repo: DataRepository, state: GameState, events: Array) -
 		var mode := String(state.ai_hosts[h]["mode"])
 		if mode == SIEGE and main_mode == HOLD:
 			EnemyAi.set_mode(state, h, HOLD, "holds the town with the main host", events)
-			state.ai_hosts[h]["siege_town"] = ""
+			SiegeRecord.drop(state, h)
 		elif mode in [EnemyAi.MODE_DEPLOYING, SIEGE, HOLD] and main_mode in [WITHDRAW, RETREAT]:
 			_go_home(repo, state, h, main_mode, "the main host is going home", events)
 
@@ -387,28 +395,6 @@ static func _go_home(repo: DataRepository, state: GameState, host_code: String, 
 		events: Array) -> void:
 	EnemyAi.set_mode(state, host_code, mode, why, events)
 	EnemyAi.march_host(repo, state, host_code)
-
-
-## The lead host takes over what another besieger of the town kept (the
-## reserve that sat down first): the most progress and days, an owed assault,
-## the hunger told; the other keeps none.
-static func _adopt(state: GameState, lead: String, hosts: Array) -> void:
-	var mind: Dictionary = state.ai_hosts[lead]
-	for x: String in hosts:
-		if x == lead:
-			continue
-		var m: Dictionary = state.ai_hosts[x]
-		if int(m.get("siege_days", 0)) == 0 and int(m.get("siege_progress", 0)) == 0:
-			continue
-		mind["siege_progress"] = maxi(int(mind.get("siege_progress", 0)), int(m.get("siege_progress", 0)))
-		mind["siege_days"] = maxi(int(mind.get("siege_days", 0)), int(m.get("siege_days", 0)))
-		mind["assault_due"] = maxi(int(mind.get("assault_due", 0)), int(m.get("assault_due", 0)))
-		mind["starved"] = maxi(int(mind.get("starved", 0)), int(m.get("starved", 0)))
-		m["siege_progress"] = 0
-		m["siege_days"] = 0
-		m["assault_due"] = 0
-		m["starved"] = 0
-		m["siege_town"] = ""
 
 
 ## One town's siege day, kept by its leading host `h`.
@@ -426,15 +412,18 @@ static func _siege_day(repo: DataRepository, state: GameState, h: String, battle
 			_go_home(repo, state, x, WITHDRAW, "the town is no longer the enemy's to take", events)
 		_lifted(repo, state, h, "lost", events)
 		for x: String in hosts:
-			state.ai_hosts[x]["siege_town"] = ""
+			SiegeRecord.drop(state, x)
 		return
-	_adopt(state, h, hosts)
-	mind["siege_town"] = town
-	var progress := int(mind.get("siege_progress", 0))
+	# one record a town: the lead joins it first, then every besieger (a
+	# reserve that sat down first opened it; its figures carry on)
+	var rec := SiegeRecord.ensure_for(repo, state, h)
+	for x: String in hosts:
+		SiegeRecord.ensure_for(repo, state, x)
+	var progress := int(rec["progress"])
 	# today's assault, round by round
 	var a := _assault_day(repo, state, town, hosts, battle_events)
 	if bool(a["fought"]):
-		mind["assault_due"] = 0
+		rec["assault_due"] = 0
 	if bool(a["breach"]):
 		progress = 1000
 	elif int(a["checks"]) > 0:
@@ -443,15 +432,15 @@ static func _siege_day(repo: DataRepository, state: GameState, h: String, battle
 		progress -= lost
 		events.append({"kind": "siege_repulsed", "host": h, "town": town, "day": today, "progress": progress,
 			"lost": lost})
-	mind["siege_progress"] = progress
+	rec["progress"] = progress
 	if garrison_fit(repo, state, town) == 0:
 		# An established siege remains an occupation order when its defenders
 		# depart. A camp in the outer ring has not yet occupied the town.
 		if _at_gate(repo, state, town, hosts):
 			_fall(repo, state, h, hosts, events)
 			return
+		rec["assault"] = 0
 		for x: String in hosts:
-			state.ai_hosts[x]["assault"] = 0
 			EnemyAi.march_host(repo, state, x)
 		return
 	if progress >= 1000:
@@ -462,27 +451,25 @@ static func _siege_day(repo: DataRepository, state: GameState, h: String, battle
 	var hungry := starving(repo, state, town)
 	var gain := day_gain(att, def, int(repo.bal("siege_rate")), hungry, int(repo.bal("siege_starve_bonus_permille")))
 	progress = mini(1000, progress + gain)
-	mind["siege_progress"] = progress
-	mind["siege_days"] = int(mind.get("siege_days", 0)) + 1
+	rec["progress"] = progress
+	rec["days"] = int(rec["days"]) + 1
 	var day := {"kind": "siege_day", "host": h, "town": town, "day": today, "progress": progress,
 		"attack": att, "defend": def, "gain": gain, "starving": hungry}
-	if int(mind["siege_days"]) == 1:
+	if int(rec["days"]) == 1:
 		var begin := day.duplicate()
 		begin["kind"] = "siege_begin"
 		events.append(begin)
 	events.append(day)
-	if hungry and int(mind.get("starved", 0)) == 0:
-		mind["starved"] = 1
+	if hungry and int(rec["starved"]) == 0:
+		rec["starved"] = 1
 		events.append({"kind": "siege_starving", "host": h, "town": town, "day": today, "progress": progress})
 	if progress >= 1000:
 		_fall(repo, state, h, hosts, events)
 		return
-	if int(mind["siege_days"]) % maxi(1, int(repo.bal("siege_assault_days"))) == 0:
-		mind["assault_due"] = 1
+	if int(rec["days"]) % maxi(1, int(repo.bal("siege_assault_days"))) == 0:
+		rec["assault_due"] = 1
 	# tomorrow's battles: an owed assault, or the assault still being fought
-	var flag := 1 if int(mind.get("assault_due", 0)) == 1 or _assault_running(state, town, hosts) else 0
-	for x: String in hosts:
-		state.ai_hosts[x]["assault"] = flag
+	rec["assault"] = 1 if int(rec["assault_due"]) == 1 or _assault_running(state, town, hosts) else 0
 
 
 static func _fall(repo: DataRepository, state: GameState, h: String, hosts: Array, events: Array) -> void:
@@ -495,7 +482,7 @@ static func _fall(repo: DataRepository, state: GameState, h: String, hosts: Arra
 			at -= 1
 		events.insert(at, ev)
 	for x: String in hosts:
-		state.ai_hosts[x]["siege_town"] = ""
+		SiegeRecord.drop(state, x)
 
 
 ## A HOLD host: when the town's manor is another house's again (taken back)
@@ -546,11 +533,10 @@ static func _liberate(repo: DataRepository, state: GameState, h: String, why: St
 ## A siege that ended otherwise (the host beaten, hungry, gone home) told once:
 ## siege_lifted {why}, one line a town a day.
 static func _lifted(repo: DataRepository, state: GameState, h: String, why: String, events: Array) -> void:
-	var mind: Dictionary = state.ai_hosts[h]
-	var town := String(mind.get("siege_town", ""))
+	var town := String(SiegeRecord.of_host(state, h).get("town", ""))
 	if town == "":
-		town = String(mind.get("target_id", ""))
-	mind["siege_town"] = ""
+		town = String(state.ai_hosts[h].get("target_id", ""))
+	SiegeRecord.drop(state, h)
 	if town == "" or besieged(repo, state, town):
 		return
 	for e: Dictionary in events:

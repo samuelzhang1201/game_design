@@ -91,7 +91,7 @@ static func spawn(repo: DataRepository, state: GameState, host: Dictionary) -> v
 			state.town_seat.erase(town)
 			ArmyGround.refill(repo, state, town)
 	state.ai_hosts[code] = {"mode": MODE_ASSEMBLE, "target_kind": "", "target_id": "",
-		"think_day": 0, "plunder": 0, "siege_progress": 0}
+		"think_day": 0, "plunder": 0}
 
 
 ## The roster units a raid_hosts row raises, in code order: each entry of its
@@ -750,7 +750,7 @@ static func _besieged_by_another(repo: DataRepository, state: GameState, host_co
 static func set_mode(state: GameState, host_code: String, mode: String, why: String, events: Array) -> void:
 	var mind: Dictionary = state.ai_hosts[host_code]
 	if String(mind["mode"]) in [MODE_DEPLOYING, MODE_SIEGE] and mode not in [MODE_DEPLOYING, MODE_SIEGE]:
-		SiegeSystem.clear(mind)
+		SiegeSystem.clear(state, host_code)
 		mind.erase("deployment")
 	mind["mode"] = mode
 	events.append({"type": "host_mode", "host": host_code, "mode": mode, "why": why,
@@ -1008,7 +1008,8 @@ static func _choose(repo: DataRepository, state: GameState, host_code: String) -
 	return best
 
 
-## Normalize legacy siege minds without advancing time or touching a day cursor.
+## Normalize legacy siege minds without advancing time or touching a day cursor,
+## then convert an old save's siege figures (SiegeRecord.migrate).
 ## Called after a repository-backed load and before the day's battles.
 static func ensure_deployments(repo: DataRepository, state: GameState, events: Array = []) -> void:
 	for h: String in host_codes(state):
@@ -1023,6 +1024,8 @@ static func ensure_deployments(repo: DataRepository, state: GameState, events: A
 			if String(mind["mode"]) == MODE_SIEGE:
 				set_mode(state, h, MODE_DEPLOYING, "restoring deployment from actual column positions", events)
 			_update_deployment(repo, state, h, events)
+	# an old save's siege figures move from the minds to GameState.sieges, once
+	SiegeRecord.migrate(repo, state)
 
 
 static func _start_deployment(repo: DataRepository, state: GameState, host: String) -> void:
@@ -1042,7 +1045,6 @@ static func _update_deployment(repo: DataRepository, state: GameState, host: Str
 			continue
 		deployment["complete"] = true
 		deployment["completed_day"] = state.absolute_day()
-		mind["assault"] = 0
 		set_mode(state, host, MODE_SIEGE, "leading columns deployed at the town", events)
 		return
 

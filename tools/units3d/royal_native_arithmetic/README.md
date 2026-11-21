@@ -106,8 +106,14 @@ bracket for `sqrt(2)` and geometric tail
 
 ## Reviewed Ubuntu profile and equations
 
-Profile: x86_64, `/usr/lib/x86_64-linux-gnu/libm.so.6`, build ID
-`cfae91b4a956116b64e2a41607671c1eeb3cc292`. The actual runner is Ubuntu 26.04;
+Profile: x86_64, `/usr/lib/x86_64-linux-gnu/libm.so.6`, build IDs in `LINUX_IDS`:
+`cfae91b4a956116b64e2a41607671c1eeb3cc292` (runner image 20261111.196.1) and
+`bbeba405e9eab172ef5b7f215c698d58eb3cc292` (runner image 20261116.202.1). Each
+admitted build's captured code ranges and operand bits are byte-identical to
+`LINUX_PROFILE`, so one set of equations and one theorem covers both; a capture
+must name one admitted ID for all three imports. A new runner libm is admitted
+only after its rejected capture (printed by GUT) matches every `LINUX_PROFILE`
+field; different bytes need a new reviewed profile. The actual runner is Ubuntu 26.04;
 the selected Godot 4.7-stable executable SHA256 is
 `f85bbc6b15e22416c7d797cd60b63286dd67b9cb13498847056c18520ae55a75`.
 This executable has no GNU build ID; the receipt retains that absence alongside

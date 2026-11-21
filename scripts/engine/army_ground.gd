@@ -753,7 +753,7 @@ static func _placement_host(repo: DataRepository, candidate: GameState, host_cod
 		candidate.foes[code] = st
 	for town: String in candidate.town_seat.keys():
 		if String(candidate.town_seat[town]) in units: candidate.town_seat.erase(town)
-	candidate.ai_hosts[host_code] = {"mode": EnemyAi.MODE_ASSEMBLE, "target_kind": "", "target_id": "", "think_day": 0, "plunder": 0, "siege_progress": 0}
+	candidate.ai_hosts[host_code] = {"mode": EnemyAi.MODE_ASSEMBLE, "target_kind": "", "target_id": "", "think_day": 0, "plunder": 0}
 	return _placement_result("complete", "Staged actual host without moving survivors", candidate)
 
 static func _placement_at_town(repo: DataRepository, state: GameState, code: String, town: String) -> bool:
