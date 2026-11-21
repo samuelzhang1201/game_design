@@ -13,7 +13,7 @@ const DT := 0.05
 func _anim() -> AnimationPlayer:
 	var anim := AnimationPlayer.new()
 	var lib := AnimationLibrary.new()
-	for spec: Array in [["GARRISON", 1.0, Animation.LOOP_LINEAR], ["ATTACK", 1.0, Animation.LOOP_NONE],
+	for spec: Array in [["GARRISON", 1.0, Animation.LOOP_LINEAR], ["MARCH", 1.1, Animation.LOOP_LINEAR], ["ATTACK", 1.0, Animation.LOOP_NONE],
 			["SLASH", 1.0, Animation.LOOP_NONE], ["BLOCK", 0.8, Animation.LOOP_NONE], ["HIT", 0.8, Animation.LOOP_NONE]]:
 		var clip := Animation.new()
 		clip.length = spec[1]
@@ -130,10 +130,13 @@ func test_unpairing_returns_to_the_saved_spot() -> void:
 	var driver := Map3DDuelDriver.new()
 	driver.run(_battle(a, b), DT, true, TUNE)
 	var placed := driver.run(_battle(a, []), DT, true, TUNE)
-	assert_false(driver.is_duelling(a[0]["anim"]))
 	assert_false((a[0]["child"] as Dictionary).has("duel_offset"), "back to its saved point")
 	assert_false((a[0]["child"] as Dictionary).has("duel_yaw"), "and its saved facing")
 	assert_true("A" in placed, "its piece is placed again to walk back")
+	assert_true(driver.is_duelling(a[0]["anim"]), "kept from its piece's action while it walks back")
+	a[0]["child"]["walking"] = false
+	driver.run(_battle(a, []), DT, true, TUNE)
+	assert_false(driver.is_duelling(a[0]["anim"]), "handed back on arrival")
 	assert_eq((a[0]["anim"] as AnimationPlayer).current_animation, "GARRISON", "a piece with no action stands its guard")
 
 
@@ -173,7 +176,7 @@ func test_losing_one_figure_keeps_the_other_pairs_running() -> void:
 	driver.run(_battle(a, b), DT, true, TUNE)
 	assert_almost_eq(driver.pair_time("A:4|B:4"), before + DT, 0.0001, "an untouched pair keeps its exchange")
 	assert_true(driver.is_duelling(a[0]["anim"]), "A:0 still duels B:0")
-	assert_false(driver.is_duelling(b[1]["anim"]), "B:1 lost its partner and stands alone")
+	assert_false(1 in driver.paired_slots("B"), "B:1 lost its partner and stands alone")
 
 
 func test_a_pair_does_not_strike_while_it_steps_in() -> void:
@@ -218,6 +221,8 @@ func test_a_freed_figure_releases_its_partner() -> void:
 	driver.run(_battle(a, b), DT, true, TUNE)
 	(a[0]["anim"] as AnimationPlayer).free()
 	driver.run(_battle([], b), DT, true, TUNE)
+	b[0]["child"]["walking"] = false  # back on its saved point
+	driver.run(_battle([], b), DT, true, TUNE)
 	assert_false(driver.is_duelling(b[0]["anim"]), "the survivor is handed back")
 	assert_eq((b[0]["anim"] as AnimationPlayer).current_animation, "GARRISON")
 
@@ -234,3 +239,85 @@ func test_a_zero_length_turn_still_ends_the_frame() -> void:
 	var driver := Map3DDuelDriver.new()
 	driver.run(_battle(a, b), 1.0, true, tune)
 	assert_true(driver.is_duelling(a[0]["anim"]), "it returned")
+
+
+## Stepping in and out (owner 2026-11-21: 兵人上前靠近对手时是平移滑过去的，没有迈步).
+## The infantry's own numbers: MARCH 1.1 s a loop walks stride 1.4838 model m.
+const CLIP_S := 1.1
+const STRIDE := 1.4838
+
+
+func test_the_step_rate_is_its_ground_over_its_stride() -> void:
+	# 0.05 m in 0.05 s = 1 world m/s; at scale 0.5 that is 2 model m/s; a loop walks
+	# 1.4838 m in 1.1 s = 1.348909 m/s; 2 / 1.348909 = 1.482679.
+	var ahead := Vector2(0, -0.05)  # yaw 0 faces -Z
+	assert_almost_eq(Map3DDuelDriver.step_rate(ahead, 0.0, 0.05, 0.5, CLIP_S, STRIDE), 1.482679, 0.00001)
+	assert_almost_eq(Map3DDuelDriver.step_rate(-ahead, 0.0, 0.05, 0.5, CLIP_S, STRIDE), -1.482679, 0.00001,
+		"backing away plays it backwards")
+	assert_almost_eq(Map3DDuelDriver.step_rate(Vector2(0.05, 0), PI / 2.0, 0.05, 0.5, CLIP_S, STRIDE), -1.482679, 0.00001,
+		"yaw pi/2 faces -X, so a step to +X backs away")
+	assert_eq(Map3DDuelDriver.step_rate(ahead, 0.0, 0.0, 0.5, CLIP_S, STRIDE), 0.0, "no frame, no rate")
+
+
+func test_a_duel_step_lasts_its_paced_seconds() -> void:
+	# at scale 0.5 the walk covers 0.5 * 1.4838 / 1.1 = 0.674454 world m/s: 1 m takes 1.482679 s
+	assert_almost_eq(Map3DBattleGroups.paced_s(1.0, 0.5, CLIP_S, STRIDE, 1.6), 1.482679, 0.00001)
+	assert_eq(Map3DBattleGroups.paced_s(1.0, 0.5, CLIP_S, 0.0, 1.6), 1.6, "no stride: the battle walk's seconds")
+	assert_eq(Map3DBattleGroups.paced_s(0.0, 0.5, CLIP_S, STRIDE, 1.6), 1.6, "standing still it only turns")
+
+
+func _stepper(code: String, xz: Vector2) -> Dictionary:
+	var f := _fig(code, 0, xz)
+	f["child"] = {"height_m": 2.0, "clip_s": CLIP_S, "stride_m": STRIDE}  # h 1: scale 0.5
+	return f
+
+
+func test_a_step_in_walks_its_march_at_its_pace() -> void:
+	var a := [_stepper("A", Vector2(0, 10))]
+	var b := [_stepper("B", Vector2(0, -10))]
+	var driver := Map3DDuelDriver.new()
+	driver.run(_battle(a, b), DT, true, TUNE)
+	var child: Dictionary = a[0]["child"]
+	child["walking"] = true
+	for i in 3:  # 1 world m/s toward b, facing it
+		child["at"] = {"xz": Vector2(0, 10 - 0.05 * i), "yaw": 0.0}
+		driver.run(_battle(a, b), DT, true, TUNE)
+	var anim: AnimationPlayer = a[0]["anim"]
+	assert_eq(anim.current_animation, "MARCH", "it steps, not glides")
+	assert_almost_eq(anim.speed_scale, 1.482679, 0.0001, "its feet keep the ground")
+	child["walking"] = false
+	driver.run(_battle(a, b), DT, true, TUNE)
+	assert_eq(anim.current_animation, "GARRISON", "arrived, back to its guard")
+
+
+func test_a_released_figure_backs_away_then_takes_its_action() -> void:
+	var a := [_stepper("A", Vector2(0, 10))]
+	var b := [_stepper("B", Vector2(0, -10))]
+	var driver := Map3DDuelDriver.new()
+	driver.run(_battle(a, b), DT, true, TUNE)
+	driver.run(_battle(a, []), DT, true, TUNE)
+	var child: Dictionary = a[0]["child"]
+	assert_true(child["walking"], "its walk back is under way")
+	for i in 3:  # backing off toward +Z, still facing b
+		child["at"] = {"xz": Vector2(0, 9 + 0.05 * i), "yaw": 0.0}
+		driver.run(_battle(a, []), DT, true, TUNE)
+	var anim: AnimationPlayer = a[0]["anim"]
+	assert_eq(anim.current_animation, "MARCH")
+	assert_almost_eq(anim.speed_scale, -1.482679, 0.0001, "backwards, at its pace")
+	child["walking"] = false
+	driver.run(_battle(a, []), DT, true, TUNE)
+	assert_false(driver.is_duelling(anim), "handed back on arrival")
+	assert_eq(anim.current_animation, "GARRISON")
+
+
+func test_a_paused_step_stands_still() -> void:
+	var a := [_stepper("A", Vector2(0, 10))]
+	var b := [_stepper("B", Vector2(0, -10))]
+	var driver := Map3DDuelDriver.new()
+	driver.run(_battle(a, b), DT, true, TUNE)
+	var child: Dictionary = a[0]["child"]
+	child["walking"] = true
+	child["walk"] = {"t0": 1.0}
+	driver.run(_battle(a, b), DT, false, TUNE)
+	assert_eq((a[0]["anim"] as AnimationPlayer).speed_scale, 0.0, "its feet stop")
+	assert_almost_eq(float(child["walk"]["t0"]), 1.0 + DT, 0.00001, "and its walk waits with the clock")
