@@ -124,7 +124,7 @@ def main():
         manifest = json.load(open(mpath))
         manifest[NAME] = {
             "label": "Man-at-arms", "kind": "humanoid", "height_m": h,
-            "source": "hand-built from the owner's blueprint (assets/3D/units/infantry/model_wip/infantry_kit/blueprint), textured with the "
+            "source": "hand-built from the owner's blueprint (assets/3D/model_wip/comfy-out/units/infantry/references/infantry_kit/blueprint), textured with the "
                       "owner's material swatches (infantry_kit/D), tools/units3d/infantry_blueprint/",
             "tris": tris, "bones": len(rig.data.bones), "weights": "rigid plates + distance",
             "actions": {a.name: [int(a.frame_range[0]), int(a.frame_range[1])] for a in acts},

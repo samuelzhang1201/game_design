@@ -18,7 +18,7 @@ then `python3 tools/units3d/courier_rig/install.py` and Godot's import. `courier
 build (Tripo fit, cull, reduce, bake); re-running it re-exports the old rig over `courier.glb` — run this folder
 after it.
 
-## Files (`assets/3D/units/courier/model_wip/`, git-ignored)
+## Files (`assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/courier/`, git-ignored)
 
 | file | what it is |
 | --- | --- |

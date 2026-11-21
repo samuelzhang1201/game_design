@@ -8,8 +8,8 @@ the one to feed Tripo.
   python3 tools/units3d/gen_arm_refs.py                      # every arm, 2 seeds, the desktop tiers
   python3 tools/units3d/gen_arm_refs.py --only royal --tiers zimage --seeds 1
 
-Output: assets/3D/units/<arm>/model_wip/tripo_kit/<tier>_<arm>_s<n>.png and one
-contact_sheet.png per run in assets/3D/units/model_wip/arm_refs/ (git-ignored). Existing files
+Output: assets/3D/model_wip/comfy-out/units/<arm>/references/tripo_kit/<tier>_<arm>_s<n>.png and one
+contact_sheet.png per run in assets/3D/model_wip/comfy-out/units/_shared/references/arm_refs/ (git-ignored). Existing files
 are kept unless --force. Each tier runs on its machine (gen_cavalry_v2.host_of).
 """
 import sys
@@ -21,7 +21,8 @@ import gen_cavalry_v2 as G  # noqa: E402  (the ComfyUI calls and templates)
 
 MAIN = Path("/Users/samuelzhang/game_design")  # the git-ignored sources live in the main checkout
 UNITS = MAIN / "assets" / "3D" / "units"
-SHEET = UNITS / "model_wip" / "arm_refs"
+COMFY = MAIN / "assets" / "3D" / "model_wip" / "comfy-out" / "units"
+SHEET = COMFY / "_shared" / "references" / "arm_refs"
 SEED = 20261005
 
 ARCHER = (
@@ -146,7 +147,7 @@ TIERS = {t: G.TIERS[t] for t in ("zimage", "qwendesk", "qwenfast")}  # qwenfast:
 
 
 def out_of(arm: str) -> Path:
-    return UNITS / FOLDER.get(arm, arm) / "model_wip" / "tripo_kit"
+    return COMFY / FOLDER.get(arm, arm) / "references" / "tripo_kit"
 
 
 def stem(tier: str, arm: str, seed: int) -> str:

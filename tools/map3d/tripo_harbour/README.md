@@ -14,7 +14,7 @@ hand-built kit modules of `tools/map3d/blender_houses/fortifications.py` (ruled 
 | --- | --- |
 | reference picture | `tools/map3d/gen_house_refs.py` (`--set ships` for the ships), picks of 2026-10-02 |
 | Tripo generation | the owner, from the `REF_*.png` in `assets/3D/model_wip/tripo_inbox/<category>/<object>/` |
-| GLB | moved to `assets/3D/<category>/<type>/model_wip/tripo/<type>_tripo.glb` (git-ignored, ~100k triangles) |
+| GLB | moved to `assets/3D/model_wip/tripo_inbox/<category>/<type>/tripo/<type>_tripo.glb` (git-ignored, ~100k triangles) |
 
 `JOBS` in `tripo_harbour.py` names each type's source, yaw, fit (game metres at twice life,
 the longer ground span), `z0` (what becomes z = 0), triangle budget, atlas size, voxel and kind.

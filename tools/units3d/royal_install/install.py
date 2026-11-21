@@ -2,7 +2,7 @@
 
     python3 tools/units3d/royal_install/install.py [SRC.glb]
 
-SRC defaults to assets/3D/units/royal/model_wip/tripo/knight_rigged_20k.glb:
+SRC defaults to assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/royal/tripo/knight_rigged_20k.glb:
 decimate.py's export of the owner's delivery (knight_rig_anim.blend, rigged
 and animated by the owner) collapsed to the units' ~20k triangles.
 Writes assets/3D/units/royal/royal.glb: the same mesh, skin and source clips,
@@ -27,7 +27,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[3]
-SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "assets/3D/units/royal/model_wip/tripo/knight_rigged_20k.glb"
+SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/royal/tripo/knight_rigged_20k.glb"
 OUT = ROOT / "assets/3D/units/royal/royal.glb"
 SIZE = 2048
 QUALITY = 92

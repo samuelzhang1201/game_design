@@ -18,8 +18,8 @@ high ground, frontal rock face). Committed (~28 MB) because a seeded generation
 is only reproducible on the same models and nodes. Pack each into Terrain3D's
 two maps before `build_pack.sh`:
 
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_canopy.png aerial_canopy --height-gain 1.3 --rough 0.95
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_upland.png aerial_upland --height-gain 1.2 --lift-patches 1.0 --patch-radius 220 --patch-inner 16 --fill-spots 0.1 --fill-dark-only --fill-inner 8 --fill-grow 10 --saturation 0.75 --contrast 0.9 --grey-tint '#BCA888' --grey-tint-amount 0.9 --grey-lift 0.2 --match-mean '#6D654B'
+    python3 tools/map3d/pack_aerial.py assets/3D/model_wip/sources/terrain/aerial/aerial_canopy.png aerial_canopy --height-gain 1.3 --rough 0.95
+    python3 tools/map3d/pack_aerial.py assets/3D/model_wip/sources/terrain/aerial/aerial_upland.png aerial_upland --height-gain 1.2 --lift-patches 1.0 --patch-radius 220 --patch-inner 16 --fill-spots 0.1 --fill-dark-only --fill-inner 8 --fill-grow 10 --saturation 0.75 --contrast 0.9 --grey-tint '#BCA888' --grey-tint-amount 0.9 --grey-lift 0.2 --match-mean '#6D654B'
 
 `--lift-patches` (visual review 2026-10-06) raises the upland's dark heather
 blobs to their surroundings' light at low frequency, keeping the grain: tiled
@@ -59,11 +59,11 @@ Seven low-feature pictures from `assets/imagegen/ground_v2_prompts.csv` with
 
 Packed with:
 
-    for k in g2_meadow_b g2_meadow_c; do python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/$k.png $k --match-mean '#666A35' --normal-strength 0.25 --rough 0.95 --fill-spots 0.2; done
-    for k in g2_meadow_a g2_upturf_a g2_upturf_b; do python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/$k.png $k --match-mean '#666A35' --normal-strength 0.8 --rough 0.95 --fill-spots 0.2 --contrast 2.2; done
+    for k in g2_meadow_b g2_meadow_c; do python3 tools/map3d/pack_aerial.py assets/3D/model_wip/sources/terrain/aerial/$k.png $k --match-mean '#666A35' --normal-strength 0.25 --rough 0.95 --fill-spots 0.2; done
+    for k in g2_meadow_a g2_upturf_a g2_upturf_b; do python3 tools/map3d/pack_aerial.py assets/3D/model_wip/sources/terrain/aerial/$k.png $k --match-mean '#666A35' --normal-strength 0.8 --rough 0.95 --fill-spots 0.2 --contrast 2.2; done
 
 (the flattest three at contrast 2.2: at 1.0 the hills read airbrushed at the opening zoom)
-    for k in g2_crop_a g2_crop_b; do python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/$k.png $k --saturation 0.25 --contrast 1.8 --flatten-keep 0.0 --fill-spots 0.12 --fill-dark-only --match-mean '#D4C89C' --normal-strength 0.6 --rough 0.95; done
+    for k in g2_crop_a g2_crop_b; do python3 tools/map3d/pack_aerial.py assets/3D/model_wip/sources/terrain/aerial/$k.png $k --saturation 0.25 --contrast 1.8 --flatten-keep 0.0 --fill-spots 0.12 --fill-dark-only --match-mean '#D4C89C' --normal-strength 0.6 --rough 0.95; done
 
 
 ## The high ground (spec 2026-10-13-map-art-phase2, B)
@@ -77,9 +77,9 @@ Owner-approved 2026-10-13 ("同意 A/B/C"), Z-Image on the Windows desktop
 | `p2_ridge.png` | T-87 | 954159500 | RIDGE (the high plateaus, ridge_lo..ridge_hi) |
 | `p2_snow.png` | T-88 | 954159497 | SNOW |
 
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p2_scree.png p2_scree --height-gain 1.2 --saturation 0.35 --match-mean '#8E8B84'
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p2_ridge.png p2_ridge --height-gain 1.4 --saturation 0.7 --lift-darks 0.6 --match-mean '#7A7060'
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p2_snow.png p2_snow --flatten-keep 0.0 --contrast 0.7 --saturation 0.3 --height-gain 0.9 --rough 0.75
+    python3 tools/map3d/pack_aerial.py assets/3D/model_wip/sources/terrain/aerial/p2_scree.png p2_scree --height-gain 1.2 --saturation 0.35 --match-mean '#8E8B84'
+    python3 tools/map3d/pack_aerial.py assets/3D/model_wip/sources/terrain/aerial/p2_ridge.png p2_ridge --height-gain 1.4 --saturation 0.7 --lift-darks 0.6 --match-mean '#7A7060'
+    python3 tools/map3d/pack_aerial.py assets/3D/model_wip/sources/terrain/aerial/p2_snow.png p2_snow --flatten-keep 0.0 --contrast 0.7 --saturation 0.3 --height-gain 0.9 --rough 0.75
 
 ## The frontal rock face (owner-approved 2026-10-13, "批准")
 
@@ -89,4 +89,4 @@ blocky and fractured with no strata. It is the CLIFF layer:
 Terrain3D projects the steep faces vertically (projection_threshold 0.87), where the
 top-down crag read as pale vertical streaks.
 
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p3_rock_face.png p3_rock_face --height-gain 1.3 --saturation 0.8 --match-mean '#8A7A64'
+    python3 tools/map3d/pack_aerial.py assets/3D/model_wip/sources/terrain/aerial/p3_rock_face.png p3_rock_face --height-gain 1.3 --saturation 0.8 --match-mean '#8A7A64'

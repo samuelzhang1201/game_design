@@ -13,7 +13,7 @@ G = {}
 for f in ("common", "build", "actions", "validate", "export"):
     G["__file__"] = ".../tools/units3d/archer_tripo/%s.py" % f; exec(open(G["__file__"]).read(), G)
 G["build_all"]()          # import -> props -> rest -> five clips baked
-G["export"]()             # -> model_wip/tripo_v2/archer_rigged.glb
+G["export"]()             # -> assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/archers/tripo_v2/archer_rigged.glb
 ```
 
 then `tools/units3d/archer_install/install.py` (→ `assets/3D/units/archers/archers.glb`, two
@@ -22,7 +22,7 @@ drops the scene's `ext_resource` UIDs and the art table's — put them back from
 and `git checkout` the table if only its UIDs moved). The props' textures need the body's import
 settings (Basis Universal; the normal map's `roughness/src_normal`).
 
-## Sources (git-ignored, `assets/3D/units/archers/model_wip/tripo_v2/`)
+## Sources (git-ignored, `assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/archers/tripo_v2/`)
 
 | file | what it is |
 | --- | --- |

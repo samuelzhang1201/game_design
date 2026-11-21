@@ -5,7 +5,7 @@ from the owner's Tripo 3D models, headless, in ONE command:
 
 What it builds, from what:
   1. the model (tools/units3d/courier/tripo.py, tripo_parts.csv): the owner's Tripo 3D
-     courier, git-ignored in assets/3D/units/courier/model_wip/tripo/courier/ - its 43 parts
+     courier, git-ignored in assets/3D/model_wip/tripo_inbox/units/no-rigging/courier/tripo/ - its 43 parts
      fitted onto its textured twin, turned to face +Y, the horse 2.45 m nose to tail on
      z = 0, hidden faces dropped, each part reduced to its budget (<= 20,000 tris in all),
      unwrapped into ONE 2048 atlas and baked from the textured mesh (colour, tangent
@@ -22,7 +22,7 @@ What it builds, from what:
      assets/3D/units/courier/courier_courier_atlas*.jpg beside it) and the "courier" entry of
      assets/3D/units/units3d.json.
 
-The rigged build is also saved to assets/3D/units/courier/model_wip/courier_rigged_tripo.blend
+The rigged build is also saved to assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/courier/tripo/courier_rigged_tripo.blend
 for shots.
 """
 import bpy, json, os, sys, time
@@ -39,7 +39,7 @@ GALLOP_FRAMES = 24         # one gallop stride, a loop
 IDLE_FRAMES = 72           # the standing loop
 FPS = 24                   # the clips' frame rate
 OUT = os.path.join(REPO, "assets", "3D", "units")
-WORK = os.path.join(OUT, "courier", "model_wip")      # git-ignored: the owner's sources and the saved build
+WORK = os.path.join(REPO, "assets", "3D", "model_wip", "tripo_inbox", "units", "rigged-with-motion", "courier", "tripo")  # the saved build
 SOURCE_NOTE = "Tripo 3D (owner), from zimage_C4_s2, tools/units3d/courier_build.py"
 
 

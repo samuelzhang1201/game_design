@@ -1,13 +1,13 @@
 #!/bin/zsh
 # The blueprint man-at-arms, end to end: model -> texture -> assets/3D/units/infantry/infantry.glb.
 #   tools/units3d/infantry_blueprint/build.sh [WORK_DIR]
-# WORK_DIR (default assets/3D/units/infantry/model_wip/infantry_build, git-ignored) keeps the two .blend files to open by hand.
+# WORK_DIR (default assets/3D/model_wip/blender_output/units/infantry/infantry_build, git-ignored) keeps the two .blend files to open by hand.
 # AGE (A/B/C, default C) and STEEL_METAL (default 0.25) set the steel's wear; C/0.25 is the one that
 # reads as steel, not a black silhouette, at a piece's 30 px on the map (2026-09-29).
 set -e
 HERE=${0:A:h}
 ROOT=${HERE:h:h:h}
-WORK=${1:-$ROOT/assets/3D/units/infantry/model_wip/infantry_build}
+WORK=${1:-$ROOT/assets/3D/model_wip/blender_output/units/infantry/infantry_build}
 B=${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}
 mkdir -p $WORK
 $B -b --factory-startup --python $HERE/build_model.py -- $WORK/infantry_blueprint_model.blend 2>&1 | grep -E "MODEL SAVED|Error|Traceback"

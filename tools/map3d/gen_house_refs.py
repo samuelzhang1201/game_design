@@ -1,7 +1,7 @@
 """Render the settlement buildings' photoreal REFERENCE images on ComfyUI (each
 model on its machine: the Windows desktop for zimage / qwen2512desk4, the Mac for
 qwen2512fast) from assets/imagegen/house_ref_prompts.csv, one picture per type per
-model, into assets/3D/buildings/<type>/model_wip/<type>_ref_<model>.png.
+model, into assets/3D/model_wip/comfy-out/buildings/<type>/references/<type>_ref_<model>.png.
 
   python3 tools/map3d/gen_house_refs.py [--set houses|ships] [--model zimage,qwen2512desk4] [--only a,b] [--seed N] [--variants N] [--tag T] [--force] [--front]
 
@@ -18,7 +18,7 @@ collected after; it waits its turn in ComfyUI's one shared queue unless
 picture. --tag T names them <type>_ref_<model>_T[_vN].png, so a re-render
 with a changed prompt keeps the pictures already picked from. --set ships
 renders the harbours' SHIPS (owner 2026-10-02: 3-4 种中世纪的船) from
-assets/imagegen/ship_ref_prompts.csv into assets/3D/ships/<type>/model_wip/,
+assets/imagegen/ship_ref_prompts.csv into assets/3D/model_wip/comfy-out/ships/<type>/references/,
 worded as a ship, not a building.
 
 A file already there is kept unless --force. The pictures are what the
@@ -116,10 +116,8 @@ def main():
         gen.switch_model(gen.MODEL_PRESETS[model]["unet"])  # one unload per model, never two models thrashing
         for row in rows(only, prompts):
             t = row["type"]
-            wip = os.path.join(out_root, t, "model_wip")
+            wip = os.path.join(ROOT, "assets", "3D", "model_wip", "comfy-out", os.path.basename(out_root), t, "references")
             os.makedirs(wip, exist_ok=True)
-            if not os.path.exists(os.path.join(wip, ".gdignore")):
-                open(os.path.join(wip, ".gdignore"), "w").close()
             for v in range(variants):
                 name = "%s_ref_%s%s%s.png" % (t, model, tag, "_v%d" % (v + 1) if variants > 1 else "")
                 ref = os.path.join(wip, name)

@@ -9,7 +9,7 @@ for the owner to pick the one to feed Tripo.
   python3 tools/units3d/cavalry_tripo/gen_refs.py               # every view, 2 seeds, both tiers
   python3 tools/units3d/cavalry_tripo/gen_refs.py --only side --tiers zimage
 
-Output: assets/3D/units/cavalry/model_wip/tripo_kit/<tier>_<view>_s<n>.png and
+Output: assets/3D/model_wip/comfy-out/units/cavalry/references/tripo_kit/<tier>_<view>_s<n>.png and
 contact_sheet.png (git-ignored, beside the other sources). Existing files are kept
 unless --force. Needs ComfyUI at COMFY_HOST (default http://127.0.0.1:8188).
 """
@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import gen_cavalry_v2 as G  # noqa: E402  (the ComfyUI calls and templates)
 
 MAIN = Path("/Users/samuelzhang/game_design")  # the git-ignored sources live in the main checkout
-OUT = MAIN / "assets" / "3D" / "units" / "cavalry" / "model_wip" / "tripo_kit"
+OUT = MAIN / "assets" / "3D" / "model_wip" / "comfy-out" / "units" / "cavalry" / "references" / "tripo_kit"
 SEED = 20260930
 
 KNIGHT = (

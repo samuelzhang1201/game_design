@@ -3,7 +3,7 @@ Blender the owner allowed for it (owner 2026-10-06: 我再开一个 Blender -- t
 another session's cavalry rig). That Blender listens on port 9877; every phase script execs this
 file first: MCP namespaces do not persist between calls.
 
-Sources (git-ignored, assets/3D/units/archers/model_wip/tripo/): the Tripo generation from
+Sources (git-ignored, assets/3D/model_wip/tripo_inbox/units/no-rigging/archers/tripo/): the Tripo generation from
 REF_archers_qwenfast_s2.png on the owner's paid plan --
   medieval+archer+3d+model.glb         the textured fused mesh: THE DELIVERABLE
   medieval+archer+3d+model+parts.glb   untextured parts: a LABEL SOURCE only (Phase 1d)
@@ -13,9 +13,10 @@ import numpy as np
 from mathutils import Vector, Matrix
 
 ROOT = "/Users/samuelzhang/game_design/"
-SRC = ROOT + "assets/3D/units/archers/model_wip/tripo/"
-TEX_FILE = SRC + "medieval+archer+3d+model.glb"
-PARTS_FILE = SRC + "medieval+archer+3d+model+parts.glb"
+RAW = ROOT + "assets/3D/model_wip/tripo_inbox/units/no-rigging/archers/tripo/"      # the Tripo exports
+SRC = ROOT + "assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/archers/tripo/"   # the work file, shots and rigged export
+TEX_FILE = RAW + "medieval+archer+3d+model.glb"
+PARTS_FILE = RAW + "medieval+archer+3d+model+parts.glb"
 WORK = SRC + "archer_rig_work.blend"
 SHOTS = SRC + "shots/"
 SCENE = "Archer_Rig"

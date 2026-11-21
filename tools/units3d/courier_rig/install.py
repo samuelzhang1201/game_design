@@ -3,7 +3,7 @@ installer with the courier's names.
 
     python3 tools/units3d/courier_rig/install.py [SRC.glb]
 
-SRC defaults to the main checkout's assets/3D/units/courier/model_wip/rig/courier_rigged.glb (git-ignored,
+SRC defaults to the main checkout's assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/courier/rig/courier_rigged.glb (git-ignored,
 exported from courier_rig_work.blend by export.py). Writes assets/3D/units/courier/courier.glb with:
   * the clips named as the game plays them (GALLOP, IDLE: the NLA tracks already carry the names);
   * the head bones renamed: the chip hangs over the bone named `head` (Map3DUnitRig.head_m), so the
@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT / "tools/units3d/royal_install"))
 from install import read_glb, write_glb  # noqa: E402  (the king's GLB reader / writer)
 
 MAIN = Path("/Users/samuelzhang/game_design")      # the git-ignored source lives in the main checkout
-SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else MAIN / "assets/3D/units/courier/model_wip/rig/courier_rigged.glb"
+SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else MAIN / "assets/3D/model_wip/tripo_inbox/units/rigged-with-motion/courier/rig/courier_rigged.glb"
 OUT = ROOT / "assets/3D/units/courier/courier.glb"
 QUALITY = 92
 BONES = {"Head": "head_h", "R_Head": "head"}

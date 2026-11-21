@@ -13,7 +13,7 @@ Three Tripo 3D generations on the owner's **paid** plan, downloaded as glTF:
 | `medieval spear 3d model.glb` | the spear (92k tris), normalised to 1 m |
 | `medieval shield 3d model.glb` | a kite shield (92k tris), normalised to 1 m |
 
-The working scenes are in `assets/3D/units/model_wip/` (git-ignored, `.gdignore`d):
+The working scenes are in `assets/3D/model_wip/blender_output/units/` (git-ignored, `.gdignore`d):
 `knight_spear_shield_march.blend` (the live set-up: IK arm, props on constraints, editable) and
 `knight_spear_shield_game.blend` (the baked, reduced piece the export is made from).
 
@@ -54,7 +54,7 @@ The working scenes are in `assets/3D/units/model_wip/` (git-ignored, `.gdignore`
    exporting `use_selection` or the `.glb` comes out with no skin and no clips.
 9. **GARRISON** is the owner's own Tripo clip (owner 2026-10-13: 驻防的动作我这里有了), a crouched
    guard on the same skeleton, with the shield and spear fitted in
-   `assets/3D/units/model_wip/knight_kneel_guard.blend` to the owner's rulings, round by round:
+   `assets/3D/model_wip/blender_output/units/knight_kneel_guard.blend` to the owner's rulings, round by round:
    the shield upright before the left side, held at the left fist and lowered 12 cm so the visor
    shows; the spear braced from the right fist, RESTING on the shield's inner edge and aimed with
    his gaze (44° to his left, 8° up); the right wrist straight (the fist turned about the shaft,

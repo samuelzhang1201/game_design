@@ -2,7 +2,7 @@
 
 Owner 2026-09-24: every house type is modelled anew in Blender (through the
 Blender MCP), against the generated reference pictures in
-assets/3D/buildings/<type>/model_wip/ (no AI 3D: Hunyuan3D was removed over its
+assets/3D/model_wip/comfy-out/buildings/<type>/references/ (no AI 3D: Hunyuan3D was removed over its
 licence). Load it in Blender with
 
     exec(open("<repo>/tools/map3d/blender_houses/kit.py").read())
@@ -38,7 +38,7 @@ import bpy
 from mathutils import Matrix, Vector
 
 ROOT = globals().get("CC_ROOT", "/Users/samuelzhang/game_design")   # a worktree passes its own
-TEX = ROOT + "/assets/3D/buildings/model_wip/polyhaven/"
+TEX = ROOT + "/assets/3D/model_wip/sources/buildings/polyhaven/"
 HOUSES = ROOT + "/assets/3D/buildings/"
 
 # key: (tinted diffuse, normal source, tile metres, roughness)

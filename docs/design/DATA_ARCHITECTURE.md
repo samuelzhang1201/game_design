@@ -37,7 +37,7 @@ flowchart TB
 
 | 层 | 是什么 | 在哪 | 谁写 | 改了要做什么 |
 | --- | --- | --- | --- | --- |
-| L0 上游原料 | Azgaar 地图 JSON、提示词库、生成的原图、Tripo 原始模型、owner 的裁决 | `assets/maps/<id>/*Full*.json`、`docs/references/`、各 `model_wip/`（git 忽略） | 人和外部工具 | 重新导入或重新安装 |
+| L0 上游原料 | Azgaar 地图 JSON、提示词库、生成的原图、Tripo 原始模型、owner 的裁决 | `assets/maps/model_wip/<id>/*Full*.json`、`docs/references/`、`assets/3D/model_wip/`、`assets/2D/model_wip/`、`assets/maps/model_wip/`（git 忽略） | 人和外部工具 | 重新导入或重新安装 |
 | L1 定义层 | 规则和内容：所有数值、表、地图包、故事文本、美术 | `data/`、`data/maps/<id>/`、`assets/`、`RANDOM_EVENTS.md`、`game_story/` | 人、导入器、安装脚本、构建脚本 | 多数只要重启游戏；3D 外观相关的要重建世界（§6） |
 | L2 状态层 | 一局游戏此刻的样子 | `GameState`（`scripts/engine/game_state.gd`）、`Character` | 只有引擎（`Game` 自动加载单例经 `ActionSystem` / `TickEngine` / `WorldLedger`） | 新字段要进 `to_dict` / `from_dict` |
 | L3 派生层 | 由 L1 + L2 算出来、可丢弃的结果 | `RealmEconomy` 缓存、`Intel`、`Ledger.galaxy`、`MapOwnership` 的边界线、3D 图层 | 引擎和视图 | 不用管，输入变了自动重算 |
