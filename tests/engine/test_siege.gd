@@ -483,7 +483,7 @@ func test_liberation_restores_a_non_default_prior_holder() -> void:
 	SiegeSystem.settle_day(repo, s, [])
 	assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD")
 	assert_ne(MapManors.owner_of(repo, s, cell), buyer, "taken")
-	assert_eq(String((s.ai_hosts[main]["occupied"] as Dictionary).get(str(cell), "")), buyer, "its holder kept")
+	assert_eq(String((s.occupations[town]["cells"] as Dictionary).get(str(cell), "")), buyer, "its holder kept")
 	s.foes[EnemyAi.regiments_of(s, main)[0]]["disengaging"] = 1
 	EnemyAi.step_day(repo, s)
 	SiegeSystem.settle_day(repo, s, [])
@@ -518,7 +518,7 @@ func test_save_and_load_mid_occupation_continues_identically() -> void:
 	assert_true(SaveLoad.save_game(s, path), "saved")
 	var c := SaveLoad.load_game(path)
 	assert_eq(SaveLoad.state_hash(c), SaveLoad.state_hash(s), "the same state loaded")
-	assert_eq(c.ai_hosts[main]["occupied"], s.ai_hosts[main]["occupied"], "the holders before, kept")
+	assert_eq(c.occupations[town]["cells"], s.occupations[town]["cells"], "the holders before, kept")
 	for st: GameState in [s, c]:
 		SiegeSystem.settle_day(repo, st, [])  # a day held
 		st.foes[EnemyAi.regiments_of(st, main)[0]]["disengaging"] = 1
