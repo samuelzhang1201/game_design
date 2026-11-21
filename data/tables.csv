@@ -130,3 +130,4 @@ battle,battle_events
 battle,battle_event_choices
 screens/map3d,archer_gear_lod
 army,game_arms
+army,game_arm_starts

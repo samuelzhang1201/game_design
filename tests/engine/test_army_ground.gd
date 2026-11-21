@@ -197,7 +197,9 @@ func test_marching_out_empties_the_seat_and_the_camp_refills_it_once_clear() -> 
 	var cap := _capital(s)
 	var old := String(cap["seat"])
 	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, old, s))
-	ArmySystem.set_march(repo, s, old, here + Vector2(5.0, 0.0))
+	var way := _open_way(s, old)
+	assert_ne(way, Vector2.ZERO, "an open way out of the camp")
+	ArmySystem.set_march(repo, s, old, here + way * 5.0)
 	var point := ArmyGround.town_point_m(repo, String(cap["town"]))
 	assert_eq(ArmyGround.seat_of(repo, s, String(cap["town"])), "", "the seat stands empty as it leaves")
 	assert_eq(ArmyGround.camped_by(repo, s, old), "", "on the march it camps nowhere")
@@ -213,6 +215,20 @@ func test_marching_out_empties_the_seat_and_the_camp_refills_it_once_clear() -> 
 		ArmySystem.metres_to_pack(repo, point))
 
 
+## Opens a gap in the capital's camp: the first of `cap`'s camped units not in `keep` is
+## taken 60 km north, out of the way. With the opening regiments the capital's first ring
+## of slots is full, and a full ring is one clump with the seat round the town's point: a
+## unit marching home halts at the clump's hull outside the town's reach and camps in the
+## field (MarchClearance). These tests are about who takes the seat and where an arrival is
+## camped, not about a closed ring.
+func _open_a_gap(s: GameState, cap: Dictionary, keep: Array) -> void:
+	for c: String in cap["camped"]:
+		if not keep.has(c):
+			var entry: Dictionary = s.regiments[c]
+			entry["camp_town"] = ""
+			ArmyGround._put(entry, Vector2i(int(entry["x_m"]), int(entry["y_m"]) - 60000))
+			return
+
 ## March `code` to pack point `to` and run days until it arrives.
 func _arrive(s: GameState, code: String, to: Vector2) -> void:
 	ArmySystem.set_march(repo, s, code, to)
@@ -222,13 +238,40 @@ func _arrive(s: GameState, code: String, to: Vector2) -> void:
 	fail_test("never arrived")
 
 
-## A land point in the open (no town's reach) east of `from`, pack px.
-func _field_east_of(from: Vector2) -> Vector2:
+## A land point in the open (no town's reach) from `from` along `dir`, pack px.
+func _field_from(from: Vector2, dir := Vector2.RIGHT) -> Vector2:
 	for i in range(1, 200):
-		var p := from + Vector2(float(i) * 5.0, 0.0)
+		var p := from + dir * float(i) * 5.0
 		if MapEconomy.cell_at(repo, p) >= 0 and ArmySystem.town_at(repo, p) == "":
 			return p
-	return from + Vector2(40.0, 0.0)
+	return from + dir * 40.0
+
+
+## The first of east, west, north, south in which `code` marches out of the camp to the
+## open field unhindered, tried on a copy: the capital's camp fills its slots round the
+## walls, so a fixed direction can walk into a camped neighbour and halt in front of it.
+## With `home`, the way back must be open too: marching from the field to `home`'s point it
+## is camped by `home`, not halted in front of a camped unit outside the town's reach.
+func _open_way(s: GameState, code: String, home := "") -> Vector2:
+	var from := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code, s))
+	for dir: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+		var copy := GameState.from_dict(s.to_dict())
+		var to := _field_from(from, dir)
+		ArmySystem.set_march(repo, copy, code, to)
+		for i in 400:
+			if code in ArmySystem.march_day(repo, copy):
+				break
+		if ArmySystem.position_of(repo, copy, ArmySystem.regiment(repo, code, copy)).distance_to(to) >= 1.0:
+			continue
+		if home != "":
+			ArmySystem.set_march(repo, copy, code, ArmySystem.metres_to_pack(repo, ArmyGround.town_point_m(repo, home)))
+			for i in 400:
+				if code in ArmySystem.march_day(repo, copy):
+					break
+			if ArmyGround.camped_by(repo, copy, code) != home:
+				continue
+		return dir
+	return Vector2.ZERO
 
 
 func test_first_come_first_in() -> void:
@@ -240,13 +283,18 @@ func test_first_come_first_in() -> void:
 	# nobody left in the camp to refill the seat: it stays empty when `a` leaves
 	for c: String in cap["camped"]:
 		s.regiments[c]["camp_town"] = ""
-	var away := _field_east_of(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, a, s)))
+	var way := _open_way(s, a)
+	assert_ne(way, Vector2.ZERO, "an open way out of the camp")
+	var away := _field_from(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, a, s)), way)
 	_arrive(s, a, away)
 	assert_eq(ArmyGround.seat_of(repo, s, town), "")
 	var tp := ArmySystem.metres_to_pack(repo, ArmyGround.town_point_m(repo, town))
 	_arrive(s, a, tp)
 	assert_eq(ArmyGround.seat_of(repo, s, town), a, "the first to arrive takes the empty seat")
-	_arrive(s, b, _field_east_of(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, b, s))))
+	_open_a_gap(s, cap, [String(cap["seat"]), b])
+	var home := _open_way(s, b, town)
+	assert_ne(home, Vector2.ZERO, "an open way out and home")
+	_arrive(s, b, _field_from(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, b, s)), home))
 	_arrive(s, b, tp)
 	assert_eq(ArmyGround.seat_of(repo, s, town), a)
 	assert_eq(ArmyGround.camped_by(repo, s, b), town, "the later one camps round the town")
@@ -273,7 +321,7 @@ func test_a_foreign_town_is_the_field() -> void:
 func test_a_unit_with_no_free_slot_stands_where_it_arrived() -> void:
 	var s := _state()
 	var code := String(_capital(s)["seat"])
-	var dest := _field_east_of(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code, s)) + Vector2(55.0, 0.0))
+	var dest := _field_from(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code, s)) + Vector2(55.0, 0.0))
 	var saved: Variant = repo.balance["army_slot_max_rings"]
 	repo.balance["army_slot_max_rings"] = 0.0
 	# no ring past the centre: the field centre or nothing
@@ -296,7 +344,10 @@ func test_a_town_among_blocked_ground_still_camps_its_arrivals() -> void:
 	for id: int in repo.army_terrain_biomes:
 		repo.army_camp_blocked[String(repo.army_terrain_biomes[id])] = true
 	var tp := ArmySystem.metres_to_pack(repo, ArmyGround.town_point_m(repo, town))
-	_arrive(s, b, _field_east_of(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, b, s))))
+	_open_a_gap(s, cap, [String(cap["seat"]), b])
+	var home := _open_way(s, b, town)
+	assert_ne(home, Vector2.ZERO, "an open way out and home")
+	_arrive(s, b, _field_from(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, b, s)), home))
 	_arrive(s, b, tp)
 	var at := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, b, s))
 	repo.army_camp_blocked = saved
