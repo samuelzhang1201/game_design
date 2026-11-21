@@ -139,7 +139,11 @@ static func bind(player: AnimationPlayer, skeleton: Skeleton3D) -> Dictionary:
 		var rest: Dictionary = Horse.rest_of(skeleton, mesh.skin, landmarks(skeleton, mesh.skin))
 		var hooves: Dictionary = Horse.patches(mesh, plan())
 		skeleton.reset_bone_poses()  # STANDBY too keys only some channels: seek it from the rest pose
-		var stand: Dictionary = Horse.seat(rest, Provider.locals(player, skeleton, "STANDBY", 0.0, rest.bones), hooves)
+		# PLAN.stand_clip: the clip the turn's stand is seated from (STANDBY's first pose unless the plan
+		# names MARCH, which is then taken at PLAN.march_phase, the held pose)
+		var stand_clip: String = String(plan().get("stand_clip", "STANDBY"))
+		var stand_at: float = float(plan().march_phase) * player.get_animation("MARCH").length if stand_clip == "MARCH" else 0.0
+		var stand: Dictionary = Horse.seat(rest, Provider.locals(player, skeleton, stand_clip, stand_at, rest.bones), hooves)
 		if stand.is_empty():
 			return {"ok": false, "reason": "cavalry stand could not be seated"}
 		_bound_by_id[id] = {"ok": true, "reason": "", "rest": rest, "patches": hooves, "stand": stand,

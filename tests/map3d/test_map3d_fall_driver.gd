@@ -97,7 +97,7 @@ func test_the_tail_man_waits_while_the_body_falls_in_his_place() -> void:
 	driver.fall(faller, ART, TUNE)  # its row's figure is now the tail man, walking up
 	var walker := _child(clips)
 	walker["step_up"] = true
-	walker["walk"] = {"to": {"xz": Vector2(0, 10)}, "t0": 0.0}
+	walker["walk"] = {"to": {"xz": Vector2(0, 10)}, "t0": 0.0, "s": 3.5}  # hold + fade: he sets off as it lies
 	var piece := {"clock": 5.0}
 	var battle := [{"id": 1, "rounds": 1, "across": Vector2(1, 0), "a": fig.call(walker, piece), "b": b}]
 	driver.run(battle, 0.05, true, TUNE)
@@ -128,7 +128,10 @@ func test_a_fallen_duellist_stays_down() -> void:
 	driver.fall(body, ART, TUNE)
 	driver.run([{"id": 1, "rounds": 1, "across": Vector2(1, 0), "a": [fig_a], "b": []}], 0.05, true, TUNE)
 	assert_eq((body["anims"][0] as AnimationPlayer).current_animation, "DEATH", "the body keeps falling")
-	assert_false(driver.is_duelling(fig_a["anim"]), "its opponent is released")
+	assert_eq(driver.paired_slots("A"), [] as Array[int], "its opponent is released")
+	fig_a["child"]["walking"] = false  # back on its saved point
+	driver.run([{"id": 1, "rounds": 1, "across": Vector2(1, 0), "a": [fig_a], "b": []}], 0.05, true, TUNE)
+	assert_false(driver.is_duelling(fig_a["anim"]), "and handed back")
 
 
 ## Review 2026-11-17: the figure stepping up from the tail turns into its way, never slides across the block.
@@ -148,3 +151,31 @@ func test_the_swap_marks_the_walker() -> void:
 	var c := {1: {"n": 1}, 5: {"n": 5}}
 	Map3DBattleGroups.fall_swap(c, [{"removed": 5, "faller": 1}])
 	assert_true(c[1].get("step_up", false))
+
+
+func test_a_short_step_up_sets_off_to_arrive_as_the_body_is_gone() -> void:
+	var driver := Map3DDuelDriver.new()
+	var clips := ["GARRISON", "ATTACK", "SLASH", "BLOCK", "HIT", "DEATH"]
+	var faller := _child(clips)
+	var b := [{"key": "B:0", "code": "B", "slot": 0, "anim": add_child_autofree(_anim(clips)),
+		"child": {}, "xz": Vector2(0, -10), "h": 1.0, "art": ART, "piece": {}}]
+	var fig := func(child: Dictionary, piece: Dictionary) -> Array:
+		return [{"key": "A:1", "code": "A", "slot": 1, "anim": child["anims"][0], "child": child,
+			"xz": Vector2(0, 10), "h": 1.0, "art": ART, "piece": piece}]
+	driver.run([{"id": 1, "rounds": 1, "across": Vector2(1, 0), "a": fig.call(faller, {}), "b": b}], 0.05, true, TUNE)
+	driver.fall(faller, ART, TUNE)
+	var walker := _child(clips)
+	walker["step_up"] = true
+	walker["walk"] = {"to": {"xz": Vector2(0, 10)}, "t0": 0.0, "s": 1.5}  # a paced walk of 1.5 s
+	var piece := {"clock": 5.0}
+	var battle := [{"id": 1, "rounds": 1, "across": Vector2(1, 0), "a": fig.call(walker, piece), "b": b}]
+	for i in 40:  # 2.05 s: the 1 s clip + 2 s hold + 1.5 s fade - 1.5 s walk = 3 s not yet reached
+		driver.run(battle, 0.05, true, TUNE)
+	piece["clock"] = 7.0
+	driver.run(battle, 0.05, true, TUNE)
+	assert_eq(float(walker["walk"]["t0"]), 7.0, "he holds back past the fall")
+	for i in 20:
+		driver.run(battle, 0.05, true, TUNE)
+	piece["clock"] = 9.0
+	driver.run(battle, 0.05, true, TUNE)
+	assert_eq(float(walker["walk"]["t0"]), 7.0, "and sets off to arrive as it is gone")

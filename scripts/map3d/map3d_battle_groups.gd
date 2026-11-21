@@ -134,6 +134,13 @@ static func eased(from_xz: Vector2, from_yaw: float, to_xz: Vector2, to_yaw: flo
 		else (way if t < 0.8 else lerp_angle(way, to_yaw, (t - 0.8) / 0.2))}
 
 
+## The seconds a walk of `dist_m` world metres takes at the arm's own MARCH pace
+## (`stride_m` model metres a `clip_s` loop, at scale `k`); `fallback` with no stride.
+static func paced_s(dist_m: float, k: float, clip_s: float, stride_m: float, fallback: float) -> float:
+	var speed := stride_m * k / clip_s if clip_s > 0.0 else 0.0
+	return dist_m / speed if speed > 0.0 and dist_m > 0.0 else fallback  # standing still it only turns
+
+
 ## The walks' own clock: true (and `delta` counted) while a figure of `piece` is on its way.
 static func tick(piece: Dictionary, delta: float) -> bool:
 	if not piece.get("easing", false):
@@ -144,15 +151,21 @@ static func tick(piece: Dictionary, delta: float) -> bool:
 
 ## Where a group's figure is DRAWN now: on its saved point, or walking to it
 ## over `map3d_battle_walk_s` from where it last stood (owner 2026-11-14:
-## 进入对峙的动画非常突兀). View-only; the saved point is never moved.
-static func _walk(repo: DataRepository, piece: Dictionary, child: Dictionary, xz: Vector2, yaw: float) -> Dictionary:
+## 进入对峙的动画非常突兀); a duel's step from where it stands (in, out or up:
+## `step_facing` / `step_up`) over `paced_s` instead, so its MARCH plays at its
+## own cadence (Map3DDuelDriver.step_rate). View-only; the saved point is never moved.
+static func _walk(repo: DataRepository, piece: Dictionary, child: Dictionary, xz: Vector2, yaw: float,
+		k := 0.0) -> Dictionary:
 	var to := {"xz": xz, "yaw": yaw}
 	var at: Dictionary = child.get("at", to)
 	var walk: Dictionary = child.get("walk", {})
 	if walk.get("to", {}) != to:
-		walk = {"from": at, "to": to, "t0": float(piece.get("clock", 0.0))}
+		walk = {"from": at, "to": to, "t0": float(piece.get("clock", 0.0)), "s": repo.bal("map3d_battle_walk_s")}
+		if child.get("step_facing", false) or child.get("step_up", false):
+			walk["s"] = paced_s((at["xz"] as Vector2).distance_to(xz), k, float(child.get("clip_s", 0.0)),
+				float(child.get("stride_m", 0.0)), float(walk["s"]))
 		child["walk"] = walk
-	var walk_s := repo.bal("map3d_battle_walk_s")
+	var walk_s := float(walk.get("s", repo.bal("map3d_battle_walk_s")))
 	var wait := float(walk["from"].get("delay", 0.0))   # a lane sets off this share of the walk late
 	var t := 1.0 if walk_s <= 0.0 or walk["from"]["xz"] == xz and walk["from"]["yaw"] == yaw \
 		else ((float(piece.get("clock", 0.0)) - float(walk["t0"])) / walk_s - wait) / (1.0 - wait)
@@ -282,7 +295,7 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 		var xz: Vector2 = saved["xz"]
 		var yaw: float = saved["yaw"]
 		if not piece.get("candidate_bodies", false):
-			var drawn := _walk(repo, piece, child, xz, yaw)
+			var drawn := _walk(repo, piece, child, xz, yaw, k)
 			xz = drawn["xz"]
 			yaw = drawn["yaw"]
 			easing = easing or bool(child["walking"])

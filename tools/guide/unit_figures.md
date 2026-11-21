@@ -53,6 +53,8 @@
 
 ## The Tripo knight (owner 2026-09-30, the cavalry remade the infantry's way)
 
+**Retired** (owner 2026-11-21: 替换现有骑兵): the cavalry is now the ARP heavy knight on the armoured horse (`tools/units3d/cavalry_arp/`); the rulings below (green saddle cloth, the shield on his back) were for the old Tripo knight and no longer apply. The heavy knight's own rulings are in its source folder's README.
+
 - **Keep the design; change the maker**: the Tripo knight wears the in-game
   look (plate, a charcoal dappled horse with a white star, no barding, a
   green saddle cloth with a brass edge, a green heater with a white pale,
