@@ -1,8 +1,8 @@
 {
  "arm": "heavy_infantry",
- "note": "LOCO-CERT-HVY (spec 2026-11-20-heavy-infantry-arm-design). The heavy infantry wear the infantry's short-sword soldier until their plate soldier is installed (army_models.tres binds heavy_infantry to infantry.tscn), so this is the infantry's provider and config at the heavy infantry's footprint radius 927 and the infantry's scale. Map3DInfantryLocomotion re-solves the coupled pivot plan for each grid turn; pivots enter and leave MARCH at 8/420 only and the hold is MARCH frozen at 8/420 (owner ruling A, a consumer requirement). Installing the plate soldier voids it.",
- "scene": "scenes/models/units/infantry.tscn",
- "provider": "scripts/map3d/map3d_infantry_locomotion.gd",
+ "note": "LOCO-CERT-HVY (spec 2026-11-20-heavy-infantry-arm-design, step 3). The plate soldier's own scene and provider: Map3DHeavyInfantryLocomotion is Map3DInfantryLocomotion's solver on this body's coupled pivot plan (heavy_infantry_pivot_plan.json; the shipped clips are its +/-90 solve). The body walks the infantry's pack walk, so pivots enter and leave MARCH at 8/420 only and the hold is MARCH frozen at 8/420 (owner ruling A, a consumer requirement), as the infantry's. Stride 1.473 measured off its MARCH; k 26.4330 (rest height 1.5992 m at size 0.62), contact 22699 um.",
+ "scene": "scenes/models/units/heavy_infantry.tscn",
+ "provider": "scripts/map3d/map3d_heavy_infantry_locomotion.gd",
  "feet": {
   "l": [
    "foot.l",
@@ -19,7 +19,7 @@
   0,
   -1
  ],
- "stride_m": 1.4838,
+ "stride_m": 1.473,
  "turn_q": 400000,
  "radius_m": 927,
  "entry_phase": 0.01904761904761905,

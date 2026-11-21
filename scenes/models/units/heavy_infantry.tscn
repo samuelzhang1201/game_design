@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://cpqlbrtq06nvf"]
+
+[ext_resource type="PackedScene" uid="uid://df3jxa7xscruh" path="res://assets/3D/units/heavy_infantry/heavy_infantry.glb" id="1_glb"]
+[ext_resource type="Texture2D" uid="uid://dopbra6ttdqyx" path="res://assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas.jpg" id="2_5jete"]
+[ext_resource type="Texture2D" uid="uid://qyua3ro0sf43" path="res://assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas_mr.jpg" id="3_txj7d"]
+[ext_resource type="Texture2D" uid="uid://1lyng0p0b8jc" path="res://assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas_n.jpg" id="4_ywfj7"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8abty"]
+resource_name = "heavy_infantry_atlas_mat"
+cull_mode = 2
+albedo_texture = ExtResource("2_5jete")
+metallic = 1.0
+metallic_texture = ExtResource("3_txj7d")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("3_txj7d")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("4_ywfj7")
+metadata/_gltf_primary_texture_coord = 0
+
+[node name="HeavyInfantry" unique_id=1494207311 instance=ExtResource("1_glb")]
+editor_description = "One FIGURE of a heavy infantry regiment's piece: the body game_export.py installed (tools/units3d/infantry_arp/README.md) on the infantry's rig and clips. The 3D map (Map3DLayerUnits) stands instances of this scene in formation and plays its clips by order. Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/screens/map3d/army_art.csv."
+
+[node name="heavy_infantry" parent="inf_rig/Skeleton3D" parent_id_path=PackedInt32Array(983800081) index="0" unique_id=66212794]
+surface_material_override/0 = SubResource("StandardMaterial3D_8abty")

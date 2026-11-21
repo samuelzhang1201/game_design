@@ -5,8 +5,14 @@
 Source (git-ignored): assets/3D/model_wip/blender_output/infantry/infantry_shortsword_shield.blend
 (rig `rig`, body `Infantry_body`, gear `Weapon` / `Shield` bone-parented to cc_weapon.r / .l).
 Headless, nothing saved:
-  Blender -b -y SOURCE.blend --python tools/units3d/infantry_arp/game_export.py -- ROOT [OUT.json]
+  Blender -b -y SOURCE.blend --python tools/units3d/infantry_arp/game_export.py -- ROOT [OUT.json] [ARM]
 or exec() in a Blender with the file open, then install(ROOT). Works on copies.
+ARM (default `infantry`) names the output: `assets/3D/units/<ARM>/<ARM>.glb`, the mesh `<ARM>` and
+the atlas files `<ARM>_<ARM>_atlas{,_mr,_n}.jpg`; the armature is `inf_rig` for every arm (one rig
+contract). Another body on the same contract (the heavy infantry's plate soldier,
+docs/superpowers/specs/2026-11-20-heavy-infantry-arm-design.md) is installed the same way; a source
+with no `textures/body_class.npy` has no authored material classes, so the class polish (mail,
+body lift) is skipped for it.
 For a complete pivot build, pass the solved sample JSON and its reference seconds (4.0) as
 install(ROOT, pivot_samples=PATH, pivot_seconds=SECONDS). The samples come from the coupled author
 mapping: pivot_native.gd captures MARCH, pivot_mapping.py builds the cases, pivot_solve.gd solves
@@ -59,6 +65,15 @@ LOCK = {"WALK": {"legs": [(s, "thigh_twist" + s, "thigh_stretch" + s, "leg_stret
                            "foot" + s, "toes_01" + s) for s in (".l", ".r")],
                  "stance_m": 0.004, "deep_m": 0.002, "clear_m": 0.012, "ease_frames": 3, "min_knee_deg": 2.0,
                  "land_frames": 2, "stance": {".l": (0.20, 0.86), ".r": (0.90, 0.35)}}}
+ARM = "infantry"                         # the output's name; install() sets it
+# What another body needs of LOCK on its own MARCH (merged over the clip's entry for that ARM; the
+# INFANTRY_LOCK environment variable, a JSON object, overrides both for a bracketed trial).
+# `approach_frames`: the last swing frames before a touchdown already travel back with the ground,
+# still above it (the stance itself is not moved; the swing before them eases onto the first). The plate soldier's sole sinks 3 mm under the lock's ground (its boot is skinned
+# across the ankle), so it enters the certifier's planting band a sixth of a frame before its
+# touchdown key, while the foot still closes on its landing place at 0.09 m a frame: 12.1 mm of
+# slide and a 11.6 mm margin, 23.7 against a bound of 22.7.
+ARM_LOCK = {"heavy_infantry": {"WALK": {"approach_frames": 1}}}
 BODY = "Infantry_body"
 GEAR = {"sword": "Weapon", "shield": "Shield"}
 REST = ("IDLE", 1)                       # the guard stance, GARRISON's first frame
@@ -184,11 +199,11 @@ def _mesh(src, rig):
         o.select_set(True)
     vl.objects.active = body
     bpy.ops.object.join()
-    body.name = "infantry"; body.data.name = "infantry"
+    body.name = ARM; body.data.name = ARM
     for old, new in RENAME.items():
         if old in body.vertex_groups:
             body.vertex_groups[old].name = new
-    mat = bpy.data.materials.new("infantry_atlas_mat")
+    mat = bpy.data.materials.new(ARM + "_atlas_mat")
     body.data.materials.clear()
     body.data.materials.append(mat)
     for p in body.data.polygons:
@@ -262,6 +277,7 @@ def _atlases(mat, out_dir):
                for kind, suffix in (("albedo", "base"), ("mr", "mr"), ("n", "normal"))}
     files = {}
     cfg, mask = _polish_cfg(), None
+    classes = (Path(bpy.data.filepath).parent / "textures/body_class.npy").exists()
     for kind, parts in sources.items():
         atlas = np.zeros((ATLAS, ATLAS, 4), np.float32)
         atlas[..., 3] = 1
@@ -273,7 +289,7 @@ def _atlases(mat, out_dir):
             x, y = int(u0 * ATLAS), int(v0 * ATLAS)
             if img is not None:
                 atlas[y:y + h, x:x + w] = _pixels(img, w, h)
-            if part == "body":
+            if part == "body" and classes:
                 if mask is None:
                     mask = _class_mask(w, h, 2)
                 atlas[y:y + h, x:x + w] = _calm_mail(kind, atlas[y:y + h, x:x + w], mask, cfg)
@@ -298,12 +314,12 @@ def _atlases(mat, out_dir):
         # the image is named as the old GLB named it; Godot extracts it beside the .glb as
         # "<glb>_<image>" = the infantry_infantry_atlas*.jpg the scene's material reads (and never
         # overwrites them: this build writes those files itself)
-        name = "infantry_atlas" + ("" if kind == "albedo" else "_" + kind)
+        name = ARM + "_atlas" + ("" if kind == "albedo" else "_" + kind)
         im = bpy.data.images.new(name, ATLAS, ATLAS, alpha=False)
         if kind != "albedo":
             im.colorspace_settings.name = "Non-Color"
         im.pixels.foreach_set(atlas.ravel())
-        path = str(Path(out_dir) / ("infantry_" + name + ".jpg"))
+        path = str(Path(out_dir) / (ARM + "_" + name + ".jpg"))
         im.filepath_raw = path
         im.file_format = "JPEG"
         bpy.context.scene.render.image_settings.quality = 92
@@ -324,7 +340,7 @@ def _atlases(mat, out_dir):
     nm = nt.nodes.new("ShaderNodeNormalMap")
     nt.links.new(t.outputs["Color"], nm.inputs["Color"])
     nt.links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
-    return {k: str(Path(out_dir) / ("infantry_" + v.name + ".jpg")) for k, v in files.items()}
+    return {k: str(Path(out_dir) / (ARM + "_" + v.name + ".jpg")) for k, v in files.items()}
 
 
 LOCKED = {}
@@ -350,8 +366,15 @@ def _turn(a, b):
     return a.normalized().rotation_difference(b.normalized()).to_matrix().to_4x4()
 
 
-def _lock_feet(src, clip, poses):
+def _lock_cfg(clip):
     cfg = LOCK.get(clip)
+    if cfg:
+        cfg = {**cfg, **ARM_LOCK.get(ARM, {}).get(clip, {}), **json.loads(os.environ.get("INFANTRY_LOCK", "{}"))}
+    return cfg
+
+
+def _lock_feet(src, clip, poses):
+    cfg = _lock_cfg(clip)
     if not cfg:
         return {}
     n = len(poses) - 1                    # unique frames (the last is the first again)
@@ -404,6 +427,17 @@ def _lock_feet(src, clip, poses):
             if stance[f] and win:
                 acc.z = -float(world[f][:, 2].min())          # the sole on the ground, z = 0
             off[f] = acc.copy() if stance[f] else None
+        # approach: the last `approach_frames` swing frames before each touchdown are moved so the
+        # sole already travels back with the ground from there to its landing place (its height
+        # kept): the foot arrives over that place a frame early and only comes down
+        lead = int(cfg.get("approach_frames", 0))
+        for f in [g for g in range(n) if stance[g] and not stance[g - 1]]:
+            for k in range(1, lead + 1):
+                q, nxt = (f - k) % n, (f - k + 1) % n
+                a, b = world[q], world[nxt]
+                deep = a[:, 2] <= a[:, 2].min() + cfg["deep_m"]
+                d = b[deep].mean(axis=0) - a[deep].mean(axis=0)
+                off[q] = Vector((off[nxt].x + d[0], off[nxt].y + d[1] - v, 0.0))
         # ease each stance's final offset back to zero through the swing that follows
         f = start
         for _ in range(n):
@@ -418,6 +452,8 @@ def _lock_feet(src, clip, poses):
                 for g in range(a + 1, z):
                     u = (g - a) / span
                     off[g % n] = off[a] * (1 - (u * u * (3 - 2 * u)))
+                    if lead:  # the swing eases onto its first approach frame's offset
+                        off[g % n] += off[z % n] * (u * u * (3 - 2 * u))
                 f = z % n
             f = (f + 1) % n
         # swing lift: each swing frame raised to clear_m, spread to its neighbours on a cos^2 falloff;
@@ -621,12 +657,15 @@ def _march_measure(src, poses, keep):
             "frames": n}
 
 
-def install(root, pivot_samples=None, pivot_seconds=None):
+def install(root, pivot_samples=None, pivot_seconds=None, arm="infantry"):
+    global ARM
+    ARM = arm
     assert (pivot_samples is None) == (pivot_seconds is None), "pivot samples and seconds are a pair"
     if pivot_samples is not None:
         assert type(pivot_seconds) in (int, float) and math.isfinite(pivot_seconds) and pivot_seconds > 0
     root = Path(root)
-    out = root / "assets/3D/units/infantry"
+    out = root / "assets/3D/units" / ARM
+    out.mkdir(parents=True, exist_ok=True)
     scn = bpy.context.scene
     src = bpy.data.objects["rig"]
     keep, parents = _keep(src)
@@ -647,7 +686,7 @@ def install(root, pivot_samples=None, pivot_seconds=None):
         if clip == "WALK":
             info["march"] = _march_measure(src, poses, keep)
             info["march"]["lock"] = lock = LOCKED.get(clip)
-            if lock and LOCK[clip].get("stance"):
+            if lock and _lock_cfg(clip).get("stance"):
                 # authored stances: every planted sole travels back at exactly the lock's speed, so
                 # the stride is that speed over the loop and the footfalls are the stances' starts
                 info["march"]["stride_m"] = round(lock["speed_m_per_frame"] * (len(poses) - 1), 4)
@@ -660,7 +699,7 @@ def install(root, pivot_samples=None, pivot_seconds=None):
         o.select_set(False)
     rig.select_set(True); body.select_set(True)
     bpy.context.view_layer.objects.active = rig
-    target = out / "infantry.glb"
+    target = out / (ARM + ".glb")
     if pivot_samples is not None:
         target = root / "assets/3D/model_wip/blender_output/units/infantry/pivot_export/source.glb"
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -675,7 +714,7 @@ def install(root, pivot_samples=None, pivot_seconds=None):
             spec = importlib.util.spec_from_file_location("infantry_pivot", root / "tools/units3d/soldier_arp/pivot.py")
             pivot = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(pivot)
-            info["pivots"] = pivot.bake(target, pivot_samples, out / "infantry.glb", pivot_seconds)
+            info["pivots"] = pivot.bake(target, pivot_samples, out / (ARM + ".glb"), pivot_seconds)
         finally:
             target.unlink(missing_ok=True)
     me = body.data
@@ -688,7 +727,7 @@ def install(root, pivot_samples=None, pivot_seconds=None):
 if __name__ == "__main__":
     import sys
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    result = install(argv[0])
+    result = install(argv[0], arm=argv[2] if len(argv) > 2 else "infantry")
     text = json.dumps(result, indent=1, default=str)
     if len(argv) > 1:
         Path(argv[1]).write_text(text)
