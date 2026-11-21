@@ -172,6 +172,7 @@ func _roster() -> void:
 			continue
 		Map3DUnitStandard.sync(piece, Map3DNationalFlag.texture_for(ctx.repo, realm_flags,
 			String(reg.get("kingdom_code", ""))), national_standard)
+		Map3DUnitCloth.sync(piece, MapPalette.color_of(ctx.repo, String(reg.get("kingdom_code", ""))))
 		live[code] = true
 		if not _shown_xz.has(code):
 			_shown_xz[code] = _target_xz(reg)
@@ -179,8 +180,10 @@ func _roster() -> void:
 	# piece (a host's: its first column's) at full strength, see-through, standing still
 	for g: Dictionary in ctx.ghosts():
 		var key := Sighting.GHOST_CODE + String(g["key"])
-		if not _pieces.has(key) and not _build(key, ArmySystem.regiment(ctx.repo, Sighting.model_unit(
-				ctx.state(), g), ctx.state()), Map3DFormation.tier_of(ctx.repo, 1000)).is_empty():
+		var model := ArmySystem.regiment(ctx.repo, Sighting.model_unit(ctx.state(), g), ctx.state()) \
+			if not _pieces.has(key) else {}
+		if not model.is_empty() and not _build(key, model, Map3DFormation.tier_of(ctx.repo, 1000)).is_empty():
+			Map3DUnitCloth.sync(_pieces[key], MapPalette.color_of(ctx.repo, String(model.get("kingdom_code", ""))))
 			Map3DCourierRide.apply(_pieces[key], ghost_alpha)
 			play(key, STANDBY)
 		if _pieces.has(key):

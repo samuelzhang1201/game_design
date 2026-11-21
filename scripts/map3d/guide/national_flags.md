@@ -33,3 +33,8 @@ remain the ordinary unit's. Installed ARP and mounted models are covered by the
 national-flags test. The infantry uses `arm_stretch.r`, `forearm_stretch.r`,
 `hand.r`, with `cc_weapon.r/l`; mounted models use `R_UpperArm.R`,
 `R_Forearm.R`, `R_Hand.R` and the cavalry's `Lance` socket.
+
+## Realm-coloured cloth (`Map3DUnitCloth`)
+
+- Every land figure's dyed cloth wears its owning realm's map colour (`MapPalette.color_of`), set in `Map3DLayerUnits._roster` beside the standard, ghosts included. A surface is dressed when its albedo atlas has a mask in `assets/3D/units/cloth_masks.tres` (ArtTable keyed by the atlas FILE NAME); it is redrawn by `scenes/map3d/materials/unit_cloth.tres` (`unit_cloth.gdshader`) over the scene material's own textures — one shared material per atlas, the colour an instance uniform `realm_color`. Unmasked surfaces (bow, quiver, arrow) keep the scene's material. The WAR ROOM builds its own figures and is untouched.
+- Masks `<atlas>_cloth.png` are baked by `tools/units3d/cloth_mask.py` (R = cloth by a per-atlas HSV window, G = shade over the dye's mean, halved, so folds survive). A new or re-exported atlas re-runs it and gets a row in the table. The look (`value`, `strength`, `fold_contrast`) is the `.tres`: kept deep (value 0.7) — a light realm colour reads salmon / chalky.
