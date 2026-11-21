@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://c6680vpgosgtt"]
+
+[ext_resource type="Material" uid="uid://hhxve3jv5lxh" path="res://scenes/map3d/materials/unit_realm_tint.tres" id="1_ujrw1"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="2_no1d4"]
+
+[resource]
+script = ExtResource("2_no1d4")
+art = Dictionary[String, Resource]({
+"artillery": ExtResource("1_ujrw1"),
+"axemen": ExtResource("1_ujrw1"),
+"heavy_infantry": ExtResource("1_ujrw1"),
+"infantry": ExtResource("1_ujrw1")
+})

@@ -1,0 +1,18 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://hhxve3jv5lxh"]
+
+[ext_resource type="Shader" uid="uid://cipw05pfwbhxt" path="res://scenes/map3d/materials/unit_realm_tint.gdshader" id="1_cgbdh"]
+[ext_resource type="Texture2D" uid="uid://4xtjdfekefsx" path="res://assets/3D/units/infantry/infantry_infantry_atlas.jpg" id="2_8o5gn"]
+[ext_resource type="Texture2D" uid="uid://uayfxy64n1ly" path="res://assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg" id="3_whw6n"]
+[ext_resource type="Texture2D" uid="uid://dua3jk44emoyu" path="res://assets/3D/units/infantry/infantry_infantry_atlas_n.jpg" id="4_gysa0"]
+[ext_resource type="Texture2D" uid="uid://b4db0uhpj43sf" path="res://assets/3D/units/infantry/infantry_tunic_mask.png" id="5_48kv6"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_cgbdh")
+shader_parameter/albedo_atlas = ExtResource("2_8o5gn")
+shader_parameter/mr_atlas = ExtResource("3_whw6n")
+shader_parameter/normal_atlas = ExtResource("4_gysa0")
+shader_parameter/tunic_mask = ExtResource("5_48kv6")
+shader_parameter/tunic_luminance = 0.12
+shader_parameter/shade_max = 2.0
+shader_parameter/cloth_roughness = 0.85
