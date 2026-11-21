@@ -6,11 +6,14 @@ extends RefCounted
 ## drives both figures, so the strike and the reply meet; the duel's own clock
 ## stops with the game's and runs in real seconds at any speed. Each figure of a
 ## pair steps toward the other (`duel_offset`, `duel_yaw` on its group child,
-## which Map3DBattleGroups walks it to) — the saved point never moves.
+## which Map3DBattleGroups walks it to) — the saved point never moves. Every
+## step (in, back out once released, a tail man's up) walks its MARCH paced to
+## the ground it covers (`step_rate`), backwards when it backs away.
 
 var _pairs: Dictionary = {}  ## "code:slot|code:slot" -> {figs, t, n, turn}
 var _bodies: Array = []  ## the fallen: [{child, t, clip_s, key}] (Map3DFall; key: the duel slot it fell from)
 var _losses: Dictionary = {}  ## code -> how many losses it has shown
+var _stepping: Array = []  ## released figures walking back to their saved point, handed back on arrival
 
 
 func is_duelling(anim: AnimationPlayer) -> bool:
@@ -142,8 +145,9 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 	for key: String in _pairs.keys():
 		if not wanted.has(key):
 			for f: Dictionary in _pairs[key]["figs"]:
-				if _release(f, tune):
+				if _release(f):
 					placed[f["code"]] = true
+					_stepping.append(f)
 			_pairs.erase(key)
 	for key: String in wanted:
 		var figs: Array = wanted[key]
@@ -151,6 +155,7 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 			# each pair opens after its own hashed guard, so a front never strikes in unison
 			_pairs[key] = {"figs": figs, "t": -Map3DMarchLag.unit(key + "|open") * float(tune["open_max"]), "n": 0}
 			for f: Dictionary in figs:
+				_stepping = _stepping.filter(func(w: Dictionary) -> bool: return not is_same(w["anim"], f["anim"]))
 				_claim(f)
 			_begin(_pairs[key], key, tune)
 		_pairs[key]["figs"] = figs
@@ -165,6 +170,12 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 			placed[figs[1]["code"]] = true
 	for key: String in _pairs:
 		_advance(_pairs[key], key, delta, running, tune)
+	for f: Dictionary in _stepping.duplicate():
+		if not is_instance_valid(f["anim"]):
+			_stepping.erase(f)  # freed with its piece
+		elif not _pace(f, delta, running):
+			_stepping.erase(f)
+			_hand_back(f, tune)
 	_fade(delta, running, tune)
 	return placed.keys()
 
@@ -187,16 +198,19 @@ func _fade(delta: float, running: bool, tune: Dictionary) -> void:
 
 
 ## The tail man walking up into a slot whose body is still falling holds back
-## (his walk kept at its start, so the pair's turn waits); he steps up once it lies.
-## With hold + fade = map3d_battle_walk_s he arrives as the body is gone.
+## (his walk kept at its start, so the pair's turn waits): he sets off once it
+## lies, and no sooner than arrives as it is gone (its hold + fade after the
+## clip, less his paced walk's seconds).
 func _wait_for_bodies(figs: Array, tune: Dictionary) -> void:
 	for f: Dictionary in figs:
 		var child: Dictionary = f["child"]
 		if not child.get("step_up", false) or not child.has("walk"):
 			continue
+		var walk_s := float(child["walk"].get("s", 0.0))
 		for body: Dictionary in _bodies:
-			if String(body["key"]) == String(f["key"]) \
-					and float(body["t"]) < float(body["clip_s"]):
+			var clip_s := float(body["clip_s"])
+			if String(body["key"]) == String(f["key"]) and float(body["t"]) \
+					< maxf(clip_s, clip_s + float(tune["fall_hold"]) + float(tune["fall_fade"]) - walk_s):
 				child["walk"]["t0"] = float((f["piece"] as Dictionary).get("clock", 0.0))
 
 
@@ -207,23 +221,72 @@ static func _claim(f: Dictionary) -> void:
 	_start(anim, "GARRISON", 0.0)
 
 
-## Back to the piece's own action (its chain, if it chains), its saved spot and facing.
-static func _release(f: Dictionary, tune: Dictionary) -> bool:
+## Back to its saved spot and facing, walking backwards (`_stepping`, `_pace`);
+## false for a figure freed with its piece (e.g. a refresh under the pause menu), or a body falling.
+static func _release(f: Dictionary) -> bool:
 	(f["child"] as Dictionary).erase("duel_offset")
 	(f["child"] as Dictionary).erase("duel_yaw")
 	(f["child"] as Dictionary)["step_facing"] = true  # it steps back facing its foe
 	if not is_instance_valid(f["anim"]) or (f["anim"] as AnimationPlayer).has_meta("fallen"):
-		return false  # freed with its piece (e.g. a refresh under the pause menu), or a body falling
+		return false
+	(f["child"] as Dictionary)["walking"] = true  # its walk back starts when its piece is placed
+	return true
+
+
+## Arrived: back to the piece's own action (its chain, if it chains).
+static func _hand_back(f: Dictionary, tune: Dictionary) -> void:
 	var anim: AnimationPlayer = f["anim"]
 	anim.remove_meta("duel")
 	anim.speed_scale = 1.0
 	var action := String((f["piece"] as Dictionary).get("action", ""))
 	if action == "":
 		_start(anim, "GARRISON", 0.0)
-		return true
+		return
 	var clips: Array = ((f["piece"] as Dictionary).get("chains", {}) as Dictionary).get(action, [])
 	Map3DUnitRig.play([anim], action, 0.2, String(f["key"]),
 		{} if clips.is_empty() else {"clips": clips, "lo": tune["chain_lo"], "hi": tune["chain_hi"]})
+
+
+## A stepping figure's MARCH rate: its drawn step `moved` (world XZ) this frame
+## along the way it faces (`yaw`), in its model's metres (scale `k`), over what
+## a `clip_s` loop walks (`stride_m`): 1 at its own pace, below 0 backing away.
+static func step_rate(moved: Vector2, yaw: float, dt: float, k: float, clip_s: float, stride_m: float) -> float:
+	if dt <= 0.0 or k <= 0.0 or stride_m <= 0.0:
+		return 0.0
+	return moved.dot(Vector2(-sin(yaw), -cos(yaw))) / dt / k * clip_s / stride_m
+
+
+## One frame of a figure's step: while its group child walks it plays MARCH at
+## `step_rate` (its guard while it stands held), paused it stands still (its
+## walk held); arrived, back to its guard. False once it no longer walks.
+static func _pace(f: Dictionary, delta: float, running: bool) -> bool:
+	var child: Dictionary = f["child"]
+	var anim: AnimationPlayer = f["anim"]
+	var march := Map3DUnits.clip_named(anim, "MARCH")
+	if not child.get("walking", false):
+		child.erase("paced_at")
+		if march != "" and anim.current_animation == march:
+			_start(anim, "GARRISON", 0.0)
+		return false
+	if not running:
+		anim.speed_scale = 0.0
+		if child.has("walk"):
+			child["walk"]["t0"] = float(child["walk"]["t0"]) + delta  # its step waits with the clock
+		return true
+	var at: Dictionary = child.get("at", {})
+	var xz: Vector2 = at.get("xz", Vector2.ZERO)
+	var was: Vector2 = child.get("paced_at", xz)
+	child["paced_at"] = xz
+	var k := float(f["h"]) / float(child["height_m"]) if float(child.get("height_m", 0.0)) > 0.0 else 0.0
+	var rate := step_rate(xz - was, float(at.get("yaw", 0.0)), delta, k, float(child.get("clip_s", 0.0)),
+		float(child.get("stride_m", 0.0)))
+	if march == "" or absf(rate) < 0.05:
+		anim.speed_scale = 1.0
+		_start(anim, "GARRISON", 0.0)  # held back (or no MARCH): it stands its guard
+		return true
+	if anim.current_animation != march:
+		anim.play(march, 0.15)
+	anim.speed_scale = rate
 	return true
 
 
@@ -244,8 +307,10 @@ static func _aim(figs: Array, tune: Dictionary) -> bool:
 				or not is_equal_approx(float(child["duel_yaw"]), yaw):
 			child["duel_offset"] = offset
 			child["duel_yaw"] = yaw
-			if not child.get("step_up", false):  # a figure walking up from the tail turns into its way
-				child["step_facing"] = true  # it steps in facing its foe, never turned to its way
+			# a figure standing on its point steps in facing its foe, never turned to its way; one
+			# still walking (up from the tail, or in from its block) turns into its way, so it never crabs
+			if not child.get("step_up", false) and not child.get("walking", false):
+				child["step_facing"] = true
 			changed = true
 	return changed
 
@@ -273,10 +338,13 @@ static func _begin(p: Dictionary, key: String, tune: Dictionary) -> void:
 
 static func _advance(p: Dictionary, key: String, delta: float, running: bool, tune: Dictionary) -> void:
 	var anims: Array = (p["figs"] as Array).map(func(f: Dictionary) -> AnimationPlayer: return f["anim"])
-	for anim: AnimationPlayer in anims:
-		if is_instance_valid(anim):
-			anim.speed_scale = 1.0 if running else 0.0
-	if not running or (p["figs"] as Array).any(func(f: Dictionary) -> bool: return bool((f["child"] as Dictionary).get("walking", false))):
+	var stepping := false
+	for f: Dictionary in p["figs"]:
+		if is_instance_valid(f["anim"]) and _pace(f, delta, running):
+			stepping = true
+		elif is_instance_valid(f["anim"]):
+			(f["anim"] as AnimationPlayer).speed_scale = 1.0 if running else 0.0
+	if not running or stepping:
 		return  # paused, or still stepping in: the turn waits
 	p["t"] = float(p["t"]) + delta
 	while true:
