@@ -20,7 +20,7 @@ static func sync(repo: DataRepository, piece: Dictionary, reg: Dictionary, realm
 ## hue alone (an HSV value left a sky-blue tunic far lighter than a coral one, and the palette's
 ## more vivid blue louder than its red).
 static func tint(base: Color, sat: float, lum: float) -> Color:
-	var s := sat
+	var s := sat if base.s > 0.01 else 0.0  # a grey (MapPalette.FALLBACK) has no hue to tint
 	var lo := 0.0
 	var hi := 1.0
 	for i in 30:

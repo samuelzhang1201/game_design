@@ -59,6 +59,14 @@ func test_tint_is_the_value_of_that_luminance() -> void:
 	assert_almost_eq(Map3DUnitDress.luminance(red), Map3DUnitDress.luminance(blue), 1e-4)
 
 
+func test_a_grey_realm_stays_grey() -> void:
+	# MapPalette.FALLBACK (no slot, no colour) has hue 0: forced to the key's saturation it
+	# would read as the red side
+	var c := Map3DUnitDress.tint(Color(0.6, 0.6, 0.6), 0.5, 0.08)
+	assert_almost_eq(c.s, 0.0, 1e-3)
+	assert_almost_eq(Map3DUnitDress.luminance(c), 0.08, 1e-4)
+
+
 func test_tint_of_reads_the_palette_and_the_keys() -> void:
 	var repo := SuiteData.repo()
 	var code := repo.resolve_realm("raider_realm")
@@ -125,3 +133,6 @@ func test_the_installed_table_tints_every_arm_on_the_infantry_model() -> void:
 			assert_null(tints.of(key), key)
 	var mat := tints.of("infantry") as ShaderMaterial
 	assert_not_null(mat.get_shader_parameter("tunic_mask"))
+	# a fading figure (a fall, Map3DCourierRide.apply) draws in the transparent pass too:
+	# the overlay must sort after it there, or the tint may vanish while it fades
+	assert_gt(mat.render_priority, 0)

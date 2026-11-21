@@ -7,7 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://b4db0uhpj43sf" path="res://assets/3D/units/infantry/infantry_tunic_mask.png" id="5_48kv6"]
 
 [resource]
-render_priority = 0
+render_priority = 1
 shader = ExtResource("1_cgbdh")
 shader_parameter/albedo_atlas = ExtResource("2_8o5gn")
 shader_parameter/mr_atlas = ExtResource("3_whw6n")
