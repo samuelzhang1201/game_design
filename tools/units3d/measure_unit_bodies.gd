@@ -147,7 +147,7 @@ static func export_all(repo: DataRepository, out_path: String) -> Dictionary:
 	var ref_m := Map3DGeometry.distance_for_bar(repo, meta, repo.bal("map3d_zoom_start_scale"), view_h)
 	var ratio := float(meta.m_per_px) / float(ArmySystem.metres_per_pack_px(repo))
 	var attack_bones := {"infantry": ["cc_weapon.r"], "artillery": ["cc_weapon.r"], "axemen": ["cc_weapon.r"],
-		"cavalry": ["Lance"], "royal": ["Sword"], "archers": ["DEF-weapon.R"]}
+		"cavalry": ["cc_weapon.r"], "royal": ["Sword"], "archers": ["DEF-weapon.R"]}
 	var rows: Dictionary = {}
 	var hashes: Dictionary = {}
 	for path: String in [GameArt.ARMY_MODELS, world_path, "res://data/screens/map3d/army_art.csv",

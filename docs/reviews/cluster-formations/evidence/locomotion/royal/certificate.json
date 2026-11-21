@@ -822,7 +822,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "500da3ae3c93273ee227655a916bb4b1f7e651673cecdb711a58eb4c5ffb5c07",
+  "sha256": "7cbe229a483a6be677f0b2aab3847c0b695e6ea8a0f4a6f87e6117d8ae4a75ef",
   "uniform": 512
  },
  "config": {
@@ -886,8 +886,8 @@
  },
  "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
  "input_sha256": {
-  "assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg": "38f28344390a6b6844b3cedfb3da1a0383ce253025701a30cc232818c448e228",
-  "assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg.import": "e99b960c02adede00ec5aecf53389c48384c93fdf4fc6a6ef24ed8efb0c6f250",
+  "assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg": "d310679c9d252b900474e91e3252fe4c2fdf175d402ef71889a3e6739503fe7a",
+  "assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg.import": "cc92e76e488405feff0310fb8768144507277cfdb3525f27027a5e41c50dc862",
   "assets/3D/units/royal/royal.glb": "93c66032437fc27ec2688ae498759ea9942ac40e2d3c23102963ef71c9d9125a",
   "assets/3D/units/royal/royal.glb.import": "07b6d67c710ecbcabb271b8ff2c17d411ad222e51eab946751b6bb73ce400c23",
   "assets/3D/units/royal/royal_locomotion_source.tres": "ac3029097f0481c4f990cc738b20806a9277fe1ac15ff0e78cd1df82bac79d3e",
@@ -898,11 +898,11 @@
   "assets/3D/units/royal/royal_royal_atlas_mr.jpg.import": "ce415cba84687cbd3bf659d4dec769d6a054d6d9462172e3b45a0f0f8c5bed92",
   "assets/3D/units/royal/royal_royal_atlas_n.jpg": "87dae2d5426bf52b5f4dd43676ce6a2bf92b9ff22e922e1ba98a8628caffe2ed",
   "assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
-  "data/army/balance.csv": "9568023e30a626cccd5e47c8de1d1b360d1cdb6d1fcc16f4f34548df31c274e5",
+  "data/army/balance.csv": "7fbe4048f1ffd80d17e8ca68f25dc66486e035d2bd7a732bc71546ac3089a9a7",
   "data/army/unit_footprints.csv": "358d0da3fbfddb33ade1f42d7eeb8f15d6016873c9220fab18468abf48e1e12e",
-  "data/screens/map3d/army_art.csv": "f880fead7c4df475f069b7c550e059f8ad40cc96349f2f9967f85a68e1220a8e",
+  "data/screens/map3d/army_art.csv": "bd196c9736adeff6ceaa68f8527380f075ac99082949cb583e2b3ad28af31168",
   "data/screens/map3d/balance.csv": "f128c6999b798ed089e50f888f24f0ee6a9e70646df2a9ff66169430190a3790",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "c60268279327954aa32504a1aa7e2a734fdd8ceb4d456a6fa88616f03c15b302",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "35ae6bac5a51242a5592f0b639a59fbaf917bd5105d43acd541e5d91bd028bd4",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
   "scripts/map3d/map3d_cavalry_pivot.gd": "b210d21b965ff11830e290d81b526eb7e713b9ddf2c285467b9838e27a96197d",
   "scripts/map3d/map3d_cavalry_pivot_math.gd": "0c9ae12d36755d2d9b5928d6343c7a6c4bdb871aa62d7c6e0013c729d65911e1",
@@ -919,11 +919,11 @@
    "MARCH"
   ],
   "contact_um": 29338,
-  "digest": "ebaa1e3fb525f6c72628c596a15dface0e5c815c74d99324ff9acf720a380424",
+  "digest": "e9b360343df62826663824d5b06f86123b607cd100e451242fd00320c5013180",
   "radius_m": 749,
   "turn_q": 400000
  },
- "payload_sha256": "ebaa1e3fb525f6c72628c596a15dface0e5c815c74d99324ff9acf720a380424",
+ "payload_sha256": "e9b360343df62826663824d5b06f86123b607cd100e451242fd00320c5013180",
  "report": {
   "bounds_um": {
    "contact": 29338,
