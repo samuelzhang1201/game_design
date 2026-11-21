@@ -1,6 +1,7 @@
 # tests/ledger3d/test_ledger_view_galaxy.gd
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const ArmyStarts := preload("res://tools/army_starts.gd")
 ## The galaxy view (spec 2026-09-30-ledger-galaxy-design §5-§6). Headless
 ## instancing is fine: the dummy renderer draws nothing, the scene, its nodes
 ## and its maths are all there.
@@ -49,7 +50,13 @@ func _show(opened: Dictionary = {}) -> Dictionary:
 ## stars for each regiment it had; at that density the opening view loses a
 ## small cluster's title and most War names stand a ring out (army-split
 ## task 3 report: a concern for the LEDGER, not tuned here).
+## The thinned realm: one unit a regiment, and none of the opening regiments of the game's
+## own arms (data/army/game_arm_starts.csv), so the density stays the one these checks were
+## tuned on; the full density is DENSITY_PENDING's ruling.
 func _one_unit_a_regiment() -> void:
+	var opening := {}
+	for rule: Dictionary in ArmyStarts.rules("res://data").get("rules", []):
+		opening[String(rule["arm"])] = true
 	var seen := {}
 	var codes: Array = s.army_roster.keys()
 	codes.sort()
@@ -58,7 +65,9 @@ func _one_unit_a_regiment() -> void:
 		if String(reg["kingdom_code"]) != repo.resolve_realm("player_realm"):
 			continue
 		var parent := String(reg["parent_code"])
-		if parent == "" or not seen.has(parent):
+		if opening.has(MapObjects.regiment_arm(repo, reg)):
+			pass
+		elif parent == "" or not seen.has(parent):
 			seen[parent] = true
 			continue
 		s.army_roster.erase(c)
