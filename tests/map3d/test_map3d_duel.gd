@@ -74,6 +74,16 @@ func test_the_installed_infantry_duels_and_falls() -> void:
 	for clip: String in Map3DDuel.contact_of(repo.army_art["infantry"]):
 		var share := float(Map3DDuel.contact_of(repo.army_art["infantry"])[clip])
 		assert_true(share > 0.0 and share < 1.0, "%s meets inside its clip" % clip)
+	# its steps in, out and up walk the installed MARCH at its measured stride, backing away backwards
+	var march := Map3DUnits.clip_named(anim, "MARCH")
+	assert_ne(march, "", "the combat walk is installed")
+	assert_gt(float(repo.army_art["infantry"]["stride_m"]), 0.0, "with its stride, so a step is paced")
+	anim.play(march)
+	anim.seek(0.2, true)
+	anim.speed_scale = -1.0
+	anim.advance(0.3)
+	assert_almost_eq(anim.current_animation_position, anim.get_animation(march).length - 0.1, 0.001,
+		"played backwards the loop wraps, so a figure backs away step by step")
 
 
 func test_turn_is_stable_and_in_range() -> void:
