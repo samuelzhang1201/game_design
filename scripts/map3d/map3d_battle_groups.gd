@@ -299,6 +299,7 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 			xz = drawn["xz"]
 			yaw = drawn["yaw"]
 			easing = easing or bool(child["walking"])
+		xz += child.get("knock_offset", Vector2.ZERO)  # a blow's knock-back (Map3DDuelDriver), drawn at once, never walked
 		var y := ctx.height_at(xz)
 		for offset: Vector2 in Map3DUnits.footprint(child["extent"], yaw, k, int(repo.bal("map3d_unit_seat_ring"))):
 			y = maxf(y, ctx.height_at(xz + offset))
