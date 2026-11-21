@@ -170,8 +170,7 @@ func _roster() -> void:
 		var piece := _piece_of(code)
 		if piece.is_empty():
 			continue
-		Map3DUnitStandard.sync(piece, Map3DNationalFlag.texture_for(ctx.repo, realm_flags,
-			String(reg.get("kingdom_code", ""))), national_standard)
+		Map3DUnitDress.sync(ctx.repo, piece, reg, realm_flags, national_standard)  # standard, tunics
 		live[code] = true
 		if not _shown_xz.has(code):
 			_shown_xz[code] = _target_xz(reg)
