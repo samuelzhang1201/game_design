@@ -71,7 +71,7 @@ Watched up close, a field battle should look like a fight the two sides are IN: 
 1. **Realm colours on the figures.** The infantry's tunic (the mask the mail-calming pass already authored, or a new tunic mask) takes the realm's colour through a per-instance shader parameter on the figure's material; the colour comes from the realm's existing colour data. Every arm that shares the material follows. Visual review for the look; the owner rules on it.
 2. **Impact on today's pairs.** Raise the HIT share (`map3d_duel_hit`) so a strike is usually taken; add hit-stop (both figures of the pair at `speed_scale` 0 for `map3d_melee_hitstop_s` at contact), a knock-back of the struck figure (a short eased view offset away from the striker, `map3d_melee_knock_h`, then back), a shield jolt on BLOCK (the BLOCK clip's own, or the same knock-back smaller), and a pooled one-shot particle burst at the meeting point (spark on a block, dust on a hit), its look a scene authored in the editor. Unpaired figures join a pair two on one (goal 4).
 3. **The mixed fight.** When two infantry units fight (the battle's first round has passed, as the duels require), every figure but the standard bearer gets a target inside a shared fighting area between the two blocks: an area spanning the facing fronts, `map3d_melee_depth_h` deep across the line, each figure's target hashed inside it and pulled toward the foe it pairs with. Figures walk there with the paced combat walk from the in-flight step-in fix, keep `map3d_melee_space_h` apart from every other figure by a separation pass (push apart overlapping neighbours each frame, bounded steps), face their foe, and duel as now. Pairing is across the area (nearest free foe), not along a front. Battle over, withdrawal or retreat: they walk back to their slots. Falls as now; the replacement walks in from its slot.
-4. **Sound** (if the owner wants it, see Open). A clash on a block and a thud on a hit, one-shots on the pattern of `Map3DUnitSound`/`Map3DUnitSettle` (camera-distance loudness, a cap on voices), started so they land on the contact instant.
+4. **Sound** (owner 2026-11-22: with sound). A clash on a block and a thud on a hit, one-shots on the pattern of `Map3DUnitSound`/`Map3DUnitSettle` (camera-distance loudness, a cap on voices), started so they land on the contact instant.
 
 **Performance (industry practice applied at this game's scale):**
 
@@ -97,6 +97,6 @@ Watched up close, a field battle should look like a fight the two sides are IN: 
 - The particle burst's look (through visual review) and pool size.
 - First values of every new key, measured in a real window.
 
-## Open (for the owner)
+## Owner rulings on this document
 
-- Sound: the earlier duel spec left sound out. Clash and hit sounds add the most "felt" contact for the least cost; sourcing them (CC0, as the march sounds were) needs the owner's yes before any download.
+- 2026-11-22: approved, **with sound** (step 4 is in scope). The clips are CC0, sourced as the march sounds were (`assets/audio/units/SOURCES.md`); each download is named to the owner (file, source, size) and confirmed before it is fetched.
