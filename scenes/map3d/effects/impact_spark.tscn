@@ -1,64 +1,17 @@
 [gd_scene format=3 uid="uid://cfe47n0twailg"]
 
-[sub_resource type="Gradient" id="Gradient_g6f2v"]
-offsets = PackedFloat32Array(0, 0.35, 1)
-colors = PackedColorArray(1, 0.95, 0.75, 1, 1, 0.62, 0.2, 1, 0.9, 0.35, 0.1, 0)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_8xkx6"]
-gradient = SubResource("Gradient_g6f2v")
-
-[sub_resource type="Curve" id="Curve_hti65"]
-_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.4), 0.0, 0.0, 0, 0]
-point_count = 2
-
-[sub_resource type="CurveTexture" id="CurveTexture_rx5p4"]
-curve = SubResource("Curve_hti65")
-
-[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_62yyc"]
-direction = Vector3(0, 1, 0)
-spread = 75.0
-initial_velocity_min = 1.4
-initial_velocity_max = 2.6
-gravity = Vector3(0, -7, 0)
-damping_min = 1.0
-damping_max = 1.0
-scale_min = 0.03
-scale_max = 0.06
-scale_curve = SubResource("CurveTexture_rx5p4")
-color_ramp = SubResource("GradientTexture1D_8xkx6")
-
-[sub_resource type="Gradient" id="Gradient_bxr5v"]
-colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_2ukb4"]
-gradient = SubResource("Gradient_bxr5v")
-width = 32
-height = 32
-fill = 1
-fill_from = Vector2(0.5, 0.5)
-fill_to = Vector2(0.5, 0)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hufso"]
-transparency = 1
-shading_mode = 0
-vertex_color_use_as_albedo = true
-albedo_texture = SubResource("GradientTexture2D_2ukb4")
-billboard_mode = 3
-particles_anim_h_frames = 1
-particles_anim_v_frames = 1
-particles_anim_loop = false
-
-[sub_resource type="QuadMesh" id="QuadMesh_tb6yc"]
-material = SubResource("StandardMaterial3D_hufso")
+[ext_resource type="Material" uid="uid://1cpgy6w3ste2" path="res://scenes/map3d/effects/impact_spark_process.tres" id="1_hti65"]
+[ext_resource type="QuadMesh" uid="uid://bwcb21ujlibys" path="res://scenes/map3d/effects/impact_spark_quad.tres" id="2_rx5p4"]
 
 [node name="ImpactSpark" type="GPUParticles3D" unique_id=934119800]
 cast_shadow = 0
 emitting = false
-amount = 14
-lifetime = 0.3
+amount = 5
+lifetime = 0.1
 one_shot = true
 explosiveness = 1.0
 visibility_aabb = AABB(-1.5, -1.5, -1.5, 3, 3, 3)
 local_coords = true
-process_material = SubResource("ParticleProcessMaterial_62yyc")
-draw_pass_1 = SubResource("QuadMesh_tb6yc")
+transform_align = 3
+process_material = ExtResource("1_hti65")
+draw_pass_1 = ExtResource("2_rx5p4")

@@ -9,7 +9,7 @@ extends GutTest
 const ART := {"duel": "STRIKE:ATTACK|BLOCK:BLOCK|HIT:HIT|DEATH:DEATH", "contact": "ATTACK:0.5;BLOCK:0.5;HIT:0.5"}
 const TUNE := {"steal": 0.0, "double": 0.0, "hit": 1.0, "rest_min": 0.25, "rest_max": 0.25,
 	"reach_h": 30.0, "close_h": 0.6, "step_max_h": 1.0, "chain_lo": 0.1, "chain_hi": 0.2, "open_max": 0.0,
-	"hitstop": 0.125, "knock_h": 0.15, "knock_out": 0.125, "knock_back": 0.25, "block_knock": 0.4, "near_m": 1000.0}
+	"hitstop": 0.125, "knock_h": 0.15, "knock_out": 0.125, "knock_back": 0.25, "block_knock": 0.4, "near_m": 1000.0, "at_h": 0.6}
 const DT := 0.0625
 const KEY := "A:0|B:0"
 
@@ -109,7 +109,7 @@ func test_contact_emits_one_impact() -> void:
 	assert_eq(String(impacts[0]["kind"]), "HIT", "the reply's kind")
 	assert_eq(String(impacts[0]["striker"]["key"]), "A:0")
 	assert_eq(String(impacts[0]["struck"]["key"]), "B:0")
-	assert_almost_eq((impacts[0]["at"] as Vector3).y, 1.0, 0.0001, "at half a figure height")
+	assert_almost_eq((impacts[0]["at"] as Vector3).y, 1.2, 0.0001, "chest high: 0.6 of a figure height")
 	assert_almost_eq((impacts[0]["at"] as Vector3).z, 0.0, 0.5, "between the two")
 	var more := 0
 	for i in 12:  # the rest of the turn (end 1.0 + rest 0.25, held 0.125): no second contact
@@ -141,6 +141,7 @@ func test_bursts_are_capped() -> void:
 		var p := GPUParticles3D.new()
 		p.one_shot = true
 		p.emitting = false
+		p.draw_pass_1 = QuadMesh.new()
 		var scene := PackedScene.new()
 		scene.pack(p)
 		p.free()
@@ -149,8 +150,11 @@ func test_bursts_are_capped() -> void:
 	for i in 12:
 		assert_true(bursts.burst("HIT" if i % 2 == 0 else "BLOCK", Vector3(i, 0, 0)), "burst %d" % i)
 	assert_eq(bursts.live_count(), 12)
-	assert_eq((parent.get_child(0) as Node3D).scale, Vector3.ONE, "a burst is sized in figure heights")
 	assert_true(bursts.burst("HIT", Vector3.ZERO, 2.0) == false, "still capped")
+	(parent.get_child(0) as GPUParticles3D).finished.emit()
+	assert_eq(bursts.live_count(), 11, "a burst burns until its one-shot has finished, not while `emitting`")
+	assert_true(bursts.burst("HIT", Vector3.ZERO), "the finished one is restarted")
+	assert_eq(parent.get_child_count(), 12, "from the pool, not made anew")
 	assert_false(bursts.burst("HIT", Vector3.ZERO), "the 13th is refused at max_live")
 	assert_false(bursts.burst("SMOKE", Vector3.ZERO), "a kind with no scene shows nothing")
 
@@ -203,6 +207,10 @@ func test_a_burst_takes_its_size() -> void:
 	var bursts := Map3DImpactBursts.new(parent, GameArt.table(GameArt.IMPACT_BURSTS), 4)
 	assert_true(bursts.burst("BLOCK", Vector3(1, 2, 3), 2.5))
 	var node := parent.get_child(0) as GPUParticles3D
-	assert_eq(node.scale, Vector3.ONE * 2.5)
+	var authored: Vector2 = ((GameArt.table(GameArt.IMPACT_BURSTS).of("BLOCK") as PackedScene).instantiate().draw_pass_1 as QuadMesh).size
+	assert_eq(node.scale, Vector3.ONE * 2.5, "its spread and speed")
+	assert_eq((node.draw_pass_1 as QuadMesh).size, authored * 2.5, "and its particles (a node's scale never reaches them)")
+	assert_true(bursts.burst("BLOCK", Vector3.ZERO, 1.0))
+	assert_eq(((parent.get_child(1) as GPUParticles3D).draw_pass_1 as QuadMesh).size, authored, "each node its own quad")
 	assert_eq(node.global_position, Vector3(1, 2, 3))
 	assert_null(node.owner, "a save never writes it")

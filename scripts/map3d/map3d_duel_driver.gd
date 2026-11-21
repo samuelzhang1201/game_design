@@ -70,6 +70,7 @@ static func tune_of(repo: DataRepository) -> Dictionary:
 	out["fall_fade"] = repo.bal("map3d_fall_fade_s")
 	out.merge(Map3DImpact.tune_of(repo))
 	out["near_m"] = repo.bal("map3d_impact_near_m")
+	out["at_h"] = repo.bal("map3d_impact_at_h")
 	return out
 
 
@@ -415,7 +416,7 @@ func _contact(p: Dictionary, tt: Dictionary, over: float, tune: Dictionary) -> v
 	var s: Dictionary = tt["sf"]
 	var d: Dictionary = tt["df"]
 	var h := maxf(float(s["h"]), float(d["h"]))
-	var at := (_drawn(s) + _drawn(d)) / 2.0 + Vector3.UP * h / 2.0
+	var at := (_drawn(s) + _drawn(d)) / 2.0 + Vector3.UP * h * float(tune.get("at_h", 0.5))  # where blade meets shield
 	var kind := String(tt["kind"])
 	_impacts.append({"kind": kind, "at": at, "striker": s, "struck": d})
 	var old: Dictionary = p.get("impact", {})
