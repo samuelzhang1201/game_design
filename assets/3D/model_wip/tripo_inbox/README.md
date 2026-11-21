@@ -6,7 +6,7 @@ The staging folder for every 3D model the owner generates in Tripo, waiting to b
 
 ```
 tripo_inbox/<category>/<object>/
-    REF_<picked reference>.png      the picture to upload to Tripo (copied from the object's model_wip/)
+    REF_<picked reference>.png      the picture to upload to Tripo (copied from `assets/3D/model_wip/comfy-out/`)
     <object>_tripo[_vN].glb         what the owner exports from Tripo
 ```
 
@@ -19,4 +19,4 @@ tripo_inbox/<category>/<object>/
 
 ## Processing
 
-In the owner's open Blender (via the MCP), with the pipeline for the kind of object — buildings `tools/map3d/tripo_houses/`, units `tools/units3d/*_tripo/`. Once a GLB is processed it MOVES to its object's `assets/3D/<category>/<object>/model_wip/tripo/`, where the pipelines look for their sources, so the inbox holds only what is still waiting.
+In the owner's open Blender (via the MCP), with the pipeline for the kind of object — buildings `tools/map3d/tripo_houses/`, units `tools/units3d/*_tripo/`. The GLB stays here as the source; everything Blender makes from it (saves, test exports, review shots) goes to `assets/3D/model_wip/blender_output/<category>/<object>/`, and only the finished game files move to `assets/3D/<category>/<object>/` (`tools/CLAUDE.md`, the work folders).
