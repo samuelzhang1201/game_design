@@ -184,6 +184,8 @@ map3d_melee_knock_h,0.15,"Melee impact (spec 2026-11-21-infantry-melee-scrum-des
 map3d_melee_knock_out_s,0.12,"Melee impact (spec 2026-11-21-infantry-melee-scrum-design.md; view-only): seconds from contact to the knock-back's peak (ease-out)"
 map3d_melee_knock_back_s,0.35,"Melee impact (spec 2026-11-21-infantry-melee-scrum-design.md; view-only): seconds the struck figure takes to come back to its stand after the peak (ease-in-out)"
 map3d_melee_block_knock,0.4,"Melee impact (spec 2026-11-21-infantry-melee-scrum-design.md; view-only): a blocked blow knocks its figure back this share of a hit's knock-back (the shield's jolt)"
+map3d_impact_burst_max,12,"Melee impact (spec 2026-11-21-infantry-melee-scrum-design.md; view-only): at most this many meeting-point bursts (Map3DImpactBursts, sparks on a block, dust on a hit) burn at once; a blow past the cap shows none"
+map3d_impact_near_m,600,"Melee impact (spec 2026-11-21-infantry-melee-scrum-design.md; view-only): a blow within this many world metres of the camera knocks its figure back and shows a burst; farther out only the hit-stop is kept (the zoom spans map3d_zoom_min_m..map3d_zoom_max_m)"
 map3d_unit_settle_db,0,"MILITARY's 3D piece: the settle sound's loudness over a marching loop's at the same camera distance (Map3DUnitSound.gain_db), dB"
 map3d_unit_symbol_enter_scale,100,"Scale bar span in pack distance units that enters strategic unit-symbol mode"
 map3d_unit_symbol_leave_scale,80,"Scale bar span that restores near unit models; hysteresis below entry"
