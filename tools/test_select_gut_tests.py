@@ -170,7 +170,7 @@ class SelectionTests(unittest.TestCase):
         jobs = chosen['matrix']['include']
         military = [job for job in jobs if job['category'] == 'engine-military']
         self.assertEqual([job['batch'] for job in military], [1, 2, 3, 4, 5, 6])
-        self.assertEqual(self.catalog['engine-body-day'], ['tests/engine/test_body_day_driver.gd', 'tests/engine/test_body_day_driver_days.gd', 'tests/engine/test_body_day_hosts.gd', 'tests/engine/test_body_day_recruits.gd'])
+        self.assertEqual(self.catalog['engine-body-day'], ['tests/engine/test_body_day_driver.gd', 'tests/engine/test_body_day_driver_days.gd', 'tests/engine/test_body_day_hosts.gd', 'tests/engine/test_body_day_losses.gd', 'tests/engine/test_body_day_recruits.gd'])
         files = []
         body_batches = {}
         for job in military:
