@@ -43,10 +43,11 @@ func _pose(turn: int, phase: float) -> Dictionary:
 
 func test_plan_admits_one_march_phase_matching_the_check_config() -> void:
 	var plan: Dictionary = Loco.plan()
-	assert_eq(plan.march_phase, 0.4375, "MARCH key 7/16")
+	assert_eq(plan.march_phase, 63.0 / 104.0, "MARCH key 63/104")
 	assert_eq(plan.rider_root, "Saddle")
+	assert_eq(plan.stand_clip, "MARCH", "the stand is the held MARCH pose, seated")
 	var config: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(
-		"res://docs/reviews/cluster-formations/evidence/locomotion/cavalry/provider-check.config.json"))
+		"res://docs/reviews/cluster-formations/evidence/locomotion/cavalry/certificate.config.json"))
 	assert_eq(plan.patch_band_m, float(config.patch_band_m), "the certifier config's patch_band_m")
 	assert_eq(float(config.entry_phase), plan.march_phase, "the certifier enters MARCH where the pivot leaves it")
 	assert_eq(config.march_stop_phases, [plan.march_phase])
@@ -64,19 +65,18 @@ func test_landmarks_connect_every_leg_chain_exactly() -> void:
 		assert_ne(bone.head, bone.tail, bone.name)
 
 
-## At 7/16 the left fore and right hind stand; the right fore (4.5 mm) and left hind (10.8 mm) are
-## barely up, so their first and last steps are short and flat (at 8/16 the left hind is 151 mm up
-## and flexed, and its swing to the stand dragged the toe through the planting band: pivot slide 168 mm sampled,
-## 196 mm with the certifier's margin).
-func test_two_hooves_stand_and_two_are_barely_up_at_the_admitted_phase() -> void:
+## At 63/104 of the heavy knight's run the left hind and the right fore stand (the run's only
+## two-hooves-down keys are 63-70 and 84-91; at 84-91 both hinds are 0.26-0.56 m up and flexed), and
+## the left fore and right hind are up 131 / 124 mm, swinging: they step first and last.
+func test_two_hooves_stand_at_the_admitted_phase() -> void:
 	var march_g: Dictionary = Math._fk(_rest.bones, _march)
 	var down: Array = []
 	for hoof: String in Horse.HOOVES:
 		if Horse.lowest(march_g, _patches[hoof]) <= Loco.plan().support_m:
 			down.append(hoof)
-	assert_eq(down, ["FrontHoof.L", "HindHoof.R"])
-	for hoof: String in ["FrontHoof.R", "HindHoof.L"]:
-		assert_lt(Horse.lowest(march_g, _patches[hoof]), 0.02, hoof)
+	assert_eq(down, ["HindHoof.L", "FrontHoof.R"])
+	for hoof: String in ["FrontHoof.L", "HindHoof.R"]:
+		assert_between(Horse.lowest(march_g, _patches[hoof]), 0.1, 0.15, hoof)
 
 
 func test_leaves_and_rejoins_march_exactly_and_never_moves_the_root() -> void:
@@ -85,16 +85,16 @@ func test_leaves_and_rejoins_march_exactly_and_never_moves_the_root() -> void:
 			var pose: Dictionary = _pose(turn, phase)
 			for name: String in _march:
 				assert_eq(pose[name], _march[name], "%s %s %s" % [turn, phase, name])
-	# Cavalry MARCH keys the root bone (an 8.5 cm bob and a slight pitch about X); STANDBY does not,
-	# so the eased pose blends the two. The root bone never yaws or moves sideways, and its height and
-	# fore-aft stay within MARCH's own bob: the body's yaw and ground position stay BodyMotion's.
+	# The horse's root bone (h_root.x) eases between the held MARCH pose and the stand seated from it:
+	# it never yaws or moves sideways, and its height and fore-aft stay between the two: the body's
+	# yaw and ground position stay BodyMotion's.
 	for phase: float in [0.05, 0.2, 0.5, 0.95]:
-		var root: Transform3D = _pose(90000000, phase)["root"]
-		assert_almost_eq(root.basis.x, Vector3.RIGHT, Vector3.ONE * 1e-5, str(phase))
-		assert_almost_eq(root.origin.x, 0.0, 1e-6, str(phase))
+		var root: Transform3D = _pose(90000000, phase)["h_root.x"]
+		assert_almost_eq(root.basis.x, _march["h_root.x"].basis.x, Vector3.ONE * 1e-5, str(phase))
+		assert_almost_eq(root.origin.x, _march["h_root.x"].origin.x, 1e-6, str(phase))
 		for axis: int in [1, 2]:  # height and the bob's few mm fore-aft stay between MARCH's and the stand's
-			var lo: float = minf(_march["root"].origin[axis], _stand["root"].origin[axis])
-			var hi: float = maxf(_march["root"].origin[axis], _stand["root"].origin[axis])
+			var lo: float = minf(_march["h_root.x"].origin[axis], _stand["h_root.x"].origin[axis])
+			var hi: float = maxf(_march["h_root.x"].origin[axis], _stand["h_root.x"].origin[axis])
 			assert_between(root.origin[axis], lo - 1e-6, hi + 1e-6, "%s axis %d" % [phase, axis])
 
 
