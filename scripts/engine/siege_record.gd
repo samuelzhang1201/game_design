@@ -127,7 +127,8 @@ static func open_units(repo: DataRepository, state: GameState, town: String, att
 ## no host, so its lift is still told once. Every mind loses the six old keys.
 ## A mind's occupation (`occupied`: cell string -> house before, and
 ## `occupied_house`) becomes GameState.occupations[its target town], `host`
-## that host, and the two keys go. Logged in military_migration["siege_record"]
+## that host, `day` the day it converts (the capture's day was not saved), and
+## the two keys go. Logged in military_migration["siege_record"]
 ## (and ["occupation"]); a second run changes nothing.
 static func migrate(repo: DataRepository, state: GameState) -> void:
 	var minds := 0
