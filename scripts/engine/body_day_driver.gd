@@ -171,8 +171,10 @@ static func _slice_work(repo: DataRepository, source: GameState) -> Dictionary:
 
 ## One slice's ordinary tactical work (`TickEngine._resolve_battles`' order) on a frozen body day.
 ## After its move (`stage` "move"): the arrivals not yet settled camp and the seats settle
-## (`_seat_day`), the laws reconcile, and the king walks his slice of the daily budget
-## (`KingSystem.step_substep`, once per slice by its own cursor). After its contacts ("contact"):
+## (`_seat_day`), the laws reconcile, the king walks his slice of the daily budget
+## (`KingSystem.step_substep`, once per slice by its own cursor), and the hosts' columns that came
+## up arrive (`EnemyAi.arrival_substep`: the host's mode, a column stationed where it stands and
+## retired from the frozen march, its events kept in the journal). After its contacts ("contact"):
 ## search travel paused by battle (`ArmyTasks.pause_battles`) leaves the frozen march, entry and
 ## membership both. Metadata only: no body moves and no personnel change; the cursor advances, and
 ## the candidate is resealed at its battle boundary and validated there.
@@ -186,6 +188,11 @@ static func _slice(repo: DataRepository, source: GameState, stage: String) -> Di
 		if not seated.is_empty(): return _result("error", seated)
 		LawSystem.reconcile(repo, state)
 		KingSystem.step_substep(repo, state, tx)
+		var hosts := EnemyAi.arrival_substep(repo, state, tx.march_entries)
+		if not hosts.is_empty():
+			var engine := TickEngine.new(repo)
+			engine._restore_day_outputs(tx)
+			engine._save_host_events(tx.journal, engine.day_ai + hosts)
 	else:
 		for code: String in ArmyTasks.pause_battles(state):
 			tx.march_entries.erase(code)
