@@ -22,6 +22,7 @@ var _waiting: Dictionary = {}  ## key -> figure: front figures left unpaired, gu
 var _impacts: Array = []  ## this frame's contacts, [{kind, at, striker, struck}] (take_impacts)
 var bursts: Map3DImpactBursts  ## the meeting-point bursts; made by `step` on first use (none in a bare run)
 var scrum := Map3DDuelScrum.new()  ## the mixed fight's areas and points (spec 2026-11-21 melee scrum)
+var sound := Map3DUnitSound.new()  ## the blows' clash and thud, sounded from `step`
 
 
 ## The contacts of the last frame run, each {"kind": "HIT"|"BLOCK", "at": Vector3,
@@ -68,6 +69,7 @@ func step(ctx: Map3DContext, pieces: Dictionary, delta: float, place: Callable) 
 	for code: String in run(gather(ctx, pieces), delta, ctx.clock_speed() > 0, tune):
 		if pieces.has(code):
 			place.call(code, pieces[code])
+	sound.play_impacts(ctx.repo, ctx.camera, take_impacts())
 
 
 static func tune_of(repo: DataRepository) -> Dictionary:
