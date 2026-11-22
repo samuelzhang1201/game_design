@@ -68,3 +68,9 @@ func test_pairs_nearest_is_greedy_and_stable() -> void:
 	var tie := Map3DScrum.pairs_nearest([{"key": "A:1", "xz": Vector2(1, 0)}, {"key": "A:0", "xz": Vector2(-1, 0)}],
 		[{"key": "B:0", "xz": Vector2(0, 0)}], 5.0)
 	assert_eq(tie, [{"a": "A:0", "b": "B:0"}], "a tie goes to the smaller key")
+
+
+func test_inside_holds_a_point_in_the_area() -> void:
+	var area := Map3DScrum.area(_row(-2.0), _row(2.0), Vector2(0, 1), 4.0)
+	assert_almost_eq(Map3DScrum.inside(Vector2(7, 5), area).distance_to(Vector2(4, 2)), 0.0, 1e-5, "clamped to the corner")
+	assert_eq(Map3DScrum.inside(Vector2(1, 1), area), Vector2(1, 1), "a point inside stays")

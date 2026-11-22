@@ -37,6 +37,15 @@ static func target(key: String, area: Dictionary) -> Vector2:
 		+ (area["across"] as Vector2) * v * float(area["half_depth"])
 
 
+## `p` held inside `area` (its along and across coordinates clamped).
+static func inside(p: Vector2, area: Dictionary) -> Vector2:
+	var d: Vector2 = p - area["centre"]
+	var hl := float(area["half_len"])
+	var hd := float(area["half_depth"])
+	return area["centre"] + (area["along"] as Vector2) * clampf(d.dot(area["along"]), -hl, hl) \
+		+ (area["across"] as Vector2) * clampf(d.dot(area["across"]), -hd, hd)
+
+
 ## One separation pass over `points` (key -> XZ): every two closer than `space`
 ## are pushed apart equally along their line (two on one spot along +X), each
 ## point's move at most `push_max`; keys taken in sorted order.
