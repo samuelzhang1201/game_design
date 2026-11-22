@@ -23,6 +23,7 @@ required check green; parallel lanes take disjoint files (R-F).
 | Node | State | PR |
 |---|---|---|
 | R0 RULINGS-DOC | this PR | — |
+| ACT-DRIVER | merged (parts A, B1, B2a–B2e; the CF04c consumer's whole loops) | #343, #345, #347, #351, #355, #358, #361, #368, #370 |
 
 Update this table as each node merges.
 
