@@ -84,8 +84,9 @@ func aim_pair(figs: Array, tune: Dictionary) -> bool:
 
 
 ## A scrum figure walks to its point and faces `foe` (its partner's point, or a
-## waiting figure's nearest foe); set only past `settle_h` of a move, so small
-## pushes never restart its walk. A long way (past `step_max_h`) turns into it
+## waiting figure's nearest foe); set only past `settle_h` of a move, and while
+## it walks only past `step_max_h`, so small pushes never restart its walk.
+## A long way (past `step_max_h`) turns into it
 ## (`step_up`); a short one steps facing its foe. Whether it changed.
 func aim(f: Dictionary, foes: Array, tune: Dictionary) -> bool:
 	var pts: Dictionary = _pts.get(int(f["scrum"]), {})
@@ -100,13 +101,15 @@ func aim(f: Dictionary, foes: Array, tune: Dictionary) -> bool:
 	var child: Dictionary = f["child"]
 	var offset: Vector2 = me - (f["xz"] as Vector2)
 	var was: Vector2 = child.get("duel_offset", Vector2.INF)
-	if was != Vector2.INF and was.distance_to(offset) <= float(tune["settle_h"]) * float(f["h"]):
-		return false
+	var step_max := float(tune["step_max_h"]) * float(f["h"])
+	if was != Vector2.INF and (was.distance_to(offset) <= float(tune["settle_h"]) * float(f["h"])
+			or child.get("walking", false) and was.distance_to(offset) <= step_max):
+		return false  # walking, a short push waits for its arrival: a restarted walk re-begins its turn (a glide)
 	child["duel_offset"] = offset
 	child["duel_yaw"] = Map3DUnits.facing_yaw(near - me, float(child.get("stand_deg", 0.0))) if near != Vector2.INF \
 		else float(child.get("duel_yaw", 0.0))
 	child["scrum_far"] = true  # its way back to its slot is a walk too (Map3DDuelDriver._release)
-	var far := (Vector2.ZERO if was == Vector2.INF else was).distance_to(offset) > float(tune["step_max_h"]) * float(f["h"])
+	var far := (Vector2.ZERO if was == Vector2.INF else was).distance_to(offset) > step_max
 	if far or child.get("step_up", false):
 		child["step_up"] = true
 		child.erase("step_facing")

@@ -45,7 +45,7 @@ func _anim(clips := ["GARRISON", "MARCH", "ATTACK", "SLASH", "BLOCK", "HIT", "DE
 
 
 ## A battle unit of `n` groups (the first five front, the rest reserve), files
-## 2 saved metres apart from `x0`, its front at `y` and its reserve 2 m behind
+## 4 saved metres apart from `x0`, its front at `y` and its reserve 2 m behind
 ## (`back`: the way behind it); a figure 2 saved metres tall.
 func _piece(n: int, x0: int, y: int, back: int, model := "duellist") -> Dictionary:
 	var piece := {"layout": "physical_groups", "model": model, "facing_deg": 0, "groups": []}
@@ -54,7 +54,7 @@ func _piece(n: int, x0: int, y: int, back: int, model := "duellist") -> Dictiona
 		add_child_autofree(node)
 		var child := {"anims": [_anim()], "height_m": 2.0 * unit, "node": node, "stand_deg": 0.0}
 		piece["groups"].append({"slot": i, "role": "front" if i < 5 else "reserve", "count": 100,
-			"x_m": x0 + (i % 5) * 2, "y_m": y + (0 if i < 5 else back * 2), "piece": child})
+			"x_m": x0 + (i % 5) * 4, "y_m": y + (0 if i < 5 else back * 2), "piece": child})
 	return piece
 
 
@@ -226,9 +226,9 @@ func test_no_scrum_against_unseen_figures() -> void:
 
 func test_one_area_per_battle_archers_stay_out() -> void:
 	# Review focus 5: several units a side with archers among them: one area, the archers never enter it
-	var att := {"A1": _piece(4, 0, 0, -1), "A2": _piece(4, 10, 0, -1), "A3": _piece(4, 20, 0, -1),
-		"AR": _piece(4, 30, 0, -1, "bowman")}
-	var def := {"B1": _piece(4, 0, 8, 1), "B2": _piece(4, 10, 8, 1)}
+	var att := {"A1": _piece(4, 0, 0, -1), "A2": _piece(4, 20, 0, -1), "A3": _piece(4, 40, 0, -1),
+		"AR": _piece(4, 60, 0, -1, "bowman")}
+	var def := {"B1": _piece(4, 0, 8, 1), "B2": _piece(4, 20, 8, 1)}
 	var pieces := _fight(att, def)
 	var battles := Map3DDuelDriver.gather(ctx, pieces)
 	assert_eq(battles.size(), 1, "one battle record, one gathering")
@@ -241,3 +241,21 @@ func test_one_area_per_battle_archers_stay_out() -> void:
 	var area := driver.scrum_area(1)
 	for key: String in targets:
 		assert_true(_inside(targets[key], area), key + " in the one area")
+
+
+func test_a_walking_figure_keeps_its_way_through_small_pushes() -> void:
+	# critic 2026-11-22: a walk restarted by every small push re-begins its turn into its way, so the
+	# figure moved sideways at a slow cadence (a glide); while it walks only a long change re-aims it
+	var f := {"key": "A:1", "xz": Vector2.ZERO, "h": 1.0, "scrum": 1, "child": {"stand_deg": 0.0}}
+	var foe := {"key": "B:1", "xz": Vector2(0, 5)}
+	var scrum := Map3DDuelScrum.new()
+	scrum._pts[1] = {"A:1": Vector2(0, 3), "B:1": Vector2(0, 4)}
+	assert_true(scrum.aim(f, [foe], tune), "first aim")
+	f["child"]["walking"] = true
+	scrum._pts[1]["A:1"] = Vector2(0.5, 3)
+	assert_false(scrum.aim(f, [foe], tune), "walking: a push shorter than step_max_h waits for its arrival")
+	f["child"]["walking"] = false
+	assert_true(scrum.aim(f, [foe], tune), "arrived: it takes the new point")
+	f["child"]["walking"] = true
+	scrum._pts[1]["A:1"] = Vector2(3, 3)
+	assert_true(scrum.aim(f, [foe], tune), "a long change re-aims at once")
