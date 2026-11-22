@@ -140,7 +140,7 @@ static func occupation_of_host(state: GameState, host: String) -> Dictionary:
 
 ## Who defends `town`: the crown's garrison (EnemyAi.garrison_of) while the
 ## crown holds it; else the holder's foes standing at it (not marching, at_town)
-## with fit men, in code order.
+## with fit men, in code order — a town's militia (TownMilitia) among them.
 static func defenders_of(repo: DataRepository, state: GameState, town: String) -> Array:
 	var holder := holder_of(repo, state, town)
 	if holder == repo.resolve_realm("player_realm"):
@@ -355,6 +355,7 @@ static func settle_day(repo: DataRepository, state: GameState, battle_events: Ar
 	var events: Array = []
 	EnemyAi.ensure_deployments(repo, state, events)
 	if state.ai_hosts.is_empty():
+		events.append_array(TownMilitia.stand_down(repo, state))
 		return events
 	follow_main(repo, state, events)
 	for h: String in EnemyAi.host_codes(state):
@@ -374,6 +375,8 @@ static func settle_day(repo: DataRepository, state: GameState, battle_events: Ar
 			if mind.has("siege_id"):
 				_lifted(repo, state, h, mode.to_lower(), events)
 	_crown_sieges(repo, state, battle_events, events)
+	# a siege over, its militia stand down (player siege spec §5, §8)
+	events.append_array(TownMilitia.stand_down(repo, state))
 	return events
 
 
@@ -467,7 +470,8 @@ static func _take(repo: DataRepository, state: GameState, town: String, attacker
 	var at := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, town)
 	var out := 0
 	for p: String in garrison:
-		if ArmySystem.fit_count(repo, state, p) > 0:
+		# a militia marches nowhere: it stands down once the record is gone
+		if ArmySystem.fit_count(repo, state, p) > 0 and TownMilitia.town_of(state, p) == "":
 			if state.regiments.has(p):
 				BattleSystem.march_out(repo, state, p, at)
 			out += 1

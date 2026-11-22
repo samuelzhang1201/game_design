@@ -15,7 +15,7 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 - `scripts/map3d/guide/pivots.md` — pivots for any turn and each arm's provider and certificate (`Map3DPivotProvider`, `Map3DInfantryLocomotion`, `Map3DArcherLocomotion`, `Map3DRoyalPivot`, `Map3DCavalryLocomotion`)
 
 - `scripts/map3d/guide/picking.md` — what a click or hover picks, the selection rings (`Map3DPicker`, `Map3DSelection`, `Map3DPicker.ray_depth`, `Map3DView.kingdom_of_pick`)
-- `scripts/map3d/guide/battle_duels.md` — front-rank duels and the mixed fight (`Map3DDuel*`, `Map3DImpact*`, `Map3DScrum`)
+- `scripts/map3d/guide/battle_duels.md` — duels, mixed fight, desync (`Map3DDuel*`, `Map3DImpact*`, `Map3DScrum`, `rest_rate`)
 - `scripts/map3d/guide/national_flags.md` — realm textures, city roof standards, one standard bearer per admitted land unit, realm-tinted tunics (`Map3DNationalFlag`, `Map3DCityFlags`, `Map3DUnitStandard`, `Map3DStandardBearer`, `Map3DUnitDress`)
 
 ## Shape and ownership

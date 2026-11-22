@@ -70,6 +70,7 @@ army,war_works
 battle,battle_outcomes
 battle,battle_stances
 battle,ai_doctrines
+battle,town_militia
 intel,spy_difficulty
 intel,courier_kinds
 intel,intel_facts
@@ -130,3 +131,4 @@ battle,battle_events
 battle,battle_event_choices
 screens/map3d,archer_gear_lod
 army,game_arms
+army,game_arm_starts
