@@ -112,7 +112,7 @@ func _blows(root: Node3D, kind: String, count: int, dist: float) -> Array:
 		var node := Node3D.new()
 		root.add_child(node)
 		node.position = Vector3(0, 0, -dist)
-		out.append({"kind": kind, "at": node.position, "striker": {}, "struck": {"node": node}})
+		out.append({"kind": kind, "at": node.position, "striker": {}, "struck": {"child": {"node": node}}})
 	return out
 
 
@@ -132,12 +132,12 @@ func test_an_impact_plays_its_kind() -> void:
 	var blows := _blows(root, "HIT", 1, 2000.0) + _blows(root, "BLOCK", 1, 500.0)
 	var sound := Map3DUnitSound.new()
 	sound.play_impacts(repo, cam, blows)
-	var hit: AudioStreamPlayer3D = (blows[0]["struck"]["node"] as Node3D).get_node("ImpactSound")
+	var hit: AudioStreamPlayer3D = (blows[0]["struck"]["child"]["node"] as Node3D).get_node("ImpactSound")
 	assert_not_null(Map3DUnitSound.impact_sound_of("HIT"), "the table has a HIT")
 	assert_eq(hit.stream, Map3DUnitSound.impact_sound_of("HIT"), "on the struck figure's node")
 	# 2000 m: gain -6 (as the march), + map3d_impact_db -3
 	assert_almost_eq(hit.volume_db, -9.0, 0.001)
-	var block: AudioStreamPlayer3D = (blows[1]["struck"]["node"] as Node3D).get_node("ImpactSound")
+	var block: AudioStreamPlayer3D = (blows[1]["struck"]["child"]["node"] as Node3D).get_node("ImpactSound")
 	assert_eq(block.stream, Map3DUnitSound.impact_sound_of("BLOCK"))
 	assert_ne(block.stream, hit.stream, "a clash is not a thud")
 

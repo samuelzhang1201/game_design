@@ -113,7 +113,7 @@ static func impact(repo: DataRepository, camera: Camera3D, at_node: Node3D, stre
 func play_impacts(repo: DataRepository, camera: Camera3D, contacts: Array) -> void:
 	_hits = _hits.filter(func(p: Variant) -> bool: return is_instance_valid(p))
 	for c: Dictionary in contacts:
-		var node: Variant = (c.get("struck", {}) as Dictionary).get("node")
+		var node: Variant = (c.get("struck", {}).get("child", {}) as Dictionary).get("node")  # the figure's group child
 		if is_instance_valid(node):
 			var player := impact(repo, camera, node, impact_sound_of(String(c.get("kind", ""))), _hits.size())
 			if player != null:
