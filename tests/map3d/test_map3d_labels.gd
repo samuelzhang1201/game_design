@@ -30,6 +30,9 @@ func before_each() -> void:
 
 func _view() -> Map3DView:
 	var v := Map3DView.create(Game.data, _fixture)
+	# The view's scene is full-rect: without this its size is the runner's window, not 800x450,
+	# and its zoom ceiling and the names' size would depend on the machine and the tests before.
+	v.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	v.size = Vector2(800, 450)
 	add_child_autofree(v)
 	v.activate()
@@ -73,13 +76,13 @@ func test_the_players_realm_is_lettered_over_its_live_anchor() -> void:
 	var v := _view()
 	var mine := Game.data.resolve_realm("player_realm")
 	var anchor := MapOwnership.label_anchor(Game.data, Game.state, mine)
-	v.look_at_pack(anchor, 30000.0)
+	v.look_at_pack(anchor, 20000.0)  # under the 450 px view's zoom ceiling, so the rig holds it
 	var e := _entry(v, mine)
 	assert_false(e.is_empty(), "the realm under the camera is lettered")
 	assert_eq(String(e["text"]), String(Game.data.kingdoms[mine]["label"]))
 	assert_almost_eq((e["pos"] as Vector2).x, v.size.x * 0.5, 2.0, "over the anchor")
 	assert_almost_eq((e["pos"] as Vector2).y, v.size.y * 0.5, 2.0)
-	var mpp := Map3DGeometry.metres_per_pixel(30000.0, Game.data.bal("map3d_fov_deg"), v.size.y)
+	var mpp := Map3DGeometry.metres_per_pixel(20000.0, Game.data.bal("map3d_fov_deg"), v.size.y)
 	assert_almost_eq(float(e["px"]), Map3DHudLabels.label_px(
 		Game.data.bal("map_label_scale_px") * 50.0, mpp,
 		Game.data.bal("map_label_min_px")), 0.5,
