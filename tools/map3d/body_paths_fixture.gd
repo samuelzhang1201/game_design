@@ -31,7 +31,6 @@ var _frames: Array = []
 var _running := false
 var _failed := false
 var _v2 := false
-var _strides: Dictionary = {}  ## unit -> stride in sim metres (v2)
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -242,14 +241,6 @@ func _stage() -> bool:
 	return true
 
 func _commit_slice() -> bool:
-	if _v2 and _strides.is_empty():
-		# Stage each axis leg as whole strides of its arm, so no slice is left with a stub.
-		for code: String in _codes:
-			var stride := _stride_sim(code)
-			for row: Dictionary in UnitBodies.rows(_repo, _state, code):
-				var key := JSON.stringify([code, row.slot])
-				var target: Array = _targets[key]
-				_targets[key] = [row.x_m + roundi(roundf((target[0] - row.x_m) / stride) * stride), row.y_m + roundi(roundf((target[1] - row.y_m) / stride) * stride)]
 	var intents: Array = []
 	for code: String in _codes:
 		for row: Dictionary in UnitBodies.rows(_repo, _state, code):
@@ -301,9 +292,10 @@ func _commit_v2(intents: Array) -> bool:
 				best = prefix
 				low = middle + 1
 			else: high = middle - 1
-		intent.path_m = _whole_strides(intent.path_m, best, _stride_sim(intent.unit))
-	# A body the planner trims to a collision-clear prefix is re-requested as whole strides of
-	# that prefix until every requested leg runs complete (lengths only shrink, so it settles).
+		intent.path_m = best
+	# A body the planner trims to a collision-clear prefix is re-requested as that prefix until
+	# every requested leg runs complete (lengths only shrink, so it settles). The consumer walks
+	# any leg as its nearest whole loop count.
 	var plan := {}
 	for attempt: int in 8:
 		plan = BodyMotion.plan_locomotion_candidate(_repo, _state, intents, _state.absolute_day(), _slice)
@@ -314,9 +306,9 @@ func _commit_v2(intents: Array) -> bool:
 		for intent: Dictionary in intents:
 			for move: Dictionary in plan.moves:
 				if move.unit == intent.unit and move.slot == intent.slot and move.end != intent.path_m.back():
-					intent.path_m = _whole_strides(intent.path_m, BodyMotion._loco_path(move), _stride_sim(intent.unit))
+					intent.path_m = BodyMotion._loco_path(move)
 	if not plan.reasons.is_empty():
-		_fail("Whole-stride re-plan did not settle: " + str(plan.reasons))
+		_fail("Re-plan did not settle: " + str(plan.reasons))
 		return false
 	var result := BodyMotion.commit_locomotion_candidate(_repo, _state, plan)
 	if result.status != "complete":
@@ -327,34 +319,6 @@ func _commit_v2(intents: Array) -> bool:
 	FileAccess.open(_out.path_join("slice-%02d.json" % _slice), FileAccess.WRITE).store_string(JSON.stringify({"plan": plan, "state": _state.to_dict()}, "\t"))
 	_layer.set_candidate_bodies(not _baseline, _envelope)
 	return true
-
-## One certified MARCH stride of this unit's figures in sim metres (the consumer's
-## sim -> model scale, at its fixed reference camera); cached per unit.
-func _stride_sim(code: String) -> float:
-	if _strides.has(code): return _strides[code]
-	if _layer.built_piece(code).is_empty(): _layer.step(0.0)
-	var piece := _layer.built_piece(code)
-	# --baseline draws ordinary pieces; their reference height and size give the same scale.
-	var child: Dictionary = piece.groups[0].piece if piece.has("groups") else {"reference_height_m": piece.get("reference_height_m", piece.get("height_m", 0.0)),
-		"size": piece.get("reference_size", piece.get("size", 1.0))}
-	var model := Map3DCandidateGait.model_length(_ctx, piece, child, {"a": [0, 0], "b": [1000000, 0]})
-	_strides[code] = float(_repo.unit_footprints[MapObjects.army_piece(_repo, _state.army_roster[code])].locomotion_certificate.stride_m) * 1000000.0 / model
-	return _strides[code]
-
-## The consumer walks a leg only as whole strides, so the driver hands it whole strides:
-## a partial last leg stops where the distance left to its waypoint is a whole number of
-## strides (the staged targets are, so a leg is never left with a stub).
-func _whole_strides(path: Array, prefix: Array, stride: float) -> Array:
-	if prefix.size() < 2 or path.has(prefix.back()): return prefix
-	var from: Array = prefix[prefix.size() - 2]
-	var to: Array = path[prefix.size() - 1]
-	var left := BodyMotion._distance_ceil(from, to)
-	var steps := floori(float(BodyMotion._distance_ceil(from, prefix.back())) / stride)
-	var out := prefix.slice(0, prefix.size() - 1)
-	if steps == 0: return out
-	var rest := roundf((roundf(left / stride) - steps) * stride) / left
-	out.append([int(to[0]) + roundi((int(from[0]) - int(to[0])) * rest), int(to[1]) + roundi((int(from[1]) - int(to[1])) * rest)])
-	return out
 
 func _process(delta: float) -> bool:
 	if not _running: return false
