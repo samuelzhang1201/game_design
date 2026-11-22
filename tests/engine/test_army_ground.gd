@@ -192,25 +192,42 @@ func test_works_and_morale_go_to_the_seat_supply_to_the_camp() -> void:
 	assert_eq(SupplyLines.home_town(repo, s, String(camper["regiment_code"])), String(cap["town"]))
 
 
-func test_marching_out_empties_the_seat_and_the_camp_refills_it_once_clear() -> void:
+## Owner 2026-11-22 (我不想要他自动填补空位): a seat its holder marches out of
+## stays EMPTY — no camped unit is moved onto the town's point; the camp stands
+## where it is, ready for orders, and a unit marched into the town takes it.
+func test_marching_out_empties_the_seat_and_the_camp_stays_put() -> void:
 	var s := _state()
 	var cap := _capital(s)
+	var town := String(cap["town"])
 	var old := String(cap["seat"])
+	var camped: Array = cap["camped"]
+	var before: Dictionary = {}
+	for c: String in camped:
+		before[c] = ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, c, s))
 	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, old, s))
 	ArmySystem.set_march(repo, s, old, here + Vector2(5.0, 0.0))
-	var point := ArmyGround.town_point_m(repo, String(cap["town"]))
-	assert_eq(ArmyGround.seat_of(repo, s, String(cap["town"])), "", "the seat stands empty as it leaves")
+	assert_eq(ArmyGround.seat_of(repo, s, town), "", "the seat stands empty as it leaves")
 	assert_eq(ArmyGround.camped_by(repo, s, old), "", "on the march it camps nowhere")
-	ArmyGround.reconcile(repo, s)
-	assert_eq(ArmyGround.seat_of(repo, s, String(cap["town"])), "",
-		"the leaver still stands on the town's point, within clearance: nobody steps onto it")
-	ArmySystem.march_day(repo, s)          # a day carries it out of the way
-	ArmyGround.reconcile(repo, s)
-	var now := ArmyGround.seat_of(repo, s, String(cap["town"]))
-	assert_ne(now, old)
-	assert_ne(now, "", "a camped unit steps in once the point is clear")
-	assert_eq(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, now, s)),
-		ArmySystem.metres_to_pack(repo, point))
+	for day in 3:
+		ArmySystem.march_day(repo, s)      # it marches well clear of the point
+		ArmyGround.reconcile(repo, s)
+	assert_eq(ArmyGround.seat_of(repo, s, town), "", "nobody steps onto the empty seat")
+	for c: String in camped:
+		assert_eq(ArmyGround.camped_by(repo, s, c), town, "%s still camps by the town" % c)
+		assert_eq(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, c, s)), before[c], "%s stays on its camp" % c)
+
+
+## With the clearance rule off the seat stays empty too (leave refilled at once).
+func test_with_clearance_off_marching_out_leaves_the_seat_empty() -> void:
+	var r := SuiteData.no_clearance(repo)
+	var s := SuiteData.campaign(r, 42)
+	var town := String(r.kingdoms[r.resolve_realm("player_realm")]["capital_burg"])
+	var old := ArmyGround.seat_of(r, s, town)
+	assert_ne(old, "", "the capital is seated at the start")
+	var here := ArmySystem.position_of(r, s, ArmySystem.regiment(r, old, s))
+	ArmySystem.set_march(r, s, old, here + Vector2(5.0, 0.0))
+	ArmyGround.reconcile(r, s)
+	assert_eq(ArmyGround.seat_of(r, s, town), "")
 
 
 ## March `code` to pack point `to` and run days until it arrives.
