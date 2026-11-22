@@ -56,6 +56,14 @@ func pick_at(pos: Vector2) -> Dictionary:
 		for i: int in range(armies.size() - 1, -1, -1):
 			var marker: Dictionary = armies[i]  # later ink is painted on top
 			if (marker["rect"] as Rect2).has_point(pos): return _army_pick(marker)
+	# Pieces round a town overlap on screen (the near one's box over the far
+	# one's figures, owner 2026-11-22): the piece whose FIGURES the click's ray
+	# meets first is the one drawn there, and takes the click over the town
+	# under it — against the sky too. A badge is drawn over the pieces.
+	if not view.unit_symbol_mode and not view.manor_badges().any(func(b: Dictionary) -> bool: return (b["rect"] as Rect2).has_point(pos)):
+		var front := _front_piece(view.unit_rects(), pos)
+		if front != "":
+			return {"kind": "army", "code": front}
 	var hit: Variant = ctx.ground_at(pos)
 	if hit == null:
 		return {}
@@ -156,6 +164,25 @@ static func _nearest_piece(rects: Dictionary, pos: Vector2, reach: float) -> Str
 		var r := rects[code] as Rect2
 		var d := r.get_center().distance_to(pos)
 		if r.has_area() and r.grow(reach).has_point(pos) and (d < best_d or (d == best_d and code < best)):
+			best = code
+			best_d = d
+	return best
+
+
+## The piece on screen (a code in `rects`; its box alone misses a bow, a
+## standard, a group's figures still walking to their places) whose FIGURES the
+## ray through `pos` meets nearest the camera; "" for none (ties: the lower code).
+func _front_piece(rects: Dictionary, pos: Vector2) -> String:
+	if ctx.camera == null:
+		return ""
+	var px := pos * ctx.viewport_px_scale()
+	var from := ctx.camera.project_ray_origin(px)
+	var dir := ctx.camera.project_ray_normal(px)
+	var best := ""
+	var best_d := INF
+	for code: String in rects:
+		var d := view.unit_ray_depth(code, from, dir)
+		if d < best_d or (d == best_d and d < INF and code < best):
 			best = code
 			best_d = d
 	return best

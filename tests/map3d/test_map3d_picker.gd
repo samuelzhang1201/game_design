@@ -192,3 +192,74 @@ func test_overlapping_symbols_pick_the_top_painted_unit_on_land_and_off_terrain(
 	assert_eq(counted.marks[0]["code"], "covered", "picking must not reorder the paint list")
 	picker.ctx = real_view.context()
 	picker.view = real_view
+
+
+## Owner 2026-11-22 (有时候我无法选择一个我方军队): round a town the camps' pieces
+## overlap on screen — the near piece's box covers the far one's figures — so
+## the box whose CENTRE was nearest took the click, and a camped regiment beside
+## its town was often unclickable until the refill moved it onto the town's
+## point. A click on one of its figures picks it whenever no other regiment's
+## figure stands nearer the camera on that ray, never the town under it.
+func test_a_figure_clicked_picks_its_own_regiment_round_a_town() -> void:
+	var v := Map3DView.create(Game.data, _fixture)
+	v.size = Vector2(1600, 900)
+	add_child_autofree(v)
+	v.activate()
+	var cam := v.context().camera
+	var sc := v.context().viewport_px_scale()
+	var units := v.get("_units") as Map3DLayerUnits
+	var me := Game.data.resolve_realm("player_realm")
+	var towns: Array = Game.state.town_seat.keys().filter(func(t: String) -> bool:
+		return String(ArmySystem.regiment(Game.data, String(Game.state.town_seat[t]), Game.state).get("kingdom_code", "")) == me)
+	towns.sort()
+	var camped := 0
+	var clicked := 0
+	for dist: float in [3000.0, 8000.0]:
+		for town: String in towns:
+			var b: Dictionary = Game.data.burgs[town]
+			v.look_at_pack(Vector2(float(b["x"]), float(b["y"])), dist)
+			await wait_process_frames(3)
+			var tally := _click_figures(v, me, cam, sc, units)
+			camped += tally[0]
+			clicked += tally[1]
+	assert_gt(camped, towns.size(), "the realm's towns have regiments camped round them")
+	assert_gt(clicked, camped, "their figures were clicked")
+
+
+## [camped pieces, figures clicked] of kingdom `me`'s in the current frame.
+func _click_figures(v: Map3DView, me: String, cam: Camera3D, sc: float, units: Map3DLayerUnits) -> Array:
+	var rects := v.unit_rects()
+	var camped := 0
+	var clicked := 0
+	for code: String in rects:
+		var town := ArmyGround.camped_by(Game.data, Game.state, code)
+		if town == "" or String(ArmySystem.regiment(Game.data, code, Game.state).get("kingdom_code", "")) != me:
+			continue
+		camped += 1
+		for mi: MeshInstance3D in Map3DUnits.meshes(units.built_piece(code)["node"]):
+			if not mi.is_visible_in_tree() or mi.skin == null or "_" in String(mi.name):
+				continue  # a figure's body, not its gear
+			var centre := (mi.global_transform * mi.get_aabb()).get_center()
+			var px := cam.unproject_position(centre)
+			if cam.is_position_behind(centre) or not Rect2(Vector2.ZERO, v.size * sc).has_point(px):
+				continue  # off the screen: nothing to click
+			var from := cam.project_ray_origin(px)
+			var dir := cam.project_ray_normal(px)
+			var own := _first_on_ray(units.built_piece(code), from, dir)
+			var hidden := false
+			for other: String in rects:
+				hidden = hidden or (other != code and _first_on_ray(units.built_piece(other), from, dir) < own)
+			if hidden:
+				continue  # another regiment's figure is drawn over this one here
+			clicked += 1
+			assert_eq(v.pick_at(px / sc), {"kind": "army", "code": code}, "%s's figure is clicked" % code)
+	return [camped, clicked]
+
+
+func _first_on_ray(piece: Dictionary, from: Vector3, dir: Vector3) -> float:
+	var best := INF
+	for mi: MeshInstance3D in Map3DUnits.meshes(piece.get("node")) if piece.has("node") else []:
+		var hit: Variant = (mi.global_transform * mi.get_aabb()).intersects_ray(from, dir) if mi.is_visible_in_tree() else null
+		if hit != null:
+			best = minf(best, from.distance_to(hit as Vector3))
+	return best

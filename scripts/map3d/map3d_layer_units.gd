@@ -331,6 +331,21 @@ func screen_rects() -> Dictionary:
 	return _rects
 
 
+## How far along the ray (world `from`, `dir`) the first of `code`'s shown
+## figures is met, by each mesh's world box; INF when the ray meets none.
+func ray_depth(code: String, from: Vector3, dir: Vector3) -> float:
+	var best := INF
+	if not _pieces.has(code):
+		return best
+	for mi: MeshInstance3D in Map3DUnits.meshes(_pieces[code]["node"]):
+		if not mi.is_visible_in_tree():
+			continue
+		var hit: Variant = (mi.global_transform * mi.get_aabb()).intersects_ray(from, dir)
+		if hit != null:
+			best = minf(best, from.distance_to(hit as Vector3))
+	return best
+
+
 ## How many pieces are standing (tests, bench).
 func drawn_count() -> int:
 	return _pieces.values().filter(func(p: Dictionary) -> bool: return (p["node"] as Node3D).visible).size()
