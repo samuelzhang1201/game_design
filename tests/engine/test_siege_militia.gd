@@ -271,3 +271,24 @@ func test_militia_round_trips_the_save() -> void:
 	assert_eq(TownMilitia.town_of(s2, f.code), f.town)
 	assert_eq(s2.sieges[f.id]["militia"], [f.code])
 	assert_true(s2.army_roster.has(f.code) and s2.military_rosters.has(f.code))
+
+
+## --- militia never march ----------------------------------------------------
+
+func test_militia_never_march() -> void:
+	var f := _crown_town()
+	var s: GameState = f.s
+	var code := String((f.rec as Dictionary)["militia"][0])
+	var words := String(repo.task_words["militia"])
+	var actions := ActionSystem.new(repo)
+	var home: Vector2 = ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code, s))
+	for kind: String in ["ARMY_MARCH", "ARMY_SEAT"]:
+		var req := ActionRequest.new()
+		req.action_code = kind
+		req.params = {"regiment": code, "x": home.x + 40.0, "y": home.y}
+		assert_eq(actions.validate(req, s), words, kind + " refused")
+	var at := Play.town_m(repo, f.town)
+	var shown := ArmyTasks.preview(repo, s, repo.resolve_realm("player_realm"), {"kind": "search",
+		"unit_codes": [code], "center_x_m": at.x, "center_y_m": at.y, "radius_m": 5000})
+	assert_false(bool(shown["ok"]))
+	assert_eq(String(shown["reason"]), words, "no area task either")

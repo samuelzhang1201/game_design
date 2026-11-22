@@ -1,6 +1,7 @@
 key,text,notes
 no_units,Choose at least one unit for the task.,"P6.1b refusal: an area task needs units"
 bad_unit,"Only our own land units with men under arms can take an area task.","P6.1b refusal: a fleet, a foe, a captured or empty unit, or an unknown code"
+militia,"A town's militia never leaves its walls.","player siege spec §5: every movement order on a militia unit (TownMilitia) is refused — ARMY_MARCH, ARMY_SEAT, an area task"
 bad_kind,That is not a task the marshals know.,"P6.1b refusal: the kind is not in task_kinds.csv"
 bad_radius,The circle is too small or too wide for one task.,"P6.1b refusal: radius at or below 0 or above balance task_max_radius_m"
 off_map,The circle's centre lies off the map.,"P6.1b refusal: centre outside the pack"
