@@ -127,6 +127,7 @@ var _war_execs: Array[String] = []
 ## (a resource nothing holds is freed, and the next load reads the file).
 var _held: Array[Resource] = []
 ## --zoom3d M (with --screen root) frames the capital M metres away.
+## --quality TIER wears that graphics tier (Map3DQuality.forced), as bench.gd.
 var _zoom3d := -1.0
 var _yaw3d: float = 0.0
 ## --at3d x,y (with --zoom3d) frames that pack pixel instead of the capital.
@@ -469,6 +470,8 @@ func _ready() -> void:
 			_yaw3d = float(args[i + 1])
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
+		elif args[i] == "--quality":
+			Map3DQuality.forced = args[i + 1]  # before the view's first load, as bench.gd
 		elif args[i] == "--supply-front":
 			_supply_front = true
 		elif args[i] == "--supply-front-reg":
