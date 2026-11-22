@@ -32,11 +32,15 @@ What the map needs of the infantry GLB (a plain export of the rig does not give 
 import json
 import math
 import os
+import sys
 from pathlib import Path
 
 import bpy
 import numpy as np
 from mathutils import Matrix, Vector
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import tunic_mask  # noqa: E402  (beside this script; Blender's --python does not add its folder)
 
 # Shipped clips (owner 2026-11-16), then the front-rank duel's (Map3DDuel: BLOCK*, HIT*; Map3DFall:
 # DEATH*), appended after the first ten. The other batch-2 clips (TURN_*, RUN*, ADVANCE*, GARRISON_2,
@@ -222,33 +226,22 @@ def _pixels(img, w, h):
     return a
 
 
-def _box(a, r):
-    """Box blur of radius r px over the first two axes (edges clamped)."""
-    for axis in (0, 1):
-        pad = [(0, 0)] * a.ndim
-        pad[axis] = (r + 1, r)
-        c = np.cumsum(np.pad(a, pad, mode="edge"), axis=axis)
-        hi = np.take(c, range(2 * r + 1, c.shape[axis]), axis=axis)
-        lo = np.take(c, range(0, c.shape[axis] - 2 * r - 1), axis=axis)
-        a = (hi - lo) / (2 * r + 1)
-    return a
+def _body_class():
+    """The body's authored material classes (`textures/body_class.npy`: 1 green leather, 2 chain
+    mail, 3 plate, scripts/matmaps.py), rows top-down."""
+    return np.load(Path(bpy.data.filepath).parent / "textures/body_class.npy")
 
 
 def _class_mask(w, h, k):
-    """Class `k` of the body's authored material classes (`textures/body_class.npy`: 1 green
-    leather, 2 chain mail, 3 plate, scripts/matmaps.py), resampled to w x h, rows bottom-up as
-    Blender's pixels, edges softened."""
-    cls = np.load(Path(bpy.data.filepath).parent / "textures/body_class.npy")[::-1]
-    ys = (np.arange(h) * cls.shape[0]) // h
-    xs = (np.arange(w) * cls.shape[1]) // w
-    return _box((cls[ys][:, xs] == k).astype(np.float32), 2)[..., None]
+    """Class `k` of the body's classes resampled to w x h, rows bottom-up, edges softened."""
+    return tunic_mask.class_mask(_body_class(), w, h, k)[..., None]
 
 
 def _calm_mail(kind, px, mask, cfg):
     """Mail at play zoom: less ring contrast, flatter relief, steadier roughness (POLISH)."""
     r = int(cfg["mail_blur_px"])
     if kind == "albedo":
-        c = px[..., :3]; b = _box(c, r)
+        c = px[..., :3]; b = tunic_mask.box(c, r)
         px[..., :3] = c + mask * ((b + (c - b) * cfg["mail_albedo"]) - c)
     elif kind == "n":
         xy = 0.5 + (px[..., :2] - 0.5) * cfg["mail_normal"]
@@ -256,7 +249,7 @@ def _calm_mail(kind, px, mask, cfg):
         v[..., 2:3] = np.sqrt(np.clip(1 - (v[..., :2] ** 2).sum(-1, keepdims=True), 0, 1))
         px[..., :3] = px[..., :3] + mask * ((v + 1) / 2 - px[..., :3])
     elif kind == "mr":
-        g = px[..., 1:2]; b = _box(g, r)
+        g = px[..., 1:2]; b = tunic_mask.box(g, r)
         calm = np.clip(b + (g - b) * cfg["mail_rough"] + cfg["mail_rough_add"], 0, 1)
         px[..., 1:2] = g + mask * (calm - g)
     return px
@@ -327,6 +320,11 @@ def _atlases(mat, out_dir):
         im.pack()                                # the exporter names an image by its FILE: give it
         im.filepath_raw = name + ".jpg"          # the old GLB's name, read from the packed copy
         files[kind] = im
+    # the map's realm tint reads the tunic where the body sits (not in the GLB: the shader's file)
+    u0, v0, du, dv = REGION["body"]
+    tunic = tunic_mask.tunic_mask_tiles(
+        _body_class(), [(int(u0 * ATLAS), int(v0 * ATLAS), int(du * ATLAS), int(dv * ATLAS))], ATLAS)
+    (Path(out_dir) / "infantry_tunic_mask.png").write_bytes(tunic_mask.png_gray(tunic))
     nt = mat.node_tree
     bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
     t = nt.nodes.new("ShaderNodeTexImage"); t.image = files["albedo"]

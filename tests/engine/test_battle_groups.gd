@@ -768,3 +768,29 @@ func test_overlap_cannot_hide_a_later_closed_rank_during_geometry_migration() ->
 			assert_eq(result.status, "complete", "Pure saved overlap still repairs at the safe boundary")
 			assert_true(BattleGroups.placement(f.repo, f.state, f.battle).ok)
 		MarchPath.forget()
+
+## A battle-bound column whose step the battle refuses stays refused every day of
+## a forecast (nothing in a forecast ends the battle): march_days_between gives
+## the cap at once instead of walking every day to it (the march confirm froze
+## the game for minutes on 5 loads x 3650 days of rigid steps).
+func test_forecast_of_a_refused_battle_step_stops_at_once() -> void:
+	var f := _fixture()
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var reg: Dictionary = f.state.regiments[f.a]
+	reg.battle_retreat = true
+	reg.camp_state = {"phase": CampSystem.NONE}
+	reg.erase("departure")
+	f.repo.balance["army_march_days_cap"] = 20000
+	var from := ArmySystem.metres_to_pack(f.repo, Vector2i(1000, 2000))
+	# 20 m off the line: rows 80 m apart would pass the enemy's exactly tangent
+	var through := ArmySystem.metres_to_pack(f.repo, Vector2i(1020, 6000))
+	assert_eq(ArmySystem.pack_to_metres(f.repo, through), Vector2i(1020, 6000), "whole-metre round trip")
+	var before := SaveLoad.state_hash(f.state)
+	var started := Time.get_ticks_msec()
+	assert_eq(ArmySystem.march_days_between(f.repo, f.state, f.a, from, through), 20000,
+		"a pinned column never arrives")
+	assert_lt(Time.get_ticks_msec() - started, 1000, "the forecast stops at the first refused step")
+	assert_eq(SaveLoad.state_hash(f.state), before, "a forecast moves nothing")
+	var away := ArmySystem.metres_to_pack(f.repo, Vector2i(1000, 1000))
+	assert_lt(ArmySystem.march_days_between(f.repo, f.state, f.a, from, away), 20000,
+		"a step the battle admits still arrives")

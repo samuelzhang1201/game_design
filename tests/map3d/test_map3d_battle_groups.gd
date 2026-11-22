@@ -807,3 +807,35 @@ func test_saved_size_cannot_override_the_current_people_per_figure() -> void:
 	ctx.state_fn = func() -> GameState: return state
 	assert_eq(Map3DBattleGroups.sample(ctx, code).mode, "invalid")
 	ctx.state_fn = Callable()
+
+
+func test_glow_follows_each_figure() -> void:
+	# the mixed fight (spec 2026-11-21-infantry-melee-scrum-design.md): a selected unit's men are lit where they fight,
+	# and each drawn soldier has its own pick box
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 7)
+	var reg: Dictionary = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state)[0]
+	var code := String(reg["regiment_code"])
+	var rows: Array = []
+	for n: int in BattleGroups.counts(ArmySystem.fit_count(repo, state, code), int(repo.bal("battle_group_size"))):
+		rows.append({"count": n, "role": "front", "x_m": 200 + rows.size() * 4, "y_m": 300})
+	state.battles = [{"place_x_m": 200, "place_y_m": 300, "att": [code], "def": [], "group_size_version": 2, "group_size_men": 100, "groups": {code: rows}, "group_facing": {code: 0}}]
+	var ctx := Map3DContext.new(repo, {"pack_origin": [0, 0], "m_per_px": 2.0})
+	ctx.state_fn = func() -> GameState: return state
+	var camera := Camera3D.new()
+	add_child_autofree(camera)
+	camera.look_at_from_position(Vector3(0, 400, 400), Vector3.ZERO)
+	ctx.camera = camera
+	var piece := Map3DBattleGroups.build(repo, reg, Map3DBattleGroups.sample(ctx, code))
+	add_child_autofree(piece["node"])
+	var fighter: Dictionary = piece["groups"][-1]["piece"]
+	fighter["duel_offset"] = Vector2(3, 2)  # in the scrum, off its saved point
+	fighter["at"] = {"xz": Map3DBattleGroups.stand_xz(ctx, piece, piece["groups"][-1]) + Vector2(3, 2), "yaw": 0.0}
+	Map3DBattleGroups.place(ctx, piece, Vector2.ZERO, 1.6, true)
+	for group: Dictionary in piece["groups"]:
+		var node: Node3D = group["piece"]["node"]
+		var glow := node.get_node_or_null(Map3DUnitGlow.NAME) as Node3D
+		assert_true(glow != null and glow.visible, "slot %d is lit" % int(group["slot"]))
+		assert_almost_eq(Vector2(glow.global_position.x, glow.global_position.z).distance_to(
+			Vector2(node.global_position.x, node.global_position.z)), 0.0, 1e-3, "under its own soldier as drawn")
+	assert_eq((piece["figure_rects"] as Array).size(), (piece["groups"] as Array).size(), "one pick box per drawn soldier")

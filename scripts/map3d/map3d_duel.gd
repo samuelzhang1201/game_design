@@ -84,9 +84,10 @@ static func turn(pair_key: String, n: int, strikes: int, variants: int, steal: f
 
 ## When, from a turn's start, the strike and the reply begin so the blade's
 ## contact (`strike_share` of `strike_len`) meets the reply's (`reply_share` of
-## `reply_len`): the earlier starts at 0; `end` is when the later clip ends.
+## `reply_len`): the earlier starts at 0; `contact_at` is when they meet (the
+## impact's instant, Map3DImpact); `end` is when the later clip ends.
 static func timing(strike_len: float, strike_share: float, reply_len: float, reply_share: float) -> Dictionary:
 	var gap := strike_len * strike_share - reply_len * reply_share  # how much later the reply starts
 	var strike_at := maxf(-gap, 0.0)
 	var reply_at := maxf(gap, 0.0)
-	return {"strike_at": strike_at, "reply_at": reply_at, "end": maxf(strike_at + strike_len, reply_at + reply_len)}
+	return {"strike_at": strike_at, "reply_at": reply_at, "contact_at": strike_at + strike_len * strike_share, "end": maxf(strike_at + strike_len, reply_at + reply_len)}

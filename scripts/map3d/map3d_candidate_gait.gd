@@ -2,8 +2,8 @@ class_name Map3DCandidateGait
 extends RefCounted
 ## How a v2 candidate figure moves its feet (CF04c, candidate only): only what the arm's
 ## installed locomotion policy certifies. MARCH starts, stops and holds at the policy's
-## admitted phase; a leg walks a whole number of MARCH loops whose stride stays within the
-## policy's contact_um of the native stride; a pivot's pose comes from the policy's turn ->
+## admitted phase; a leg walks the nearest whole number of MARCH strides, its cadence set by
+## the leg's time; a pivot's pose comes from the policy's turn ->
 ## pose provider (Map3DPivotProvider). Every pose is scrubbed from the committed operation
 ## time (MARCH held at speed 0 and sought, a pivot posed by the provider), so there is no
 ## crossfade and no frame-delta playback.
@@ -17,6 +17,7 @@ static var _solved: Dictionary = {}  ## [arm, clip, turn, phase] -> the provider
 
 
 ## The consumer's slice of the arm's installed policy: {phase, stride_m, contact_um, solve}, or {error}.
+## contact_um bounds the native clip (the certificate's); no leg's loop count is held to it.
 ## The engine's BodyMotion._loco_policy must admit these fields too (LOCO-POLICY widens it).
 static func policy(repo: DataRepository, arm: String) -> Dictionary:
 	var raw: Variant = repo.unit_footprints.get(arm, {}).get("locomotion_certificate")
@@ -53,18 +54,13 @@ static func admitted_phase(lists: Array) -> float:
 	return -1.0
 
 
-## Whole MARCH loops for a leg of `length_m` model metres: the k >= 1 whose stride length/k is
-## nearest the native stride; -1 when even that k slides more than contact_um. The bound is
-## conservative: a foot's stance lasts at most one loop, so its slide is at most |length/k - stride|.
-## It bounds only this stride mismatch; the native clip's own slide is the certificate's to bound.
-static func strides(length_m: float, stride_m: float, contact_um: int) -> int:
-	var best := -1
-	var error := INF
-	for k: int in [floori(length_m / stride_m), ceili(length_m / stride_m)]:
-		if k >= 1 and absf(length_m / k - stride_m) < error:
-			best = k
-			error = absf(length_m / k - stride_m)
-	return best if error * 1000000.0 <= contact_um else -1
+## Whole MARCH loops for a leg of `length_m` model metres: the nearest whole number of strides,
+## round(length / stride), halves up. No leg is refused: the k loops play over the leg's time, so
+## the cadence follows the leg, and a planted foot slides at |length - k * stride| over the leg's
+## time, the least any whole loop count allows. A leg under half a stride plays no loop: the
+## figure holds the admitted phase while it moves.
+static func strides(length_m: float, stride_m: float) -> int:
+	return maxi(0, roundi(length_m / stride_m))
 
 
 ## A move op's length in the figure's model metres (sim metres -> built world -> model).
@@ -91,10 +87,6 @@ static func refusal(ctx: Map3DContext, piece: Dictionary, child: Dictionary, row
 			var clip := "PIVOT_RIGHT" if int(op.turn_udeg) > 0 else "PIVOT_LEFT"
 			for anim: AnimationPlayer in child["anims"]:
 				if Map3DUnits.clip_named(anim, clip).is_empty(): return "%s has no %s clip: transverse leg refused" % [arm, clip]
-		elif op.kind == "move":
-			var length := model_length(ctx, piece, child, op)
-			if strides(length, rule.stride_m, rule.contact_um) < 0:
-				return "%s leg of %.3f model m fits no whole MARCH stride within %d um: refused" % [arm, length, rule.contact_um]
 	for anim: AnimationPlayer in child["anims"]:
 		if Map3DUnits.clip_named(anim, "MARCH").is_empty(): return "%s has no MARCH clip" % arm
 	return ""
@@ -110,7 +102,7 @@ static func pose(ctx: Map3DContext, piece: Dictionary, child: Dictionary, row: D
 	if op.kind == "pivot":
 		clip = "PIVOT_RIGHT" if int(op.turn_udeg) > 0 else "PIVOT_LEFT"
 	elif op.kind == "move":
-		march = fposmod(rule.phase + strides(model_length(ctx, piece, child, op), rule.stride_m, rule.contact_um) * phase, 1.0)
+		march = fposmod(rule.phase + strides(model_length(ctx, piece, child, op), rule.stride_m) * phase, 1.0)
 	var entering := not String(child.get("action", "")).begins_with("v2:")
 	for anim: AnimationPlayer in child["anims"]:
 		var skeleton := _skeleton(anim)

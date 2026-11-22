@@ -433,6 +433,9 @@ char_coast_ansel_durnwick,Ser Ansel Durnwick,,78,21,80,45,24,52,31,36,31,3,12,3,
 char_coast_berengar_seabrook,Ser Berengar Seabrook,,21,69,63,74,56,74,24,29,60,6,14,5,11,3,20,-20,30,20,0,53,noble_born|learned|cautious|honest,-30,officer,Seabrook,coast_realm,93,23,22,69,39
 char_coast_cedric_bellhaven,Ser Cedric Bellhaven,,60,80,43,26,42,79,27,48,21,6,10,7,2,6,20,10,0,-30,70,30,noble_born|master_duelist|wrathful|vain,-44,officer,Bellhaven,coast_realm,56,73,69,15,24
 char_coast_dorian_tideford,Ser Dorian Tideford,,51,67,53,31,46,53,29,38,49,9,15,10,8,10,-70,80,10,10,-20,36,noble_born|loyal_devoted|vigorous|forthright,-35,officer,Tideford,coast_realm,67,28,40,25,51
+char_coast_hadrian_tideford,Ser Hadrian Tideford,,58,66,47,62,40,45,38,55,64,4,13,4,5,6,10,40,0,-20,10,44,noble_born|veteran|bold|blunt,12,officer,Tideford,coast_realm,88,41,46,33,34
+char_coast_ivo_seabrook,Ser Ivo Seabrook,,44,72,61,49,55,58,30,41,57,5,12,3,6,8,-10,30,20,10,0,47,noble_born|born_soldier|patient|honest,8,officer,Seabrook,coast_realm,90,35,38,29,30
+char_coast_jory_bellhaven,Ser Jory Bellhaven,,66,48,39,70,33,41,52,62,45,3,11,6,4,5,30,60,-10,0,20,51,noble_born|vigorous|wrathful|forthright,-6,officer,Bellhaven,coast_realm,79,52,50,27,26
 char_coast_edric_marrick,Ser Edric Marrick,,20,42,52,29,20,70,56,32,79,9,11,2,6,6,20,40,80,20,10,40,noble_born|schemer|patient|amb_ruthless,44,officer,Marrick,coast_realm,69,44,21,61,27
 char_coast_emrys_oakhaven,Ser Emrys Oakhaven,,48,42,73,75,31,35,80,42,75,4,7,5,4,7,-80,80,-20,50,10,52,noble_born|pious|compassionate|trusting,-31,officer,Oakhaven,coast_realm,60,74,24,41,55
 char_coast_florian_windmere,Ser Florian Windmere,,50,54,79,75,50,60,33,44,28,2,7,6,11,11,10,50,50,0,30,39,noble_born|veteran|cynical|amb_content,-9,officer,Windmere,coast_realm,81,82,63,41,37

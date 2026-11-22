@@ -1,0 +1,24 @@
+[gd_resource type="QuadMesh" format=3 uid="uid://bwcb21ujlibys"]
+
+[sub_resource type="Gradient" id="Gradient_bxr5v"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_2ukb4"]
+gradient = SubResource("Gradient_bxr5v")
+width = 32
+height = 32
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hufso"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+vertex_color_is_srgb = true
+albedo_texture = SubResource("GradientTexture2D_2ukb4")
+
+[resource]
+material = SubResource("StandardMaterial3D_hufso")
+size = Vector2(0.006, 0.06)

@@ -49,6 +49,11 @@ extends Node
 ##   --pan               measure a MOVING view instead of a still one (below).
 ##   --frame-cap N       run under the menus' frame-rate cap N (FrameCap; default 0,
 ##                       uncapped) to read the GPU's load under it, not a frame's cost.
+##   --battle-arm ARM    stage a real FIELD battle of that arm (tools/battle_stage.gd,
+##                       as snapshot_screen's --battle-arm; e.g. foot), play it on at
+##                       1x and frame it at each zoom; only the "all on" rows are
+##                       measured (the battle must still be fought), each printing
+##                       the battles' rounds so a row priced after the fight shows.
 ##   --decree LAW        before each zoom's rows, decree LAW to a value other than
 ##                       the one decreed (LawSystem.decree, no cost charged), so a
 ##                       decree's couriers are on the road while it is priced (a
@@ -99,6 +104,9 @@ var _layer := ""
 var _rig: Map3DCameraRig
 ## --decree's law ("" for none).
 var _decree := ""
+## --battle-arm's staged own unit ("" for none).
+var _battle := ""
+const BattleStage := preload("res://tools/battle_stage.gd")
 
 
 func _ready() -> void:
@@ -167,6 +175,14 @@ func _ready() -> void:
 		return
 	_view = v
 	_rig = v.component("rig") as Map3DCameraRig
+	var bi := args.find("--battle-arm")
+	if bi >= 0 and bi + 1 < args.size():
+		_battle = BattleStage.stage(args[bi + 1])
+		for i in 4:
+			await get_tree().process_frame
+		if not Game.pending_battle_decision().is_empty():
+			Game.resolve_battle_decision(String(Game.pending_battle_decision()["token"]), "continue")
+		Game.set_clock_speed(1)  # the encounter stopped the clock: the battle plays on, as the recordings see it
 	# --weather KIND[,KIND] lays that weather over the map (spec 2026-09-29-
 	# weather-visuals) so the rain and snow are priced where they fall
 	var wi := args.find("--weather")
@@ -195,12 +211,18 @@ func _ready() -> void:
 		"PANNING (per-move CPU priced)" if _pan else "still (per-move CPU NOT priced)"])
 	var worst := 0.0
 	for stop: Array in STOPS:
-		if _at.x >= 0.0:
+		if _battle != "":
+			v.look_at_pack(ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, _battle, Game.state)),
+				Game.data.bal(String(stop[1])))
+		elif _at.x >= 0.0:
 			v.look_at_pack(_at, Game.data.bal(String(stop[1])))
 		else:
 			v.look_at_home(Game.data.bal(String(stop[1])))
 		_send_decree()
 		worst = maxf(worst, await _measure("%s  all on" % stop[0]))
+		if _battle != "":
+			print("  battles: %s" % str(Game.state.battles.map(func(b: Dictionary) -> int: return int(b.get("rounds", 0)))))
+			continue  # the fight is the row: no layer is priced away from it
 		for layer: String in v.layer_names():
 			v.set_layer_visible(layer, false)
 			await _measure("%s  - %s" % [stop[0], layer])
@@ -225,7 +247,8 @@ func _ready() -> void:
 ## Returns the MEDIAN frame time in ms — the bench's "how expensive is this"
 ## number (see the top-of-file note on why median).
 func _measure(plain_label: String) -> float:
-	var label := plain_label + ("  [pan]" if _pan else "") + ("  [%s]" % _layer if _layer != "" else "")
+	var label := plain_label + ("  [pan]" if _pan else "") + ("  [%s]" % _layer if _layer != "" else "") \
+		+ ("  [battle]" if _battle != "" else "")
 	for i in WARM:
 		await get_tree().process_frame
 		_root.hold_clock_before_month_end(DAY_CEILING)

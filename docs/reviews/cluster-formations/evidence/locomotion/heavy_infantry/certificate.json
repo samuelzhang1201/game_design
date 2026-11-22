@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "67a42fad96ce0baf9a47528ae895672d5bb393553818794bdf1b3b46178a2d22",
+  "sha256": "37c12a0a6fed7342a0fc6832fd0259d3594d3d2ff4b793f95a69b9ec9b337069",
   "uniform": 512
  },
  "config": {
@@ -424,10 +424,10 @@
   "assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas_n.jpg.import": "d6ea70623a453c74cd002452f6e045666cf5debc84294cff5bd36c42172f08af",
   "assets/3D/units/heavy_infantry/heavy_infantry_pivot_plan.json": "50de38d600f4a616e4027d274930a904a28ad748379b8cf7b784288e270e1fef",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
-  "data/army/balance.csv": "d830521a87cf61fa9276ebd6b3961429fd684a3dff440840e671942797f8b6a7",
+  "data/army/balance.csv": "7925c6b53eb35e138044542c0e12072f3ce6a599b629dd89d68ad8d6b6ebff39",
   "data/army/unit_footprints.csv": "81971028b03d63c2031c55f983f74df8d114414d13e461d61981ddce744aaf03",
   "data/screens/map3d/army_art.csv": "15058277b4340dacae865aa0c0c05870de0d055787decbd91cb2507553446415",
-  "data/screens/map3d/balance.csv": "f128c6999b798ed089e50f888f24f0ee6a9e70646df2a9ff66169430190a3790",
+  "data/screens/map3d/balance.csv": "33dea7e472bfe0b9245734daaa8d631526fbb67eaf9f8eb20f819bfb26446f20",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "f49cb07aecc7e87f985126d3db0751c5b8552d40ee34519da9bf638fbfd2fbd3",
   "scenes/models/units/heavy_infantry.tscn": "3efc8e2c93ee9c5b3ac833e09b61a174a3e2190637d9f5ad5219dba362d662a4",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 22699,
-  "digest": "5bd01bca0d51967a306f41858527df57db874a4d8dfc3e5bed605ab93bfb01b2",
+  "digest": "f2e5fe8a2e48f6ae8429ebe2ffa84b636341295f419e4cd7591e543accf172b8",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "5bd01bca0d51967a306f41858527df57db874a4d8dfc3e5bed605ab93bfb01b2",
+ "payload_sha256": "f2e5fe8a2e48f6ae8429ebe2ffa84b636341295f419e4cd7591e543accf172b8",
  "report": {
   "bounds_um": {
    "contact": 22699,

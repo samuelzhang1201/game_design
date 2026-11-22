@@ -313,7 +313,7 @@ kingdom's town is refused with words. Several enemy kingdoms are the PRD's post-
   its province's manors within `siege_capture_radius_km` that are no other town's own manor
   (`taken_cells`, unchanged) go to the attacker's ruling house through `MapManors.set_owner`. The
   reason is `taken by <realm>'s <host or the crown's army>: siege of <town>`, and each one's house
-  before is kept on the siege record. Province control (`MapManors.controller_of`) can pass as it does
+  before is kept on the siege record. (Step 3 keeps them on `GameState.occupations[town]` instead, since a counter-siege needs its own record while the occupation lasts; plan `2026-11-22-player-siege-step3-sides.md`.) Province control (`MapManors.controller_of`) can pass as it does
   today. No province, border, capital or other town moves.
 - **The occupiers**: the besiegers turn HOLD (a host), or the crown's units garrison the town (seat
   and camp, `ArmyGround`). `ArmyGround.holds` and `seated_in` learn that an occupier holds a town it
@@ -458,3 +458,4 @@ ruling.
 - The AI reads the walls at full strength, while the battle reads the damaged ones (§4.4).
 - Sea entries never close, so a port starves more slowly (§4.1).
 - No relief host is newly raised (§8). Integrity is not carried over to a later siege (§8).
+- `TOWN_TAKEN`'s gain is +round(base × (1 + w)), as §7 writes it. Because w lies in −1..1, it is never a loss. An opposed seat's gain shrinks toward 0, mirroring the loss's "never a gain" (step 3b). The sack reads the plunder law of the record's first unit.

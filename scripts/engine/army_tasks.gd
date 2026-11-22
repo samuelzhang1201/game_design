@@ -56,6 +56,8 @@ static func preview(repo: DataRepository, state: GameState, realm: String, task:
 	for c: Variant in codes:
 		if not _own_land_unit(repo, state, realm, String(c)):
 			return _refuse(repo, "bad_unit")
+		if TownMilitia.town_of(state, String(c)) != "":
+			return _refuse(repo, "militia")
 	if not repo.task_kinds.has(kind):
 		return _refuse(repo, "bad_kind")
 	var spec: Dictionary = repo.task_kinds[kind]

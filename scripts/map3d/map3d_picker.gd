@@ -56,6 +56,14 @@ func pick_at(pos: Vector2) -> Dictionary:
 		for i: int in range(armies.size() - 1, -1, -1):
 			var marker: Dictionary = armies[i]  # later ink is painted on top
 			if (marker["rect"] as Rect2).has_point(pos): return _army_pick(marker)
+	# Pieces round a town overlap on screen (the near one's box over the far
+	# one's figures, owner 2026-11-22): the piece whose FIGURES the click's ray
+	# meets first is the one drawn there, and takes the click over the town
+	# under it — against the sky too. A badge is drawn over the pieces.
+	if not view.unit_symbol_mode and not view.manor_badges().any(func(b: Dictionary) -> bool: return (b["rect"] as Rect2).has_point(pos)):
+		var front := _front_piece(view.unit_rects(), pos)
+		if front != "":
+			return {"kind": "army", "code": front}
 	var hit: Variant = ctx.ground_at(pos)
 	if hit == null:
 		return {}
@@ -86,7 +94,10 @@ func pick_at(pos: Vector2) -> Dictionary:
 	else:
 		armies = view.army_markers()
 		if not on_badge: rects = view.unit_rects()
-	var piece := _nearest_piece(rects, pos, 0.0)
+	var piece := _soldier_at(view, rects, pos)  # in a scrum the soldier under the click names his unit
+	if piece != "":
+		return {"kind": "army", "code": piece}
+	piece = _nearest_piece(rects, pos, 0.0)
 	if piece != "" and (rects[piece] as Rect2).get_center().distance_to(pos) < town_d:
 		return {"kind": "army", "code": piece}
 	var reach := ctx.repo.bal("map_army_pick_px")
@@ -149,6 +160,31 @@ func pick_at(pos: Vector2) -> Dictionary:
 
 ## The piece whose box, grown by `reach` design px, holds `pos` with its centre
 ## nearest it (ties: the lower code); "" for none.
+## The unit whose drawn soldier's box holds `pos` (`figure_rects`: code ->
+## Array[Rect2]); several, the one whose box's bottom edge is lowest on screen
+## (nearest the camera; ties: the smaller code); "" for none.
+static func figure_at(figure_rects: Dictionary, pos: Vector2) -> String:
+	var best := ""
+	var best_y := -INF
+	for code: String in figure_rects:
+		for r: Rect2 in figure_rects[code]:
+			if r.has_point(pos) and (r.end.y > best_y or (r.end.y == best_y and code < best)):
+				best = code
+				best_y = r.end.y
+	return best
+
+
+## figure_at over the battle pieces among `rects` (near mode: the units layer's own boxes).
+static func _soldier_at(view: Map3DView, rects: Dictionary, pos: Vector2) -> String:
+	var units := view.component("units") as Map3DLayerUnits
+	if units == null or view.unit_symbol_mode:
+		return ""
+	var figures: Dictionary = {}
+	for code: String in rects:
+		figures[code] = units.built_piece(code).get("figure_rects", [])
+	return figure_at(figures, pos)
+
+
 static func _nearest_piece(rects: Dictionary, pos: Vector2, reach: float) -> String:
 	var best := ""
 	var best_d := INF
@@ -158,6 +194,41 @@ static func _nearest_piece(rects: Dictionary, pos: Vector2, reach: float) -> Str
 		if r.has_area() and r.grow(reach).has_point(pos) and (d < best_d or (d == best_d and code < best)):
 			best = code
 			best_d = d
+	return best
+
+
+## The piece on screen (a code in `rects`; its box alone misses a bow, a
+## standard, a group's figures still walking to their places) whose FIGURES the
+## ray through `pos` meets nearest the camera; "" for none (ties: the lower code).
+func _front_piece(rects: Dictionary, pos: Vector2) -> String:
+	if ctx.camera == null:
+		return ""
+	var px := pos * ctx.viewport_px_scale()
+	var from := ctx.camera.project_ray_origin(px)
+	var dir := ctx.camera.project_ray_normal(px)
+	var units := view.component("units") as Map3DLayerUnits
+	if units == null:
+		return ""
+	var best := ""
+	var best_d := INF
+	for code: String in rects:
+		var d := ray_depth(units.built_piece(code), from, dir)
+		if d < best_d or (d == best_d and d < INF and code < best):
+			best = code
+			best_d = d
+	return best
+
+
+## How far along the ray (world `from`, `dir`) the first of a piece's shown
+## figures is met, by each mesh's world box; INF when it meets none.
+static func ray_depth(piece: Dictionary, from: Vector3, dir: Vector3) -> float:
+	var best := INF
+	if not piece.has("node"):
+		return best
+	for mi: MeshInstance3D in Map3DUnits.meshes(piece["node"]):
+		var hit: Variant = (mi.global_transform * mi.get_aabb()).intersects_ray(from, dir) if mi.is_visible_in_tree() else null
+		if hit != null:
+			best = minf(best, from.distance_to(hit as Vector3))
 	return best
 
 

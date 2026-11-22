@@ -83,7 +83,10 @@ within a floating-point error bound is conservatively blocked; exact constant
 axis separation and exact monotone endpoints preserve integer tangency.
 
 Reservations start stationary for ALL bodies, not unit deployment rectangles.
-Saved progress priority then `(unit,slot)` selects each reservation once. Friendly
+Saved progress priority then `(unit,slot)` selects each reservation once, except that
+a unit in no battle reserves all its rows together, at its best saved place, front first
+(`_loco_front`: the reach along the unit's first requested leg), so a column's rear follows
+its front, a reversed column's too. Friendly
 bodies can take bounded alternating lateral routes that rejoin the requested
 polyline within the same budget. Enemy/hostile obstacles do not grant that
 bypass. Otherwise the body advances a swept-clear integer prefix or waits with
@@ -351,7 +354,7 @@ holder on the march, `ArmyGround.leave`'s rule), so a holder standing off the to
 (`ArmyGround._placement_refill`). No anchor or row moves, so arrival and encounter days complete.
 A departing holder's seat is cleared without `LawSystem.on_leave` (the order writer's). Tick 0's day 30 fails closed too (the opening month settles through `advance`, and the
 absolute day falls back to 1). `TickEngine.resolve_day`, `resolve_decision` and `advance` refuse a world with `body_version` (`BODY_WORLD`),
-so no ordinary writer is its alternate authority; no ordinary campaign carries the marker. Still
-not here (B2e): the march staging the CF04c visual review asks for (whole
-strides, front-first column order, facing written to the heading); the Game bridges are
-ACT-CUTOVER's. Nothing in ordinary dispatch calls the driver.
+so no ordinary writer is its alternate authority; no ordinary campaign carries the marker. **March staging (part B2e)** is `BodyMotion`'s: a march's row facing follows its
+heading and a column reserves front first (Candidate body motion, above;
+`guide/body_marches.md`). Whole strides are the consumer's: the engine
+stages no stride. The Game bridges are ACT-CUTOVER's. Nothing in ordinary dispatch calls the driver.

@@ -54,6 +54,7 @@ func _repo() -> DataRepository:
 		"wick": {"burg_code": "wick", "label": "Wick", "province_code": "q", "population": "500"},
 	}
 	r.house_bindings = {"p": "Valorin"}
+	r.realm_bindings = {"player_realm": "k"}  # p is the realm's: the crown controls only its own (siege step 3b)
 	r.manor_buildings = {
 		"mill": {"building_code": "mill", "label": "Mill", "cost_gold": "40", "civil_cost": "30",
 			"tax_bonus": "0.05", "output_bonus": "0.15", "defence_bonus": "0", "church_bonus": "0"},
