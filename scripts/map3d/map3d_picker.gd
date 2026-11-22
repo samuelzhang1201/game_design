@@ -206,13 +206,29 @@ func _front_piece(rects: Dictionary, pos: Vector2) -> String:
 	var px := pos * ctx.viewport_px_scale()
 	var from := ctx.camera.project_ray_origin(px)
 	var dir := ctx.camera.project_ray_normal(px)
+	var units := view.component("units") as Map3DLayerUnits
+	if units == null:
+		return ""
 	var best := ""
 	var best_d := INF
 	for code: String in rects:
-		var d := view.unit_ray_depth(code, from, dir)
+		var d := ray_depth(units.built_piece(code), from, dir)
 		if d < best_d or (d == best_d and d < INF and code < best):
 			best = code
 			best_d = d
+	return best
+
+
+## How far along the ray (world `from`, `dir`) the first of a piece's shown
+## figures is met, by each mesh's world box; INF when it meets none.
+static func ray_depth(piece: Dictionary, from: Vector3, dir: Vector3) -> float:
+	var best := INF
+	if not piece.has("node"):
+		return best
+	for mi: MeshInstance3D in Map3DUnits.meshes(piece["node"]):
+		var hit: Variant = (mi.global_transform * mi.get_aabb()).intersects_ray(from, dir) if mi.is_visible_in_tree() else null
+		if hit != null:
+			best = minf(best, from.distance_to(hit as Vector3))
 	return best
 
 

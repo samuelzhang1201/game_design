@@ -471,7 +471,6 @@ func unit_pack_positions() -> Dictionary:  # the WAR ROOM's pieces (Map3DGeometr
 	if _loaded: _units.step(0.0)
 	return Map3DGeometry.world_to_pack_all(_meta, unit_positions())
 func unit_rects() -> Dictionary: return (_hud.piece("Armies") as Map3DHudArmies).hit_rects(_units.screen_rects()) if _loaded else {}
-func unit_ray_depth(code: String, from: Vector3, dir: Vector3) -> float: return _units.ray_depth(code, from, dir) if _loaded else INF  # its figures on a click's ray
 func unit_count() -> int: return _units.drawn_count() if _loaded else 0
 func unit_moves() -> int: return _units.moves() if _loaded else 0
 func courier_rects() -> Dictionary: return _couriers.screen_rects() if _loaded else {}
