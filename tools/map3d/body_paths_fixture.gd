@@ -100,7 +100,8 @@ func _run() -> void:
 	_state = saved
 	_centre = ArmySystem.pack_to_metres(_repo, _ctx.to_pack(_flat_patch()))
 	if not _stage(): return
-	_ctx.day_fn = func() -> float: return _share
+	# Slice _slice plays over its window of the day, as the production bridge times it (Map3DContext.slice_share).
+	_ctx.day_fn = func() -> float: return (_slice + _share) / Map3DCandidateBodies.slice_count(_ctx)
 	_ctx.clock_fn = func() -> int: return _speed
 	_layer = _view.world().get_node("Units") as Map3DLayerUnits
 	_layer.blend_s = float(_arg("--blend", "0.3"))
@@ -322,11 +323,11 @@ func _commit_v2(intents: Array) -> bool:
 
 func _process(delta: float) -> bool:
 	if not _running: return false
-	_share += delta * _speed * DayResolution.DEFAULT_SUBSTEP_COUNT / _repo.bal("time_day_seconds")
+	_share += delta * _speed * Map3DCandidateBodies.slice_count(_ctx) / _repo.bal("time_day_seconds")
 	if _share >= 1.0:
 		_share = 1.0
 		_layer.step(0.0)
-		if _slice < DayResolution.DEFAULT_SUBSTEP_COUNT - 1:
+		if _slice < Map3DCandidateBodies.slice_count(_ctx) - 1:
 			_slice += 1
 			_share = 0.0
 			_commit_slice()

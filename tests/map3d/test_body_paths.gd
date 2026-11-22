@@ -77,6 +77,11 @@ func _fixture(fit: int = 100, points: Array = []) -> Dictionary:
 func _sample(f: Dictionary, envelope: Dictionary = {}) -> Dictionary:
 	return view.call("sample_candidate", f.ctx, f.code, envelope)
 
+## The day's share at which `share` of committed slice `substep` has played: slice k of the
+## day's 10 (`battle_substeps`) runs over [k/10, (k+1)/10] (Map3DContext.slice_share).
+func _day(share: float, substep: int = 0) -> float:
+	return (substep + share) / 10.0
+
 func _commit(f: Dictionary, paths: Array, budgets: Array, substep: int = 0) -> Dictionary:
 	var intents: Array = []
 	for i: int in paths.size():
@@ -313,7 +318,7 @@ func test_repeated_receipt_refresh_pause_fps_and_camera_are_readonly() -> void:
 	var f := _fixture()
 	var envelope := _commit(f, [[[0, 0], [0, 3000], [0, 7000]]], [10000])
 	var clock := {"share": 0.0, "speed": 1}
-	f.ctx.day_fn = func() -> float: return clock.share
+	f.ctx.day_fn = func() -> float: return _day(clock.share)
 	f.ctx.clock_fn = func() -> int: return clock.speed
 	var layer := _layer(f, envelope)
 	layer.set_candidate_bodies(true, envelope)
@@ -344,12 +349,20 @@ func _script_files(path: String) -> Array[String]:
 func test_no_ordinary_candidate_callers_or_query_writers() -> void:
 	var callers: Array[String] = []
 	for file: String in _script_files("res://scripts"):
-		if file in ["res://scripts/map3d/map3d_candidate_bodies.gd", "res://scripts/map3d/map3d_layer_units.gd"]: continue
+		if file in ["res://scripts/map3d/map3d_candidate_bodies.gd", "res://scripts/map3d/map3d_layer_units.gd",
+				"res://scripts/map3d/map3d_body_bridge.gd"]: continue
 		var source := FileAccess.get_file_as_string(file)
 		for token: String in ["sample_candidate(", "along_candidate(", "set_candidate_bodies(", "along_locomotion_candidate(",
 				"Map3DCandidateBodies.sample_locomotion_candidate(", "CandidateView.sample_locomotion_candidate("]:
 			if token in source: callers.append(file + ":" + token)
 	assert_eq(callers, [])
+	# Map3DBodyBridge is the one door; it starts off and nothing creates it before ACT-CUTOVER.
+	assert_false(Map3DBodyBridge.new().enabled, "the bridge starts off")
+	callers.clear()
+	for file: String in _script_files("res://scripts"):
+		if file == "res://scripts/map3d/map3d_body_bridge.gd": continue
+		if "Map3DBodyBridge" in FileAccess.get_file_as_string(file): callers.append(file)
+	assert_eq(callers, [], "no caller opens the bridge")
 	var source := FileAccess.get_file_as_string("res://scripts/map3d/map3d_candidate_bodies.gd")
 	for token: String in ["migrate_candidate(", "reconcile_candidate(", "BodyMotion.plan(", "BodyMotion.commit(", "initialize_bodies_candidate("]:
 		assert_false(token in source, "render query cannot invoke " + token)
@@ -405,8 +418,8 @@ func test_real_march_slices_use_matching_inner_receipt_and_outer_boundary() -> v
 func test_new_receipt_continuity_and_rejected_transfer_keep_current_view() -> void:
 	var f := _fixture()
 	var envelope := _commit(f, [[[0, 0], [0, 100]]], [100])
-	var clock := {"share": 1.0}
-	f.ctx.day_fn = func() -> float: return clock.share
+	var clock := {"share": 1.0, "substep": 0}
+	f.ctx.day_fn = func() -> float: return _day(clock.share, clock.substep)
 	var layer := _layer(f, envelope)
 	layer.set_candidate_bodies(true, envelope)
 	var node: Node3D = layer.built_piece(f.code).groups[0].piece.node
@@ -420,14 +433,18 @@ func test_new_receipt_continuity_and_rejected_transfer_keep_current_view() -> vo
 	assert_eq(f.state.to_dict(), before)
 	envelope = _commit(f, [[[0, 100], [0, 200]]], [100], 1)
 	clock.share = 0.0
+	clock.substep = 1
 	layer.set_candidate_bodies(true, envelope)
 	assert_eq(node.global_transform, transform, "new slice begins at prior endpoint")
 	assert_same(layer.built_piece(f.code).groups[0].piece.node, node)
 	clock.share = 1.0
 	layer.step(0.0)
+	var per_px := float(ArmySystem.metres_per_pack_px(f.repo))
+	assert_almost_eq(node.global_position.z, f.ctx.to_world(Vector2(0, 200) / per_px).y, 0.0001, "slice 1 plays out over its window")
 	f.state.regiments[f.code].body_groups[0].y_m = 300
 	envelope = _commit(f, [[[0, 300], [0, 400]]], [100], 2)
 	clock.share = 0.0
+	clock.substep = 2
 	layer.set_candidate_bodies(true, envelope)
 	assert_false(node.is_visible_in_tree(), "discontinuous input never gets a fabricated bridge")
 	assert_false(layer.screen_rects().has(f.code))
@@ -444,7 +461,7 @@ func test_candidate_legacy_fallback_never_enters_whole_state_prediction() -> voi
 func test_first_explicit_clock_plays_but_late_timing_cannot_replay_loaded_endpoint() -> void:
 	var f := _fixture()
 	var envelope := _commit(f, [[[0, 0], [0, 4000]]], [4000])
-	f.ctx.day_fn = func() -> float: return 0.5
+	f.ctx.day_fn = func() -> float: return _day(0.5)
 	var layer := _layer(f, envelope)
 	var node: Node3D = layer.built_piece(f.code).groups[0].piece.node
 	var expected: Vector2 = f.ctx.to_world(Vector2(0, 2000) / float(ArmySystem.metres_per_pack_px(f.repo)))
@@ -453,6 +470,122 @@ func test_first_explicit_clock_plays_but_late_timing_cannot_replay_loaded_endpoi
 	var endpoint: Transform3D = loaded.built_piece(f.code).groups[0].piece.node.global_transform
 	loaded.set_candidate_bodies(true, envelope)
 	assert_eq(loaded.built_piece(f.code).groups[0].piece.node.global_transform, endpoint, "late receipt cannot restart an endpoint already presented")
+
+func test_slice_share_hand_computed_over_the_days_slices() -> void:
+	var f := _fixture()
+	var ctx: Map3DContext = f.ctx
+	var day := {"share": 0.375}
+	ctx.day_fn = func() -> float: return day.share
+	# battle_substeps 10: 0.375 of the day is 3.75 slices.
+	assert_eq(Map3DCandidateBodies.slice_share(ctx, 3), 0.75, "slice 3 runs over [0.3, 0.4]: three quarters played")
+	assert_eq(Map3DCandidateBodies.slice_share(ctx, 2), 1.0, "an earlier slice has played whole")
+	assert_eq(Map3DCandidateBodies.slice_share(ctx, 4), 0.0, "a later slice has not begun")
+	assert_eq(Map3DCandidateBodies.slice_share(ctx, 0), 1.0)
+	# The frozen day's own slice count rules: 0.375 of a 4-slice day is 1.5 slices.
+	f.state.day_resolution = {"substep_count": 4}
+	assert_eq(Map3DCandidateBodies.slice_share(ctx, 1), 0.5)
+	assert_eq(Map3DCandidateBodies.slice_share(ctx, 0), 1.0)
+	f.state.day_resolution = {}
+	day.share = 1.0
+	assert_eq(Map3DCandidateBodies.slice_share(ctx, 9), 1.0, "the last slice ends with the day")
+	day.share = 0.0
+	assert_eq(Map3DCandidateBodies.slice_share(ctx, 0), 0.0)
+	ctx.day_fn = Callable()
+	assert_eq(Map3DCandidateBodies.slice_share(ctx, 0), 0.0, "no clock: nothing played")
+
+func test_a_later_slice_plays_over_its_own_window_of_the_day() -> void:
+	var f := _fixture()
+	var envelope := _commit(f, [[[0, 0], [0, 4000]]], [4000], 6)
+	assert_eq(envelope.cursor.substep, 6)
+	var day := {"share": 0.65}
+	f.ctx.day_fn = func() -> float: return day.share
+	var layer := _layer(f, envelope)
+	var node: Node3D = layer.built_piece(f.code).groups[0].piece.node
+	var per_px := float(ArmySystem.metres_per_pack_px(f.repo))
+	# 0.65 of the day is half of slice 6 ([0.6, 0.7]): 2000 of the 4000 m.
+	assert_almost_eq(node.global_position.z, f.ctx.to_world(Vector2(0, 2000) / per_px).y, 0.0001)
+	day.share = 0.7
+	layer.step(0.0)
+	assert_almost_eq(node.global_position.z, f.ctx.to_world(Vector2(0, 4000) / per_px).y, 0.0001, "the slice ends with its window")
+
+func test_a_turned_day_forgets_the_envelope_and_draws_endpoints() -> void:
+	var f := _fixture()
+	var envelope := _commit(f, [[[0, 0], [0, 4000]]], [4000])
+	var day := {"share": _day(0.5)}
+	f.ctx.day_fn = func() -> float: return day.share
+	var layer := _layer(f, envelope)
+	var node: Node3D = layer.built_piece(f.code).groups[0].piece.node
+	var per_px := float(ArmySystem.metres_per_pack_px(f.repo))
+	assert_almost_eq(node.global_position.z, f.ctx.to_world(Vector2(0, 2000) / per_px).y, 0.0001)
+	var scale := node.scale
+	# The day turns: the next day's clock restarts before its first slice is committed.
+	f.state.day += 1
+	day.share = 0.0
+	layer.step(0.0)
+	var piece: Dictionary = layer.built_piece(f.code)
+	assert_eq(String(piece.get("candidate_error", "")), "", "a past day's envelope is no error")
+	assert_same(piece.groups[0].piece.node, node, "the same (unit, slot) child stands on")
+	assert_true(node.is_visible_in_tree())
+	assert_almost_eq(node.global_position.z, f.ctx.to_world(Vector2(0, 4000) / per_px).y, 0.0001, "at its committed endpoint")
+	assert_true(layer.get("_candidate_committed").is_empty())
+	assert_eq(node.scale, scale, "the figure keeps its scale across the day")
+	# The next day's first slice starts at that endpoint and plays: half of it is 6000 m.
+	var next := _commit(f, [[[0, 4000], [0, 8000]]], [4000])
+	layer.set_candidate_bodies(true, next)
+	assert_almost_eq(node.global_position.z, f.ctx.to_world(Vector2(0, 4000) / per_px).y, 0.0001, "from the endpoint")
+	day.share = _day(0.5)
+	layer.step(0.0)
+	assert_almost_eq(node.global_position.z, f.ctx.to_world(Vector2(0, 6000) / per_px).y, 0.0001)
+	assert_same(layer.built_piece(f.code).groups[0].piece.node, node)
+
+func test_a_loaded_state_never_replays_an_envelope_from_another() -> void:
+	var f := _fixture()
+	var envelope := _commit(f, [[[0, 0], [0, 4000]]], [4000])
+	var day := {"share": _day(0.5)}
+	f.ctx.day_fn = func() -> float: return day.share
+	var layer := _layer(f, envelope)
+	var node: Node3D = layer.built_piece(f.code).groups[0].piece.node
+	var per_px := float(ArmySystem.metres_per_pack_px(f.repo))
+	assert_almost_eq(node.global_position.z, f.ctx.to_world(Vector2(0, 2000) / per_px).y, 0.0001)
+	var bridge := Map3DBodyBridge.new()
+	autofree(bridge)
+	bridge.units_fn = func() -> Map3DLayerUnits: return layer
+	bridge.committed(envelope)
+	assert_eq(bridge.get("_state"), null, "an envelope before the bridge is on goes nowhere")
+	bridge.set_enabled(true)
+	bridge.committed(envelope)
+	assert_same(bridge.get("_state"), f.state)
+	# A save of this very slice, loaded on the same day with the clock restarted: same cursor, new state.
+	var loaded := GameState.from_dict(f.state.to_dict())
+	f.ctx.state_fn = func() -> GameState: return loaded
+	day.share = 0.0
+	bridge.tick()
+	layer.step(0.0)
+	var piece: Dictionary = layer.built_piece(f.code)
+	assert_eq(String(piece.get("candidate_error", "")), "", piece.get("candidate_error", ""))
+	assert_true(node.is_visible_in_tree())
+	assert_almost_eq(node.global_position.z, f.ctx.to_world(Vector2(0, 4000) / per_px).y, 0.0001, "endpoint, never a replay")
+	assert_true(layer.get("_candidate_committed").is_empty())
+	# A JSON copy of a new slice's envelope (whole floats) still plays through the bridge.
+	var g := _fixture()
+	g.ctx.day_fn = func() -> float: return _day(0.5)
+	var other := _layer(g)
+	var through := Map3DBodyBridge.new()
+	autofree(through)
+	through.units_fn = func() -> Map3DLayerUnits: return other
+	through.set_enabled(true)
+	var floats: Dictionary = JSON.parse_string(JSON.stringify(_commit(g, [[[0, 0], [0, 4000]]], [4000])))
+	assert_true(floats.cursor.abs_day is float)
+	through.committed(floats)
+	other.step(0.0)
+	var drawn: Dictionary = other.built_piece(g.code)
+	assert_eq(String(drawn.get("candidate_error", "")), "", drawn.get("candidate_error", ""))
+	assert_true(drawn.groups[0].piece.node.is_visible_in_tree())
+	assert_almost_eq(drawn.groups[0].piece.node.global_position.z, g.ctx.to_world(Vector2(0, 2000) / per_px).y, 0.0001)
+	# A malformed envelope is refused, never cleared into endpoints.
+	other.set_candidate_bodies(true, {"cursor": {"abs_day": "x"}})
+	assert_false(other.get("_candidate_committed").is_empty())
+	assert_false(other.screen_rects().has(g.code), "a refused unit draws nothing and takes no pick")
 
 func test_unequal_budgets_diagonal_ceil_and_waiting_peers() -> void:
 	var f := _fixture(200)
@@ -557,7 +690,7 @@ func _commit_v2(f: Dictionary, path: Array, budget: int) -> Dictionary:
 func test_v1_leg_off_saved_facing_is_refused_not_walked_sideways() -> void:
 	var f := _fixture()
 	var envelope := _commit(f, [[[0, 0], [3, 0], [3, 4]]], [10])
-	f.ctx.day_fn = func() -> float: return 0.5
+	f.ctx.day_fn = func() -> float: return _day(0.5)
 	var layer := _layer(f, envelope)
 	var piece: Dictionary = layer.built_piece(f.code)
 	assert_false(piece.groups[0].piece.node.is_visible_in_tree(), "facing 90 cannot walk the +X leg on forward clips")
@@ -606,7 +739,7 @@ func test_v2_pivot_needs_the_arms_clip_else_refuses_the_unit() -> void:
 	f.state.army_roster[f.code].organization_arm = "infantry"
 	assert_eq(MapObjects.army_piece(f.repo, f.state.army_roster[f.code]), "infantry")
 	var envelope := _commit_v2(f, [[0, 0], [3, 0], [3, 4]], 10)
-	f.ctx.day_fn = func() -> float: return 0.35
+	f.ctx.day_fn = func() -> float: return _day(0.35)
 	var layer := _layer(f, envelope)
 	var piece: Dictionary = layer.built_piece(f.code)
 	# Every installed arm has its pivots now: give THIS figure a copy of its clips without them
@@ -642,7 +775,7 @@ func _archer_l(share: float) -> Dictionary:
 	f.state.army_roster[f.code].organization_arm = "archers"
 	var envelope := _commit_v2(f, [[0, 0], [3, 0], [3, 4]], 10)
 	var clock := {"share": share, "speed": 1}
-	f.ctx.day_fn = func() -> float: return clock.share
+	f.ctx.day_fn = func() -> float: return _day(clock.share)
 	f.ctx.clock_fn = func() -> int: return clock.speed
 	f.envelope = envelope
 	f.clock = clock
@@ -771,7 +904,7 @@ func test_v2_straight_leg_walks_march_on_an_infantry_figure() -> void:
 	var f := _fixture()
 	f.state.army_roster[f.code].organization_arm = "infantry"
 	var envelope := _commit_v2(f, [[0, 0], [4, 0]], 8)
-	f.ctx.day_fn = func() -> float: return 0.25
+	f.ctx.day_fn = func() -> float: return _day(0.25)
 	var layer := _layer(f, envelope)
 	var piece: Dictionary = layer.built_piece(f.code)
 	var child: Dictionary = piece.groups[0].piece
