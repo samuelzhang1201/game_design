@@ -215,20 +215,6 @@ func test_marching_out_empties_the_seat_and_the_camp_refills_it_once_clear() -> 
 		ArmySystem.metres_to_pack(repo, point))
 
 
-## Opens a gap in the capital's camp: the first of `cap`'s camped units not in `keep` is
-## taken 60 km north, out of the way. With the opening regiments the capital's first ring
-## of slots is full, and a full ring is one clump with the seat round the town's point: a
-## unit marching home halts at the clump's hull outside the town's reach and camps in the
-## field (MarchClearance). These tests are about who takes the seat and where an arrival is
-## camped, not about a closed ring.
-func _open_a_gap(s: GameState, cap: Dictionary, keep: Array) -> void:
-	for c: String in cap["camped"]:
-		if not keep.has(c):
-			var entry: Dictionary = s.regiments[c]
-			entry["camp_town"] = ""
-			ArmyGround._put(entry, Vector2i(int(entry["x_m"]), int(entry["y_m"]) - 60000))
-			return
-
 ## March `code` to pack point `to` and run days until it arrives.
 func _arrive(s: GameState, code: String, to: Vector2) -> void:
 	ArmySystem.set_march(repo, s, code, to)
@@ -291,7 +277,6 @@ func test_first_come_first_in() -> void:
 	var tp := ArmySystem.metres_to_pack(repo, ArmyGround.town_point_m(repo, town))
 	_arrive(s, a, tp)
 	assert_eq(ArmyGround.seat_of(repo, s, town), a, "the first to arrive takes the empty seat")
-	_open_a_gap(s, cap, [String(cap["seat"]), b])
 	var home := _open_way(s, b, town)
 	assert_ne(home, Vector2.ZERO, "an open way out and home")
 	_arrive(s, b, _field_from(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, b, s)), home))
@@ -344,7 +329,6 @@ func test_a_town_among_blocked_ground_still_camps_its_arrivals() -> void:
 	for id: int in repo.army_terrain_biomes:
 		repo.army_camp_blocked[String(repo.army_terrain_biomes[id])] = true
 	var tp := ArmySystem.metres_to_pack(repo, ArmyGround.town_point_m(repo, town))
-	_open_a_gap(s, cap, [String(cap["seat"]), b])
 	var home := _open_way(s, b, town)
 	assert_ne(home, Vector2.ZERO, "an open way out and home")
 	_arrive(s, b, _field_from(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, b, s)), home))
@@ -372,6 +356,41 @@ func test_a_halt_in_a_towns_reach_camps_by_it() -> void:
 	assert_eq(ArmyGround.camped_by(repo, s, b), town)
 	assert_ne(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, b, s)),
 		ArmySystem.metres_to_pack(repo, tp), "the seat is held: it takes a camp")
+
+
+## Owner 2026-11-22: a crown column halted short of a held town it was bound for, within
+## army_spread_reach_m of the town's point, camps by that town as a host spreads round its
+## target: the free slot nearest its halt point inside the circle. Further out, or bound for
+## a town the crown does not hold, it camps in the field.
+func test_a_column_halted_short_of_its_held_town_camps_by_it() -> void:
+	var s := _state()
+	var cap := _capital(s)
+	var town := String(cap["town"])
+	var b := String((cap["camped"] as Array)[0])
+	var tp := ArmyGround.town_point_m(repo, town)
+	var pitch := int(repo.bal("army_slot_spacing_m"))
+	var reach := int(repo.bal("army_spread_reach_m"))
+	var entry: Dictionary = s.regiments[b]
+	entry["camp_town"] = ""
+	# halted three pitches due east of the capital, bound for its point
+	var halt := tp + Vector2i(3 * pitch, 0)
+	ArmyGround._put(entry, halt)
+	var arm := MapObjects.regiment_arm(repo, ArmySystem.regiment(repo, b, s))
+	var expected := ArmyGround.free_slot(repo, tp, arm, ArmyGround.held_taken(repo, s, b), town, false, halt, 0, reach)
+	assert_ne(expected, ArmyGround.NONE, "a free slot inside the circle")
+	ArmyGround.settle(repo, s, b, halt, tp)
+	assert_eq(ArmyGround.camped_by(repo, s, b), town, "camped by the town it was bound for")
+	assert_eq(Vector2i(int(entry["x_m"]), int(entry["y_m"])), expected)
+	assert_lte(MarchClearance.dist2(expected, tp), reach * reach)
+	# past the circle: the field
+	var far := tp + Vector2i(reach + pitch, 0)
+	ArmyGround._put(entry, far)
+	ArmyGround.settle(repo, s, b, far, tp)
+	assert_ne(String(entry["camp_town"]), town, "beyond army_spread_reach_m it is not camped by the town")
+	# with no halt aim the old rule holds: the field
+	ArmyGround._put(entry, halt)
+	ArmyGround.settle(repo, s, b, halt)
+	assert_ne(String(entry["camp_town"]), town, "with no halt aim it camps where it halted")
 
 
 func test_a_lost_town_loses_its_seat() -> void:

@@ -298,16 +298,37 @@ static func _put(entry: Dictionary, p_m: Vector2i) -> void:
 ## terrain when the free ground is all blocked (a mountain hold, as the split
 ## places); with none free it holds the point it reached (§4.3). Its
 ## camp_town is the town, "" in the field. `near_m` (a halt point) makes it the
-## camp slot nearest that point (free_slot).
-static func settle(repo: DataRepository, state: GameState, code: String, near_m := NONE) -> void:
+## camp slot nearest that point (free_slot). A column halted short of a held
+## town it was bound for (`bound_m`, its halt aim, within that town's reach),
+## within army_spread_reach_m of the town's point, camps by that town as a
+## host spreads round its target (owner 2026-11-22): the free slot nearest its
+## halt point inside that circle; with none free there, in the field.
+static func settle(repo: DataRepository, state: GameState, code: String, near_m := NONE, bound_m := NONE) -> void:
 	var entry: Dictionary = state.regiments.get(code, {})
 	var reg := ArmySystem.regiment(repo, code, state)
 	if entry.is_empty() or reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 		return
 	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	var kingdom := String(reg["kingdom_code"])
 	var town := ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, here))
-	if town != "" and not holds(repo, state, String(reg["kingdom_code"]), town):
+	if town != "" and not holds(repo, state, kingdom, town):
 		town = ""
+	var arm := MapObjects.regiment_arm(repo, reg)
+	if town == "" and near_m != NONE and bound_m != NONE:
+		var bound := ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, bound_m))
+		var reach := int(repo.bal("army_spread_reach_m"))
+		if bound != "" and holds(repo, state, kingdom, bound) \
+				and MarchClearance.dist2(here, town_point_m(repo, bound)) <= reach * reach:
+			var point := town_point_m(repo, bound)
+			var taken := held_taken(repo, state, code)
+			var slot := free_slot(repo, point, arm, taken, bound, false, near_m, 0, reach)
+			if slot == NONE:
+				slot = free_slot(repo, point, arm, taken, bound, true, near_m, 0, reach)
+			if slot != NONE:
+				entry["camp_town"] = bound
+				LawSystem.on_settle(repo, state, code)
+				_put(entry, slot)
+				return
 	entry["camp_town"] = town
 	# it takes the newer of its own laws and the camp's (laws spec §2.4)
 	LawSystem.on_settle(repo, state, code)
@@ -319,7 +340,6 @@ static func settle(repo: DataRepository, state: GameState, code: String, near_m 
 		state.town_seat[town] = code
 		_put(entry, centre)
 		return
-	var arm := MapObjects.regiment_arm(repo, reg)
 	var slot := free_slot(repo, centre, arm, taken, town, false, near_m)
 	if slot == NONE:
 		slot = free_slot(repo, centre, arm, taken, town, true, near_m)
