@@ -42,6 +42,12 @@ static func pace(code: String, index: int, base: float, spread: float, lo: float
 	return clampf(base * jitter, lo, hi)
 
 
+## A standing figure's playback rate, 1 +/- `spread` (owner 2026-11-22: 骑兵攻击
+## 过于整齐): a looped ATTACK / GARRISON / STANDBY drifts out of step across a rank.
+static func rest_rate(code: String, index: int, spread: float) -> float:
+	return 1.0 + (_unit("%s|rest_pace|%d" % [code, index]) * 2.0 - 1.0) * spread
+
+
 ## A figure's stature, 1 +/- `spread` (owner 2026-10-14: 步伐要参差不齐): an
 ## exact-pace arm stands each figure at it and plays the piece's rate over it
 ## (Map3DUnitRig.keep_pace), so its cadence is its own and its feet still hold.

@@ -202,3 +202,44 @@ func test_figures_settle_back_and_pause_freezes() -> void:
 	assert_eq((figs[0] as Node3D).position, Vector3(-1, 0, 0), "settled in its slot")
 	assert_eq((figs[1] as Node3D).position, Vector3(1, 0, 0))
 	assert_eq((piece["node"] as Node3D).get_child(2).position, Vector3.ZERO, "glow put")
+
+
+## Battle bodies are lone figures, index 0 under their own code: a looped strike
+## must still start each at its own hashed share of the clip (owner 2026-11-22:
+## 骑兵攻击过于整齐), not every one at frame 0.
+func test_lone_bodies_start_a_loop_at_their_own_phase() -> void:
+	var seen := {}
+	for slot in 6:
+		var anim := _anim()
+		var code := "reg_a:%d" % slot
+		Map3DUnitRig.play([anim], "STANDBY", 0.0, code)
+		var want := Map3DMarchLag.unit("%s|STANDBY|0" % code) * 2.0
+		assert_almost_eq(anim.current_animation_position, want, 0.001)
+		seen[snappedf(want, 0.01)] = true
+	assert_gte(seen.size(), 5, "the bodies do not share one start")
+
+
+## At rest every figure plays 1 +/- map3d_unit_rest_desync_pace, hashed; a
+## duelling figure keeps 1 for its pair's timing.
+func test_standing_figures_play_their_own_rate() -> void:
+	var spread := repo.bal("map3d_unit_rest_desync_pace")
+	assert_gt(spread, 0.0)
+	var node := Node3D.new()
+	add_child_autofree(node)
+	var anims: Array = []
+	for i in 8:
+		var a := AnimationPlayer.new()
+		node.add_child(a)
+		anims.append(a)
+	(anims[7] as AnimationPlayer).set_meta("duel", {})
+	var piece := {"node": node, "anims": anims, "clip_s": 2.0, "stride_m": 4.0}
+	Map3DUnitRig.keep_pace(repo, piece, {"from": Vector2.ZERO, "to": Vector2.ZERO, "s0": 0.0}, 0.5, 1, "R1")
+	var rates := {}
+	for i in 7:
+		var r := (anims[i] as AnimationPlayer).speed_scale
+		assert_almost_eq(r, Map3DMarchLag.rest_rate("R1", i, spread), 0.00001)
+		assert_between(r, 1.0 - spread, 1.0 + spread)
+		rates[r] = true
+	assert_gte(rates.size(), 5, "the figures do not share one rate")
+	assert_eq((anims[7] as AnimationPlayer).speed_scale, 1.0, "a duellist keeps 1")
+	assert_eq(Map3DMarchLag.rest_rate("R1", 3, 0.0), 1.0, "no spread, rate 1")
