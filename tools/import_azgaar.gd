@@ -29,7 +29,9 @@ extends SceneTree
 ##       deals.csv every recorded trade flow (seller/buyer, market or burg, good,
 ##       units, price, tax) -- the only record of which settlement trades with which
 ##   <pack>/military/kingdoms.csv      unit totals, regiment count, strength, alert
-##   <pack>/military/regiments.csv     one row per regiment: its province and unit counts
+##   <pack>/military/regiments.csv     one row per regiment: its province and unit counts, then
+##                                     the game's own opening regiments (data/army/game_arm_starts.csv,
+##                                     tools/army_starts.gd), each kingdom's after its own
 ##   <pack>/military/unit_types.csv    the unit definitions (rates, crew, power)
 ##   <pack>/society/cultures.csv, religions.csv, zones.csv (hazards -> provinces)
 ##   <pack>/geography/routes.csv       roads/trails/sea routes as polylines,
@@ -62,8 +64,12 @@ extends SceneTree
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
 ##     --script res://tools/import_azgaar.gd \\
 ##       [-- --map-id ID --json PATH]   (default id: data/world/maps.csv is_default)
+##   [-- --map-id ID --starts-only]       only re-derive the opening regiments of the game's own
+##                                       arms on the pack as it is (its regiments, kingdoms, burgs
+##                                       and map_info), leaving every other row and file alone
 
 const MAPS := "res://assets/maps"
+const ArmyStarts = preload("res://tools/army_starts.gd")
 
 ## The game's own arms (data/army/game_arms.csv, found through `data`'s tables.csv) in the
 ## export's unit shape: {"defs": [...]}, or {"error": ...} when the table is missing or malformed,
@@ -399,6 +405,149 @@ func _num2(v: float) -> String:
 	return String.num(v, 2)
 
 
+## Metres per pack pixel of a map_info (distance_unit, distance_scale), as the engine reads it.
+func _metres_per_px(info: Dictionary) -> int:
+	var repo := DataRepository.new()
+	repo.map_info = info
+	return ArmySystem.metres_per_pack_px(repo)
+
+
+## The game's own opening regiments (tools/army_starts.gd) written into the pack's
+## military/regiments.csv and kingdoms.csv as they stand: the rows an earlier run wrote (any row
+## with men of a ruled arm: the export has none) are dropped first, so it re-derives them; each
+## kingdom's rows follow its own, and its ruled-arm totals, regiment count and strength include them.
+func _write_starts(out_data: String, metres_per_px: int) -> int:
+	var ruled := ArmyStarts.rules(DATA)
+	if ruled.has("error"):
+		push_error("import_azgaar: " + String(ruled["error"]))
+		return 1
+	var arms: Array[String] = []
+	for rule: Dictionary in ruled["rules"]:
+		arms.append(String(rule["arm"]))
+	var power := {}
+	for u: Dictionary in DataRepository.parse_csv(out_data + "/military/unit_types.csv", ["unit_code", "power"]):
+		power[String(u["unit_code"])] = float(u["power"])
+	var reg_path := out_data + "/military/regiments.csv"
+	var king_path := out_data + "/military/kingdoms.csv"
+	var reg_header := _csv_header(reg_path)
+	var king_header := _csv_header(king_path)
+	for arm: String in arms:
+		if not reg_header.has(arm) or not king_header.has(arm) or not power.has(arm):
+			push_error("import_azgaar: the pack's military tables have no %s" % arm)
+			return 1
+	var regs := DataRepository.parse_csv(reg_path, ["regiment_code", "kingdom_code"])
+	var kings := DataRepository.parse_csv(king_path, ["kingdom_code", "regiments", "strength"])
+	var kept: Array[Dictionary] = []
+	var gone := {}  # kingdom -> {count, strength} of the rows dropped
+	for r: Dictionary in regs:
+		var men := 0.0
+		for arm: String in arms:
+			men += int(r[arm]) * float(power[arm])
+		if men <= 0.0:
+			kept.append(r)
+			continue
+		var k := String(r["kingdom_code"])
+		var g: Dictionary = gone.get(k, {"count": 0, "strength": 0.0})
+		gone[k] = {"count": int(g["count"]) + 1, "strength": float(g["strength"]) + men}
+	var kingdoms: Array = []
+	for k: Dictionary in kings:
+		var code := String(k["kingdom_code"])
+		kingdoms.append({"code": code, "strength": float(k["strength"]) - float(gone.get(code, {}).get("strength", 0.0))})
+	var taken: Array = []
+	var codes := {}
+	for r: Dictionary in kept:
+		taken.append(Vector2(float(r["x"]), float(r["y"])))
+		codes[String(r["regiment_code"])] = true
+	var burgs: Array = []
+	for b: Dictionary in DataRepository.parse_csv(out_data + "/political/burgs.csv", ["burg_code", "kingdom_code"]):
+		burgs.append({"burg_code": String(b["burg_code"]), "label": String(b["label"]),
+			"province_code": String(b["province_code"]), "kingdom_code": String(b["kingdom_code"]),
+			"population": int(b["population"]), "x": float(b["x"]), "y": float(b["y"])})
+	var plan := ArmyStarts.plan(ruled["rules"], kingdoms, burgs, taken, metres_per_px, codes)
+	if plan.has("error"):
+		push_error("import_azgaar: " + String(plan["error"]))
+		return 1
+	var added := {}  # kingdom -> its new rows
+	for row: Dictionary in plan["rows"]:
+		var k := String(row["kingdom_code"])
+		if not added.has(k):
+			added[k] = []
+		added[k].append(row)
+	var out := _csv_line(reg_header)
+	var last := {}  # kingdom -> the index in `kept` of its last row
+	for i in kept.size():
+		last[String(kept[i]["kingdom_code"])] = i
+	var spliced := {}
+	for i in kept.size():
+		var fields: Array[String] = []
+		for col: String in reg_header:
+			fields.append(String(kept[i][col]))
+		out += _csv_line(fields)
+		var k := String(kept[i]["kingdom_code"])
+		if int(last[k]) == i:
+			out += _start_lines(added.get(k, []), reg_header)
+			spliced[k] = true
+	for k: String in added:  # a kingdom with none of the export's regiments
+		if not spliced.has(k):
+			out += _start_lines(added[k], reg_header)
+	if not _write_text(reg_path, out):
+		return 1
+	var military := _csv_line(king_header)
+	for kd: Dictionary in kings:
+		var code := String(kd["kingdom_code"])
+		var rows: Array = added.get(code, [])
+		var strength := 0.0
+		for row: Dictionary in rows:
+			strength += int(row["men"]) * float(power[String(row["arm"])])
+		var fields: Array[String] = []
+		for col: String in king_header:
+			if arms.has(col):
+				var total := 0
+				for row: Dictionary in rows:
+					if String(row["arm"]) == col:
+						total += int(row["men"])
+				fields.append(str(total))
+			elif col == "regiments":
+				fields.append(str(int(kd["regiments"]) - int(gone.get(code, {}).get("count", 0)) + rows.size()))
+			elif col == "strength":
+				var before := float(kd["strength"]) - float(gone.get(code, {}).get("strength", 0.0))
+				fields.append(_num2(before + strength))
+			else:
+				fields.append(String(kd[col]))
+		military += _csv_line(fields)
+	if not _write_text(king_path, military):
+		return 1
+	print("import_azgaar: %d opening regiments of the game's own arms%s" % [plan["rows"].size(),
+		"" if plan["skipped"].is_empty() else " (no town in %s)" % ", ".join(plan["skipped"])])
+	return 0
+
+
+## One generated regiment's lines: only its arm's column holds men.
+func _start_lines(rows: Array, header: Array[String]) -> String:
+	var out := ""
+	for row: Dictionary in rows:
+		var fields: Array[String] = []
+		for col: String in header:
+			if col in ["regiment_code", "kingdom_code", "province_code", "label"]:
+				fields.append(String(row[col]))
+			elif col == "x" or col == "y":
+				fields.append(_num2(float(row[col])))
+			elif col == String(row["arm"]):
+				fields.append(str(int(row["men"])))
+			else:
+				fields.append("0")
+		out += _csv_line(fields)
+	return out
+
+
+func _csv_header(path: String) -> Array[String]:
+	var out: Array[String] = []
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f != null:
+		out.assign(f.get_csv_line())
+	return out
+
+
 func _write_text(path: String, text: String) -> bool:
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
@@ -461,6 +610,12 @@ func _run() -> int:
 			map_id = user_args[i + 1]
 		i += 1
 	var out_data := DATA + "/maps/" + map_id
+	if user_args.has("--starts-only"):
+		var info_rows := DataRepository.parse_csv(out_data + "/map_info.csv", ["key", "value"])
+		var pack_info := {}
+		for r: Dictionary in info_rows:
+			pack_info[String(r["key"])] = String(r["value"])
+		return _write_starts(out_data, _metres_per_px(pack_info))
 	var out_art := MAPS + "/" + map_id
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_data))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_art))
@@ -874,6 +1029,9 @@ func _run() -> int:
 	if not _write_text(out_data + "/military/regiments.csv", out):
 		return 1
 	if not _write_text(out_data + "/military/kingdoms.csv", military):
+		return 1
+	if _write_starts(out_data, _metres_per_px({"distance_unit": String(settings.get("distanceUnit", "km")),
+			"distance_scale": _num2(float(settings.get("distanceScale", 1)))})) != 0:
 		return 1
 
 	# --- society/* --------------------------------------------------------

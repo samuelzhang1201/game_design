@@ -378,6 +378,10 @@ var battle_events: Dictionary = {}
 ## DefeatSystem): an Array of {town, host, day (absolute)}, one per loss; the
 ## key that makes a loss cost the crown once.
 var town_losses: Array = []
+## The towns the crown took (player siege spec §7, SiegeSystem._gains): an
+## Array of {town, day (absolute, the occupation's)}; the key that makes a
+## capture pay the crown once per occupation.
+var town_takes: Array = []
 ## What the crown last knew of the enemy's men (spec 2026-10-10-player-sight-
 ## and-ghosts, Sighting): key (a foe unit's code, or Sighting.HOST_KEY + a host
 ## code for the border rumour) -> {kind ("unit" | "host"), code, x_m, y_m
@@ -552,6 +556,7 @@ func to_dict() -> Dictionary:
 		"recruitment_projects": recruitment_projects.duplicate(true),
 		"military_migration": military_migration.duplicate(true),
 		"town_losses": _encode_values(town_losses.duplicate(true)),
+		"town_takes": _encode_values(town_takes.duplicate(true)),
 		"sightings": _encode_values(sightings.duplicate(true)),
 		"scout_log": _encode_values(scout_log.duplicate(true)),
 		"foe_next_id": _encode_values(foe_next_id),
@@ -753,6 +758,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.battle_events = _decode_values(d.get("battle_events", {}))
 	# Saves from before defeat carry no losses.
 	s.town_losses = _decode_values(d.get("town_losses", []))
+	s.town_takes = _decode_values(d.get("town_takes", []))
 	# Saves from before the crown's sight carry no ghosts.
 	s.sightings = _decode_values(d.get("sightings", {}))
 	s.scout_log = _decode_values(d.get("scout_log", {}))

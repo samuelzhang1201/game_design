@@ -10,7 +10,7 @@ extends RefCounted
 ## days, integrity (0..1000, set at open: 1000 for walls or a citadel, else 0),
 ## progress (0..1000, transitional: step 10 removes it), assault (1: the next
 ## day's battles may storm), assault_due (an assault owed), starved (1: the
-## hunger was told). A host's mind keeps only `siege_id`, set until the
+## hunger was told), militia (the militia unit codes it raised, TownMilitia). A host's mind keeps only `siege_id`, set until the
 ## siege's end has been told.
 
 ## The figures an old save kept on the host minds (migrate erases them).
@@ -41,8 +41,9 @@ static func of_host(state: GameState, host: String) -> Dictionary:
 
 ## The live record of the town a host in DEPLOYING or SIEGE besieges, opened
 ## if the town has none; the host joins its `hosts` and its mind names it.
-## {} for any other host.
-static func ensure_for(repo: DataRepository, state: GameState, host: String) -> Dictionary:
+## {} for any other host. `levy` false opens it with no militia (an old
+## save's siege, already running: migrate).
+static func ensure_for(repo: DataRepository, state: GameState, host: String, levy := true) -> Dictionary:
 	var mind: Dictionary = state.ai_hosts.get(host, {})
 	if String(mind.get("mode", "")) not in [EnemyAi.MODE_DEPLOYING, EnemyAi.MODE_SIEGE] \
 			or String(mind.get("target_kind", "")) != EnemyAi.KIND_TOWN:
@@ -54,7 +55,7 @@ static func ensure_for(repo: DataRepository, state: GameState, host: String) -> 
 		drop(state, host)
 	var id := of_town(state, town)
 	if id == "":
-		id = _open(repo, state, town, SiegeSystem._kingdom_of(repo, state, host))
+		id = _open(repo, state, town, SiegeSystem._kingdom_of(repo, state, host), levy)
 	var rec: Dictionary = state.sieges[id]
 	var hosts: Array = rec["hosts"]
 	if not host in hosts:
@@ -148,7 +149,7 @@ static func migrate(repo: DataRepository, state: GameState) -> void:
 			mind.erase("occupied_house")
 		if not LEGACY.any(func(k: String) -> bool: return mind.has(k)):
 			continue
-		var rec := ensure_for(repo, state, h)
+		var rec := ensure_for(repo, state, h, false)
 		var town := String(mind.get("siege_town", ""))
 		if not rec.is_empty():
 			for pair: Array in [["progress", "siege_progress"], ["days", "siege_days"],
@@ -163,7 +164,7 @@ static func migrate(repo: DataRepository, state: GameState) -> void:
 		elif town != "":
 			var id := of_town(state, town)
 			if id == "":
-				id = _open(repo, state, town, SiegeSystem._kingdom_of(repo, state, h))
+				id = _open(repo, state, town, SiegeSystem._kingdom_of(repo, state, h), false)
 			mind["siege_id"] = id
 			minds += 1
 		for k: String in LEGACY:
@@ -176,11 +177,15 @@ static func migrate(repo: DataRepository, state: GameState) -> void:
 			"reason": "siege figures moved from ai_hosts to GameState.sieges (player siege spec §3)"}
 
 
-static func _open(repo: DataRepository, state: GameState, town: String, attacker: String) -> String:
+## Opens `town`'s record for `attacker`; with `levy`, a town with no defenders
+## raises its militia (TownMilitia.raise, the record's `militia`).
+static func _open(repo: DataRepository, state: GameState, town: String, attacker: String, levy := true) -> String:
 	state.siege_next_id += 1
 	var id := "s%d" % state.siege_next_id
 	state.sieges[id] = {"town": town, "attacker": attacker, "defender": SiegeSystem.holder_of(repo, state, town),
 		"hosts": [], "units": [], "task_id": "", "opened_day": state.absolute_day(), "days": 0,
 		"integrity": 1000 if walled(repo, town) else 0, "progress": 0, "assault": 0, "assault_due": 0,
-		"starved": 0}
+		"starved": 0, "militia": []}
+	if levy:
+		TownMilitia.raise(repo, state, id)
 	return id

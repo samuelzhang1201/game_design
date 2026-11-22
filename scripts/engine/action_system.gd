@@ -270,6 +270,9 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 		return "No such regiment: " + code
 	if ArmySystem.is_foe(state, code) or String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
 		return "%s is not yours to command" % String(reg["label"])
+	# a town's militia never marches (player siege spec §5); a halt is no march
+	if req.action_code != "ARMY_GARRISON" and TownMilitia.town_of(state, code) != "":
+		return String(data.task_words["militia"])
 	# The order rides by courier (owner 2026-09-27): his fee is paid from the
 	# crown's chest ON TOP of the order's own always-charged cost (fix round 1:
 	# the two were checked independently against the same treasury, so an

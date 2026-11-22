@@ -1,0 +1,7 @@
+works,arm,men_permille,men_cap,notes
+citadel,infantry,30,600,"player siege spec §5 (first draft, step 5 tunes): a besieged town with no defenders raises population x men_permille / 1000 men of each arm of its best works (citadel over walls over none), each capped at men_cap and all bounded by what its province can still mobilise (MilitaryPopulation.available, urban). Arms take what is left in this file's order"
+citadel,archers,15,300,
+walls,infantry,20,400,
+walls,archers,10,200,
+town,infantry,10,200,"an open town still turns out its townsfolk, fewer of them"
+town,archers,5,100,

@@ -220,6 +220,8 @@ func test_routing_an_outer_camp_is_a_field_victory_not_a_breach_of_the_town() ->
 	assert_lt(int(SiegeSystem.record_of(s, host).get("progress", 0)), 1000)
 
 func test_a_column_held_in_a_field_battle_cannot_remotely_occupy_the_empty_town() -> void:
+	# an undefended town stays undefended: no militia rises (test_siege_militia's)
+	repo.town_militia.clear()
 	EnemyAi.step_day(repo, s)
 	assert_eq(s.ai_hosts[host]["mode"], "SIEGE")
 	var at := Play.town_m(repo, town)

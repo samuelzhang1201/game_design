@@ -161,6 +161,9 @@ var battle_event_choices: Array[Dictionary] = []
 ## data/battle/ai_doctrines.csv (§3.3): host role -> {greed_permille, caution_permille,
 ## dist_cost, engage_odds_permille, retreat_morale, town_bonus}.
 var ai_doctrines: Dictionary = {}
+## data/battle/town_militia.csv (player siege spec §5): a besieged town's militia
+## by works, in file order: [{works, arm, men_permille, men_cap}].
+var town_militia: Array[Dictionary] = []
 ## The pack's military/raid_hosts.csv (§2) in file order: [{host_code,
 ## regiments (Array of regiment codes), appear_day, role, start_x, start_y}].
 ## Cleared by load_map.
@@ -1126,6 +1129,11 @@ func _load(dir: String) -> bool:
 				"caution_permille": int(r["caution_permille"]), "dist_cost": int(r["dist_cost"]),
 				"engage_odds_permille": int(r["engage_odds_permille"]),
 				"retreat_morale": int(r["retreat_morale"]), "town_bonus": int(r["town_bonus"])}):
+		return false
+	town_militia.clear()
+	if not _load_if_present(table_path(dir, "town_militia"), ["works", "arm", "men_permille", "men_cap"],
+			func(r): town_militia.append({"works": String(r["works"]), "arm": String(r["arm"]),
+				"men_permille": int(r["men_permille"]), "men_cap": int(r["men_cap"])})):
 		return false
 	if not _load_if_present(table_path(dir, "army_formations"), ["figures", "min_fit_permille", "slots"],
 			func(r):
