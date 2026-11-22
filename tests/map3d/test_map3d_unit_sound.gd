@@ -102,3 +102,69 @@ func test_a_piece_rebuilt_under_its_code_gets_a_fresh_loop() -> void:
 	assert_true(fresh.has_node("MarchSound"), "a new loop on the new node")
 	assert_eq(sound.playing_count(), 1)
 	sound.silence()
+
+
+## A duel's blow (spec 2026-11-21-infantry-melee-scrum-design.md, step 4): one
+## contact told by Map3DDuelDriver.take_impacts, `count` of them, struck figures `dist` m out.
+func _blows(root: Node3D, kind: String, count: int, dist: float) -> Array:
+	var out: Array = []
+	for i in count:
+		var node := Node3D.new()
+		root.add_child(node)
+		node.position = Vector3(0, 0, -dist)
+		out.append({"kind": kind, "at": node.position, "striker": {}, "struck": {"node": node}})
+	return out
+
+
+func _impact_repo() -> DataRepository:
+	var repo := _repo()
+	repo.balance["map3d_impact_db"] = -3.0
+	repo.balance["map3d_impact_voices"] = 6.0
+	return repo
+
+
+func test_an_impact_plays_its_kind() -> void:
+	var repo := _impact_repo()
+	var root := Node3D.new()
+	add_child_autofree(root)
+	var cam := Camera3D.new()
+	root.add_child(cam)
+	var blows := _blows(root, "HIT", 1, 2000.0) + _blows(root, "BLOCK", 1, 500.0)
+	var sound := Map3DUnitSound.new()
+	sound.play_impacts(repo, cam, blows)
+	var hit: AudioStreamPlayer3D = (blows[0]["struck"]["node"] as Node3D).get_node("ImpactSound")
+	assert_not_null(Map3DUnitSound.impact_sound_of("HIT"), "the table has a HIT")
+	assert_eq(hit.stream, Map3DUnitSound.impact_sound_of("HIT"), "on the struck figure's node")
+	# 2000 m: gain -6 (as the march), + map3d_impact_db -3
+	assert_almost_eq(hit.volume_db, -9.0, 0.001)
+	var block: AudioStreamPlayer3D = (blows[1]["struck"]["node"] as Node3D).get_node("ImpactSound")
+	assert_eq(block.stream, Map3DUnitSound.impact_sound_of("BLOCK"))
+	assert_ne(block.stream, hit.stream, "a clash is not a thud")
+
+
+func test_impacts_are_capped() -> void:
+	var repo := _impact_repo()
+	var root := Node3D.new()
+	add_child_autofree(root)
+	var cam := Camera3D.new()
+	root.add_child(cam)
+	var stream := AudioStreamWAV.new()
+	var node := Node3D.new()
+	root.add_child(node)
+	assert_not_null(Map3DUnitSound.impact(repo, cam, node, stream, 5), "the 6th voice plays")
+	assert_null(Map3DUnitSound.impact(repo, cam, node, stream, 6), "the 7th live is refused")
+	var sound := Map3DUnitSound.new()
+	sound.play_impacts(repo, cam, _blows(root, "HIT", 4, 500.0))
+	sound.play_impacts(repo, cam, _blows(root, "BLOCK", 4, 500.0))  # the first four still sound
+	assert_eq(root.find_children("ImpactSound", "AudioStreamPlayer3D", true, false).size(), 6 + 1)
+
+
+func test_far_impacts_are_silent() -> void:
+	var repo := _impact_repo()
+	var root := Node3D.new()
+	add_child_autofree(root)
+	var cam := Camera3D.new()
+	root.add_child(cam)
+	var sound := Map3DUnitSound.new()
+	sound.play_impacts(repo, cam, _blows(root, "HIT", 1, 11001.0))  # past map3d_unit_sound_far_m
+	assert_eq(root.find_children("ImpactSound", "AudioStreamPlayer3D", true, false).size(), 0)

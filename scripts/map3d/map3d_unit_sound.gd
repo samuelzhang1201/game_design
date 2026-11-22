@@ -13,6 +13,7 @@ const SILENT_DB := -80.0
 
 ## code -> AudioStreamPlayer3D, a child of that piece's node (freed with it).
 var _players: Dictionary = {}
+var _hits: Array = []  ## the duel blows' live one-shots (play_impacts)
 
 
 ## The loudness, dB, of a march heard from `dist_m`; SILENT_DB past far.
@@ -93,20 +94,56 @@ static func settle_sound_of(piece: Dictionary) -> AudioStream:
 ## stream. The player frees itself when the sound ends.
 static func one_shot(repo: DataRepository, camera: Camera3D, piece: Dictionary, stream: AudioStream) -> void:
 	var node: Node3D = piece.get("node")
-	if stream == null or camera == null or node == null or not node.visible or not node.is_inside_tree():
-		return
+	_play(repo, camera, node, stream, repo.bal("map3d_unit_settle_db"), "SettleSound")
+
+
+## A duel blow's one-shot (spec 2026-11-21-infantry-melee-scrum-design.md: a clash
+## on a block, a thud on a hit) on the struck figure's `at_node`, at gain_db +
+## map3d_impact_db; null (refused) once `live` reach map3d_impact_voices, past far,
+## or hidden. Each clip's attack is at its first sample, so the frame that tells
+## the contact (its instant: there is no look-ahead) is the frame it sounds.
+static func impact(repo: DataRepository, camera: Camera3D, at_node: Node3D, stream: AudioStream, live: int) -> AudioStreamPlayer3D:
+	if live >= int(repo.bal("map3d_impact_voices")):
+		return null
+	return _play(repo, camera, at_node, stream, repo.bal("map3d_impact_db"), "ImpactSound")
+
+
+## Each frame: the duels' contacts (Map3DDuelDriver.take_impacts) sounded, each
+## while fewer than map3d_impact_voices are still ringing (the cap stops a din).
+func play_impacts(repo: DataRepository, camera: Camera3D, contacts: Array) -> void:
+	_hits = _hits.filter(func(p: Variant) -> bool: return is_instance_valid(p))
+	for c: Dictionary in contacts:
+		var node: Variant = (c.get("struck", {}) as Dictionary).get("node")
+		if is_instance_valid(node):
+			var player := impact(repo, camera, node, impact_sound_of(String(c.get("kind", ""))), _hits.size())
+			if player != null:
+				_hits.append(player)
+
+
+## The one-shot a blow of `kind` (HIT | BLOCK) sounds, or null (GameArt.UNIT_IMPACT_SOUNDS:
+## each an AudioStreamRandomizer over its variants).
+static func impact_sound_of(kind: String) -> AudioStream:
+	var table := GameArt.table(GameArt.UNIT_IMPACT_SOUNDS)
+	return table.of(kind) as AudioStream if table != null else null
+
+
+static func _play(repo: DataRepository, camera: Camera3D, node: Node3D, stream: AudioStream, extra_db: float,
+		label: String) -> AudioStreamPlayer3D:
+	if stream == null or camera == null or node == null or not node.is_visible_in_tree():
+		return null
 	var db := gain_db(repo, camera.global_position.distance_to(node.global_position))
 	if db <= SILENT_DB:
-		return
+		return null
 	var player := AudioStreamPlayer3D.new()
-	player.name = "SettleSound"
+	player.name = label
 	player.stream = stream
 	player.attenuation_model = AudioStreamPlayer3D.ATTENUATION_DISABLED  # the loudness is gain_db's
-	player.volume_db = db + repo.bal("map3d_unit_settle_db")
+	player.volume_db = db + extra_db
 	player.finished.connect(player.queue_free)
 	node.add_child(player)  # no owner: never saved
 	player.get_viewport().audio_listener_enable_3d = true
 	player.play()
+	return player
 
 
 func _player_for(code: String, piece: Dictionary) -> AudioStreamPlayer3D:
