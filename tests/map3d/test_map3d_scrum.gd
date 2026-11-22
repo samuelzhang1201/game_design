@@ -34,13 +34,13 @@ func _inside(p: Vector2, area: Dictionary) -> bool:
 func test_targets_stay_inside() -> void:
 	var area := Map3DScrum.area(_row(-2.0), _row(2.0), Vector2(0, 1), 4.0)
 	for i in 100:
-		assert_true(_inside(Map3DScrum.target("A:%d" % i, area), area), "A:%d inside the area" % i)
+		assert_true(_inside(Map3DScrum.target("A:%d" % i, area, Vector2.ZERO, 1.0), area), "A:%d inside the area" % i)
 
 
 func test_targets_are_stable() -> void:
 	var area := Map3DScrum.area(_row(-2.0), _row(2.0), Vector2(0, 1), 4.0)
-	assert_eq(Map3DScrum.target("A:3", area), Map3DScrum.target("A:3", area))
-	assert_ne(Map3DScrum.target("A:3", area), Map3DScrum.target("A:4", area), "neighbours spread")
+	assert_eq(Map3DScrum.target("A:3", area, Vector2.ZERO, 1.0), Map3DScrum.target("A:3", area, Vector2.ZERO, 1.0))
+	assert_ne(Map3DScrum.target("A:3", area, Vector2.ZERO, 1.0), Map3DScrum.target("A:4", area, Vector2.ZERO, 1.0), "neighbours spread")
 
 
 func test_separate_pushes_overlaps_apart() -> void:
@@ -74,3 +74,16 @@ func test_inside_holds_a_point_in_the_area() -> void:
 	var area := Map3DScrum.area(_row(-2.0), _row(2.0), Vector2(0, 1), 4.0)
 	assert_almost_eq(Map3DScrum.inside(Vector2(7, 5), area).distance_to(Vector2(4, 2)), 0.0, 1e-5, "clamped to the corner")
 	assert_eq(Map3DScrum.inside(Vector2(1, 1), area), Vector2(1, 1), "a point inside stays")
+
+
+func test_targets_lean_to_their_side() -> void:
+	# critic 2026-11-22: points anywhere in the area put foes under the other side's standard and crossed
+	# every walk; a side's point lies in its own half and past the centre line by at most `cross` of the other
+	var area := Map3DScrum.area(_row(-2.0), _row(2.0), Vector2(0, 1), 4.0)
+	for i in 100:
+		var a := Map3DScrum.target("A:%d" % i, area, Vector2(2, -2), 0.5)
+		var b := Map3DScrum.target("B:%d" % i, area, Vector2(2, 2), 0.5)
+		assert_true(_inside(a, area) and _inside(b, area))
+		assert_lte(a.y, 1.0 + 1e-4, "A:%d: its half, at most half of B's" % i)
+		assert_gte(b.y, -1.0 - 1e-4, "B:%d" % i)
+	assert_eq(Map3DScrum.target("A:3", area, Vector2(2, -2), 0.5), Map3DScrum.target("A:3", area, Vector2(2, -2), 0.5))

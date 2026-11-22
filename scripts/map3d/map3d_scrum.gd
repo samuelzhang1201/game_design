@@ -29,10 +29,13 @@ static func area(a: Array[Vector2], b: Array[Vector2], across: Vector2, depth: f
 	return {"centre": centre, "along": along, "across": ac, "half_len": half_len, "half_depth": depth / 2.0}
 
 
-## Figure `key`'s point inside `area`, the same every call.
-static func target(key: String, area: Dictionary) -> Vector2:
+## Figure `key`'s point inside `area`, the same every call: across the line in
+## its own side's half (the side whose mean stand is `side`) and past the centre
+## line by at most `cross` of the other half (1: anywhere across).
+static func target(key: String, area: Dictionary, side: Vector2, cross: float) -> Vector2:
 	var u := Map3DMarchLag.unit(key + "|u") * 2.0 - 1.0
-	var v := Map3DMarchLag.unit(key + "|v") * 2.0 - 1.0
+	var own := -1.0 if (side - (area["centre"] as Vector2)).dot(area["across"]) < 0.0 else 1.0
+	var v := own * lerpf(-cross, 1.0, Map3DMarchLag.unit(key + "|v"))
 	return area["centre"] + (area["along"] as Vector2) * u * float(area["half_len"]) \
 		+ (area["across"] as Vector2) * v * float(area["half_depth"])
 

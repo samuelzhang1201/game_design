@@ -79,7 +79,7 @@ static func tune_of(repo: DataRepository) -> Dictionary:
 	out.merge(Map3DImpact.tune_of(repo))
 	out["near_m"] = repo.bal("map3d_impact_near_m")
 	out["at_h"] = repo.bal("map3d_impact_at_h")
-	for key: String in ["depth_h", "space_h", "push_h", "settle_h"]: out[key] = repo.bal("map3d_melee_" + key)
+	for key: String in ["depth_h", "space_h", "push_h", "settle_h", "cross"]: out[key] = repo.bal("map3d_melee_" + key)
 	return out
 
 

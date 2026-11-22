@@ -45,9 +45,13 @@ func pair(battle: Dictionary, figs: Dictionary, pairs: Dictionary, wanted: Dicti
 	_areas[id] = area
 	var old: Dictionary = _pts.get(id, {})
 	var pts: Dictionary = {}
-	for key: String in figs:
-		pts[key] = old.get(key, Map3DScrum.target(key, area))
-		(figs[key] as Dictionary)["scrum"] = id
+	for side: String in ["a", "b"]:  # each side's points lean to its own half of the area
+		var mean := Vector2.ZERO
+		for p: Vector2 in stands.call(battle[side]):
+			mean += p / float((battle[side] as Array).size())
+		for f: Dictionary in battle[side]:
+			pts[f["key"]] = old.get(f["key"], Map3DScrum.target(f["key"], area, mean, float(tune["cross"])))
+			f["scrum"] = id
 	var mine: Array = []
 	for key: String in pairs:
 		var ka := String(pairs[key]["figs"][0]["key"])
