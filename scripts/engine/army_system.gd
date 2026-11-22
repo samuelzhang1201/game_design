@@ -1316,8 +1316,7 @@ static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1,
 				# a column halted before a unit it is not at war with camps on the
 				# side it came from; before an enemy it stands where it halted
 				ArmyGround.settle(repo, state, code,
-					Vector2i(int(entry["x_m"]), int(entry["y_m"])) if halted_by != "" else ArmyGround.NONE,
-					_halt_aim(entry))
+					Vector2i(int(entry["x_m"]), int(entry["y_m"])) if halted_by != "" else ArmyGround.NONE)
 			if halted_by != "" and blockers.has("pos") and (blockers["pos"] as Dictionary).has(halted_by):
 				entry["facing_deg"] = _facing_to(Vector2i(int(entry["x_m"]), int(entry["y_m"])),
 					(blockers["pos"] as Dictionary)[halted_by])
@@ -1366,13 +1365,6 @@ static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1,
 				BattleGroups.follow_anchor(repo, state, battle, code, passed)
 			_note_place(blockers, code, state.foes[code])
 	return arrived
-
-## Where a halted column was bound (halt_aim_m), ArmyGround.NONE when it
-## was not halted.
-static func _halt_aim(entry: Dictionary) -> Vector2i:
-	var aim: Array = entry.get("halt_aim_m", [])
-	return Vector2i(int(aim[0]), int(aim[1])) if aim.size() == 2 and entry.has("halted_by") else ArmyGround.NONE
-
 
 static func _resume_departure(repo: DataRepository, state: GameState, code: String, entry: Dictionary) -> void:
 	if not entry.has("departure"):
@@ -1776,8 +1768,7 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 						_publish_march_state(current, saved)
 						if BattleSystem.battle_of(state, code).is_empty() and (halted_by == "" or not _enemies(blockers, code, halted_by)):
 							ArmyGround.settle(repo, state, code,
-								Vector2i(int(saved["x_m"]), int(saved["y_m"])) if halted_by != "" else ArmyGround.NONE,
-								_halt_aim(saved))
+								Vector2i(int(saved["x_m"]), int(saved["y_m"])) if halted_by != "" else ArmyGround.NONE)
 						if halted_by != "" and (blockers.get("pos", {}) as Dictionary).has(halted_by):
 							current["facing_deg"] = _facing_to(Vector2i(int(saved["x_m"]), int(saved["y_m"])),
 								(blockers["pos"] as Dictionary)[halted_by])

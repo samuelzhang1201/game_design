@@ -299,11 +299,11 @@ static func _put(entry: Dictionary, p_m: Vector2i) -> void:
 ## places); with none free it holds the point it reached (§4.3). Its
 ## camp_town is the town, "" in the field. `near_m` (a halt point) makes it the
 ## camp slot nearest that point (free_slot). A column halted short of a held
-## town it was bound for (`bound_m`, its halt aim, within that town's reach),
+## town it was bound for (its `halt_aim_m` within that town's reach),
 ## within army_spread_reach_m of the town's point, camps by that town as a
 ## host spreads round its target (owner 2026-11-22): the free slot nearest its
 ## halt point inside that circle; with none free there, in the field.
-static func settle(repo: DataRepository, state: GameState, code: String, near_m := NONE, bound_m := NONE) -> void:
+static func settle(repo: DataRepository, state: GameState, code: String, near_m := NONE) -> void:
 	var entry: Dictionary = state.regiments.get(code, {})
 	var reg := ArmySystem.regiment(repo, code, state)
 	if entry.is_empty() or reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
@@ -314,8 +314,9 @@ static func settle(repo: DataRepository, state: GameState, code: String, near_m 
 	if town != "" and not holds(repo, state, kingdom, town):
 		town = ""
 	var arm := MapObjects.regiment_arm(repo, reg)
-	if town == "" and near_m != NONE and bound_m != NONE:
-		var bound := ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, bound_m))
+	var aim: Array = entry.get("halt_aim_m", [])
+	if town == "" and near_m != NONE and aim.size() == 2:
+		var bound := ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, Vector2i(int(aim[0]), int(aim[1]))))
 		var reach := int(repo.bal("army_spread_reach_m"))
 		if bound != "" and holds(repo, state, kingdom, bound) \
 				and MarchClearance.dist2(here, town_point_m(repo, bound)) <= reach * reach:

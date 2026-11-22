@@ -375,19 +375,22 @@ func test_a_column_halted_short_of_its_held_town_camps_by_it() -> void:
 	# halted three pitches due east of the capital, bound for its point
 	var halt := tp + Vector2i(3 * pitch, 0)
 	ArmyGround._put(entry, halt)
+	entry["halted_by"] = String(cap["seat"])
+	entry["halt_aim_m"] = [tp.x, tp.y]
 	var arm := MapObjects.regiment_arm(repo, ArmySystem.regiment(repo, b, s))
 	var expected := ArmyGround.free_slot(repo, tp, arm, ArmyGround.held_taken(repo, s, b), town, false, halt, 0, reach)
 	assert_ne(expected, ArmyGround.NONE, "a free slot inside the circle")
-	ArmyGround.settle(repo, s, b, halt, tp)
+	ArmyGround.settle(repo, s, b, halt)
 	assert_eq(ArmyGround.camped_by(repo, s, b), town, "camped by the town it was bound for")
 	assert_eq(Vector2i(int(entry["x_m"]), int(entry["y_m"])), expected)
 	assert_lte(MarchClearance.dist2(expected, tp), reach * reach)
 	# past the circle: the field
 	var far := tp + Vector2i(reach + pitch, 0)
 	ArmyGround._put(entry, far)
-	ArmyGround.settle(repo, s, b, far, tp)
+	ArmyGround.settle(repo, s, b, far)
 	assert_ne(String(entry["camp_town"]), town, "beyond army_spread_reach_m it is not camped by the town")
 	# with no halt aim the old rule holds: the field
+	entry.erase("halt_aim_m")
 	ArmyGround._put(entry, halt)
 	ArmyGround.settle(repo, s, b, halt)
 	assert_ne(String(entry["camp_town"]), town, "with no halt aim it camps where it halted")
