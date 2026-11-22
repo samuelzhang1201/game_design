@@ -1,8 +1,9 @@
 class_name RaidSystem
 extends RefCounted
 ## Raiding and spoils (spec docs/superpowers/specs/2026-10-07-enemy-ai-and-battle-design.md
-## §5.3). A host in mode RAID (EnemyAi sets it on arrival at an open manor or a
-## town with no garrison; SiegeSystem when a garrison marches off) that stands
+## §5.3). A host in mode RAID (EnemyAi sets it on arrival at an open manor —
+## an empty town is besieged instead, its militia raised (player siege spec
+## §5); SiegeSystem when a garrison marches off) that stands
 ## at its target lives off it, a day at a time:
 ##
 ##   cap   = month x raid_plunder_permille / 1000      (the manor's share)

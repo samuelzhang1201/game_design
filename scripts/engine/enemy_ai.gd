@@ -180,6 +180,7 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 				set_mode(state, code, next, _arrival_why(next), events)
 				if next == MODE_DEPLOYING:
 					_start_deployment(repo, state, code)
+					SiegeRecord.ensure_for(repo, state, code)
 		_march_host(repo, state, code)
 		if String(mind["mode"]) == MODE_DEPLOYING:
 			_update_deployment(repo, state, code, events)
@@ -210,6 +211,7 @@ static func arrival_substep(repo: DataRepository, state: GameState, march_entrie
 				set_mode(state, code, next, _arrival_why(next), events)
 				if next == MODE_DEPLOYING:
 					_start_deployment(repo, state, code)
+					SiegeRecord.ensure_for(repo, state, code)
 		var mode := String(mind.get("mode", ""))
 		if mode not in [MODE_DEPLOYING, MODE_SIEGE]:
 			continue
@@ -637,8 +639,10 @@ static func should_retreat(repo: DataRepository, state: GameState, host_code: St
 ## besieges that town (no second siege). Else, once its first live
 ## column stands within battle_contact_km of the target's point: the player no
 ## longer holds the target → ARRIVAL_LOST (choose again); a player regiment it sees stands at the
-## target → nothing (contact fights it); else → RAID (an open manor, or a town
-## with no garrison).
+## target → nothing (contact fights it); else a town with no garrison →
+## DEPLOYING (its militia defends it) and an open manor → RAID. A host that
+## turns DEPLOYING opens the town's record at once (SiegeRecord.ensure_for), so
+## the militia stands on the seat before any column walks in.
 static func arrival_mode(repo: DataRepository, state: GameState, host_code: String) -> String:
 	var mind: Dictionary = state.ai_hosts[host_code]
 	var kind := String(mind["target_kind"])
@@ -675,6 +679,11 @@ static func arrival_mode(repo: DataRepository, state: GameState, host_code: Stri
 		return ARRIVAL_LOST
 	if not defenders_of(repo, state, kind, id, seen_by(repo, state, host_code)).is_empty():
 		return ""
+	if kind == KIND_TOWN:
+		# an empty town is besieged, its militia raised (player siege spec §5)
+		if role_of(repo, host_code) != ROLE_RESERVE and _besieged_by_another(repo, state, host_code, id):
+			return ARRIVAL_RETHINK
+		return MODE_DEPLOYING
 	return MODE_RAID
 
 
@@ -938,8 +947,12 @@ static func _gather(repo: DataRepository, state: GameState, host_code: String) -
 				continue
 			var base := int(round(MapManors.value_of_line(repo, state, cell, RealmEconomy.line_of(repo, state, cell))))
 			var defence := 0
-			for p: String in defenders_of(repo, state, kind, id, seen):
+			var seen_here := defenders_of(repo, state, kind, id, seen)
+			for p: String in seen_here:
 				defence += ArmySystem.power(repo, state, p, "defend")
+			if kind == KIND_TOWN and seen_here.is_empty():
+				# no garrison in sight: the militia it would raise (player siege spec §5)
+				defence = TownMilitia.defend_power(repo, state, id)
 			out.append({"kind": kind, "id": id, "cell": cell, "value": target_value(base, kind, doctrine),
 				"distance_days": -1, "defence": defence})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return _key(a) < _key(b))
