@@ -346,7 +346,9 @@ static func _animate_candidate(ctx: Map3DContext, code: String, piece: Dictionar
 			if not knots.is_empty() and speed > 0.0 and ctx.clock_speed() != 0 and k > 0.0:
 				rate = Map3DUnitRig.mapped_rate(anim, knots, float(child["clip_s"]), world_speed / k / stature, dt,
 					Map3DMarchLag.phase(identity, j))
-			anim.speed_scale = 0.0 if ctx.clock_speed() == 0 else (rate if speed > 0.0 else 1.0)
+			var rest := 1.0 if anim.has_meta("duel") \
+				else Map3DMarchLag.rest_rate(identity, j, ctx.repo.bal("map3d_unit_rest_desync_pace"))
+			anim.speed_scale = 0.0 if ctx.clock_speed() == 0 else (rate if speed > 0.0 else rest)
 	piece["candidate_moving"] = (moving or turning) and ctx.clock_speed() > 0
 	# A pivot stands in place: the unit-level clip (and its march sound) walks only while translating.
 	piece["action"] = Map3DUnitRig.action_for(moving and ctx.clock_speed() > 0, order, stance)

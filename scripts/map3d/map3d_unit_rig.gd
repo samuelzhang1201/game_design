@@ -111,7 +111,10 @@ static func play(anims: Array, action: String, blend_s: float, code: String = ""
 		if clip == "" or anim.current_animation == clip:
 			continue
 		anim.play(clip, blend_s)  # blended, never a snap
-		var share := Map3DMarchLag.phase(code, i) if action == "MARCH" else fposmod(i * 0.37, 1.0)
+		# hashed per figure AND action: a lone body (index 0 under its own code) never
+		# starts a loop at the same frame as its neighbours (owner 2026-11-22: 骑兵攻击过于整齐)
+		var share := Map3DMarchLag.phase(code, i) if action == "MARCH" \
+			else Map3DMarchLag.unit("%s|%s|%d" % [code, action, i])
 		anim.seek(share * anim.current_animation_length, true)
 
 
@@ -222,7 +225,8 @@ static func heading_for(repo: DataRepository, state: GameState, code: String, tr
 
 
 ## The feet keep pace with the ground, timed from the day's PLAN (walk_speed,
-## march_rate); 1 at rest, where no figure is jittered. A marching figure's
+## march_rate); at rest each figure plays its own hashed rate near 1
+## (Map3DMarchLag.rest_rate, map3d_unit_rest_desync_pace). A marching figure's
 ## speed_scale gets its own hashed jitter, clamped after it. Set only on a change.
 ## A piece with a `phase_map` (army_art.csv, Map3DMarchPhase) instead sets every
 ## marching figure each frame to the map's secant over the next `dt`: never held,
@@ -251,11 +255,15 @@ static func keep_pace(repo: DataRepository, piece: Dictionary, day: Dictionary, 
 		var anims: Array = piece["anims"]
 		var spread := 0.0 if exact else repo.bal("map3d_march_desync_pace")
 		var statures: Array = piece.get("statures", [])
+		var rest_spread := repo.bal("map3d_unit_rest_desync_pace")
 		for i in anims.size():
 			# a figure at stature s strides s times as far: s times slower keeps its feet
 			var own := pace / float(statures[i]) if exact and i < statures.size() else pace
-			(anims[i] as AnimationPlayer).speed_scale = Map3DMarchLag.pace(code, i, own,
-				spread, lo, hi) if walking else 1.0
+			var anim: AnimationPlayer = anims[i]
+			if walking:
+				anim.speed_scale = Map3DMarchLag.pace(code, i, own, spread, lo, hi)
+			else:
+				anim.speed_scale = 1.0 if anim.has_meta("duel") else Map3DMarchLag.rest_rate(code, i, rest_spread)
 
 
 ## keep_pace for a phase-mapped piece: each figure from its own clip phase (its hashed
