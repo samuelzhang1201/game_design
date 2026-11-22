@@ -86,7 +86,10 @@ func pick_at(pos: Vector2) -> Dictionary:
 	else:
 		armies = view.army_markers()
 		if not on_badge: rects = view.unit_rects()
-	var piece := _nearest_piece(rects, pos, 0.0)
+	var piece := _soldier_at(view, rects, pos)  # in a scrum the soldier under the click names his unit
+	if piece != "":
+		return {"kind": "army", "code": piece}
+	piece = _nearest_piece(rects, pos, 0.0)
 	if piece != "" and (rects[piece] as Rect2).get_center().distance_to(pos) < town_d:
 		return {"kind": "army", "code": piece}
 	var reach := ctx.repo.bal("map_army_pick_px")
@@ -149,6 +152,31 @@ func pick_at(pos: Vector2) -> Dictionary:
 
 ## The piece whose box, grown by `reach` design px, holds `pos` with its centre
 ## nearest it (ties: the lower code); "" for none.
+## The unit whose drawn soldier's box holds `pos` (`figure_rects`: code ->
+## Array[Rect2]); several, the one whose box's bottom edge is lowest on screen
+## (nearest the camera; ties: the smaller code); "" for none.
+static func figure_at(figure_rects: Dictionary, pos: Vector2) -> String:
+	var best := ""
+	var best_y := -INF
+	for code: String in figure_rects:
+		for r: Rect2 in figure_rects[code]:
+			if r.has_point(pos) and (r.end.y > best_y or (r.end.y == best_y and code < best)):
+				best = code
+				best_y = r.end.y
+	return best
+
+
+## figure_at over the battle pieces among `rects` (near mode: the units layer's own boxes).
+static func _soldier_at(view: Map3DView, rects: Dictionary, pos: Vector2) -> String:
+	var units := view.component("units") as Map3DLayerUnits
+	if units == null or view.unit_symbol_mode:
+		return ""
+	var figures: Dictionary = {}
+	for code: String in rects:
+		figures[code] = units.built_piece(code).get("figure_rects", [])
+	return figure_at(figures, pos)
+
+
 static func _nearest_piece(rects: Dictionary, pos: Vector2, reach: float) -> String:
 	var best := ""
 	var best_d := INF
