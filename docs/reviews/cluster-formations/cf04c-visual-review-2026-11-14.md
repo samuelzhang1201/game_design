@@ -91,3 +91,18 @@ No defect found was caused by the consumer. Its findings, with dispositions:
   stature); the map3d consumer takes the nearest whole number of loops and adjusts the cadence
   rather than refusing the leg. Done in its own map3d PR after B2e (`Map3DCandidateGait.strides`).
 - **Column order:** front first in the planner's reservation order. Done in B2e.
+
+## Owner ruling on the projection's slice timing (2026-11-22, ACT-PROJECTION)
+
+- **Commit per slice:** as the clock runs, slice k of S is committed when the day reaches k/S and the
+  map plays that committed slice over [k/S, (k+1)/S] of the day (fixed simulation steps, the renderer
+  following the last committed one, at most one slice behind). Not a replay of the ended day (a day
+  behind), not a preview on a copy (a renderer-side plan). ACT-PROJECTION builds the map side
+  (`Map3DCandidateBodies.slice_share`, `Map3DBodyBridge`); ACT-CUTOVER steps the driver one
+  slice at a time as the day runs and hands each publication's envelope to the view.
+- **Cutover's side of it:** slice k is committed, and its envelope handed in the same frame, no later
+  than the clock reaching k/S; a slice the clock overtakes plays from where the clock already is (a
+  late commit jumps), so the clock waits for a slice still being resolved. A published state takes
+  its envelope in the same call: the bridge reads any other state object (a load, a deferred
+  publication) as one with no envelope and draws endpoints until the next commit, and a state
+  swapped inside a frame's processing after the bridge's tick shows its old envelope for that frame.
