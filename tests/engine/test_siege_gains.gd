@@ -34,6 +34,8 @@ func _opinions(s: GameState) -> Dictionary:
 func _ready_to_take() -> Dictionary:
 	var s := SuiteData.campaign(repo, 7)
 	repo = SuiteData.open_country(repo)
+	# an undefended town stays undefended: no militia rises (test_siege_militia's)
+	repo.town_militia.clear()
 	var raider := repo.resolve_realm("raider_realm")
 	var town := ""
 	var codes: Array = repo.burgs.keys()
