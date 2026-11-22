@@ -116,6 +116,9 @@ existing one.
   and what connects stays finer than what it connects.
 - **Heraldic colour, not dashboard colour.** One muted family of tinctures,
   muted only as far as the distinctions it carries survive.
+- **Sides part by hue alone.** Colours that tell sides apart share one
+  brightness and one richness, so no side reads louder than another; the cloth
+  keeps its own light and shade and stays matte, never satin.
 
 ## Words and information
 - **Read in a book face; shout only in titles.** Body text is lowercase and
