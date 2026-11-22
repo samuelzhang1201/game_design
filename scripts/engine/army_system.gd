@@ -1862,13 +1862,20 @@ static func _retire_saved_march(saved: Dictionary, current: Dictionary) -> void:
 
 static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
 		abs_day: int, blockers: Dictionary = {}, passed_out: Array = [], pace_divisor := 1,
-		substep_index := 0, daily_budget := -1, step_budget := -1, travelled_out: Array = []) -> bool:
+		substep_index := 0, daily_budget := -1, step_budget := -1, travelled_out: Array = [],
+		held_out: Array = []) -> bool:
+	# held_out gets `true` when the BATTLE holds the column (a pending round, old
+	# geometry, a refused rigid step): no later day of a forecast can lift that
 	var battle := BattleSystem.battle_of(state, code)
-	if not (battle.get("pending_round", {}) as Dictionary).is_empty(): return false
+	if not (battle.get("pending_round", {}) as Dictionary).is_empty():
+		held_out.append(true)
+		return false
 	if battle.get("groups", {}).get(code, []).is_empty():
 		return _walk_one(repo, state, code, entry, abs_day, blockers, passed_out, pace_divisor,
 			substep_index, daily_budget, step_budget, travelled_out)
-	if int(battle.get("geometry_version", 0)) != 1: return false
+	if int(battle.get("geometry_version", 0)) != 1:
+		held_out.append(true)
+		return false
 	var proposed := entry.duplicate(true)
 	var passed: Array = []
 	var travelled: Array = []
@@ -1878,7 +1885,9 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 	var points: Array = passed + [Vector2i(int(proposed.x_m), int(proposed.y_m))]
 	for point: Vector2i in points:
 		var delta := point - from
-		if not BattleGroups.motion(repo, state, battle, code, from, delta, ceili(Vector2(delta).length())): return false
+		if not BattleGroups.motion(repo, state, battle, code, from, delta, ceili(Vector2(delta).length())):
+			held_out.append(true)
+			return false
 		from = point
 	entry.clear()
 	entry.merge(proposed)
@@ -2270,9 +2279,15 @@ static func _days_walking(repo: DataRepository, state: GameState, code: String, 
 	var cap := int(repo.bal("army_march_days_cap"))
 	if max_days >= 0:
 		cap = mini(cap, max_days)
+	var held: Array = []
 	for n in range(1, cap + 1):
-		if _march_one(repo, state, code, entry, day + n - 1):
+		if _march_one(repo, state, code, entry, day + n - 1, {}, [], 1, 0, -1, -1, [], held):
 			return n
+		if not held.is_empty():
+			# ponytail: nothing in a forecast ends the battle, so a held column never
+			# arrives — the cap at once, not cap days of rigid steps (the march confirm
+			# froze for minutes). A step refused only at today's pace is not retried.
+			return cap
 	return cap
 
 
