@@ -456,7 +456,14 @@ static func _take(repo: DataRepository, state: GameState, town: String, attacker
 					if ArmySystem.realm_of(repo, unit, state) == attacker: winner = side
 			events.append(BattleSystem.call_off(state, int(bt["id"]), repo, winner))
 	var garrison := defenders_of(repo, state, town)
+	# the town's month, read before its manors move (the sack's measure)
+	var month := RaidSystem.month_of(repo, state, EnemyAi.target_cell(repo, state, EnemyAi.KIND_TOWN, town)) \
+		if attacker == player else 0
 	var reason := _occupy(repo, state, town, attacker, defender, by, lead)
+	var gains := {"opinion": [], "sack": 0}
+	if attacker == player and String((state.occupations.get(town, {}) as Dictionary).get("occupier", "")) == player:
+		# a fresh occupation of a foreign town (a retake ends the occupation instead)
+		gains = _gains(repo, state, town, defender, units, month)
 	var at := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, town)
 	var out := 0
 	for p: String in garrison:
@@ -479,7 +486,71 @@ static func _take(repo: DataRepository, state: GameState, town: String, attacker
 		events.append_array(DefeatSystem.on_town_lost(repo, state, town, lead))
 	return {"kind": (OURS + "taken") if attacker == player else "siege_fallen", "host": lead, "town": town,
 		"day": state.absolute_day(), "progress": maxi(progress, 1000), "days": days, "reason": reason,
-		"garrison_out": out}
+		"garrison_out": out, "opinion": gains["opinion"], "sack": gains["sack"]}
+
+
+## What a capture gives the crown (spec §7), once per occupation
+## (GameState.town_takes {town, day}, the occupation's day):
+##  - the council: each seat +round(battle_victory_opinion x (1 + w)), w the
+##    OpinionDrift.weight of TOWN_TAKEN (the mirror of DefeatSystem's loss), so
+##    0..2 x base and never a loss; reason "took <town> from <realm> (supports,
+##    <axis>)";
+##  - the sack: when the plunder law of the lead unit (the first of `units` in
+##    code order) reads allow, `month` (the town's own manor, before the fall)
+##    x siege_sack_permille / 1000, whole gold rounded down, into
+##    metrics.strategic (WorldLedger, source "sack", reason "sacked <town>").
+## The occupied manors' lines pay their holder as any manor's do: nothing extra.
+## {opinion [{character_id, delta, reason}], sack (gold)}.
+static func _gains(repo: DataRepository, state: GameState, town: String, defender: String, units: Array,
+		month: int) -> Dictionary:
+	var none := {"opinion": [], "sack": 0}
+	var occ: Dictionary = state.occupations.get(town, {})
+	var key := {"town": town, "day": int(occ.get("day", state.absolute_day()))}
+	if key in state.town_takes:
+		return none
+	state.town_takes.append(key)
+	var label := String((repo.burgs.get(town, {}) as Dictionary).get("label", town))
+	return {"opinion": _council_gain(repo, state, "took %s from %s" % [label, repo.realm_label(defender)]),
+		"sack": _sack(repo, state, label, units, month)}
+
+
+## One seat's gain: round(base x (1 + w)), w clamped to -1..1, so 0..2 x base.
+static func opinion_gain(base: int, w: float) -> int:
+	return roundi(float(base) * (1.0 + clampf(w, -1.0, 1.0)))
+
+
+static func _council_gain(repo: DataRepository, state: GameState, what: String) -> Array:
+	var out: Array = []
+	var sig := OpinionDrift.signature_for(repo, "TOWN_TAKEN", {})
+	var base := int(repo.bal("battle_victory_opinion"))
+	var seats: Array = state.council.keys()
+	seats.sort()
+	for seat: String in seats:
+		var id := String(state.council[seat])
+		var c: Character = state.characters.get(id)
+		if c == null:
+			continue
+		var delta := opinion_gain(base, OpinionDrift.weight(sig, c) if not sig.is_empty() else 0.0)
+		if delta == 0:
+			continue
+		var axis := OpinionDrift.dominant_axis(sig, c.ideology) if not sig.is_empty() else "the realm"
+		var reason := "%s (supports, %s)" % [what, axis]
+		c.change_opinion(delta, reason, state.tick)
+		out.append({"character_id": id, "delta": delta, "reason": reason})
+	return out
+
+
+static func _sack(repo: DataRepository, state: GameState, label: String, units: Array, month: int) -> int:
+	var lead := units.duplicate()
+	lead.sort()
+	if lead.is_empty() or LawSystem.value(repo, state, "plunder", String(lead[0])) != "allow":
+		return 0
+	@warning_ignore("integer_division")  # whole gold, rounded down
+	var gold := maxi(month, 0) * int(repo.bal("siege_sack_permille")) / 1000
+	if gold <= 0:
+		return 0
+	var out := WorldLedger.apply(repo, state, "metrics.strategic", float(gold), "sacked " + label, "sack")
+	return 0 if out.has("error") else int(float(out["delta"]))
 
 
 ## The manors of `town` move to `attacker`, with their reason (returned): a
