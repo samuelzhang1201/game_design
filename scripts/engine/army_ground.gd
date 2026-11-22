@@ -211,8 +211,8 @@ static func seat_of(repo: DataRepository, state: GameState, town: String) -> Str
 ## What earns the works and the garrison's morale. A unit holds one seat at
 ## most; were it ever on two, the earlier town code is the one.
 static func seated_in(repo: DataRepository, state: GameState, code: String) -> String:
-	if ArmySystem.is_foe(state, code):
-		return ""   # a raised host's unit left its camp (EnemyAi.spawn)
+	if ArmySystem.is_foe(state, code) and String(state.foes[code].get("host", "")) != "":
+		return ""   # a raised host's unit left its camp (EnemyAi.spawn); a host-less foe (a militia) may hold one
 	var seats := _seats(repo, state)
 	var found := ""
 	for town: String in seats:
