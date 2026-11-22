@@ -14,8 +14,8 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 - `scripts/map3d/guide/king_and_camps.md` — the independent king, field-camp stages, physical courier origins (`Map3DKing`, `Map3DUnitCamps`, `Map3DCourierPalace`, `Map3DLayerUnits`, `Map3DView`)
 - `scripts/map3d/guide/pivots.md` — pivots for any turn and each arm's provider and certificate (`Map3DPivotProvider`, `Map3DInfantryLocomotion`, `Map3DArcherLocomotion`, `Map3DRoyalPivot`, `Map3DCavalryLocomotion`)
 
-- `scripts/map3d/guide/battle_duels.md` — front-rank duels (`Map3DDuel`, `Map3DDuelDriver`, `Map3DDuelMelee`, `Map3DImpact*`)
-- `scripts/map3d/guide/national_flags.md` — realm textures, city roof standards and one existing standard bearer per admitted land unit (`Map3DNationalFlag`, `Map3DCityFlags`, `Map3DUnitStandard`, `Map3DStandardBearer`)
+- `scripts/map3d/guide/battle_duels.md` — front-rank duels (`Map3DDuel*`, `Map3DImpact*`)
+- `scripts/map3d/guide/national_flags.md` — realm textures, city roof standards, one standard bearer per admitted land unit, realm-tinted tunics (`Map3DNationalFlag`, `Map3DCityFlags`, `Map3DUnitStandard`, `Map3DStandardBearer`, `Map3DUnitDress`)
 
 ## Shape and ownership
 

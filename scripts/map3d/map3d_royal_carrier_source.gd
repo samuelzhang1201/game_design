@@ -28,7 +28,7 @@ const _SOURCES: Dictionary = {
 	"res://scripts/map3d/map3d_units.gd":"e842566f033267ae5cbb8bf548bed2aefc88103a9234b344cdc1b3554e32fb4d",
 	"res://scripts/map3d/map3d_formation.gd":"f86ed5dda46368df3c40823804337c6589517934be1411d67fac27e6d8ad20d6",
 	"res://scripts/map3d/map3d_geometry.gd":"64797a53505cff9bd849e9245107f9be9f73fbb78cc2d27ab9f58b71bfce9e4c",
-	"res://scripts/map3d/map3d_layer_units.gd":"3b2e418b545ae7a635533cf34e81491010d6424316749efb40509c12c5033317",
+	"res://scripts/map3d/map3d_layer_units.gd":"e21edc6325b8f849c13dccf9c8b352d00eeea1745982efc4669df9a484b55577",
 	"res://scripts/map3d/map3d_unit_standard.gd":"ec4b2f5fcc15e9b962ec86fd4c39c3e0bef5bfed3d02224870ada8a41ff3c3df",
 	"res://scripts/map3d/map3d_national_flag.gd":"c9fd16bf11475c6ca628881ef3ca9a1eab389635007f19c673bd7f5b6becccb4",
 	"res://scripts/map3d/map3d_context.gd":"d7d45a27a77d7859a7df00b6d87980e106535c198b2828795d5f47837a5d3172"}
