@@ -79,7 +79,7 @@ static func tune_of(repo: DataRepository) -> Dictionary:
 	out.merge(Map3DImpact.tune_of(repo))
 	out["near_m"] = repo.bal("map3d_impact_near_m")
 	out["at_h"] = repo.bal("map3d_impact_at_h")
-	for key: String in ["depth_h", "space_h", "push_h", "settle_h", "cross"]: out[key] = repo.bal("map3d_melee_" + key)
+	for key: String in ["depth_h", "space_h", "push_h", "settle_h", "cross", "spread_h", "pair_h"]: out[key] = repo.bal("map3d_melee_" + key)
 	return out
 
 
@@ -195,7 +195,8 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 		if not wanted.has(key):
 			for f: Dictionary in _pairs[key]["figs"]:
 				if waiting.has(f["key"]) and is_instance_valid(f["anim"]) and (f["anim"] as AnimationPlayer).has_meta("duel"):
-					if not f.has("scrum"): Map3DDuelMelee.unstep(f)  # its partner gone: it steps back (in the scrum: stays) and waits
+					if f.has("scrum"): (f["child"] as Dictionary).erase("knock_offset")  # in the scrum it waits where it stands
+					else: Map3DDuelMelee.unstep(f)  # its partner gone: it steps back and waits
 					placed[f["code"]] = true
 				elif _release(f):
 					placed[f["code"]] = true

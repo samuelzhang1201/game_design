@@ -48,7 +48,7 @@ func _anim(clips := ["GARRISON", "MARCH", "ATTACK", "SLASH", "BLOCK", "HIT", "DE
 ## 4 saved metres apart from `x0`, its front at `y` and its reserve 2 m behind
 ## (`back`: the way behind it); a figure 2 saved metres tall.
 func _piece(n: int, x0: int, y: int, back: int, model := "duellist") -> Dictionary:
-	var piece := {"layout": "physical_groups", "model": model, "facing_deg": 0, "groups": []}
+	var piece := {"layout": "physical_groups", "model": model, "facing_deg": 90, "groups": []}  # facing +y: files along x
 	for i in n:
 		var node := Node3D.new()
 		add_child_autofree(node)
@@ -259,3 +259,42 @@ func test_a_walking_figure_keeps_its_way_through_small_pushes() -> void:
 	f["child"]["walking"] = true
 	scrum._pts[1]["A:1"] = Vector2(3, 3)
 	assert_true(scrum.aim(f, [foe], tune), "a long change re-aims at once")
+
+
+func test_a_knocked_figure_left_waiting_stands_back_up() -> void:
+	# final review: under the scrum a figure whose partner went mid-knock waited displaced for good
+	var a := _piece(10, 0, 0, -1)
+	var b := _piece(10, 0, 8, 1)
+	var pieces := _fight({"A": a}, {"B": b})
+	var driver := Map3DDuelDriver.new()
+	driver.run(Map3DDuelDriver.gather(ctx, pieces), DT, true, tune)
+	var key: String = driver._pairs.keys()[0]
+	var x: Dictionary = driver._pairs[key]["figs"][0]
+	var foe_slot := int(driver._pairs[key]["figs"][1]["slot"])
+	(x["child"] as Dictionary)["knock_offset"] = Vector2(0.3, 0.0)  # struck an instant ago
+	b["groups"] = (b["groups"] as Array).filter(func(g: Dictionary) -> bool: return int(g["slot"]) != foe_slot)
+	driver.run(Map3DDuelDriver.gather(ctx, pieces), DT, true, tune)
+	assert_true(driver.is_duelling(x["anim"]), "its foe gone, it waits in the scrum")
+	assert_false((x["child"] as Dictionary).has("knock_offset"), "and stands back up: no knock left on it")
+
+
+func test_a_wide_battle_fights_where_its_units_stand() -> void:
+	# final review: points spread over the whole front and pairs with no reach sent men tens of metres
+	# across a battle of several units a side; a point stays near its stand along the front, a pair within reach
+	var att := {"A1": _piece(4, 0, 0, -1), "A2": _piece(4, 80, 0, -1)}
+	var def := {"B1": _piece(4, 0, 8, 1)}
+	var pieces := _fight(att, def)
+	var driver := Map3DDuelDriver.new()
+	driver.run(Map3DDuelDriver.gather(ctx, pieces), DT, true, tune)
+	assert_eq(driver.paired_slots("A2"), [], "a unit 40 heights off pairs with no one across the front")
+	var area := driver.scrum_area(1)
+	var h := 2.0 * unit
+	var reach := float(tune["pair_h"]) * h
+	for g: Dictionary in (att["A2"]["groups"] as Array).slice(1):
+		var along: float = ((driver.scrum_targets(1)["A2:%d" % int(g["slot"])] as Vector2)
+			- Map3DBattleGroups.stand_xz(ctx, att["A2"], g)).dot(area["along"])
+		assert_lte(absf(along), float(tune["spread_h"]) * h + float(tune["push_h"]) * h + 1e-4,
+			"A2:%d's point stays near its stand along the front" % int(g["slot"]))
+	for p: Dictionary in driver._pairs.values():
+		assert_lte((p["figs"][0]["xz"] as Vector2).distance_to(p["figs"][1]["xz"]), reach + float(tune["depth_h"]) * h,
+			"a pair forms within reach")

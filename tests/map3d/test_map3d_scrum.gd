@@ -34,13 +34,13 @@ func _inside(p: Vector2, area: Dictionary) -> bool:
 func test_targets_stay_inside() -> void:
 	var area := Map3DScrum.area(_row(-2.0), _row(2.0), Vector2(0, 1), 4.0)
 	for i in 100:
-		assert_true(_inside(Map3DScrum.target("A:%d" % i, area, Vector2.ZERO, 1.0), area), "A:%d inside the area" % i)
+		assert_true(_inside(Map3DScrum.target("A:%d" % i, area, Vector2.ZERO, 1.0, Vector2(2, 0), INF), area), "A:%d inside the area" % i)
 
 
 func test_targets_are_stable() -> void:
 	var area := Map3DScrum.area(_row(-2.0), _row(2.0), Vector2(0, 1), 4.0)
-	assert_eq(Map3DScrum.target("A:3", area, Vector2.ZERO, 1.0), Map3DScrum.target("A:3", area, Vector2.ZERO, 1.0))
-	assert_ne(Map3DScrum.target("A:3", area, Vector2.ZERO, 1.0), Map3DScrum.target("A:4", area, Vector2.ZERO, 1.0), "neighbours spread")
+	assert_eq(Map3DScrum.target("A:3", area, Vector2.ZERO, 1.0, Vector2(2, 0), INF), Map3DScrum.target("A:3", area, Vector2.ZERO, 1.0, Vector2(2, 0), INF))
+	assert_ne(Map3DScrum.target("A:3", area, Vector2.ZERO, 1.0, Vector2(2, 0), INF), Map3DScrum.target("A:4", area, Vector2.ZERO, 1.0, Vector2(2, 0), INF), "neighbours spread")
 
 
 func test_separate_pushes_overlaps_apart() -> void:
@@ -81,9 +81,19 @@ func test_targets_lean_to_their_side() -> void:
 	# every walk; a side's point lies in its own half and past the centre line by at most `cross` of the other
 	var area := Map3DScrum.area(_row(-2.0), _row(2.0), Vector2(0, 1), 4.0)
 	for i in 100:
-		var a := Map3DScrum.target("A:%d" % i, area, Vector2(2, -2), 0.5)
-		var b := Map3DScrum.target("B:%d" % i, area, Vector2(2, 2), 0.5)
+		var a := Map3DScrum.target("A:%d" % i, area, Vector2(2, -2), 0.5, Vector2(2, -2), INF)
+		var b := Map3DScrum.target("B:%d" % i, area, Vector2(2, 2), 0.5, Vector2(2, 2), INF)
 		assert_true(_inside(a, area) and _inside(b, area))
 		assert_lte(a.y, 1.0 + 1e-4, "A:%d: its half, at most half of B's" % i)
 		assert_gte(b.y, -1.0 - 1e-4, "B:%d" % i)
-	assert_eq(Map3DScrum.target("A:3", area, Vector2(2, -2), 0.5), Map3DScrum.target("A:3", area, Vector2(2, -2), 0.5))
+	assert_eq(Map3DScrum.target("A:3", area, Vector2(2, -2), 0.5, Vector2(2, -2), INF), Map3DScrum.target("A:3", area, Vector2(2, -2), 0.5, Vector2(2, -2), INF))
+
+
+func test_targets_stay_near_their_stand_along_the_front() -> void:
+	var wide: Array[Vector2] = [Vector2(0, -2), Vector2(40, -2)]
+	var far: Array[Vector2] = [Vector2(0, 2), Vector2(40, 2)]
+	var area := Map3DScrum.area(wide, far, Vector2(0, 1), 4.0)
+	for i in 100:
+		var p := Map3DScrum.target("A:%d" % i, area, Vector2(20, -2), 1.0, Vector2(2, -2), 3.0)
+		assert_lte(absf(p.x - 2.0), 3.0 + 1e-4, "A:%d within the spread of its stand along the front" % i)
+		assert_true(_inside(p, area))

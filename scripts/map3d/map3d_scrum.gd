@@ -31,13 +31,16 @@ static func area(a: Array[Vector2], b: Array[Vector2], across: Vector2, depth: f
 
 ## Figure `key`'s point inside `area`, the same every call: across the line in
 ## its own side's half (the side whose mean stand is `side`) and past the centre
-## line by at most `cross` of the other half (1: anywhere across).
-static func target(key: String, area: Dictionary, side: Vector2, cross: float) -> Vector2:
-	var u := Map3DMarchLag.unit(key + "|u") * 2.0 - 1.0
+## line by at most `cross` of the other half (1: anywhere across); along the
+## front within `spread` of its own `stand` (a wide battle is fought where its
+## units stand).
+static func target(key: String, area: Dictionary, side: Vector2, cross: float, stand: Vector2, spread: float) -> Vector2:
+	var hl := float(area["half_len"])
+	var at := ((stand - (area["centre"] as Vector2)).dot(area["along"]))
+	var u := clampf(at + (Map3DMarchLag.unit(key + "|u") * 2.0 - 1.0) * minf(spread, 2.0 * hl), -hl, hl)
 	var own := -1.0 if (side - (area["centre"] as Vector2)).dot(area["across"]) < 0.0 else 1.0
 	var v := own * lerpf(-cross, 1.0, Map3DMarchLag.unit(key + "|v"))
-	return area["centre"] + (area["along"] as Vector2) * u * float(area["half_len"]) \
-		+ (area["across"] as Vector2) * v * float(area["half_depth"])
+	return area["centre"] + (area["along"] as Vector2) * u + (area["across"] as Vector2) * v * float(area["half_depth"])
 
 
 ## `p` held inside `area` (its along and across coordinates clamped).

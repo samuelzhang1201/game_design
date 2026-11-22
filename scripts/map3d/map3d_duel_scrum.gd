@@ -50,7 +50,8 @@ func pair(battle: Dictionary, figs: Dictionary, pairs: Dictionary, wanted: Dicti
 		for p: Vector2 in stands.call(battle[side]):
 			mean += p / float((battle[side] as Array).size())
 		for f: Dictionary in battle[side]:
-			pts[f["key"]] = old.get(f["key"], Map3DScrum.target(f["key"], area, mean, float(tune["cross"])))
+			pts[f["key"]] = old.get(f["key"], Map3DScrum.target(f["key"], area, mean, float(tune["cross"]), f["xz"],
+				float(tune["spread_h"]) * h))
 			f["scrum"] = id
 	var mine: Array = []
 	for key: String in pairs:
@@ -63,7 +64,7 @@ func pair(battle: Dictionary, figs: Dictionary, pairs: Dictionary, wanted: Dicti
 	var free := func(side: Array) -> Array:
 		return side.filter(func(f: Dictionary) -> bool: return not taken.has(f["key"])).map(
 			func(f: Dictionary) -> Dictionary: return {"key": f["key"], "xz": pts[f["key"]]})
-	for p: Dictionary in Map3DScrum.pairs_nearest(free.call(battle["a"]), free.call(battle["b"]), INF):
+	for p: Dictionary in Map3DScrum.pairs_nearest(free.call(battle["a"]), free.call(battle["b"]), float(tune["pair_h"]) * h):
 		mine.append(["%s|%s" % [p["a"], p["b"]], p["a"], p["b"]])
 		taken[p["a"]] = true
 		taken[p["b"]] = true
