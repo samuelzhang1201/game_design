@@ -572,14 +572,15 @@ func test_v2_stop_pivot_move_hand_computed_l() -> void:
 	assert_false(endpoint.moving, "a saved v2 receipt alone draws its endpoint")
 	assert_false(endpoint.rows[0].has("move"))
 	var still: Dictionary = view.call("along_locomotion_candidate", endpoint, 500000)
-	assert_eq([still.rows[0].x_m - O, still.rows[0].y_m - O, still.rows[0].yaw_udeg], [3, 4, 0.0])
+	# B2e: a march in no battle ends facing its last leg (90), with no pivot back.
+	assert_eq([still.rows[0].x_m - O, still.rows[0].y_m - O, still.rows[0].yaw_udeg], [3, 4, 90000000.0])
 	var sampled: Dictionary = view.call("sample_locomotion_candidate", f.ctx, f.code, envelope)
 	assert_eq(sampled.mode, "bodies", sampled.error)
 	assert_true(sampled.moving)
-	assert_eq(sampled.rows[0].move.ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "pivot", "hold"])
+	assert_eq(sampled.rows[0].move.ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "hold"])
 	var before := sampled.duplicate(true)
 	for example: Array in [[150000, 1.5, 0.0, 0.0, "move"], [350000, 3.0, 0.0, 45000000.0, "pivot"],
-			[500000, 3.0, 1.0, 90000000.0, "move"], [850000, 3.0, 4.0, 45000000.0, "pivot"], [1000000, 3.0, 4.0, 0.0, "hold"]]:
+			[500000, 3.0, 1.0, 90000000.0, "move"], [850000, 3.0, 4.0, 90000000.0, "hold"], [1000000, 3.0, 4.0, 90000000.0, "hold"]]:
 		var at: Dictionary = view.call("along_locomotion_candidate", sampled, example[0])
 		assert_eq([at.rows[0].x_m - O, at.rows[0].y_m - O, at.rows[0].yaw_udeg, at.rows[0].op], example.slice(1), str(example[0]))
 	assert_eq(sampled, before, "sampling leaves the copied projection intact")
@@ -652,12 +653,13 @@ func _bones(skeleton: Skeleton3D) -> Array:
 	for bone: int in skeleton.get_bone_count(): out.append(skeleton.get_bone_pose(bone))
 	return out
 
-func test_whole_strides_hand_computed_against_contact_bound() -> void:
-	# Infantry native stride 1.765 model m, contact bound 22769 um (0.60 world m at k 26.35).
-	for item: Array in [[3.53, 2], [1.78, 1], [1.79, -1], [0.5, -1], [70.0, 40], [100.0, 57]]:
-		assert_eq(Map3DCandidateGait.strides(item[0], 1.765, 22769), item[1], str(item))
-	# 1.78/1 slides 15000 um; 1.79/1 slides 25000 um > 22769, and 1.79/2 is far worse.
-	# 70/40 = 1.75 slides 15000 (70/39 = 1.79487 would slide 29872); 100/57 slides 10614.
+func test_whole_strides_hand_computed_nearest_whole_count() -> void:
+	# Native stride 1.765 model m. k = round(L / 1.765), never refused: the foot slides |L - k x 1.765|.
+	for item: Array in [[3.53, 2], [1.78, 1], [1.79, 1], [0.9, 1], [0.86, 0], [0.0, 0], [70.0, 40], [100.0, 57], [4.32425, 2]]:
+		assert_eq(Map3DCandidateGait.strides(item[0], 1.765), item[1], str(item))
+	# 3.53 = 2 strides. 0.9 = 0.51 strides -> 1 (slides 0.865); 0.86 = 0.487 -> 0 (glides 0.86 at the
+	# held phase, under one loop's 0.905). 70 = 39.66 -> 40 (slides 0.6); 100 = 56.66 -> 57 (0.605).
+	# 4.32425 = 2.45 strides -> 2: slides 0.79425 where 3 loops would slide 0.97075.
 	assert_eq(Map3DCandidateGait.admitted_phase([[PHASE], [PHASE], [PHASE]]), PHASE)
 	assert_eq(Map3DCandidateGait.admitted_phase(["*", [0.5], "*"]), 0.5)
 	assert_eq(Map3DCandidateGait.admitted_phase([[0.1], [0.2], "*"]), -1.0)
@@ -681,16 +683,46 @@ func test_v2_without_certified_gait_refuses_the_unit() -> void:
 		assert_string_contains(String(piece.candidate_error), case[1])
 		assert_false(layer.screen_rects().has(f.code))
 
-func test_v2_leg_that_fits_no_whole_stride_is_refused() -> void:
-	var f := _archer_l(0.15)
+func test_v2_leg_off_whole_strides_walks_the_nearest_loop_count() -> void:
+	# Stride = first leg / 2.4. Leg 1 (3 m) is 2.4 strides -> 2 loops; leg 2 (4 m) is 3.2 -> 3 loops.
+	# Neither is whole; both are shown. The wrong count beside each (3, 4) must not be what is shown.
+	_check_loops(2.4, [[0.1875, fposmod(PHASE + 2 * 0.625, 1.0), fposmod(PHASE + 3 * 0.625, 1.0), Vector2(1.875, 0)],
+		[0.5, fposmod(PHASE + 3 * 0.25, 1.0), fposmod(PHASE + 4 * 0.25, 1.0), Vector2(3, 1)]])
+
+func test_v2_leg_under_half_a_stride_holds_the_admitted_phase_as_it_moves() -> void:
+	# Stride = first leg x 2.5. Leg 1 (3 m) is 0.4 strides -> 0 loops: the figure moves at the held
+	# phase. Leg 2 (4 m) is 0.533 -> 1 loop.
+	_check_loops(1.0 / 2.5, [[0.1875, PHASE, fposmod(PHASE + 0.625, 1.0), Vector2(1.875, 0)],
+		[0.5, fposmod(PHASE + 0.25, 1.0), PHASE, Vector2(3, 1)]])
+
+## The archer L with stride = first leg / `per_leg`; each case [share, MARCH phase shown, a phase
+## that must not be shown, pack offset]. Binary-exact shares: leg 1 runs 0..300000 q, leg 2
+## 400000..800000.
+func _check_loops(per_leg: float, cases: Array) -> void:
+	var f := _archer_l(0.1875)
 	var layer := _layer(f, f.envelope)
-	var child: Dictionary = layer.built_piece(f.code).groups[0].piece
+	var piece: Dictionary = layer.built_piece(f.code)
+	var child: Dictionary = piece.groups[0].piece
 	var row: Dictionary = (view.call("sample_candidate", f.ctx, f.code, f.envelope) as Dictionary).rows[0]
-	var leg := Map3DCandidateGait.model_length(f.ctx, layer.built_piece(f.code), child, row.move.ops[0])
-	_install_gait(f, leg / 2.5)
+	_install_gait(f, Map3DCandidateGait.model_length(f.ctx, piece, child, row.move.ops[0]) / per_leg)
 	layer.set_candidate_bodies(true, f.envelope)
-	assert_false(child.node.is_visible_in_tree())
-	assert_string_contains(String(layer.built_piece(f.code).candidate_error), "fits no whole MARCH stride")
+	var anim: AnimationPlayer = child.anims[0]
+	var skeleton := Map3DCandidateGait._skeleton(anim)
+	var clip := Map3DUnits.clip_named(anim, "MARCH")
+	for item: Array in cases:
+		f.clock.share = item[0]
+		layer.step(0.0)
+		assert_eq(String(layer.built_piece(f.code).get("candidate_error", "")), "", str(item[0]))
+		assert_true(child.node.is_visible_in_tree(), str(item[0]))
+		assert_eq(child.action, "v2:MARCH", str(item[0]))
+		var shown := _bones(skeleton)
+		Map3DPivotProvider.seek(anim, skeleton, clip, float(item[2]) * anim.get_animation(clip).length)
+		assert_ne(shown, _bones(skeleton), "not the wrong loop count at %s" % item[0])
+		Map3DPivotProvider.seek(anim, skeleton, clip, float(item[1]) * anim.get_animation(clip).length)
+		assert_eq(shown, _bones(skeleton), "the nearest whole loop count at %s" % item[0])
+		var xz: Vector2 = f.ctx.to_world((item[3] + Vector2(O, O)) / float(ArmySystem.metres_per_pack_px(f.repo)))
+		assert_almost_eq((child.node as Node3D).global_position.x, xz.x, 0.0001)
+		assert_almost_eq((child.node as Node3D).global_position.z, xz.y, 0.0001)
 
 func test_v2_stops_turns_and_walks_only_at_admitted_phases() -> void:
 	var f := _archer_l(0.1875)
@@ -706,12 +738,12 @@ func test_v2_stops_turns_and_walks_only_at_admitted_phases() -> void:
 	Stub.calls.clear()
 	# Binary-exact shares (time_q = floor(share x Q)). share -> clip, the MARCH phase it must
 	# show (or the pivot phase), yaw degrees, pack offset. Leg 1: 0..300000, pivot +90 to
-	# 400000, leg 2 to 800000, pivot -90 to 900000, then the hold at the admitted phase.
+	# 400000, leg 2 to 800000, then the hold facing the road (B2e: no pivot back) at the admitted phase.
 	for item: Array in [[0.1875, "MARCH", fposmod(PHASE + 3 * 0.625, 1.0), 0.0, Vector2(1.875, 0)],
 			[0.375, "PIVOT_RIGHT", 0.75, 67.5, Vector2(3, 0)],
 			[0.5, "MARCH", fposmod(PHASE + 4 * 0.25, 1.0), 90.0, Vector2(3, 1)],
-			[0.875, "PIVOT_LEFT", 0.75, 22.5, Vector2(3, 4)],
-			[0.9375, "MARCH", PHASE, 0.0, Vector2(3, 4)]]:
+			[0.875, "MARCH", PHASE, 90.0, Vector2(3, 4)],
+			[0.9375, "MARCH", PHASE, 90.0, Vector2(3, 4)]]:
 		f.clock.share = item[0]
 		layer.step(0.0)
 		assert_true(child.node.is_visible_in_tree(), String(piece.get("candidate_error", "")))
@@ -726,7 +758,7 @@ func test_v2_stops_turns_and_walks_only_at_admitted_phases() -> void:
 		var xz: Vector2 = f.ctx.to_world((item[4] + Vector2(O, O)) / float(ArmySystem.metres_per_pack_px(f.repo)))
 		assert_almost_eq((child.node as Node3D).global_position.x, xz.x, 0.0001)
 		assert_almost_eq((child.node as Node3D).global_position.z, xz.y, 0.0001)
-	assert_eq(Stub.calls, [["PIVOT_RIGHT", 90000000, 0.75], ["PIVOT_LEFT", -90000000, 0.75]], "pivot poses come from the provider")
+	assert_eq(Stub.calls, [["PIVOT_RIGHT", 90000000, 0.75]], "pivot poses come from the provider")
 	# Leaving the candidate seam replays the ordinary clip on the frozen figure.
 	layer.set_candidate_bodies(false)
 	layer.step(0.0)

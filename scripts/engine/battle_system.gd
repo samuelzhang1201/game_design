@@ -555,6 +555,18 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 	var now: Dictionary = garrisons.duplicate()   # p -> the town it garrisons NOW
 	var touch: Dictionary = {}                    # "town|f" -> town_contact
 	var at: Dictionary = {}                       # code -> where it stands, metres
+	# the mirror (player siege spec §5): a crown besieger waits for its assault
+	# before the town's defenders, and storms them in the town battle once its
+	# record's flag is up; read only while the crown besieges somewhere
+	var crown_sieges := state.sieges.values().any(func(r: Dictionary) -> bool:
+		return not (r.get("units", []) as Array).is_empty())
+	var invest: Dictionary = {}   # p -> the town it besieges while the flag is down
+	var storm: Dictionary = {}    # p -> the town it storms today
+	var guards: Dictionary = {}   # town -> its defenders (SiegeSystem.defenders_of)
+	if crown_sieges:
+		for pc: Variant in mine:
+			invest[pc] = SiegeSystem.investing(repo, state, String(pc))
+			storm[pc] = SiegeSystem.storming(repo, state, String(pc))
 	for fc: Variant in theirs:
 		var f := String(fc)
 		var held_off := siege_town_of(repo, state, f)
@@ -562,10 +574,21 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 			var p := String(pc)
 			if held_off != "" and String(garrisons[pc]) == held_off:
 				continue    # a besieged town's garrison waits for the assault
+			var stormed := ""
+			if crown_sieges:
+				var sieged := String(invest[pc]) if String(invest[pc]) != "" else String(storm[pc])
+				if sieged != "":
+					if not guards.has(sieged):
+						guards[sieged] = SiegeSystem.defenders_of(repo, state, sieged)
+					if f in (guards[sieged] as Array):
+						if String(invest[pc]) != "":
+							continue    # the besieger waits for its assault
+						stormed = sieged
 			if not now.has(pc):
 				now[pc] = ArmyGround.garrison_town(repo, state, p)
-			var town := String(now[pc])
-			if town != "":
+			# a storm's town is the record's: the assault is the town battle there
+			var town := stormed if stormed != "" else String(now[pc])
+			if stormed == "" and town != "":
 				var key := town + "|" + f
 				if not touch.has(key):
 					touch[key] = town_contact(repo, state, town, f)
@@ -586,7 +609,7 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 				_join_event(repo, state, at_town, f, events)
 				_join_event(repo, state, at_town, p, events)
 			elif bf.is_empty() and bp.is_empty():
-				_start(repo, state, p, f, town, events)
+				_start(repo, state, p, f, town, events, stormed != "")
 			elif bf.is_empty():
 				_join_event(repo, state, bp, f, events)
 			elif bp.is_empty():
@@ -596,6 +619,7 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 			now.clear()
 			touch.clear()
 			at.clear()
+			guards.clear()
 
 
 static func _join_event(repo: DataRepository, state: GameState, b: Dictionary, code: String, events: Array) -> void:
@@ -618,14 +642,17 @@ static func _contact_doctrine(repo: DataRepository, state: GameState, b: Diction
 
 
 ## Pure metadata for explicit candidate enrollment; never allocates or moves rows.
-static func contact_skeleton_candidate(repo: DataRepository, state: GameState, p: String, f: String, town: String = "") -> Dictionary:
+## With `crown_storms` the player's `p` storms the town (its siege record's
+## assault): it attacks there and its plan is the attack.
+static func contact_skeleton_candidate(repo: DataRepository, state: GameState, p: String, f: String, town: String = "",
+		crown_storms := false) -> Dictionary:
 	var pe := _stored(state, p)
 	# the side that marched into a standing enemy attacks: a column that halted
 	# in front of one today (halt_day, ArmySystem._halt_before) did exactly that
 	var marched := String(pe.get("order", "")) == ArmySystem.ORDER_MARCH \
 		or (pe.has("halt_day") and int(pe["halt_day"]) == state.absolute_day())
-	var player_attacks := town == "" and marched \
-		and String(_stored(state, f).get("order", "")) != ArmySystem.ORDER_MARCH
+	var player_attacks := crown_storms or (town == "" and marched \
+		and String(_stored(state, f).get("order", "")) != ArmySystem.ORDER_MARCH)
 	var att: Array = [p] if player_attacks else [f]
 	var def: Array = [f] if player_attacks else [p]
 	var place := _at_m(repo, state, String(def[0]))
@@ -642,7 +669,7 @@ static func contact_skeleton_candidate(repo: DataRepository, state: GameState, p
 		var kind := String(entry.get("battle_plan", "hold"))
 		var advanced := String(entry.get("order", "")) == ArmySystem.ORDER_MARCH \
 			or int(entry.get("halt_day", -1)) == state.absolute_day()
-		if advanced:
+		if advanced or (crown_storms and actor == p):
 			kind = "attack"
 		if homeward(state, actor) or bool(entry.get("battle_retreat", false)):
 			kind = "retreat"
@@ -653,11 +680,12 @@ static func contact_skeleton_candidate(repo: DataRepository, state: GameState, p
 
 
 ## A new battle between player regiment `p` and foe `f`: at a town the foe
-## assaults; in the open the side that marched into a standing enemy attacks,
+## assaults — unless the crown storms it (`crown_storms`, its siege record's
+## assault); in the open the side that marched into a standing enemy attacks,
 ## else the foe. Fought where the defender stands (the town's point at a town).
 static func _start(repo: DataRepository, state: GameState, p: String, f: String, town: String,
-		events: Array) -> void:
-	var b := contact_skeleton_candidate(repo, state, p, f, town)
+		events: Array, crown_storms := false) -> void:
+	var b := contact_skeleton_candidate(repo, state, p, f, town, crown_storms)
 	var att: Array = b.att
 	var def: Array = b.def
 	var place := Vector2i(int(b.place_x_m), int(b.place_y_m))

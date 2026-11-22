@@ -30,6 +30,15 @@ const UNIT_SOUNDS := "res://assets/audio/units/unit_sounds.tres"
 ## The sound each arm's piece settles into its GARRISON with, on its last
 ## step off the march (Map3DUnitSettle); an arm with none settles silent.
 const UNIT_SETTLE_SOUNDS := "res://assets/audio/units/settle_sounds.tres"
+## The one-shot a duel blow sounds (Map3DUnitSound.play_impacts), by the reply's
+## kind: BLOCK a clash, HIT a thud; each an AudioStreamRandomizer over its variants.
+const UNIT_IMPACT_SOUNDS := "res://assets/audio/units/impact_sounds.tres"
+## The one-shot burst at a duel blow's meeting point (Map3DImpactBursts), by
+## the reply's kind: BLOCK sparks, HIT dust.
+const IMPACT_BURSTS := "res://assets/3D/effects/impact_bursts.tres"
+## The overlay each arm's map figure wears its realm's colour through
+## (Map3DUnitDress), by army_piece key; an arm with none keeps its colours.
+const UNIT_REALM_TINT := "res://assets/3D/units/realm_tint.tres"
 
 ## Each estate's painting by its industry and size, "<focus>_<tier>"
 ## (library B-01..B-36; manor_estates.csv keeps the tiers' numbers).

@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://bul5ce1r10wp5"]
+
+[ext_resource type="Material" uid="uid://bk2jbfw3odgmk" path="res://scenes/map3d/effects/impact_dust_process.tres" id="1_5sc2c"]
+[ext_resource type="QuadMesh" uid="uid://2nclcwbj1flr" path="res://scenes/map3d/effects/impact_dust_quad.tres" id="2_bd56d"]
+
+[node name="ImpactDust" type="GPUParticles3D" unique_id=1091916231]
+cast_shadow = 0
+emitting = false
+amount = 10
+lifetime = 0.4
+one_shot = true
+explosiveness = 1.0
+visibility_aabb = AABB(-1.5, -1.5, -1.5, 3, 3, 3)
+local_coords = true
+process_material = ExtResource("1_5sc2c")
+draw_pass_1 = ExtResource("2_bd56d")

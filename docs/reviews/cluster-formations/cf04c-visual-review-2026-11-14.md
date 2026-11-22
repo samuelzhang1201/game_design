@@ -80,3 +80,14 @@ No defect found was caused by the consumer. Its findings, with dispositions:
 - **Facing.** "A final pivot restores row facing": every slice of a march off the row's facing
   pivots out and back. A march needs its row facing written to its heading, or a turn never
   persists.
+
+## Owner rulings on these requirements (2026-11-21, ACT-DRIVER B2e)
+
+- **Facing:** the pinned `body_motion.gd` may change: a row in no battle ends its slice facing its
+  last leg's whole degree and the commit writes it (no pivot back, no snap between slices); the
+  royal carrier's SHA pin is renewed with it. Done in B2e.
+- **Whole strides:** relax the consumer instead of staging strides in the engine. The engine
+  never reads render scale (a stride is ~700–800 sim m at the reference scale, with ±6% per-figure
+  stature); the map3d consumer takes the nearest whole number of loops and adjusts the cadence
+  rather than refusing the leg. Done in its own map3d PR after B2e (`Map3DCandidateGait.strides`).
+- **Column order:** front first in the planner's reservation order. Done in B2e.

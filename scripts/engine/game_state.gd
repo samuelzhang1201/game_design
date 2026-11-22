@@ -354,6 +354,11 @@ var ai_hosts: Dictionary = {}
 ## progress, assault, assault_due, starved}, ints and strings.
 var sieges: Dictionary = {}
 var siege_next_id := 0
+## One entry per occupied town (SiegeSystem: a capture, player siege spec §7),
+## either side's: town -> {town, occupier, from (kingdom codes), house (the
+## house the manors went to), host (the capturing host, "" for the crown), by
+## (the taker in words), day, cells (manor cell string -> the house before)}.
+var occupations: Dictionary = {}
 ## The battles being fought (§4, BattleSystem): an Array of {id, att, def
 ## (regiment codes), start_day, rounds, place_x_m, place_y_m, town}.
 var battles: Array = []
@@ -373,6 +378,10 @@ var battle_events: Dictionary = {}
 ## DefeatSystem): an Array of {town, host, day (absolute)}, one per loss; the
 ## key that makes a loss cost the crown once.
 var town_losses: Array = []
+## The towns the crown took (player siege spec §7, SiegeSystem._gains): an
+## Array of {town, day (absolute, the occupation's)}; the key that makes a
+## capture pay the crown once per occupation.
+var town_takes: Array = []
 ## What the crown last knew of the enemy's men (spec 2026-10-10-player-sight-
 ## and-ghosts, Sighting): key (a foe unit's code, or Sighting.HOST_KEY + a host
 ## code for the border rumour) -> {kind ("unit" | "host"), code, x_m, y_m
@@ -527,6 +536,7 @@ func to_dict() -> Dictionary:
 		"ai_hosts": _encode_values(ai_hosts.duplicate(true)),
 		"sieges": _encode_values(sieges.duplicate(true)),
 		"siege_next_id": siege_next_id,
+		"occupations": _encode_values(occupations.duplicate(true)),
 		"battles": _encode_values(battles.duplicate(true)),
 		"battle_aliases": battle_aliases.duplicate(true),
 		"battle_orders": battle_orders.duplicate(true),
@@ -546,6 +556,7 @@ func to_dict() -> Dictionary:
 		"recruitment_projects": recruitment_projects.duplicate(true),
 		"military_migration": military_migration.duplicate(true),
 		"town_losses": _encode_values(town_losses.duplicate(true)),
+		"town_takes": _encode_values(town_takes.duplicate(true)),
 		"sightings": _encode_values(sightings.duplicate(true)),
 		"scout_log": _encode_values(scout_log.duplicate(true)),
 		"foe_next_id": _encode_values(foe_next_id),
@@ -715,6 +726,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.ai_hosts = _decode_values(d.get("ai_hosts", {}))
 	s.sieges = _decode_values(d.get("sieges", {}))
 	s.siege_next_id = int(d.get("siege_next_id", 0))
+	s.occupations = _decode_values(d.get("occupations", {}))
 	s.battles = _decode_values(d.get("battles", []))
 	for i: int in s.battles.size():
 		var raw: Variant = d.battles[i]
@@ -746,6 +758,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.battle_events = _decode_values(d.get("battle_events", {}))
 	# Saves from before defeat carry no losses.
 	s.town_losses = _decode_values(d.get("town_losses", []))
+	s.town_takes = _decode_values(d.get("town_takes", []))
 	# Saves from before the crown's sight carry no ghosts.
 	s.sightings = _decode_values(d.get("sightings", {}))
 	s.scout_log = _decode_values(d.get("scout_log", {}))
