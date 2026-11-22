@@ -272,18 +272,22 @@ static func controller_of(repo: DataRepository, state: GameState, province_code:
 			best = h
 	return best
 
+## The crown's control stops at its realm (player siege spec §7): a foreign
+## province whose manors the crown's house mostly holds by occupation is no
+## crown province — no BUILD, FOCUS or world-delta path there.
 static func crown_controls(repo: DataRepository, state: GameState, province_code: String) -> bool:
 	var c := crown(state)
-	return c != "" and controller_of(repo, state, province_code) == c
+	return c != "" and MapOwnership.owner_of(repo, state, province_code) == repo.resolve_realm("player_realm") \
+		and controller_of(repo, state, province_code) == c
 
 ## The provinces the crown controls, in code order — the crown's economy,
-## the land it may build on, the ledger the model may touch. Cached per
-## manor ownership, which is the only thing that moves it.
+## the land it may build on, the ledger the model may touch; only provinces
+## of the player's realm. Cached per manor and province ownership.
 static func controlled_provinces(repo: DataRepository, state: GameState) -> Array:
 	if state == null:
 		return []
 	var c := _repo_cache(repo)
-	var sig := hash([state.manor_owner.hash(), state.manor_province.hash(), crown(state),
+	var sig := hash([state.manor_owner.hash(), state.manor_province.hash(), state.province_owner.hash(), crown(state),
 		String(state.player_setup.get("house_was", ""))])
 	if c.has("control") and int(c["control"]["sig"]) == sig:
 		return c["control"]["provinces"]

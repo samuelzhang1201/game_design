@@ -14,7 +14,8 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 - `scripts/map3d/guide/king_and_camps.md` — the independent king, field-camp stages, physical courier origins (`Map3DKing`, `Map3DUnitCamps`, `Map3DCourierPalace`, `Map3DLayerUnits`, `Map3DView`)
 - `scripts/map3d/guide/pivots.md` — pivots for any turn and each arm's provider and certificate (`Map3DPivotProvider`, `Map3DInfantryLocomotion`, `Map3DArcherLocomotion`, `Map3DRoyalPivot`, `Map3DCavalryLocomotion`)
 
-- `scripts/map3d/guide/battle_duels.md` — front-rank duels (`Map3DDuel*`, `Map3DImpact*`)
+- `scripts/map3d/guide/picking.md` — what a click or hover picks, the selection rings (`Map3DPicker`, `Map3DSelection`, `Map3DLayerUnits.ray_depth`, `Map3DView.kingdom_of_pick`)
+- `scripts/map3d/guide/battle_duels.md` — front-rank duels and the mixed fight (`Map3DDuel*`, `Map3DImpact*`, `Map3DScrum`)
 - `scripts/map3d/guide/national_flags.md` — realm textures, city roof standards, one standard bearer per admitted land unit, realm-tinted tunics (`Map3DNationalFlag`, `Map3DCityFlags`, `Map3DUnitStandard`, `Map3DStandardBearer`, `Map3DUnitDress`)
 
 ## Shape and ownership
@@ -34,11 +35,6 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 - **The camera never sinks into the ground**: `Map3DGeometry.clear_pitch` steepens the pitch until the whole sight line stands `map3d_camera_clear_m` over the ground.
 - **Every distance shown reads the pack's measure**: world metres back to pack px (`Map3DView.map_units_per_metre`) times `map_info.csv` `distance_scale` in `distance_unit`; the `map3d_*_m` camera values stay in built metres. The scale bar restates itself in the 1-2-5 ladder (`MapGeometry.nice_step`).
 - The compass (`CompassLayer`, `assets/2D/ui/compass/compass.png`) turns with the view, turns clockwise with the clock while time runs, redraws only itself, and eases back to north on a click; it sits inside the map's top-left on both looks (`map_compass_size_px`, on the war table `map_compass_size_px_table`).
-
-## Picking, hover, selection
-
-- **A click**: a settlement within `map3d_pick_px` (or on its ring) sends `object_selected`, anywhere else `province_selected` (the province bitmap under `Map3DGeometry.ground_hit`); `MapDetailPanel.follow` takes either. Under a theme a click on land picks the manor. `map3d_picker.gd`'s `pick_at` orders: first, off a badge (drawn over the pieces) and before the ground test, the piece whose FIGURES the click's ray meets nearest the camera (`Map3DLayerUnits.ray_depth`, each shown mesh's world box) — it beats the town under it, and the sky; pieces round a town overlap on screen, so a box's centre never decides between them; then a piece by its box (`screen_rects`: the box holding the click, else within `map_army_pick_px` of one, so a far piece of a few px is still clicked) or a fleet's counter — a nearer town centre or a badge under the click wins — then a settlement within reach beats a landmark mark, a mark's own box beats its grown rect; picking never depends on a dot being drawn.
-- **Only a clicked object is ringed**: hover names it (and swaps the left column via `country_hovered` → `CountryPanel.follow`) and draws the hovered kingdom's live outline wider in the border's ink (`lines/hover.tres`), on its land runs only, like the border; a clicked province is its own seam emphasised (`lines/selection_province.tres`), a clicked manor gold (`lines/selection_manor.tres`). A pointer move is picked once a frame (`hover_pick`); `Map3DView.kingdom_of_pick` names the holder NOW.
 
 ## Regiment pieces, couriers, HUD
 

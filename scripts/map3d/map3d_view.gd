@@ -555,7 +555,7 @@ func select_object(picked: Dictionary) -> void: if _loaded: _selection.select(pi
 ## Test seam (Ruling 18): the inner part named `key`, or null.
 func component(key: String) -> Object:
 	return {"roads": _roads, "borders": _borders, "themes": _themes, "weather": _weather, "input": _input,
-		"rig": _rig, "picker": _picker, "selection": _selection}.get(key)
+		"rig": _rig, "picker": _picker, "selection": _selection, "units": _units}.get(key)
 
 # --- test seams and the bench -------------------------------------------------------
 func is_loaded() -> bool: return _loaded

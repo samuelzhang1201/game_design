@@ -458,3 +458,4 @@ ruling.
 - The AI reads the walls at full strength, while the battle reads the damaged ones (§4.4).
 - Sea entries never close, so a port starves more slowly (§4.1).
 - No relief host is newly raised (§8). Integrity is not carried over to a later siege (§8).
+- `TOWN_TAKEN`'s gain is +round(base × (1 + w)), as §7 writes it. Because w lies in −1..1, it is never a loss. An opposed seat's gain shrinks toward 0, mirroring the loss's "never a gain" (step 3b). The sack reads the plunder law of the record's first unit.

@@ -222,6 +222,9 @@ func test_foe_held_town_is_retaken_through_the_shared_path() -> void:
 		assert_eq(int(taken[0]["garrison_out"]), EnemyAi.live_regiments(repo, s, f.main).size())
 	assert_eq(ev.filter(func(e: Dictionary) -> bool: return String(e.get("kind", "")).begins_with("defeat_")), [],
 		"the crown lost nothing")
+	assert_eq(s.town_takes, [], "a retake is no capture: it pays nothing (step 3b)")
+	if taken.size() == 1:
+		assert_eq(taken[0].get("opinion", []), [], "no seat moves for a retake")
 	assert_eq(s.battles.filter(func(b: Dictionary) -> bool: return String(b["town"]) == town), [])
 
 
