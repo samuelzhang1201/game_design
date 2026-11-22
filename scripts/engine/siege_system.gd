@@ -139,8 +139,9 @@ static func occupation_of_host(state: GameState, host: String) -> Dictionary:
 
 
 ## Who defends `town`: the crown's garrison (EnemyAi.garrison_of) while the
-## crown holds it; else the holder's foes standing at it (not marching, at_town)
-## with fit men, in code order — a town's militia (TownMilitia) among them.
+## crown holds it; else the holder's foes standing at it (not marching, at_town;
+## a woken unit at its post, TownMilitia.at_post, its camp's too) with fit men,
+## in code order — a town's militia and woken units (TownMilitia) among them.
 static func defenders_of(repo: DataRepository, state: GameState, town: String) -> Array:
 	var holder := holder_of(repo, state, town)
 	if holder == repo.resolve_realm("player_realm"):
@@ -151,7 +152,8 @@ static func defenders_of(repo: DataRepository, state: GameState, town: String) -
 	for c: String in codes:
 		if ArmySystem.realm_of(repo, c, state) == holder \
 				and String(state.foes[c].get("order", "")) != ArmySystem.ORDER_MARCH \
-				and ArmySystem.fit_count(repo, state, c) > 0 and at_town(repo, state, c, town):
+				and ArmySystem.fit_count(repo, state, c) > 0 \
+				and (at_town(repo, state, c, town) or TownMilitia.at_post(repo, state, c, town)):
 			out.append(c)
 	return out
 
@@ -356,6 +358,7 @@ static func settle_day(repo: DataRepository, state: GameState, battle_events: Ar
 	EnemyAi.ensure_deployments(repo, state, events)
 	if state.ai_hosts.is_empty():
 		events.append_array(TownMilitia.stand_down(repo, state))
+		events.append_array(TownMilitia.send_back(repo, state))
 		return events
 	follow_main(repo, state, events)
 	for h: String in EnemyAi.host_codes(state):
@@ -375,8 +378,9 @@ static func settle_day(repo: DataRepository, state: GameState, battle_events: Ar
 			if mind.has("siege_id"):
 				_lifted(repo, state, h, mode.to_lower(), events)
 	_crown_sieges(repo, state, battle_events, events)
-	# a siege over, its militia stand down (player siege spec §5, §8)
+	# a siege over, its militia stand down and its woken units go back (spec §5, §8)
 	events.append_array(TownMilitia.stand_down(repo, state))
+	events.append_array(TownMilitia.send_back(repo, state))
 	return events
 
 
