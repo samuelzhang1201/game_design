@@ -1,13 +1,15 @@
-"""Bake each unit atlas's CLOTH MASK, `<atlas>_cloth.png`, for the 3D map's
-realm-coloured cloth (scripts/map3d/unit_cloth.gdshader): R is the dyed cloth
-(1) or not (0); G is the texel's SHADE, its luminance over the dye's mean
-luminance, halved (0.5 = the mean), so the realm colour keeps the folds.
+"""Bake the TUNIC MASK of the land arms whose art has no exported one, for the
+3D map's realm-coloured tunics (Map3DUnitDress, scenes/map3d/materials/
+unit_realm_tint*.tres). The infantry's mask comes from its export
+(tools/units3d/infantry_arp/tunic_mask.py); these Tripo atlases have no cloth
+material, so the dyed cloth is picked by an HSV window per atlas (RECIPES),
+median-cleaned and feathered so seams do not alias.
 
-The dye is picked by an HSV window per atlas (RECIPES); the mask is feathered
-by a small blur so seams do not alias. Run from the repo root:
+Writes `<model>_tunic_mask.png` (L: 1 = tunic) beside each atlas and prints
+the dye's mean linear luminance, the material's `tunic_luminance`. Run from
+the repo root:
 
-    python3 tools/units3d/cloth_mask.py            # every recipe
-    python3 tools/units3d/cloth_mask.py --preview DIR   # also a red overlay per atlas
+    python3 tools/units3d/cloth_mask.py [--preview DIR]
 """
 import argparse
 from pathlib import Path
@@ -16,45 +18,47 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 UNITS = Path("assets/3D/units")
-# atlas -> hue window (degrees; lo > hi wraps through red), min saturation, value window (0..1)
+# model -> atlas, hue window (degrees; lo > hi wraps through red), min saturation, value window (0..1)
 RECIPES = {
-    "infantry/infantry_infantry_atlas.jpg": dict(hue=(70, 140), sat=0.28, val=(0.12, 1.0)),
-    "cavalry/cavalry_cavalry_atlas.jpg": dict(hue=(330, 12), sat=0.40, val=(0.15, 1.0)),
-    "royal/royal_royal_atlas.jpg": dict(hue=(100, 180), sat=0.30, val=(0.06, 1.0)),
-    "archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg":
-        dict(hue=(28, 52), sat=0.55, val=(0.35, 1.0)),
+    "cavalry": dict(atlas="cavalry/cavalry_cavalry_atlas.jpg", hue=(330, 12), sat=0.40, val=(0.15, 1.0)),
+    "royal": dict(atlas="royal/royal_royal_atlas.jpg", hue=(100, 180), sat=0.30, val=(0.06, 1.0)),
+    "archers": dict(atlas="archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg",
+                    hue=(28, 52), sat=0.55, val=(0.35, 1.0)),
 }
 
 
-def mask_of(path: Path, hue, sat, val) -> Image.Image:
-    rgb = Image.open(path).convert("RGB")
+def linear_luminance(rgb: np.ndarray) -> np.ndarray:
+    c = rgb / 255.0
+    lin = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+    return lin @ np.array([0.2126, 0.7152, 0.0722])
+
+
+def mask_of(rgb: Image.Image, hue, sat, val):
     hsv = np.asarray(rgb.convert("HSV")).astype(np.float32) / 255.0
     h, s, v = hsv[..., 0] * 360.0, hsv[..., 1], hsv[..., 2]
     in_hue = (h >= hue[0]) & (h <= hue[1]) if hue[0] <= hue[1] else (h >= hue[0]) | (h <= hue[1])
     m = in_hue & (s >= sat) & (v >= val[0]) & (v <= val[1])
-    r = Image.fromarray((m * 255).astype(np.uint8), "L")
-    r = r.filter(ImageFilter.MedianFilter(3)).filter(ImageFilter.GaussianBlur(1.0))
-    lum = np.asarray(rgb.convert("L")).astype(np.float32)
-    shade = np.clip(lum / max(lum[m].mean(), 1.0) * 0.5, 0.0, 1.0)
-    g = Image.fromarray((shade * 255).astype(np.uint8), "L")
-    return Image.merge("RGB", (r, g, Image.new("L", r.size, 0)))
+    img = Image.fromarray((m * 255).astype(np.uint8), "L")
+    img = img.filter(ImageFilter.MedianFilter(3)).filter(ImageFilter.GaussianBlur(1.0))
+    lum = float(linear_luminance(np.asarray(rgb).astype(np.float32))[m].mean())
+    return img, lum
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--preview", type=Path)
     args = ap.parse_args()
-    for rel, r in RECIPES.items():
-        src = UNITS / rel
-        out = src.with_name(src.stem + "_cloth.png")
-        m = mask_of(src, **r)
+    for model, r in RECIPES.items():
+        src = UNITS / r["atlas"]
+        rgb = Image.open(src).convert("RGB")
+        m, lum = mask_of(rgb, r["hue"], r["sat"], r["val"])
+        out = src.parent / f"{model}_tunic_mask.png"
         m.save(out)
-        print(out, f"{np.asarray(m)[..., 0].mean() / 255:.3f}")
+        print(f"{out}  coverage {np.asarray(m).mean() / 255:.3f}  tunic_luminance {lum:.3f}")
         if args.preview:
             args.preview.mkdir(parents=True, exist_ok=True)
-            base = Image.open(src).convert("RGB")
-            red = Image.new("RGB", base.size, (255, 0, 0))
-            Image.composite(red, base, m.getchannel("R")).resize((1024, 1024)).save(args.preview / (src.parent.name + ".png"))
+            red = Image.new("RGB", rgb.size, (255, 0, 0))
+            Image.composite(red, rgb, m).resize((1024, 1024)).save(args.preview / f"{model}.png")
 
 
 if __name__ == "__main__":

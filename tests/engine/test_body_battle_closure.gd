@@ -76,7 +76,8 @@ func test_move_contact_retry_close_successor() -> void:
 			var expected: Dictionary = state.military_migration.body_motion.duplicate(true)
 			expected.erase("plan")
 			assert_eq(candidate.military_migration.body_battle.closed_motion, expected)
-			assert_eq(expected.priority, [{"unit": f.code, "slot": "0"}, {"unit": f.code, "slot": "1"}])
+			# The column walks east and slot 1 stands east of slot 0: it reserves first (B2e, front first).
+			assert_eq(expected.priority, [{"unit": f.code, "slot": "1"}, {"unit": f.code, "slot": "0"}])
 			assert_false(candidate.military_migration.has("body_motion"))
 			var unchanged := candidate.to_dict()
 			unchanged.military_migration = state.to_dict().military_migration
@@ -89,7 +90,7 @@ func test_move_contact_retry_close_successor() -> void:
 			var next := BodyBattleMotion.plan_candidate(f.repo, _json(candidate), BodyBattleMotion._boundary(candidate))
 			assert_eq(next.status, "complete", next.reason)
 			if next.plan.is_empty(): return
-			assert_eq(next.plan.motion.cursor.priority, [{"unit": f.code, "slot": 0}, {"unit": f.code, "slot": 1}])
+			assert_eq(next.plan.motion.cursor.priority, [{"unit": f.code, "slot": 1}, {"unit": f.code, "slot": 0}])
 			assert_eq(next.plan.motion.moves[0].used_m, 100)
 			assert_eq(next.plan.motion.moves[0].budget_m, 100)
 			next_plans.append(next.plan)

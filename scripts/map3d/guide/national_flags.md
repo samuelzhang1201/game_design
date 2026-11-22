@@ -34,7 +34,25 @@ national-flags test. The infantry uses `arm_stretch.r`, `forearm_stretch.r`,
 `hand.r`, with `cc_weapon.r/l`; mounted models use `R_UpperArm.R`,
 `R_Forearm.R`, `R_Hand.R` and the cavalry's `Lance` socket.
 
-## Realm-coloured cloth (`Map3DUnitCloth`)
+## Realm colours on the figures
 
-- Every land figure's dyed cloth wears its owning realm's map colour (`MapPalette.color_of`), set in `Map3DLayerUnits._roster` beside the standard, ghosts included. A surface is dressed when its albedo atlas has a mask in `assets/3D/units/cloth_masks.tres` (ArtTable keyed by the atlas FILE NAME); it is redrawn by `scenes/map3d/materials/unit_cloth.tres` (`unit_cloth.gdshader`) over the scene material's own textures — one shared material per atlas, the colour an instance uniform `realm_color`. Unmasked surfaces (bow, quiver, arrow) keep the scene's material. The WAR ROOM builds its own figures and is untouched.
-- Masks `<atlas>_cloth.png` are baked by `tools/units3d/cloth_mask.py` (R = cloth by a per-atlas HSV window, G = shade over the dye's mean, halved, so folds survive). A new or re-exported atlas re-runs it and gets a row in the table. The look (`value`, `strength`, `fold_contrast`) is the `.tres`: kept deep (value 0.7) — a light realm colour reads salmon / chalky.
+`Map3DUnitDress.sync` (called where the Units layer placed the standard) dresses
+every figure of an arm listed in `GameArt.UNIT_REALM_TINT`
+(`assets/3D/units/realm_tint.tres`: the arms on the infantry model) in its realm's
+colour, so a mixed fight reads as two sides (spec
+`2026-11-21-infantry-melee-scrum-design.md`, step 1). Each figure mesh — never the
+carried standard — wears `scenes/map3d/materials/unit_realm_tint.tres` as its
+`material_overlay`: it repaints the model's tunic mask
+(`infantry_tunic_mask.png`, exported with the atlases by
+`tools/units3d/infantry_arp/game_export.py`) in the instance uniform `realm_tint`,
+keeping the cloth's shading (atlas luminance over the tunic's mean). The scene's
+own material is untouched, so the WAR ROOM's tin and ink are unchanged. The colour
+is the realm's political-palette hue at saturation `map3d_unit_tint_sat`,
+its value solved for the linear luminance `map3d_unit_tint_lum`: every realm's
+tunic equally light, told apart by hue. The cavalry, royal and archer models
+have no cloth material in their Tripo atlases: their `<model>_tunic_mask.png` is
+baked by `tools/units3d/cloth_mask.py` (an HSV window per atlas on the dyed
+cloth; it prints the `tunic_luminance` for the arm's
+`unit_realm_tint_<model>.tres`). An overlay is painted only on a mesh drawn from
+its material's `albedo_atlas`, so a prop on its own texture (the archer's bow,
+quiver, arrow) keeps its colours.

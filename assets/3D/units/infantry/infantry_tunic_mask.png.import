@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://clcpahmsap0o1"
-path="res://.godot/imported/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0_cloth.png-3cb87cfbbc8867147f5224f2f99f2f26.ctex"
+uid="uid://b4db0uhpj43sf"
+path="res://.godot/imported/infantry_tunic_mask.png-45263eb67f62565df8ab10573636714b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0_cloth.png"
-dest_files=["res://.godot/imported/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0_cloth.png-3cb87cfbbc8867147f5224f2f99f2f26.ctex"]
+source_file="res://assets/3D/units/infantry/infantry_tunic_mask.png"
+dest_files=["res://.godot/imported/infantry_tunic_mask.png-45263eb67f62565df8ab10573636714b.ctex"]
 
 [params]
 

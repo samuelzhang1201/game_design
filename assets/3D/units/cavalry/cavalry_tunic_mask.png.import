@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dm4g8pxisci7x"
-path="res://.godot/imported/royal_royal_atlas_cloth.png-353763e6b4497e39be70f2297ad256cc.ctex"
+uid="uid://dyxraurmnmenv"
+path="res://.godot/imported/cavalry_tunic_mask.png-8ddfb32c62c1fdfb1dae0ac4af1ecea4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/3D/units/royal/royal_royal_atlas_cloth.png"
-dest_files=["res://.godot/imported/royal_royal_atlas_cloth.png-353763e6b4497e39be70f2297ad256cc.ctex"]
+source_file="res://assets/3D/units/cavalry/cavalry_tunic_mask.png"
+dest_files=["res://.godot/imported/cavalry_tunic_mask.png-8ddfb32c62c1fdfb1dae0ac4af1ecea4.ctex"]
 
 [params]
 

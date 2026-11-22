@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bkg7qry2dojh3"
-path="res://.godot/imported/infantry_infantry_atlas_cloth.png-0452c95d770b45f05430be35254d06a6.ctex"
+uid="uid://k0aqiu2ldjbd"
+path="res://.godot/imported/archers_tunic_mask.png-5f39a746129d3d9668e1720d65816169.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/3D/units/infantry/infantry_infantry_atlas_cloth.png"
-dest_files=["res://.godot/imported/infantry_infantry_atlas_cloth.png-0452c95d770b45f05430be35254d06a6.ctex"]
+source_file="res://assets/3D/units/archers/archers_tunic_mask.png"
+dest_files=["res://.godot/imported/archers_tunic_mask.png-5f39a746129d3d9668e1720d65816169.ctex"]
 
 [params]
 

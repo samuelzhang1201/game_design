@@ -15,7 +15,7 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 - `scripts/map3d/guide/pivots.md` — pivots for any turn and each arm's provider and certificate (`Map3DPivotProvider`, `Map3DInfantryLocomotion`, `Map3DArcherLocomotion`, `Map3DRoyalPivot`, `Map3DCavalryLocomotion`)
 
 - `scripts/map3d/guide/battle_duels.md` — front-rank duels (`Map3DDuel`, `Map3DDuelDriver`)
-- `scripts/map3d/guide/national_flags.md` — realm textures, city roof standards, one existing standard bearer per admitted land unit and the realm-coloured cloth (`Map3DNationalFlag`, `Map3DCityFlags`, `Map3DUnitStandard`, `Map3DStandardBearer`, `Map3DUnitCloth`)
+- `scripts/map3d/guide/national_flags.md` — realm textures, city roof standards, one standard bearer per admitted land unit, realm-tinted tunics (`Map3DNationalFlag`, `Map3DCityFlags`, `Map3DUnitStandard`, `Map3DStandardBearer`, `Map3DUnitDress`)
 
 ## Shape and ownership
 
