@@ -572,14 +572,15 @@ func test_v2_stop_pivot_move_hand_computed_l() -> void:
 	assert_false(endpoint.moving, "a saved v2 receipt alone draws its endpoint")
 	assert_false(endpoint.rows[0].has("move"))
 	var still: Dictionary = view.call("along_locomotion_candidate", endpoint, 500000)
-	assert_eq([still.rows[0].x_m - O, still.rows[0].y_m - O, still.rows[0].yaw_udeg], [3, 4, 0.0])
+	# B2e: a march in no battle ends facing its last leg (90), with no pivot back.
+	assert_eq([still.rows[0].x_m - O, still.rows[0].y_m - O, still.rows[0].yaw_udeg], [3, 4, 90000000.0])
 	var sampled: Dictionary = view.call("sample_locomotion_candidate", f.ctx, f.code, envelope)
 	assert_eq(sampled.mode, "bodies", sampled.error)
 	assert_true(sampled.moving)
-	assert_eq(sampled.rows[0].move.ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "pivot", "hold"])
+	assert_eq(sampled.rows[0].move.ops.map(func(op: Dictionary) -> String: return op.kind), ["move", "pivot", "move", "hold"])
 	var before := sampled.duplicate(true)
 	for example: Array in [[150000, 1.5, 0.0, 0.0, "move"], [350000, 3.0, 0.0, 45000000.0, "pivot"],
-			[500000, 3.0, 1.0, 90000000.0, "move"], [850000, 3.0, 4.0, 45000000.0, "pivot"], [1000000, 3.0, 4.0, 0.0, "hold"]]:
+			[500000, 3.0, 1.0, 90000000.0, "move"], [850000, 3.0, 4.0, 90000000.0, "hold"], [1000000, 3.0, 4.0, 90000000.0, "hold"]]:
 		var at: Dictionary = view.call("along_locomotion_candidate", sampled, example[0])
 		assert_eq([at.rows[0].x_m - O, at.rows[0].y_m - O, at.rows[0].yaw_udeg, at.rows[0].op], example.slice(1), str(example[0]))
 	assert_eq(sampled, before, "sampling leaves the copied projection intact")
@@ -706,12 +707,12 @@ func test_v2_stops_turns_and_walks_only_at_admitted_phases() -> void:
 	Stub.calls.clear()
 	# Binary-exact shares (time_q = floor(share x Q)). share -> clip, the MARCH phase it must
 	# show (or the pivot phase), yaw degrees, pack offset. Leg 1: 0..300000, pivot +90 to
-	# 400000, leg 2 to 800000, pivot -90 to 900000, then the hold at the admitted phase.
+	# 400000, leg 2 to 800000, then the hold facing the road (B2e: no pivot back) at the admitted phase.
 	for item: Array in [[0.1875, "MARCH", fposmod(PHASE + 3 * 0.625, 1.0), 0.0, Vector2(1.875, 0)],
 			[0.375, "PIVOT_RIGHT", 0.75, 67.5, Vector2(3, 0)],
 			[0.5, "MARCH", fposmod(PHASE + 4 * 0.25, 1.0), 90.0, Vector2(3, 1)],
-			[0.875, "PIVOT_LEFT", 0.75, 22.5, Vector2(3, 4)],
-			[0.9375, "MARCH", PHASE, 0.0, Vector2(3, 4)]]:
+			[0.875, "MARCH", PHASE, 90.0, Vector2(3, 4)],
+			[0.9375, "MARCH", PHASE, 90.0, Vector2(3, 4)]]:
 		f.clock.share = item[0]
 		layer.step(0.0)
 		assert_true(child.node.is_visible_in_tree(), String(piece.get("candidate_error", "")))
@@ -726,7 +727,7 @@ func test_v2_stops_turns_and_walks_only_at_admitted_phases() -> void:
 		var xz: Vector2 = f.ctx.to_world((item[4] + Vector2(O, O)) / float(ArmySystem.metres_per_pack_px(f.repo)))
 		assert_almost_eq((child.node as Node3D).global_position.x, xz.x, 0.0001)
 		assert_almost_eq((child.node as Node3D).global_position.z, xz.y, 0.0001)
-	assert_eq(Stub.calls, [["PIVOT_RIGHT", 90000000, 0.75], ["PIVOT_LEFT", -90000000, 0.75]], "pivot poses come from the provider")
+	assert_eq(Stub.calls, [["PIVOT_RIGHT", 90000000, 0.75]], "pivot poses come from the provider")
 	# Leaving the candidate seam replays the ordinary clip on the frozen figure.
 	layer.set_candidate_bodies(false)
 	layer.step(0.0)

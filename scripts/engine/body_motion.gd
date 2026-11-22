@@ -619,6 +619,13 @@ static func _loco_policy(repo: DataRepository, piece: String) -> Dictionary:
 static func _loco_op(kind: String, t0: int, t1: int, a: Array, b: Array, yaw: int, turn: int = 0) -> Dictionary:
 	return {"kind": kind, "t0_q": t0, "t1_q": t1, "a": a.duplicate(), "b": b.duplicate(), "yaw0_udeg": yaw, "turn_udeg": turn}
 
+## A heading's nearest whole degree, in microdegrees: where a row facing its march ends.
+@warning_ignore("integer_division")
+static func _loco_whole(heading: int) -> int:
+	return posmod((heading + LOCOMOTION_Q / 2) / LOCOMOTION_Q, 360) * LOCOMOTION_Q
+
+## A body with `face_heading` (a row in no battle) ends facing its last leg's whole-degree
+## heading; any other pivots back to its row facing.
 static func _loco_timeline(body: Dictionary, path: Array, turn_q: int) -> Dictionary:
 	var ops: Array = []
 	var time := 0
@@ -637,7 +644,8 @@ static func _loco_timeline(body: Dictionary, path: Array, turn_q: int) -> Dictio
 		var move_time := _loco_duration(distance, LOCOMOTION_Q, body.budget_m)
 		var turn := _loco_turn(yaw, heading)
 		var pivot_time := _loco_duration(absi(turn), turn_q, LOCOMOTION_TURN)
-		var final_time := _loco_duration(absi(_loco_turn(heading, final_yaw)), turn_q, LOCOMOTION_TURN)
+		var ends: int = _loco_whole(heading) if body.get("face_heading", false) else final_yaw
+		var final_time := _loco_duration(absi(_loco_turn(heading, ends)), turn_q, LOCOMOTION_TURN)
 		if move_time <= 0 or pivot_time < 0 or final_time < 0 or distance > body.budget_m - used \
 			or move_time > LOCOMOTION_Q - time - pivot_time - final_time: break
 		if turn:
@@ -646,6 +654,7 @@ static func _loco_timeline(body: Dictionary, path: Array, turn_q: int) -> Dictio
 		ops.append(_loco_op("move", time, time + move_time, here, path[i], heading))
 		time += move_time
 		yaw = heading
+		final_yaw = ends
 		here = path[i].duplicate()
 		used += distance
 	var finish_turn := _loco_turn(yaw, final_yaw)
@@ -656,7 +665,7 @@ static func _loco_timeline(body: Dictionary, path: Array, turn_q: int) -> Dictio
 		time += duration
 	if time < LOCOMOTION_Q: ops.append(_loco_op("hold", time, LOCOMOTION_Q, here, here, final_yaw))
 	return {"unit": body.unit, "slot": body.slot, "start": body.start.duplicate(), "end": here,
-		"start_yaw_udeg": body.start_yaw_udeg, "final_facing_deg": body.final_facing_deg,
+		"start_yaw_udeg": body.start_yaw_udeg, "final_facing_deg": final_yaw / LOCOMOTION_Q,
 		"budget_m": body.budget_m, "used_m": used, "ops": ops}
 
 static func _loco_path(move: Dictionary) -> Array:
@@ -776,7 +785,7 @@ static func _plan_locomotion(repo: DataRepository, state: GameState, intents: Ar
 			var body := {"unit": code, "slot": int(row.slot), "start": [int(row.x_m), int(row.y_m)],
 				"start_yaw_udeg": int(row.facing_deg) * LOCOMOTION_Q, "final_facing_deg": int(row.facing_deg),
 				"budget_m": 0, "radius": int(repo.unit_footprints[piece].radius_m), "turn_q": int(policy.turn_q),
-				"hostile": false, "realm": str(state.army_roster[code].get("kingdom_code", "")), "enemies": []}
+				"face_heading": BattleSystem.battle_of(state, code).is_empty(), "hostile": false, "realm": str(state.army_roster[code].get("kingdom_code", "")), "enemies": []}
 			for other: String in codes:
 				if ArmySystem._body_enemies(repo, state, code, other): body.enemies.append(other)
 			body.path_m = [body.start.duplicate()]
@@ -786,10 +795,19 @@ static func _plan_locomotion(repo: DataRepository, state: GameState, intents: Ar
 	var ordered := canonical_intents.duplicate(true)
 	var priority: Array = state.military_migration.get("body_battle", {}).get("closed_motion", {}).get("priority", []).duplicate(true) if saved == null else saved.priority.duplicate(true)
 	for identity: Dictionary in priority: identity.slot = int(identity.slot)
+	# A column keeps its unit's best saved place, and inside it its rows go front first.
+	var front := _loco_front(bodies, lookup, canonical_intents)
+	var place := {}
+	for intent: Dictionary in canonical_intents:
+		var at := priority.find(_identity(intent))
+		place[_id(intent)] = at if at >= 0 else priority.size()
+		if front.has(intent.unit): place[intent.unit] = mini(int(place.get(intent.unit, priority.size())), int(place[_id(intent)]))
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var ai := priority.find(_identity(a))
-		var bi := priority.find(_identity(b))
-		if ai != bi: return (ai if ai >= 0 else priority.size()) < (bi if bi >= 0 else priority.size())
+		var ai: int = place[a.unit] if front.has(a.unit) else place[_id(a)]
+		var bi: int = place[b.unit] if front.has(b.unit) else place[_id(b)]
+		if ai != bi: return ai < bi
+		if a.unit == b.unit and front.has(a.unit) and front[a.unit][_id(a)] != front[a.unit][_id(b)]:
+			return front[a.unit][_id(a)] > front[a.unit][_id(b)]
 		return _less(a, b))
 	for intent: Dictionary in ordered:
 		var body: Dictionary = bodies[lookup[_id(intent)]]
@@ -846,19 +864,47 @@ static func _plan_locomotion(repo: DataRepository, state: GameState, intents: Ar
 		"intents": canonical_intents, "priority": next_priority, "boundary": march_boundary.duplicate(true)},
 		"policy_digest": _hash(policies), "moves": moves, "reasons": reasons}
 
+## A column marches front first: per unit in no battle that moves, each requested row's reach
+## along the unit's first requested leg ({unit: {id: reach}}). Its rows reserve in that order at
+## the unit's best saved place, so a rear row follows its front, a reversed column too.
+static func _loco_front(bodies: Array[Dictionary], lookup: Dictionary, intents: Array) -> Dictionary:
+	var heading := {}
+	for intent: Dictionary in intents:
+		if heading.has(intent.unit) or not bodies[lookup[_id(intent)]].face_heading: continue
+		for point: Array in intent.path_m:
+			if point == intent.path_m[0]: continue
+			# The direction and every row are measured from this first moving row (local deltas).
+			heading[intent.unit] = {"from": intent.path_m[0], "d": [int(_difference(point[0], intent.path_m[0][0])), int(_difference(point[1], intent.path_m[0][1]))]}
+			break
+	var out := {}
+	for intent: Dictionary in intents:
+		if not heading.has(intent.unit): continue
+		var h: Dictionary = heading[intent.unit]
+		var dx := _difference(intent.path_m[0][0], h.from[0])
+		var dy := _difference(intent.path_m[0][1], h.from[1])
+		if absf(dx) > LOCAL_LIMIT or absf(dy) > LOCAL_LIMIT:
+			heading.erase(intent.unit)
+			out.erase(intent.unit)
+			continue
+		if not out.has(intent.unit): out[intent.unit] = {}
+		out[intent.unit][_id(intent)] = int(dx) * int(h.d[0]) + int(dy) * int(h.d[1])
+	return out
+
 static func _loco_move_ok(raw: Variant) -> bool:
 	if not raw is Dictionary or not _keys(raw, ["unit", "slot", "start", "end", "start_yaw_udeg", "final_facing_deg", "budget_m", "used_m", "ops"]): return false
 	if not raw.unit is String or raw.unit.is_empty() or not _loco_point(raw.start) or not _loco_point(raw.end): return false
 	for key: String in ["slot", "start_yaw_udeg", "final_facing_deg", "budget_m", "used_m"]:
 		if not _loco_integer(raw[key]) or raw[key] < 0: return false
 	if raw.start_yaw_udeg >= LOCOMOTION_TURN or raw.final_facing_deg >= 360 or raw.budget_m > LOCAL_LIMIT or raw.used_m > raw.budget_m: return false
-	if int(raw.start_yaw_udeg) != int(raw.final_facing_deg) * LOCOMOTION_Q: return false
+	# A row faces a whole degree, so a slice starts at one.
+	if int(raw.start_yaw_udeg) % LOCOMOTION_Q != 0: return false
 	if not raw.ops is Array or raw.ops.is_empty(): return false
 	var time := 0
 	var here: Array = raw.start
 	var yaw: int = int(raw.start_yaw_udeg)
 	var used := 0
 	var previous := ""
+	var heading_end := -1
 	for op: Variant in raw.ops:
 		if not op is Dictionary or not _keys(op, ["kind", "t0_q", "t1_q", "a", "b", "yaw0_udeg", "turn_udeg"]): return false
 		if not op.kind is String or op.kind not in ["hold", "pivot", "move"] or not _loco_point(op.a) or not _loco_point(op.b): return false
@@ -874,6 +920,7 @@ static func _loco_move_ok(raw: Variant) -> bool:
 			var length := _distance_ceil(op.a, op.b)
 			if heading < 0 or heading != yaw or _loco_duration(length, LOCOMOTION_Q, raw.budget_m) != int(op.t1_q) - time: return false
 			used += length
+			heading_end = heading
 			if used > raw.budget_m: return false
 		elif op.kind == "pivot":
 			if op.a != op.b or op.turn_udeg == 0 or op.turn_udeg <= -180000000 or op.turn_udeg > 180000000: return false
@@ -884,6 +931,9 @@ static func _loco_move_ok(raw: Variant) -> bool:
 		time = int(op.t1_q)
 		previous = op.kind
 	if used == 0 and (raw.ops.size() != 1 or raw.ops[0].kind != "hold"): return false
+	# It ends at its row facing, or a moved row at its last leg's whole-degree heading.
+	var final := int(raw.final_facing_deg) * LOCOMOTION_Q
+	if final != int(raw.start_yaw_udeg) and (heading_end < 0 or final != _loco_whole(heading_end)): return false
 	return time == LOCOMOTION_Q and here == raw.end and yaw == int(raw.final_facing_deg) * LOCOMOTION_Q and used == raw.used_m
 
 static func _loco_plan_ok(raw: Variant, battle: bool = false) -> bool:
