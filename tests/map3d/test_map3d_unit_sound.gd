@@ -168,3 +168,15 @@ func test_far_impacts_are_silent() -> void:
 	var sound := Map3DUnitSound.new()
 	sound.play_impacts(repo, cam, _blows(root, "HIT", 1, 11001.0))  # past map3d_unit_sound_far_m
 	assert_eq(root.find_children("ImpactSound", "AudioStreamPlayer3D", true, false).size(), 0)
+
+
+func test_a_detached_figure_is_silent() -> void:
+	# a node out of the tree reports is_visible_in_tree() true: it must still be refused
+	var repo := _impact_repo()
+	var root := Node3D.new()
+	add_child_autofree(root)
+	var cam := Camera3D.new()
+	root.add_child(cam)
+	var loose: Node3D = autofree(Node3D.new())
+	assert_null(Map3DUnitSound.impact(repo, cam, loose, AudioStreamWAV.new(), 0))
+	assert_eq(loose.get_child_count(), 0)

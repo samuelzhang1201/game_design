@@ -129,7 +129,7 @@ static func impact_sound_of(kind: String) -> AudioStream:
 
 static func _play(repo: DataRepository, camera: Camera3D, node: Node3D, stream: AudioStream, extra_db: float,
 		label: String) -> AudioStreamPlayer3D:
-	if stream == null or camera == null or node == null or not node.is_visible_in_tree():
+	if stream == null or camera == null or node == null or not node.is_inside_tree() or not node.is_visible_in_tree():
 		return null
 	var db := gain_db(repo, camera.global_position.distance_to(node.global_position))
 	if db <= SILENT_DB:
