@@ -21,6 +21,7 @@ var _stepping: Array = []  ## released figures walking back to their saved point
 var _waiting: Dictionary = {}  ## key -> figure: front figures left unpaired, guarding toward a foe
 var _impacts: Array = []  ## this frame's contacts, [{kind, at, striker, struck}] (take_impacts)
 var bursts: Map3DImpactBursts  ## the meeting-point bursts; made by `step` on first use (none in a bare run)
+var scrum := Map3DDuelScrum.new()  ## the mixed fight's areas and points (spec 2026-11-21 melee scrum)
 var sound := Map3DUnitSound.new()  ## the blows' clash and thud, sounded from `step`
 
 
@@ -34,6 +35,10 @@ func take_impacts() -> Array:
 
 func is_duelling(anim: AnimationPlayer) -> bool:
 	return is_instance_valid(anim) and anim.has_meta("duel")
+
+
+func scrum_targets(id: int) -> Dictionary: return scrum.targets(id)  ## battle `id`'s figure key -> point (tests, bench)
+func scrum_area(id: int) -> Dictionary: return scrum.area_of(id)
 
 
 func pair_time(key: String) -> float:
@@ -76,6 +81,7 @@ static func tune_of(repo: DataRepository) -> Dictionary:
 	out.merge(Map3DImpact.tune_of(repo))
 	out["near_m"] = repo.bal("map3d_impact_near_m")
 	out["at_h"] = repo.bal("map3d_impact_at_h")
+	for key: String in ["depth_h", "space_h", "push_h", "settle_h", "cross", "spread_h", "pair_h"]: out[key] = repo.bal("map3d_melee_" + key)
 	return out
 
 
@@ -113,9 +119,11 @@ func fall(child: Dictionary, art: Dictionary, _tune: Dictionary) -> void:
 	_bodies.append({"child": child, "t": 0.0, "clip_s": anim.get_animation(clip).length, "key": key})
 
 
-## Each battle's front figures that can duel, by side ("a" = its attacking side), in battle id order.
+## Each battle's figures that can duel, by side ("a" = its attacking side), in battle id order:
+## under the scrum (`map3d_melee_scrum`) both ranks but each unit's standard bearer, else the front.
 static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 	var by_id: Dictionary = {}
+	var scrum := ctx.repo.bal("map3d_melee_scrum") > 0.0
 	for code: String in pieces:
 		var piece: Dictionary = pieces[code]
 		if piece.get("layout", "") != "physical_groups" or code.begins_with(Sighting.GHOST_CODE):
@@ -125,7 +133,7 @@ static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 			continue
 		var id := int(battle.get("id", 0))  # a hand-built battle may carry none
 		if not by_id.has(id):
-			by_id[id] = {"id": id, "rounds": int(battle["rounds"]), "across": Vector2.ZERO, "across_code": "", "a": [], "b": []}
+			by_id[id] = {"id": id, "rounds": int(battle["rounds"]), "across": Vector2.ZERO, "across_code": "", "a": [], "b": [], "scrum": scrum}
 		if code in battle["att"] and (by_id[id]["across_code"] == "" or code < by_id[id]["across_code"]):
 			var heading := WarFront.facing_vector(int(piece.get("facing_deg", 0)))  # the attackers' front, whatever the pieces' order
 			by_id[id]["across"] = Vector2(-heading.y, heading.x)
@@ -133,11 +141,13 @@ static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 		var art: Dictionary = ctx.repo.army_art.get(String(piece.get("model", "")), {})
 		for group: Dictionary in piece["groups"]:
 			var child: Dictionary = group["piece"]
-			if String(group["role"]) != "front" or (child["anims"] as Array).is_empty() \
+			var bearer := is_same(group, piece["groups"][0])  # Map3DUnitStandard.first_figure's: it keeps its slot
+			if (bearer if scrum else String(group["role"]) != "front") or (child["anims"] as Array).is_empty() \
 					or not can_duel(child, art, child["anims"][0]):
 				continue
 			by_id[id]["a" if code in battle["att"] else "b"].append({"key": "%s:%d" % [code, int(group["slot"])],
 				"code": code, "slot": int(group["slot"]), "anim": child["anims"][0], "child": child, "art": art, "piece": piece,
+				"rank": String(group["role"]), "bearer": bearer,
 				"xz": Map3DBattleGroups.stand_xz(ctx, piece, group),
 				"h": float(child["height_m"]) * (child["node"] as Node3D).global_basis.get_scale().y})
 	var ids := by_id.keys()
@@ -161,7 +171,9 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 			h = maxf(h, float(f["h"]))
 		var reach := float(tune["reach_h"]) * h
 		var taken: Dictionary = {}
-		for key: String in _pairs:  # a pair whose two figures still stand within reach keeps its exchange
+		if battle.get("scrum", false):
+			scrum.pair(battle, figs, _pairs, wanted, taken, tune, h)
+		for key: String in ([] if battle.get("scrum", false) else _pairs):  # a pair whose two figures still stand within reach keeps its exchange
 			var ka := String(_pairs[key]["figs"][0]["key"])
 			var kb := String(_pairs[key]["figs"][1]["key"])
 			if figs.has(ka) and figs.has(kb) and not taken.has(ka) and not taken.has(kb) \
@@ -170,7 +182,7 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 				taken[ka] = true
 				taken[kb] = true
 		var free := func(side: Array) -> Array: return side.filter(func(f: Dictionary) -> bool: return not taken.has(f["key"]))
-		for p: Dictionary in Map3DDuel.pairs(free.call(battle["a"]), free.call(battle["b"]), battle["across"], reach):
+		for p: Dictionary in ([] if battle.get("scrum", false) else Map3DDuel.pairs(free.call(battle["a"]), free.call(battle["b"]), battle["across"], reach)):
 			wanted["%s|%s" % [p["a"], p["b"]]] = [figs[p["a"]], figs[p["b"]]]
 			taken[p["a"]] = true
 			taken[p["b"]] = true
@@ -185,7 +197,8 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 		if not wanted.has(key):
 			for f: Dictionary in _pairs[key]["figs"]:
 				if waiting.has(f["key"]) and is_instance_valid(f["anim"]) and (f["anim"] as AnimationPlayer).has_meta("duel"):
-					Map3DDuelMelee.unstep(f)  # its partner gone: it steps back and waits, still off its chain
+					if f.has("scrum"): (f["child"] as Dictionary).erase("knock_offset")  # in the scrum it waits where it stands
+					else: Map3DDuelMelee.unstep(f)  # its partner gone: it steps back and waits
 					placed[f["code"]] = true
 				elif _release(f):
 					placed[f["code"]] = true
@@ -207,7 +220,7 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 		if was_stepping or not (f["anim"] as AnimationPlayer).has_meta("duel"):
 			_stepping = _stepping.filter(func(w: Dictionary) -> bool: return not is_same(w["anim"], f["anim"]))
 			_claim(f)
-		if Map3DDuelMelee.face(f, waiting[key]["foes"]):
+		if scrum.aim(f, waiting[key]["foes"], tune) if f.has("scrum") else Map3DDuelMelee.face(f, waiting[key]["foes"]):
 			placed[f["code"]] = true
 		if not _pace(f, delta, running):  # it turns (or steps back) paced; standing, it keeps the clock
 			(f["anim"] as AnimationPlayer).speed_scale = 1.0 if running else 0.0
@@ -233,7 +246,7 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 			_pairs[key].erase("impact")
 			_begin(_pairs[key], key, tune)
 		_wait_for_bodies(figs, tune)
-		if _aim(figs, tune):
+		if scrum.aim_pair(figs, tune) if figs[0].has("scrum") else _aim(figs, tune):
 			placed[figs[0]["code"]] = true
 			placed[figs[1]["code"]] = true
 	for key: String in _pairs:
@@ -247,6 +260,7 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 			_stepping.erase(f)
 			_hand_back(f, tune)
 	_fade(delta, running, tune)
+	scrum.keep(battles.map(func(b: Dictionary) -> int: return int(b["id"])))
 	return placed.keys()
 
 
@@ -294,13 +308,17 @@ static func _claim(f: Dictionary) -> void:
 ## Back to its saved spot and facing, walking backwards (`_stepping`, `_pace`);
 ## false for a figure freed with its piece (e.g. a refresh under the pause menu), or a body falling.
 static func _release(f: Dictionary) -> bool:
-	(f["child"] as Dictionary).erase("knock_offset")  # no figure stays knocked (nor held: `_pace` / `_hand_back` set its speed)
-	(f["child"] as Dictionary).erase("duel_offset")
-	(f["child"] as Dictionary).erase("duel_yaw")
-	(f["child"] as Dictionary)["step_facing"] = true  # it steps back facing its foe
+	var child: Dictionary = f["child"]
+	child.erase("knock_offset")  # no figure stays knocked (nor held: `_pace` / `_hand_back` set its speed)
+	child.erase("duel_offset")
+	child.erase("duel_yaw")
+	if child.has("scrum_far"):
+		child.erase("step_facing")  # from the scrum it walks back turned into its way
+	child["step_up" if child.has("scrum_far") else "step_facing"] = true  # else it steps back facing its foe
+	child.erase("scrum_far")
 	if not is_instance_valid(f["anim"]) or (f["anim"] as AnimationPlayer).has_meta("fallen"):
 		return false
-	(f["child"] as Dictionary)["walking"] = true  # its walk back starts when its piece is placed
+	child["walking"] = true  # its walk back starts when its piece is placed
 	return true
 
 

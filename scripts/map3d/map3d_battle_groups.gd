@@ -279,6 +279,7 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 	var extent := Vector2.ZERO
 	var height := 0.0
 	var easing := false
+	var figure_rects: Array[Rect2] = []  ## each drawn soldier's box: a click on one picks its unit in a scrum (Map3DPicker.figure_at)
 	if piece.has("starts"):
 		var targets: Array = piece["groups"].map(func(group: Dictionary) -> Dictionary: return _target(ctx, piece, group))
 		var heading := WarFront.facing_vector(int(piece["facing_deg"]))
@@ -325,8 +326,10 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 				if not ctx.camera.is_position_behind(point):
 					child_box = child_box.expand(ctx.camera.unproject_position(point) / ctx.viewport_px_scale())
 			group["screen_bounds"] = [child_box.position.x, child_box.position.y, child_box.size.x, child_box.size.y]
+			figure_rects.append(child_box)
 			box = box.merge(child_box) if has_box else child_box
 			has_box = true
+	piece["figure_rects"] = figure_rects
 	piece["height_m"] = height
 	piece["extent"] = extent
 	piece["half_w_m"] = maxf(extent.x, extent.y)
