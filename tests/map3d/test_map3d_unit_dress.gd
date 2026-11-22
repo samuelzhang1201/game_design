@@ -120,19 +120,40 @@ func test_war_room_material_untouched() -> void:
 	assert_same(_body(piece["figs"][0]).get_active_material(0), before)
 
 
-func test_the_installed_table_tints_every_arm_on_the_infantry_model() -> void:
+func test_the_installed_table_tints_every_land_arm() -> void:
 	var models := GameArt.table(GameArt.ARMY_MODELS)
 	var tints := GameArt.table(GameArt.UNIT_REALM_TINT)
 	assert_not_null(tints)
 	if tints == null: return
 	var infantry := models.of("infantry")
 	for key: String in models.art:
+		var mat := tints.of(key) as ShaderMaterial
+		assert_not_null(mat, key + " wears its realm's colour")
+		if mat == null: continue
 		if models.of(key) == infantry:
-			assert_true(tints.of(key) is ShaderMaterial, key)
-		else:
-			assert_null(tints.of(key), key)
-	var mat := tints.of("infantry") as ShaderMaterial
-	assert_not_null(mat.get_shader_parameter("tunic_mask"))
-	# a fading figure (a fall, Map3DCourierRide.apply) draws in the transparent pass too:
-	# the overlay must sort after it there, or the tint may vanish while it fades
-	assert_gt(mat.render_priority, 0)
+			assert_same(mat, tints.of("infantry"), key + " shares the infantry model's tint")
+		assert_not_null(mat.get_shader_parameter("tunic_mask"), key)
+		# a fading figure (a fall, Map3DCourierRide.apply) draws in the transparent pass too:
+		# the overlay must sort after it there, or the tint may vanish while it fades
+		assert_gt(mat.render_priority, 0, key)
+
+
+## Each installed model, dressed: its body takes the overlay, a prop on its own texture does not.
+func test_every_installed_model_dresses_its_body_and_not_its_props() -> void:
+	var repo := SuiteData.repo()
+	var models := GameArt.table(GameArt.ARMY_MODELS)
+	var tints := GameArt.table(GameArt.UNIT_REALM_TINT)
+	for key: String in ["infantry", "cavalry", "royal", "archers"]:
+		var fig := (models.of(key) as PackedScene).instantiate() as Node3D
+		add_child_autofree(fig)
+		Map3DUnitDress.dress(repo, {"figs": [fig], "model": key}, "", tints)
+		var atlas: Texture2D = (tints.of(key) as ShaderMaterial).get_shader_parameter("albedo_atlas")
+		var dressed := 0
+		for m: MeshInstance3D in Map3DUnits.meshes(fig):
+			var own := m.get_active_material(0) as BaseMaterial3D
+			if own != null and own.albedo_texture == atlas:
+				dressed += 1
+				assert_same(m.material_overlay, tints.of(key), key + ": the body wears the tint")
+			else:
+				assert_null(m.material_overlay, key + ": a prop keeps its own colours (" + m.name + ")")
+		assert_eq(dressed, 1, key + ": one body mesh on the tinted atlas")

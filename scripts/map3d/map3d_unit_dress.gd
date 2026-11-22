@@ -4,7 +4,8 @@ extends RefCounted
 ## step 1: the sides of a mixed fight told apart at a glance). A figure mesh of an arm listed in
 ## GameArt.UNIT_REALM_TINT takes that table's overlay material (it paints the model's tunic mask
 ## over the scene's own material, which the WAR ROOM's tin and ink keep reading) and the realm's
-## colour as its `realm_tint` instance parameter. An arm with no entry keeps its own colours.
+## colour as its `realm_tint` instance parameter. An arm with no entry keeps its own colours; a mesh
+## not drawn from the overlay's `albedo_atlas` (a prop on its own texture) is left bare.
 
 
 ## The standard bearer (Map3DUnitStandard, as the layer always placed it), then the tunics.
@@ -49,14 +50,25 @@ static func dress(repo: DataRepository, piece: Dictionary, kingdom_code: String,
 	var mat := table.of(String(piece.get("model", ""))) as Material if table != null else null
 	if mat == null:
 		return
+	var atlas: Texture2D = (mat as ShaderMaterial).get_shader_parameter("albedo_atlas") if mat is ShaderMaterial else null
 	var colour := tint_of(repo, kingdom_code)
 	var fresh: bool = piece.get("tint") != colour
 	piece["tint"] = colour
 	for fig: Node in _figures(piece):
 		for m: MeshInstance3D in _bodies(fig):
+			if not _on_atlas(m, atlas):
+				continue  # a carried prop on its own texture (the archer's bow, quiver, arrow)
 			if fresh or m.material_overlay != mat:
 				m.material_overlay = mat
 				m.set_instance_shader_parameter("realm_tint", colour)
+
+
+## Whether mesh `m` is drawn from `atlas`, the one its overlay's mask is painted on (no atlas: any mesh).
+static func _on_atlas(m: MeshInstance3D, atlas: Texture2D) -> bool:
+	if atlas == null or m.mesh == null or m.mesh.get_surface_count() == 0:
+		return atlas == null
+	var own := m.get_active_material(0) as BaseMaterial3D
+	return own == null or own.albedo_texture == atlas
 
 
 static func _figures(piece: Dictionary) -> Array:
