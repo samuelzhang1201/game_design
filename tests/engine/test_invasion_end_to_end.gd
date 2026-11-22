@@ -153,7 +153,7 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 					seen["fell"] = today
 					seen["fallen"] = e
 					seen["before"] = before
-					seen["occupied_at_fall"] = (s.ai_hosts[main].get("occupied", {}) as Dictionary).keys()
+					seen["occupied_at_fall"] = ((s.occupations.get(String(e["town"]), {}) as Dictionary).get("cells", {}) as Dictionary).keys()
 					seen["mode_at_fall"] = String(s.ai_hosts[main]["mode"])
 					seen["crown_held_at_fall"] = EnemyAi.target_held(repo, s, "town", String(seen["town"]))
 					for code: String in EnemyAi.live_regiments(repo, s, main):

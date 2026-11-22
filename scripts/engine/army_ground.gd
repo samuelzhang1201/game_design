@@ -194,16 +194,12 @@ static func _seats(repo: DataRepository, state: GameState) -> Dictionary:
 	return state.town_seat if state != null and not state.army_roster.is_empty() else ArmySplit.seats_of(repo)
 
 
-## Whether kingdom `k` holds `town` now (its province's owner) — and no enemy
-## host occupies it (a town taken by siege, SiegeSystem.capture: its province
-## does not move, yet no unit of the crown's holds its seat or camps by it
-## until it is liberated).
+## Whether kingdom `k` holds `town` now (SiegeSystem.holder_of): its occupier
+## while it is occupied (a town taken by siege, either side's: its province does
+## not move, yet the old holder's units hold no seat or camp by it until it is
+## freed, and the occupier's do), else its province's owner.
 static func holds(repo: DataRepository, state: GameState, k: String, town: String) -> bool:
-	var b: Dictionary = repo.burgs.get(town, {})
-	if b.is_empty() or MapOwnership.owner_of(repo, state, String(b.get("province_code", ""))) != k:
-		return false
-	return state == null or state.ai_hosts.is_empty() \
-		or SiegeSystem.occupier_of(state, EnemyAi.target_cell(repo, state, EnemyAi.KIND_TOWN, town)) == ""
+	return repo.burgs.has(town) and SiegeSystem.holder_of(repo, state, town) == k
 
 
 ## The unit holding `town`'s seat, "" for an empty one.
