@@ -165,3 +165,79 @@ func test_a_withdrawing_unit_walks_back() -> void:
 		g["piece"]["walking"] = false
 	driver.run(Map3DDuelDriver.gather(ctx, pieces), DT, true, tune)
 	assert_eq(_claimed(a).size(), 0, "arrived, every figure is handed back")
+
+
+func test_a_fall_in_the_scrum_lies_where_it_fought() -> void:
+	# Review focus 3: the body lies where it fought; the replacement walks from its own place to the scrum
+	var a := _piece(10, 0, 0, -1)
+	var b := _piece(6, 0, 8, 1)
+	var pieces := _fight({"A": a}, {"B": b})
+	var driver := Map3DDuelDriver.new()
+	for i in 5:
+		driver.run(Map3DDuelDriver.gather(ctx, pieces), DT, true, tune)
+	var paired := driver.paired_slots("A")
+	var free: Array = range(1, 10).filter(func(s: int) -> bool: return not s in paired)
+	assert_false(free.is_empty(), "five foes for nine: some A figures wait")
+	var removed: int = free[-1]
+	var previous: Dictionary = {}
+	for g: Dictionary in a["groups"]:
+		previous[int(g["slot"])] = g["piece"]
+	var kept: Array = previous.keys().filter(func(s: int) -> bool: return s != removed)
+	var plan := driver.plan_falls("A", [removed], kept)
+	var faller := int(plan[0]["faller"])
+	assert_true(faller in paired, "a duellist falls for the removed waiting figure")
+	var body: Dictionary = previous[faller]
+	var fought: Vector2 = body["duel_offset"]
+	var walker: Dictionary = previous[removed]
+	var bodies := Map3DBattleGroups.fall_swap(previous, plan)
+	assert_eq(bodies, [body])
+	a["groups"] = (a["groups"] as Array).filter(func(g: Dictionary) -> bool: return int(g["slot"]) != removed)
+	for g: Dictionary in a["groups"]:
+		g["piece"] = previous[int(g["slot"])]
+	driver.fall(body, ART, tune)
+	for i in 3:
+		driver.run(Map3DDuelDriver.gather(ctx, pieces), DT, true, tune)
+	assert_true((body["anims"][0] as AnimationPlayer).has_meta("fallen"))
+	assert_eq(body.get("duel_offset"), fought, "the body keeps its scrum offset: it lies where it fought")
+	assert_true(walker.get("step_up", false), "the replacement walks up turned into its way")
+	var key := "A:%d" % faller
+	var target: Vector2 = driver.scrum_targets(1)[key]
+	assert_true(_inside(target, driver.scrum_area(1)), "to a point in the area")
+	var group: Dictionary = (a["groups"] as Array).filter(func(g: Dictionary) -> bool: return int(g["slot"]) == faller)[0]
+	assert_almost_eq(((walker["duel_offset"] as Vector2) + Map3DBattleGroups.stand_xz(ctx, a, group)).distance_to(target),
+		0.0, float(tune["settle_h"]) * 2.0 * unit + 1e-4, "its offset takes it there from the faller's row")
+	assert_true(driver.is_duelling(walker["anims"][0]))
+
+
+func test_no_scrum_against_unseen_figures() -> void:
+	# Review focus 4: the foe's figures are not drawn (unseen, or a ghost): no scrum, the seen side stands in its block
+	var a := _piece(10, 0, 0, -1)
+	var pieces := _fight({"A": a}, {"B": {}})
+	pieces.erase("B")
+	pieces[Sighting.GHOST_CODE + "B"] = _piece(10, 0, 8, 1)
+	var driver := Map3DDuelDriver.new()
+	for i in 5:
+		driver.run(Map3DDuelDriver.gather(ctx, pieces), DT, true, tune)
+	assert_eq(driver.scrum_targets(1), {}, "no fighting area")
+	assert_eq(_claimed(a).size(), 0, "nobody is claimed")
+	for g: Dictionary in a["groups"]:
+		assert_false((g["piece"] as Dictionary).has("duel_offset"), "A:%d stands in its block" % int(g["slot"]))
+
+
+func test_one_area_per_battle_archers_stay_out() -> void:
+	# Review focus 5: several units a side with archers among them: one area, the archers never enter it
+	var att := {"A1": _piece(4, 0, 0, -1), "A2": _piece(4, 10, 0, -1), "A3": _piece(4, 20, 0, -1),
+		"AR": _piece(4, 30, 0, -1, "bowman")}
+	var def := {"B1": _piece(4, 0, 8, 1), "B2": _piece(4, 10, 8, 1)}
+	var pieces := _fight(att, def)
+	var battles := Map3DDuelDriver.gather(ctx, pieces)
+	assert_eq(battles.size(), 1, "one battle record, one gathering")
+	var driver := Map3DDuelDriver.new()
+	driver.run(battles, DT, true, tune)
+	var targets := driver.scrum_targets(1)
+	assert_eq(targets.size(), 15, "every infantry figure but the bearers, both sides, in the one area")
+	assert_false(targets.keys().any(func(k: String) -> bool: return k.begins_with("AR:")), "no archer in the area")
+	assert_eq(_claimed(att["AR"]).size(), 0, "the archers keep their block")
+	var area := driver.scrum_area(1)
+	for key: String in targets:
+		assert_true(_inside(targets[key], area), key + " in the one area")
