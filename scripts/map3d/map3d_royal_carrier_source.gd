@@ -16,7 +16,7 @@ const _SOURCES: Dictionary = {
 	"res://scripts/map3d/map3d_unit_glow.gd":"48aa3aecc97c901cb4f7e138962a49bf47a315676a241377c01807659c852874",
 	"res://scripts/map3d/map3d_unit_settle.gd":"26ba22e211409286e6a750a34a3821a483811aae95ca1f086396c53b38f76a2f",
 	"res://scripts/map3d/map3d_clip_chain.gd":"060d7d1b304c8f4d885a925496913fbd954dabae4cc4021ad3758f03001eacde",
-	"res://scripts/map3d/map3d_unit_rig.gd":"2686b6e6f226df7df3dc112969d831952040a4125e1539defce866aec9c323b2",
+	"res://scripts/map3d/map3d_unit_rig.gd":"2c4b803c4ae0dc6b9b5edab71c3489cad449c03a3a0382fd2844a4c378c3bc7f",
 	"res://scripts/map3d/map3d_royal_locomotion_source.gd":"b4301e3953e92676cdb0386bf4324c9e779687c665dfd9c9433a0083d3e827e7",
 	"res://scripts/map3d/map3d_world_loader.gd":"b59e4fb2cb7223fbd1989047fce0b2c5e05ab2cd0f3878a24fc212c9dc4c61bd",
 	"res://scripts/engine/body_motion.gd":"9569c803075e8d598341de5a0bcda3e137de7a053b8678faf12ea64341f81328",
