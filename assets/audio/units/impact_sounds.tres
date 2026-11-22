@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://bwl3yvbcmxxg3"]
+
+[ext_resource type="AudioStream" uid="uid://c1jn0tilqk213" path="res://assets/audio/units/impact_hit_1.wav" id="1_b025s"]
+[ext_resource type="AudioStream" uid="uid://j53uunvuv4sm" path="res://assets/audio/units/impact_hit_2.wav" id="2_nmdim"]
+[ext_resource type="AudioStream" uid="uid://0iqrro7c1m51" path="res://assets/audio/units/impact_hit_3.wav" id="3_0ygy7"]
+[ext_resource type="AudioStream" uid="uid://bvrclr56voflt" path="res://assets/audio/units/impact_hit_4.wav" id="4_vlcfv"]
+[ext_resource type="AudioStream" uid="uid://10unw1oglnrj" path="res://assets/audio/units/impact_hit_5.wav" id="5_fi6yq"]
+[ext_resource type="AudioStream" uid="uid://lv6jir8veq3d" path="res://assets/audio/units/impact_clash_1.wav" id="6_s5ypt"]
+[ext_resource type="AudioStream" uid="uid://f27cqax37jxk" path="res://assets/audio/units/impact_clash_2.wav" id="7_mq04n"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="8_7djpy"]
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_mdtb4"]
+random_pitch = 1.08
+random_volume_offset_db = 1.5
+streams_count = 5
+stream_0/stream = ExtResource("1_b025s")
+stream_1/stream = ExtResource("2_nmdim")
+stream_2/stream = ExtResource("3_0ygy7")
+stream_3/stream = ExtResource("4_vlcfv")
+stream_4/stream = ExtResource("5_fi6yq")
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_ub3x3"]
+random_pitch = 1.08
+random_volume_offset_db = 1.5
+streams_count = 2
+stream_0/stream = ExtResource("6_s5ypt")
+stream_1/stream = ExtResource("7_mq04n")
+
+[resource]
+script = ExtResource("8_7djpy")
+art = Dictionary[String, Resource]({
+"BLOCK": SubResource("AudioStreamRandomizer_ub3x3"),
+"HIT": SubResource("AudioStreamRandomizer_mdtb4")
+})

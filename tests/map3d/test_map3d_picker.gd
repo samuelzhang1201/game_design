@@ -192,3 +192,18 @@ func test_overlapping_symbols_pick_the_top_painted_unit_on_land_and_off_terrain(
 	assert_eq(counted.marks[0]["code"], "covered", "picking must not reorder the paint list")
 	picker.ctx = real_view.context()
 	picker.view = real_view
+
+
+func test_a_click_on_a_scrum_figure_picks_its_unit() -> void:
+	# the mixed fight (spec 2026-11-21-infantry-melee-scrum-design.md): two units' boxes overlap; the soldier under the click names his
+	var figures := {"A": [Rect2(0, 0, 10, 20), Rect2(40, 0, 10, 20)], "B": [Rect2(20, 0, 10, 20)]}
+	assert_eq(Map3DPicker.figure_at(figures, Vector2(25, 10)), "B", "inside only B's soldier")
+	assert_eq(Map3DPicker.figure_at(figures, Vector2(45, 10)), "A")
+	assert_eq(Map3DPicker.figure_at(figures, Vector2(35, 10)), "", "between soldiers: none (the unit boxes decide)")
+
+
+func test_the_nearer_figure_wins() -> void:
+	var figures := {"A": [Rect2(0, 0, 10, 20)], "B": [Rect2(4, 6, 10, 20)]}
+	assert_eq(Map3DPicker.figure_at(figures, Vector2(6, 10)), "B", "the lower bottom edge stands nearer the camera")
+	var tie := {"B": [Rect2(0, 0, 10, 20)], "A": [Rect2(2, 0, 10, 20)]}
+	assert_eq(Map3DPicker.figure_at(tie, Vector2(5, 10)), "A", "a tie goes to the smaller code")
