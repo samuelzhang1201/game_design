@@ -9,11 +9,26 @@ extends RefCounted
 ## which Map3DBattleGroups walks it to) — the saved point never moves. Every
 ## step (in, back out once released, a tail man's up) walks its MARCH paced to
 ## the ground it covers (`step_rate`), backwards when it backs away.
+## Every blow lands (spec 2026-11-21-infantry-melee-scrum-design.md): at the
+## turn's contact instant both figures hold a hit-stop, the struck one is
+## knocked back (`knock_offset`, Map3DImpact), a pooled burst shows
+## (Map3DImpactBursts) and the contact is told (`take_impacts`).
 
 var _pairs: Dictionary = {}  ## "code:slot|code:slot" -> {figs, t, n, turn}
 var _bodies: Array = []  ## the fallen: [{child, t, clip_s, key}] (Map3DFall; key: the duel slot it fell from)
 var _losses: Dictionary = {}  ## code -> how many losses it has shown
 var _stepping: Array = []  ## released figures walking back to their saved point, handed back on arrival
+var _waiting: Dictionary = {}  ## key -> figure: front figures left unpaired, guarding toward a foe
+var _impacts: Array = []  ## this frame's contacts, [{kind, at, striker, struck}] (take_impacts)
+var bursts: Map3DImpactBursts  ## the meeting-point bursts; made by `step` on first use (none in a bare run)
+
+
+## The contacts of the last frame run, each {"kind": "HIT"|"BLOCK", "at": Vector3,
+## "striker": figure, "struck": figure}; drained (the unit sounds play them).
+func take_impacts() -> Array:
+	var out := _impacts
+	_impacts = []
+	return out
 
 
 func is_duelling(anim: AnimationPlayer) -> bool:
@@ -37,7 +52,15 @@ func paired_slots(code: String) -> Array[int]:
 func step(ctx: Map3DContext, pieces: Dictionary, delta: float, place: Callable) -> void:
 	if ctx == null or ctx.state() == null:
 		return
-	for code: String in run(gather(ctx, pieces), delta, ctx.clock_speed() > 0, tune_of(ctx.repo)):
+	var tune := tune_of(ctx.repo)
+	if ctx.camera != null:
+		tune["eye"] = ctx.camera.global_position
+	if bursts == null and not pieces.is_empty():
+		var node: Variant = (pieces.values()[0] as Dictionary).get("node")
+		if is_instance_valid(node) and (node as Node3D).get_parent() is Node3D:
+			bursts = Map3DImpactBursts.new((node as Node3D).get_parent(), GameArt.table(GameArt.IMPACT_BURSTS),
+				int(ctx.repo.bal("map3d_impact_burst_max")))
+	for code: String in run(gather(ctx, pieces), delta, ctx.clock_speed() > 0, tune):
 		if pieces.has(code):
 			place.call(code, pieces[code])
 
@@ -48,6 +71,9 @@ static func tune_of(repo: DataRepository) -> Dictionary:
 		out[key.trim_suffix("_s")] = repo.bal("map3d_duel_" + key)
 	out["fall_hold"] = repo.bal("map3d_fall_hold_s")
 	out["fall_fade"] = repo.bal("map3d_fall_fade_s")
+	out.merge(Map3DImpact.tune_of(repo))
+	out["near_m"] = repo.bal("map3d_impact_near_m")
+	out["at_h"] = repo.bal("map3d_impact_at_h")
 	return out
 
 
@@ -121,6 +147,8 @@ static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array:
 	var placed: Dictionary = {}
 	var wanted: Dictionary = {}
+	var waiting: Dictionary = {}  ## key -> {f, foes}: this frame's front figures left unpaired
+	_impacts.clear()
 	for battle: Dictionary in battles:
 		if int(battle["rounds"]) <= 0:
 			continue
@@ -142,34 +170,74 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 		var free := func(side: Array) -> Array: return side.filter(func(f: Dictionary) -> bool: return not taken.has(f["key"]))
 		for p: Dictionary in Map3DDuel.pairs(free.call(battle["a"]), free.call(battle["b"]), battle["across"], reach):
 			wanted["%s|%s" % [p["a"], p["b"]]] = [figs[p["a"]], figs[p["b"]]]
+			taken[p["a"]] = true
+			taken[p["b"]] = true
+		for side: String in ["a", "b"]:  # no one fights air: the front left over guards toward a foe
+			var foes: Array = battle["b" if side == "a" else "a"]
+			if foes.is_empty():
+				continue
+			for f: Dictionary in battle[side]:
+				if not taken.has(f["key"]):
+					waiting[f["key"]] = {"f": f, "foes": foes}
 	for key: String in _pairs.keys():
 		if not wanted.has(key):
 			for f: Dictionary in _pairs[key]["figs"]:
-				if _release(f):
+				if waiting.has(f["key"]) and is_instance_valid(f["anim"]) and (f["anim"] as AnimationPlayer).has_meta("duel"):
+					Map3DDuelMelee.unstep(f)  # its partner gone: it steps back and waits, still off its chain
+					placed[f["code"]] = true
+				elif _release(f):
 					placed[f["code"]] = true
 					_stepping.append(f)
 			_pairs.erase(key)
+	var kept := func(f: Dictionary) -> bool:  # by its figure, not its key (a fall swap gives it another row)
+		return waiting.values().any(func(w: Dictionary) -> bool: return is_same(w["f"]["anim"], f["anim"])) \
+			or wanted.values().any(func(pair: Array) -> bool: return pair.any(func(g: Dictionary) -> bool: return is_same(g["anim"], f["anim"])))
+	for key: String in _waiting:
+		var f: Dictionary = _waiting[key]
+		if not kept.call(f) and _release(f):
+			placed[f["code"]] = true
+			_stepping.append(f)
+	_waiting = {}
+	for key: String in waiting:
+		var f: Dictionary = waiting[key]["f"]
+		_waiting[key] = f
+		var was_stepping := _stepping.any(func(w: Dictionary) -> bool: return is_same(w["anim"], f["anim"]))
+		if was_stepping or not (f["anim"] as AnimationPlayer).has_meta("duel"):
+			_stepping = _stepping.filter(func(w: Dictionary) -> bool: return not is_same(w["anim"], f["anim"]))
+			_claim(f)
+		if Map3DDuelMelee.face(f, waiting[key]["foes"]):
+			placed[f["code"]] = true
+		if not _pace(f, delta, running):  # it turns (or steps back) paced; standing, it keeps the clock
+			(f["anim"] as AnimationPlayer).speed_scale = 1.0 if running else 0.0
 	for key: String in wanted:
 		var figs: Array = wanted[key]
 		if not _pairs.has(key):
 			# each pair opens after its own hashed guard, so a front never strikes in unison
 			_pairs[key] = {"figs": figs, "t": -Map3DMarchLag.unit(key + "|open") * float(tune["open_max"]), "n": 0}
 			for f: Dictionary in figs:
-				_stepping = _stepping.filter(func(w: Dictionary) -> bool: return not is_same(w["anim"], f["anim"]))
 				_claim(f)
 			_begin(_pairs[key], key, tune)
+		for f: Dictionary in figs:  # a paired figure never walks back on its own
+			_stepping = _stepping.filter(func(w: Dictionary) -> bool: return not is_same(w["anim"], f["anim"]))
+		var was: Array = _pairs[key]["figs"]
 		_pairs[key]["figs"] = figs
-		if figs.any(func(f: Dictionary) -> bool: return not (f["anim"] as AnimationPlayer).has_meta("duel")):
-			for f: Dictionary in figs:  # a figure built again (its piece rebuilt): claimed, the turn restarted on it
+		if figs.any(func(f: Dictionary) -> bool: return not (f["anim"] as AnimationPlayer).has_meta("duel")) \
+				or not is_same(was[0]["anim"], figs[0]["anim"]) or not is_same(was[1]["anim"], figs[1]["anim"]):
+			for f: Dictionary in figs:  # a figure built again, or another in its row (a fall): claimed, the turn restarted on it
 				_claim(f)
+				(f["child"] as Dictionary).erase("knock_offset")
 			_pairs[key]["t"] = 0.0
+			_pairs[key].erase("hold")
+			_pairs[key].erase("impact")
 			_begin(_pairs[key], key, tune)
 		_wait_for_bodies(figs, tune)
 		if _aim(figs, tune):
 			placed[figs[0]["code"]] = true
 			placed[figs[1]["code"]] = true
 	for key: String in _pairs:
-		_advance(_pairs[key], key, delta, running, tune)
+		var knocked := _advance(_pairs[key], key, delta, running, tune)
+		if knocked != "":
+			placed[knocked] = true
 	for f: Dictionary in _stepping.duplicate():
 		if not is_instance_valid(f["anim"]):
 			_stepping.erase(f)  # freed with its piece
@@ -224,6 +292,7 @@ static func _claim(f: Dictionary) -> void:
 ## Back to its saved spot and facing, walking backwards (`_stepping`, `_pace`);
 ## false for a figure freed with its piece (e.g. a refresh under the pause menu), or a body falling.
 static func _release(f: Dictionary) -> bool:
+	(f["child"] as Dictionary).erase("knock_offset")  # no figure stays knocked (nor held: `_pace` / `_hand_back` set its speed)
 	(f["child"] as Dictionary).erase("duel_offset")
 	(f["child"] as Dictionary).erase("duel_yaw")
 	(f["child"] as Dictionary)["step_facing"] = true  # it steps back facing its foe
@@ -332,24 +401,42 @@ static func _begin(p: Dictionary, key: String, tune: Dictionary) -> void:
 		_length(d["anim"], reply), float(Map3DDuel.contact_of(d["art"])[reply]))
 	var rest := lerpf(float(tune["rest_min"]), float(tune["rest_max"]), float(turn["rest_u"]))
 	p["turn"] = {"s": s["anim"], "d": d["anim"], "strike": strike, "reply": reply, "strike_at": timing["strike_at"],
-		"reply_at": timing["reply_at"], "end": timing["end"], "total": maxf(float(timing["end"]) + rest, 0.05),
-		"struck": false, "replied": false, "guarded": false}
+		"reply_at": timing["reply_at"], "contact_at": timing["contact_at"], "kind": turn["reply"],
+		"sf": s, "df": d, "end": timing["end"], "total": maxf(float(timing["end"]) + rest, 0.05),
+		"struck": false, "replied": false, "contacted": false, "guarded": false}
 
 
-static func _advance(p: Dictionary, key: String, delta: float, running: bool, tune: Dictionary) -> void:
+## One frame of a pair's turn; the code of a piece whose figure the knock-back
+## moved (to be placed again), else "".
+func _advance(p: Dictionary, key: String, delta: float, running: bool, tune: Dictionary) -> String:
 	var anims: Array = (p["figs"] as Array).map(func(f: Dictionary) -> AnimationPlayer: return f["anim"])
+	var hold := float(p.get("hold", 0.0))
 	var stepping := false
 	for f: Dictionary in p["figs"]:
 		if is_instance_valid(f["anim"]) and _pace(f, delta, running):
 			stepping = true
 		elif is_instance_valid(f["anim"]):
 			(f["anim"] as AnimationPlayer).speed_scale = 1.0 if running else 0.0
-	if not running or stepping:
-		return  # paused, or still stepping in: the turn waits
-	p["t"] = float(p["t"]) + delta
+	if not running:
+		return ""  # paused: the turn, the hold and the knock stand
+	var knocked := Map3DDuelMelee.knock(p, delta, tune)
+	if stepping:
+		return knocked  # still stepping in: the turn waits
+	var use := minf(hold, delta)  # a hit-stop's remainder first: the turn clock stands through it
+	hold -= use
+	p["t"] = float(p["t"]) + delta - use
 	while true:
 		var tt: Dictionary = p["turn"]
 		var t := float(p["t"])
+		if not tt["contacted"] and t >= float(tt["contact_at"]):
+			tt["contacted"] = true  # the blow meets: the hit-stop holds from here, the overshoot spent on it
+			var over := t - float(tt["contact_at"])
+			Map3DDuelMelee.contact(p, tt, over, tune, _impacts, bursts)
+			hold = float(tune.get("hitstop", 0.0))
+			use = minf(hold, over)
+			hold -= use
+			t -= use
+			p["t"] = t
 		if not tt["struck"] and t >= float(tt["strike_at"]):
 			tt["struck"] = true
 			_start(tt["s"], tt["strike"], t - float(tt["strike_at"]))
@@ -361,10 +448,13 @@ static func _advance(p: Dictionary, key: String, delta: float, running: bool, tu
 			for anim: AnimationPlayer in anims:
 				_start(anim, "GARRISON", 0.0)
 		if t < float(tt["total"]):
-			return
+			break
 		p["t"] = t - float(tt["total"])
 		p["n"] = int(p["n"]) + 1
 		_begin(p, key, tune)
+	p["hold"] = hold
+	Map3DDuelMelee.speed(anims, 0.0 if hold > 0.0 else 1.0)
+	return knocked if knocked != "" else String(p.get("impact", {}).get("code", ""))
 
 
 static func _length(anim: AnimationPlayer, clip: String) -> float:

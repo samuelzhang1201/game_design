@@ -7,7 +7,8 @@ const ART := {"duel": "STRIKE:ATTACK;SLASH|BLOCK:BLOCK|HIT:HIT|DEATH:DEATH",
 	"contact": "ATTACK:0.4;SLASH:0.35;BLOCK:0.25;HIT:0.1"}
 const TUNE := {"steal": 0.0, "double": 0.0, "hit": 0.0, "rest_min": 0.2, "rest_max": 0.2, "open_max": 0.0,
 	"reach_h": 30.0, "close_h": 0.6, "step_max_h": 1.0, "chain_lo": 0.1, "chain_hi": 0.2,
-	"fall_hold": 2.0, "fall_fade": 1.5}
+	"fall_hold": 2.0, "fall_fade": 1.5,
+	"hitstop": 0.0, "knock_h": 0.15, "knock_out": 0.12, "knock_back": 0.35, "block_knock": 0.4, "near_m": 1000.0}
 
 
 func _anim(clips: Array) -> AnimationPlayer:

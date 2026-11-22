@@ -125,9 +125,24 @@ func test_pairs_do_not_turn_in_step() -> void:
 
 func test_timing_meets_at_contact() -> void:
 	# strike 1.0 s meeting at 0.4 (0.4 s in), reply 0.8 s at 0.25 (0.2 s in): the reply starts 0.2 s later.
-	assert_eq(Map3DDuel.timing(1.0, 0.4, 0.8, 0.25), {"strike_at": 0.0, "reply_at": 0.2, "end": 1.0})
+	assert_eq(Map3DDuel.timing(1.0, 0.4, 0.8, 0.25), {"strike_at": 0.0, "reply_at": 0.2, "contact_at": 0.4, "end": 1.0})
 	# strike 0.5 s at 0.2 (0.1 s in), reply 1.0 s at 0.5 (0.5 s in): the strike waits 0.4 s.
 	var late := Map3DDuel.timing(0.5, 0.2, 1.0, 0.5)
 	assert_almost_eq(float(late["strike_at"]), 0.4, 0.0001)
 	assert_eq(float(late["reply_at"]), 0.0)
 	assert_almost_eq(float(late["end"]), 1.0, 0.0001)
+
+
+func test_timing_names_the_contact() -> void:
+	# strike 1.2 s meeting at 0.5 (0.6 s in), reply 0.8 s at 0.25 (0.2 s in): the reply starts at 0.4, both meet at 0.6.
+	var t := Map3DDuel.timing(1.2, 0.5, 0.8, 0.25)
+	assert_almost_eq(float(t["strike_at"]), 0.0, 0.0001)
+	assert_almost_eq(float(t["reply_at"]), 0.4, 0.0001)
+	assert_almost_eq(float(t["contact_at"]), 0.6, 0.0001)
+	assert_almost_eq(float(t["end"]), 1.2, 0.0001)
+	# strike 0.6 s at 0.25 (0.15 s in), reply 1.0 s at 0.75 (0.75 s in): the strike waits 0.6, they meet at 0.75.
+	var late := Map3DDuel.timing(0.6, 0.25, 1.0, 0.75)
+	assert_almost_eq(float(late["strike_at"]), 0.6, 0.0001)
+	assert_almost_eq(float(late["reply_at"]), 0.0, 0.0001)
+	assert_almost_eq(float(late["contact_at"]), 0.75, 0.0001)
+	assert_almost_eq(float(late["end"]), 1.2, 0.0001)
