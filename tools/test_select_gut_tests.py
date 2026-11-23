@@ -194,6 +194,8 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(len(set(body_batches.values())), 3)
         self.assertEqual(len(files), len(set(files)))
         manifest = json.loads(Path('tests/categories.json').read_text())['categories']
+        # Two body-day scripts on one runner ran to 23 of its 35 minutes: one script, one batch.
+        self.assertEqual(manifest['engine-body-day']['ci_batches'], len(self.catalog['engine-body-day']))
         for job in jobs:
             if job['category'] != 'engine-military':
                 count = manifest[job['category']].get('ci_batches', 1)
