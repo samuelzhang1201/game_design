@@ -292,6 +292,11 @@ func test_no_land_men_no_share() -> void:
 
 func test_a_year_of_a_law_is_visible_against_the_drift() -> void:
 	var off := SuiteData.campaign(repo, 42)
+	# The invasion is not this test's: an empty town's militia (player siege 4b) fights the hosts in
+	# the first months, and its battle waits for the player's acknowledgement.
+	for x: GameState in [s, off]:
+		x.ai_hosts.clear()
+		x.foes.clear()
 	LawSystem.impose(repo, s, "protect_church", "on")
 	assert_eq(LawEffects.army_share_permille(repo, s, "protect_church", "on"), 1000, "imposed: everyone")
 	assert_eq(LawEffects.army_share_permille(repo, off, "protect_church", "on"), 0, "the default is off")

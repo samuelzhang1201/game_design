@@ -314,7 +314,9 @@ func test_ai_sees_only_what_is_in_sight() -> void:
 		return {}
 	var far: Dictionary = find.call()
 	assert_false(far.is_empty(), "the town is a candidate")
-	assert_eq(int(far["defence"]), 0, "a garrison out of sight is no defence")
+	# a garrison out of sight is no defence: the host weighs the militia an
+	# empty town would raise (player siege spec §5)
+	assert_eq(int(far["defence"]), TownMilitia.defend_power(repo, s, town), "out of sight: the would-be militia")
 	assert_false(mine in EnemyAi.seen_by(repo, s, host))
 	repo.balance["ai_sight_km"] = 61.0
 	var near: Dictionary = find.call()
@@ -573,15 +575,16 @@ func test_arrival_at_an_undefended_manor_raids_it() -> void:
 	assert_eq(EnemyAi.target_cell(repo, s, "manor", str(cell)), cell)
 
 
-func test_arrival_at_an_ungarrisoned_town_raids_it() -> void:
+func test_arrival_at_an_ungarrisoned_town_besieges_it() -> void:
 	var host := _host("main")
 	var s := _field(_appear(host))
 	var town := _empty_town(s)
 	_aim(s, host, "town", town)
 	_place_host(s, host, _town_m(town))
 	EnemyAi.step_day(repo, s)
-	assert_eq(String(s.ai_hosts[host]["mode"]), "RAID", "no garrison: the town is plundered, not besieged")
-	assert_eq(MapManors.burg_of(repo, EnemyAi.target_cell(repo, s, "town", town)), town, "the town's own cell")
+	# player siege spec §5: RAID is for a plain manor; the town's militia defends it
+	assert_true(String(s.ai_hosts[host]["mode"]) in ["DEPLOYING", "SIEGE"], "no garrison: the town is besieged")
+	assert_eq((SiegeRecord.of_host(s, host)["militia"] as Array).size(), 1, "its militia raised")
 
 
 ## A host that reaches a target the crown no longer holds drops it and chooses
@@ -932,6 +935,10 @@ func test_the_minds_are_deterministic() -> void:
 	for h: String in EnemyAi.host_codes(a):
 		for k: Variant in a.ai_hosts[h]:
 			var v: Variant = a.ai_hosts[h][k]
+			if v is Dictionary:   # a siege's deployment {town, started_day, complete, completed_day}
+				for f: Variant in v:
+					assert_true(v[f] is int or v[f] is String or v[f] is bool, "%s.%s.%s is whole, a word or a flag" % [h, k, f])
+				continue
 			assert_true(v is int or v is String, "%s.%s is whole or a word" % [h, k])
 
 

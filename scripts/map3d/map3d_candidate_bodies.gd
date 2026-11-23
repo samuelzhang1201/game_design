@@ -274,7 +274,25 @@ static func along_candidate(sampled: Dictionary, share: float) -> Dictionary:
 		row.y_m = y
 	return out
 
+## The day's tactical slices S: the frozen day's `substep_count`, else `battle_substeps`.
+static func slice_count(ctx: Map3DContext) -> int:
+	var st := ctx.state()
+	var count := int(ctx.repo.bal("battle_substeps"))
+	return int(st.day_resolution.get("substep_count", count)) if st != null else count
+
+## Committed slice `substep` plays over [substep/S, (substep+1)/S] of the day (the owner's
+## commit-per-slice ruling, 2026-11-22): its share played by now.
+static func slice_share(ctx: Map3DContext, substep: int) -> float:
+	return clampf(ctx.day_share() * slice_count(ctx) - substep, 0.0, 1.0)
+
+## `committed` is the layer's own envelope: a past day's one is forgotten in place, so once the
+## day turns the committed endpoints stand (never refused as a stale playback day).
 static func _candidate_key(ctx: Map3DContext, samples: Dictionary, committed: Dictionary) -> Array:
+	var st := ctx.state()
+	var cursor: Variant = committed.get("cursor")
+	# A malformed envelope is kept for sample_candidate to refuse.
+	if st != null and cursor is Dictionary and BodyMotion._integer(cursor.get("abs_day")) and int(cursor.abs_day) != st.absolute_day():
+		committed.clear()
 	var key: Array = [ctx.dev]
 	samples.clear()
 	for reg: Dictionary in ctx.regiments():
@@ -289,7 +307,7 @@ static func _candidate_key(ctx: Map3DContext, samples: Dictionary, committed: Di
 
 static func _candidate_at(ctx: Map3DContext, code: String, sampled: Dictionary, history: Dictionary) -> Dictionary:
 	var receipt := String(sampled.cursor.get("receipt", ""))
-	var share := ctx.day_share() if sampled.moving and not receipt.is_empty() and ctx.day_fn.is_valid() else 1.0
+	var share := slice_share(ctx, int(sampled.cursor.substep)) if sampled.moving and not receipt.is_empty() and ctx.day_fn.is_valid() else 1.0
 	var old: Dictionary = history.get(code, {})
 	if old.get("receipt", "") == receipt:
 		share = maxf(share, float(old.get("share", 0.0)))
@@ -309,7 +327,7 @@ static func _animate_candidate(ctx: Map3DContext, code: String, piece: Dictionar
 	var hostile := ctx.fogged(code)
 	var order := "" if hostile else ArmySystem.order_of(ctx.repo, state, code)
 	var stance: Dictionary = {} if hostile else ctx.repo.battle_stances.get(BattleSystem.stance_of(state, code), {})
-	var slices := int(state.day_resolution.get("substep_count", DayResolution.DEFAULT_SUBSTEP_COUNT))
+	var slices := slice_count(ctx)
 	var moving := false
 	var turning := false
 	for i: int in piece["groups"].size():

@@ -292,3 +292,24 @@ func test_militia_never_march() -> void:
 		"unit_codes": [code], "center_x_m": at.x, "center_y_m": at.y, "radius_m": 5000})
 	assert_false(bool(shown["ok"]))
 	assert_eq(String(shown["reason"]), words, "no area task either")
+
+
+## --- a beaten militia breaks up ----------------------------------------------
+
+func test_a_beaten_militia_breaks_up_instead_of_marching() -> void:
+	var f := _crown_town()
+	var s: GameState = f.s
+	var code := String((f.rec as Dictionary)["militia"][0])
+	var foe := String(EnemyAi.regiments_of(s, f.main)[0])
+	var fit := ArmySystem.fit_count(repo, s, code)
+	var battle := {"id": 999, "att": [foe], "def": [code], "town": "", "place_x_m": 0, "place_y_m": 0}
+	s.battles.append(battle)
+	assert_false(BattleSystem._start_retreat(repo, s, code, battle), "it withdraws nowhere")
+	assert_ne(String(s.regiments[code]["order"]), ArmySystem.ORDER_MARCH, "and never marches")
+	assert_eq(ArmySystem.fit_count(repo, s, code), 0, "its men go home")
+	assert_gt(fit, 0)
+	assert_eq(String(s.military_events[code + ":broke"]["request"]["reason"]),
+		"militia of %s broke" % String(repo.burgs[f.town]["label"]))
+	assert_eq(BattleSystem._exit_why(repo, s, code, "def", "none", 0), "broken", "the battle reads it broken")
+	assert_eq(TownMilitia.disperse(repo, s, code), 0, "once")
+	assert_eq(MilitaryBootstrap._integrity_error(repo, s), "", "the personnel model holds")
