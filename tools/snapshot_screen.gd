@@ -28,6 +28,10 @@ const SCENES := {
 }
 
 ## --battle-case encounter: real contact and its saved first-encounter pause.
+## --battle-case militia: the main raid host invests an empty crown town, which
+## raises its militia (BattleStage.stage_militia); with --zoom3d framed on it.
+## --battle-case militia_fight: the same, then the days run until the siege's
+## assault is fought, so the militia stands in its battle (--speed plays it on).
 ## --battle-case field: the same contact, the notice then acknowledged through
 ## Game, so the battle stands with no window over it (the WAR ROOM's task block).
 ## --battle-arm ARM stages a FIELD battle of that arm (code suffix, e.g. foot): the
@@ -990,7 +994,7 @@ func _process(_delta: float) -> void:
 	if _root != null and not _root.overlays_are_ready():
 		return
 	_frames += 1
-	if _battle_case in ["encounter", "field"] and _frames == 20 and _root != null:
+	if _battle_case in ["encounter", "field", "militia", "militia_fight"] and _frames == 20 and _root != null:
 		_stage_battle_encounter()
 	if _battle_frame and _root.current_screen.has_method("map3d_view") and _root.current_screen.map3d_view()._ctx != null:
 		_battle_frame = false  # the world is loaded: frame the staged battle
@@ -2026,8 +2030,11 @@ func _war_chart_click(view: WarRoomView, id: String) -> int:
 func _stage_battle_encounter() -> void:
 	if _battle_raise != "" and BattleStage.raise(_battle_raise, _battle_arm) == "":
 		return
-	var own := BattleStage.stage(_battle_arm, _battle_foe)
-	if own != "" and _battle_arm != "" and _zoom3d > 0.0 and _at3d.x < 0.0:
+	var militia := _battle_case in ["militia", "militia_fight"]  # the siege that raises a town militia, framed on it
+	var own := BattleStage.stage_militia(_battle_case == "militia_fight") if militia else BattleStage.stage(_battle_arm, _battle_foe)
+	if _battle_case == "militia_fight" and _speed >= 0:
+		_start_clock()  # an encounter stopped the clock: play the assault on
+	if own != "" and (_battle_arm != "" or militia) and _zoom3d > 0.0 and _at3d.x < 0.0:
 		_at3d = ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, own, Game.state))
 		_battle_frame = true
 

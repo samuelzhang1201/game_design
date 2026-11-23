@@ -1,0 +1,18 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://csnrv2c26otee"]
+
+[ext_resource type="Shader" uid="uid://cipw05pfwbhxt" path="res://scenes/map3d/materials/unit_realm_tint.gdshader" id="1_3uoe4"]
+[ext_resource type="Texture2D" uid="uid://bdfhpogy17cy5" path="res://assets/3D/units/militia/militia_militia_atlas.jpg" id="2_de7m6"]
+[ext_resource type="Texture2D" uid="uid://c1hojda18plmf" path="res://assets/3D/units/militia/militia_militia_atlas_mr.jpg" id="3_sea86"]
+[ext_resource type="Texture2D" uid="uid://b343hwmm5ft8" path="res://assets/3D/units/militia/militia_militia_atlas_n.jpg" id="4_yv4qt"]
+[ext_resource type="Texture2D" uid="uid://bwdsq2njisfrh" path="res://assets/3D/units/militia/militia_tunic_mask.png" id="5_ppiso"]
+
+[resource]
+render_priority = 1
+shader = ExtResource("1_3uoe4")
+shader_parameter/albedo_atlas = ExtResource("2_de7m6")
+shader_parameter/mr_atlas = ExtResource("3_sea86")
+shader_parameter/normal_atlas = ExtResource("4_yv4qt")
+shader_parameter/tunic_mask = ExtResource("5_ppiso")
+shader_parameter/tunic_luminance = 0.051
+shader_parameter/shade_max = 2.0
+shader_parameter/cloth_roughness = 0.85

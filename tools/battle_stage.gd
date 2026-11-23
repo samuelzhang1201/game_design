@@ -8,6 +8,7 @@ extends RefCounted
 ## tools/map3d/bench.gd (--battle-arm). Returns the own unit's code ("" none).
 ## `foe_arm` (default `arm`) picks the foe by its own code suffix: an arm the
 ## realms do not field (the axemen) fights the foe's foot.
+## stage_militia is the siege that raises a town militia (--battle-case militia).
 
 
 ## Raises a unit of `arm` through the recruitment panel's own order (ARMY_RECRUIT)
@@ -85,3 +86,54 @@ static func stage(arm: String, foe_arm := "") -> String:
 	Game.advance_day()
 	print("battle staged: %s vs %s" % [ours[0], foes[0]])
 	return String(ours[0])
+
+
+## A crown town with no defenders invested by the main raid host, so it raises
+## its militia (SiegeRecord.ensure_for -> TownMilitia.raise): the host's columns
+## stood at the first such town (code order, never the capital) and its mind
+## set on the siege. With `fight` the days then run through the game's day
+## entry point (each encounter notice acknowledged through Game) until the
+## siege's assault is fought and the militia stands in its battle. Returns the
+## militia's code ("" none).
+static func stage_militia(fight := false) -> String:
+	var repo: DataRepository = Game.data
+	var s: GameState = Game.state
+	var main := ""
+	for h: Dictionary in repo.raid_hosts:
+		if main == "" and String(h["role"]) == "main":
+			main = String(h["host_code"])
+	var towns: Array = repo.burgs.keys()
+	towns.sort()
+	for town: String in towns:
+		if SiegeSystem.holder_of(repo, s, town) != repo.resolve_realm("player_realm") \
+				or ArmyGround.seat_of(repo, s, town) != "" or String(repo.burgs[town].get("is_capital", "0")) == "1" \
+				or not SiegeSystem.defenders_of(repo, s, town).is_empty() or not s.ai_hosts.has(main):
+			continue
+		var at := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, town)
+		for c: String in EnemyAi.regiments_of(s, main):
+			var e: Dictionary = s.foes[c]
+			for k: String in ["x_m", "dest_x_m"]:
+				e[k] = at.x
+			for k: String in ["y_m", "dest_y_m"]:
+				e[k] = at.y
+			e["order"] = ArmySystem.ORDER_GARRISON
+		var mind: Dictionary = s.ai_hosts[main]
+		mind["mode"] = EnemyAi.MODE_SIEGE
+		mind["target_kind"] = EnemyAi.KIND_TOWN
+		mind["target_id"] = town
+		var militia: Array = SiegeRecord.ensure_for(repo, s, main).get("militia", [])
+		print("militia staged at %s: %s" % [town, militia])
+		if militia.is_empty():
+			return ""
+		var code := String(militia[0])
+		for _day in (int(repo.bal("siege_assault_days")) + 3 if fight else 0):
+			if not BattleSystem.battle_of(s, code).is_empty():
+				break
+			Game.advance_day()
+			if not Game.pending_battle_decision().is_empty():
+				Game.resolve_battle_decision(String(Game.pending_battle_decision()["token"]), "continue")
+		if fight:
+			print("militia battle on day %d: %s" % [s.absolute_day(), BattleSystem.battle_of(s, code).get("id", "none")])
+		return code
+	push_error("militia showcase: no empty crown town")
+	return ""

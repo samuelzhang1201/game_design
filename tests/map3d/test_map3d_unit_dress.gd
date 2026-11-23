@@ -143,7 +143,7 @@ func test_every_installed_model_dresses_its_body_and_not_its_props() -> void:
 	var repo := SuiteData.repo()
 	var models := GameArt.table(GameArt.ARMY_MODELS)
 	var tints := GameArt.table(GameArt.UNIT_REALM_TINT)
-	for key: String in ["infantry", "cavalry", "royal", "archers", "axemen"]:
+	for key: String in ["infantry", "cavalry", "royal", "archers", "axemen", "militia"]:
 		var fig := (models.of(key) as PackedScene).instantiate() as Node3D
 		add_child_autofree(fig)
 		Map3DUnitDress.dress(repo, {"figs": [fig], "model": key}, "", tints)

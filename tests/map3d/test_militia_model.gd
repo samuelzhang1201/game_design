@@ -1,6 +1,9 @@
 extends GutTest
-## The town militia's figure as installed (tools/units3d/militia_arp/): the file the arm's scene will inherit.
-## No arm wears it yet, so the tables' tests (test_map3d_unit_scenes.gd) do not reach it.
+## The town militia's figure as installed (tools/units3d/militia_arp/) and as worn: a raised town militia's
+## unit (its roster row's `figure`, TownMilitia.FIGURE) is drawn with scenes/models/units/militia.tscn while
+## its piece stays its first arm's (Map3DFormation.figure_of).
+
+const SuiteData := preload("res://tests/suite_data.gd")
 
 const GLB := "res://assets/3D/units/militia/militia.glb"
 const LOOPS: Array[String] = ["MARCH", "GARRISON", "STANDBY", "DEFEND"]
@@ -68,3 +71,59 @@ func test_the_realm_tints_mask_covers_the_dyed_cloth_only() -> void:
 		if byte > 127:
 			stray += 1
 	assert_eq(stray, 0, "nothing of the mask on the gear")
+
+
+## A militia's roster row as TownMilitia.raise writes it, and an ordinary unit of the same arm.
+func _rows() -> Dictionary:
+	var plain := {"regiment_code": "x", "organization_arm": "infantry", "is_royal": "0", "is_naval": "0"}
+	var militia := plain.duplicate()
+	militia["regiment_code"] = "militia:s1"
+	militia["figure"] = TownMilitia.FIGURE
+	return {"plain": plain, "militia": militia}
+
+
+func test_a_militia_wears_its_own_figure_and_no_other_unit_of_its_arm_does() -> void:
+	var repo: DataRepository = SuiteData.repo()
+	var rows := _rows()
+	assert_eq(Map3DFormation.figure_of(repo, rows.militia), "militia")
+	assert_eq(MapObjects.army_piece(repo, rows.militia), "infantry", "card, footprint and bodies stay the arm's")
+	assert_eq(Map3DFormation.figure_of(repo, rows.plain), "infantry")
+	var unknown: Dictionary = rows.plain.duplicate()
+	unknown["figure"] = "no_such_figure"
+	assert_eq(Map3DFormation.figure_of(repo, unknown), "infantry", "a figure with no army_art.csv row falls back to the piece")
+	var tier := {"figures": 1, "slots": [Vector2.ZERO]}
+	var built := Map3DFormation.of_regiment(repo, rows.militia, tier, 1.6)
+	autofree(built["node"])
+	assert_eq(String(built["model"]), "militia")
+	assert_eq(String(built["footprint"]), "infantry", "the battle rows close up by the engine bodies' footprint")
+	assert_not_null((built["figs"][0] as Node).get_node_or_null("mil_rig"), "the militia scene stands")
+	assert_almost_eq(float(built["stride_m"]), 1.3597, 1e-9, "its own MARCH's stride (the infantry's slides its feet)")
+	var other := Map3DFormation.of_regiment(repo, rows.plain, tier, 1.6)
+	autofree(other["node"])
+	assert_null((other["figs"][0] as Node).get_node_or_null("mil_rig"), "the infantry keeps its figure")
+	# a size draws the rest box (hat to sole) at one map height: the same size, so his head stands level
+	# with the infantry's (his 1.7051 m box against 1.6357 m: 4 % smaller in the metre)
+	assert_eq(float(built["size"]), float(other["size"]))
+	assert_almost_eq(float(built["height_m"]), 1.7051, 0.001)
+
+
+## What the figure has not got (reported, never faked): no duel, no fall, no pivots.
+func test_the_militia_strikes_its_chain_and_never_duels() -> void:
+	var repo: DataRepository = SuiteData.repo()
+	var art: Dictionary = repo.army_art["militia"]
+	var node: Node = (load(GameArt.path(GameArt.ARMY_MODELS, "militia")) as PackedScene).instantiate()
+	autofree(node)
+	var player: AnimationPlayer = node.find_child("AnimationPlayer", true, false)
+	assert_eq(Map3DClipChain.of_art(art).get("ATTACK"), STRIKES, "in battle it strikes its six clips by turns")
+	for clip in STRIKES:
+		assert_ne(Map3DUnits.clip_named(player, clip), "", clip)
+	assert_false(Map3DDuel.duels(art, player), "no BLOCK / HIT clips: it is never gathered into a duel")
+	assert_eq(Map3DClipChain.of_column(art, "duel"), {}, "and no DEATH: a loss is freed at once")
+	for clip: String in ["PIVOT_LEFT", "PIVOT_RIGHT", "BLOCK", "HIT", "DEATH"]:
+		assert_eq(Map3DUnits.clip_named(player, clip), "", clip + " is not installed")
+	var tint := GameArt.table(GameArt.UNIT_REALM_TINT).of("militia") as ShaderMaterial
+	assert_not_null(tint, "its tunic and skirt wear the realm's colour")
+	assert_eq((tint.get_shader_parameter("tunic_mask") as Texture2D).resource_path,
+		"res://assets/3D/units/militia/militia_tunic_mask.png", "by its own mask")
+	# the cloth's mean linear luminance under the mask, as the exporter reports it
+	assert_almost_eq(float(tint.get_shader_parameter("tunic_luminance")), 0.051, 1e-6)

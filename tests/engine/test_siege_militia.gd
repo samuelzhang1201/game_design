@@ -145,6 +145,8 @@ func test_empty_foreign_town_raises_militia() -> void:
 	var row: Dictionary = s.army_roster[code]
 	for arm: String in f.want:
 		assert_eq(int(row[arm]), int(f.want[arm]), "%s by the table" % arm)
+	assert_eq(String(row["figure"]), TownMilitia.FIGURE, "drawn with the militia's own figure")
+	assert_eq(MapObjects.army_piece(repo, row), String(row["organization_arm"]), "its piece stays its first arm's")
 	assert_eq(ArmySystem.fit_count(repo, s, code), _total(f.want), "every man fit")
 	assert_eq(_urban(s, f.prov), int(f.urban), "no population debit for the levy")
 	assert_eq(MilitaryPopulation.occupied(s, f.prov, TownMilitia.FIELD), int(f.held) + _total(f.want),
