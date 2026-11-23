@@ -191,5 +191,58 @@
   "source": "Tripo 3D (owner, paid plan) from royal/model_wip/tripo/REF_royal_qwenfast_s1.png; rigged and animated by the owner (knight_rig_anim.blend); tools/units3d/royal_install/ decimate.py (90,506 -> 19,998 tris)",
   "stride_m": 2.25,
   "tris": 19998
+ },
+ "militia": {
+  "actions": {
+   "MARCH": [
+    0,
+    33
+   ],
+   "GARRISON": [
+    0,
+    110
+   ],
+   "STANDBY": [
+    0,
+    75
+   ],
+   "DEFEND": [
+    0,
+    90
+   ],
+   "ATTACK": [
+    0,
+    30
+   ],
+   "SLASH": [
+    0,
+    45
+   ],
+   "ATTACK_VAR1": [
+    0,
+    52
+   ],
+   "ATTACK_2": [
+    0,
+    39
+   ],
+   "SLASH_2": [
+    0,
+    47
+   ],
+   "SLASH_3": [
+    0,
+    41
+   ]
+  },
+  "bones": 100,
+  "fps": 30,
+  "height_m": 1.705,
+  "kind": "humanoid",
+  "label": "Town militia",
+  "source": "The parts Tripo militiaman (tripo_inbox soldier/militia_parts.glb) with the infantry's short sword and round shield, rigged with Auto-Rig Pro and driven by the infantry's ten clips at a narrower stance: assets/3D/model_wip/blender_output/militia/militia_parts_11_hem.blend (git-ignored), tools/units3d/militia_arp/game_export.py. Not yet worn by any arm (army_models.tres).",
+  "stride_m": 1.3597,
+  "tris": 17437,
+  "weights": "ARP skin limited to 4, the knee-length skirt on 10 chains of 3 bones whose keys are baked into every clip; sword and shield rigid on cc_weapon.r / cc_weapon.l"
  }
 }
