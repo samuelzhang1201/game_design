@@ -45,3 +45,26 @@ func test_the_militia_is_recorded_within_budget() -> void:
 	assert_gt(float(row["stride_m"]), 0.0, "measured off its own MARCH")
 	for clip: String in LOOPS + STRIKES:
 		assert_true((row["actions"] as Dictionary).has(clip), clip)
+
+
+func test_the_realm_tints_mask_covers_the_dyed_cloth_only() -> void:
+	var mask := load("res://assets/3D/units/militia/militia_tunic_mask.png") as Texture2D
+	var atlas := load("res://assets/3D/units/militia/militia_militia_atlas.jpg") as Texture2D
+	assert_not_null(mask, "exported with the atlases (tools/units3d/militia_arp/game_export.py)")
+	assert_eq(mask.get_size(), atlas.get_size(), "in the atlas's frame")
+	var img := mask.get_image()
+	img.convert(Image.FORMAT_L8)
+	var set_texels := 0
+	for byte in img.get_data():
+		if byte > 127:
+			set_texels += 1
+	var share := float(set_texels) / float(img.get_width() * img.get_height())
+	# the tunic and the skirt are 30 % of the body's faces; the body sits in 9/16 of the atlas
+	assert_between(share, 0.08, 0.18, "the tunic and the skirt, not the whole body")
+	# the sword's and the shield's strip (the right-hand quarter) carries no cloth
+	var gear := img.get_region(Rect2i(img.get_width() * 3 / 4, 0, img.get_width() / 4, img.get_height()))
+	var stray := 0
+	for byte in gear.get_data():
+		if byte > 127:
+			stray += 1
+	assert_eq(stray, 0, "nothing of the mask on the gear")
