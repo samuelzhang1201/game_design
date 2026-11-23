@@ -39,7 +39,7 @@ inf.GAME = {k: inf.GAME[k] for k in FIRST_TEN}
 PARTS = ("head", "coif", "helmet", "tunic", "legs", "wraps", "shoes", "hands", "skirt", "belt")
 TINT_PARTS = ("tunic", "skirt")
 MASK_MARGIN_PX = 6
-DYE_SATURATION = 0.3            # the russet wool sits near 0.65, the linen near 0.1
+LINEN = (0.3, 0.65)             # linen: less saturated than this AND brighter than this (the wool: 0.65 / 0.4)
 
 
 def _raster(tris, size):
@@ -68,7 +68,7 @@ def _grow(a):
 def tunic_mask():
     """The realm tint's mask (`militia_tunic_mask.png`'s pixels, rows bottom-up, 0..1): the tunic's and the
     skirt's faces drawn where the body sits in the atlas, grown by the bake's margin without entering another
-    part's island, edges softened as the infantry's mask is."""
+    part's island, less the linen; softened outward only."""
     me = bpy.data.objects[inf.BODY].data
     ids = np.zeros(len(me.vertices), np.int32)
     me.attributes["part_id"].data.foreach_get("value", ids)
@@ -83,18 +83,24 @@ def tunic_mask():
         (cloth if int(ids[t.vertices[0]]) in tint else other).append(uv[list(t.loops)])
     m, o = _raster(np.array(cloth), inf.ATLAS), _raster(np.array(other), inf.ATLAS)
     o &= ~m
+    faces = o.copy()                         # the other parts' own texels: never tinted
     for _ in range(MASK_MARGIN_PX):
         m, o = m | (_grow(m) & ~o), o | (_grow(o) & ~m)
-    # only the DYED cloth: the linen showing at the neck and cuffs is in the tunic's faces and stays white
     mat = bpy.data.objects[inf.BODY].data.materials[0]
     base = next(n.image for n in mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image
                 and Path(n.image.filepath).stem.endswith("_base"))
     w, h = int(du * inf.ATLAS), int(dv * inf.ATLAS)
-    px = inf._pixels(base, w, h)[..., :3]
-    dyed = np.zeros_like(m)
-    dyed[int(v0 * inf.ATLAS):int(v0 * inf.ATLAS) + h, int(u0 * inf.ATLAS):int(u0 * inf.ATLAS) + w] = \
-        (px.max(2) - px.min(2)) > DYE_SATURATION * np.maximum(px.max(2), 1e-4)
-    return inf.tunic_mask.box((m & dyed).astype(np.float32), 2)
+    px = np.zeros((inf.ATLAS, inf.ATLAS, 3), np.float32)
+    px[int(v0 * inf.ATLAS):int(v0 * inf.ATLAS) + h, int(u0 * inf.ATLAS):int(u0 * inf.ATLAS) + w] = inf._pixels(base, w, h)[..., :3]
+    hi = px.max(2)
+    sat = (hi - px.min(2)) / np.maximum(hi, 1e-4)
+    # The tunic's faces also carry the linen at the neck (bright, unsaturated): it stays white. A grey stain on the
+    # wool is cloth all the same: cut by saturation alone it showed as a rust spot on the tinted skirt, and a mask
+    # softened INTO its own islands left a rust seam where two islands lie close (critic 2026-11-24). So the
+    # cloth's texels are fully set, the softening runs outward only, and never onto another part's faces.
+    m &= ~((sat < LINEN[0]) & (hi > LINEN[1]))
+    soft = np.maximum(inf.tunic_mask.box(m.astype(np.float32), 2), m.astype(np.float32))
+    return np.where(faces, 0.0, soft).astype(np.float32)
 
 
 def _tunic_luminance(albedo_jpg, mask):

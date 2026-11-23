@@ -67,9 +67,9 @@ residual, ATTACK_VAR1 / ATTACK_2 in place, MARCH's contact lock with the infantr
 shield thumb folded, the shield wood toned, metal at `GAME_METAL` of the authored map. The body has no authored
 material classes, so no mail calming. The realm tint's mask `militia_tunic_mask.png` is drawn here from the
 body's `part_id`: the tunic's and the skirt's faces where the body sits in the atlas, grown by the bake's
-margin without entering another part's island, the white linen at the neck and cuffs left out (only texels
-more saturated than `DYE_SATURATION`); the export reports its coverage and the cloth's mean linear luminance,
-the tint material's `tunic_luminance` (0.051). It returns the MARCH measure: `stride_m` 1.3597 (the
+margin without entering another part's island, the bright linen at the neck left out (`LINEN`), softened
+outward only and never onto another part's faces; the export reports its coverage and the cloth's mean linear luminance,
+the tint material's `tunic_luminance` (0.052). It returns the MARCH measure: `stride_m` 1.3597 (the
 militia's own; with the infantry's 1.4838 its feet slide), steps 0.2121; 0.9091.
 
 The `.import` files carry the infantry's settings: mesh compression off, MARCH / GARRISON / STANDBY / DEFEND
