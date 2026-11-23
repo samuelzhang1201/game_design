@@ -195,7 +195,7 @@ static func raise(repo: DataRepository, state: GameState, id: String) -> String:
 	var types := repo.world_table("military", "unit_types")
 	var row := {"regiment_code": code, "label": "%s militia" % label, "kingdom_code": defender,
 		"province_code": prov, "parent_code": "", "organization_arm": String(arms.keys()[0]), "is_royal": "0",
-		"is_naval": "0", "camp_town": town, "x": String(b["x"]), "y": String(b["y"]), "source_parts": []}
+		"is_naval": "0", "camp_town": town, "x": str(b["x"]), "y": str(b["y"]), "source_parts": []}
 	for kind: String in types:
 		row[kind] = "0"
 	for arm: String in arms:

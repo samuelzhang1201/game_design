@@ -210,8 +210,9 @@ static func arrival_substep(repo: DataRepository, state: GameState, march_entrie
 			elif next != "":
 				set_mode(state, code, next, _arrival_why(next), events)
 				if next == MODE_DEPLOYING:
+					# no record here: a slice's work changes no body or personnel, so the
+					# militia rises as the day's siege settles (SiegeSystem.settle_day)
 					_start_deployment(repo, state, code)
-					SiegeRecord.ensure_for(repo, state, code)
 		var mode := String(mind.get("mode", ""))
 		if mode not in [MODE_DEPLOYING, MODE_SIEGE]:
 			continue
@@ -641,8 +642,9 @@ static func should_retreat(repo: DataRepository, state: GameState, host_code: St
 ## longer holds the target → ARRIVAL_LOST (choose again); a player regiment it sees stands at the
 ## target → nothing (contact fights it); else a town with no garrison →
 ## DEPLOYING (its militia defends it) and an open manor → RAID. A host that
-## turns DEPLOYING opens the town's record at once (SiegeRecord.ensure_for), so
-## the militia stands on the seat before any column walks in.
+## turns DEPLOYING in the morning's step opens the town's record at once
+## (SiegeRecord.ensure_for); one that arrives in a body-day slice opens it as
+## the day's siege settles, before any assault or fall.
 static func arrival_mode(repo: DataRepository, state: GameState, host_code: String) -> String:
 	var mind: Dictionary = state.ai_hosts[host_code]
 	var kind := String(mind["target_kind"])

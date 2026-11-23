@@ -208,10 +208,10 @@ func test_an_empty_town_is_besieged_not_raided() -> void:
 	assert_ne(town, "", "an empty crown town")
 	var main := _arrive(s, EnemyAi.KIND_TOWN, town, Play.town_m(repo, town))
 	assert_eq(EnemyAi.arrival_mode(repo, s, main), EnemyAi.MODE_DEPLOYING, "besieged")
-	EnemyAi.arrival_substep(repo, s)
+	EnemyAi.step_day(repo, s)
 	assert_eq(String(s.ai_hosts[main]["mode"]) in [EnemyAi.MODE_DEPLOYING, EnemyAi.MODE_SIEGE], true)
 	var rec := SiegeRecord.of_host(s, main)
-	assert_false(rec.is_empty(), "the record opens as it arrives")
+	assert_false(rec.is_empty(), "the morning's arrival opens the record")
 	var militia: Array = rec["militia"]
 	assert_eq(militia.size(), 1, "the town's militia rises")
 	assert_true(s.regiments.has(String(militia[0])), "the crown's")
