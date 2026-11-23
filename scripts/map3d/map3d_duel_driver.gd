@@ -120,7 +120,7 @@ func fall(child: Dictionary, art: Dictionary, _tune: Dictionary) -> void:
 
 
 ## Each battle's figures that can duel, by side ("a" = its attacking side), in battle id order:
-## under the scrum (`map3d_melee_scrum`) both ranks but each unit's standard bearer, else the front.
+## under the scrum (`map3d_melee_scrum`) both ranks, else the front.
 static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 	var by_id: Dictionary = {}
 	var scrum := ctx.repo.bal("map3d_melee_scrum") > 0.0
@@ -141,13 +141,12 @@ static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 		var art: Dictionary = ctx.repo.army_art.get(String(piece.get("model", "")), {})
 		for group: Dictionary in piece["groups"]:
 			var child: Dictionary = group["piece"]
-			var bearer := is_same(group, piece["groups"][0])  # Map3DUnitStandard.first_figure's: it keeps its slot
-			if (bearer if scrum else String(group["role"]) != "front") or (child["anims"] as Array).is_empty() \
+			if (not scrum and String(group["role"]) != "front") or (child["anims"] as Array).is_empty() \
 					or not can_duel(child, art, child["anims"][0]):
 				continue
 			by_id[id]["a" if code in battle["att"] else "b"].append({"key": "%s:%d" % [code, int(group["slot"])],
 				"code": code, "slot": int(group["slot"]), "anim": child["anims"][0], "child": child, "art": art, "piece": piece,
-				"rank": String(group["role"]), "bearer": bearer,
+				"rank": String(group["role"]),
 				"xz": Map3DBattleGroups.stand_xz(ctx, piece, group),
 				"h": float(child["height_m"]) * (child["node"] as Node3D).global_basis.get_scale().y})
 	var ids := by_id.keys()
