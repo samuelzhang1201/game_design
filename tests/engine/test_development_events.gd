@@ -191,6 +191,10 @@ func test_shipped_roster_reaches_tier_one_in_a_year() -> void:
 	var raider := repo.resolve_realm("raider_realm")
 	var step := int(repo.bal("dev_ai_step"))
 	var per := int(repo.bal("dev_ai_target_per_pref"))
+	# The invasion is not this test's: an empty town's militia (player siege 4b) fights the hosts in
+	# the first months, and its battle waits for the player's acknowledgement.
+	s.ai_hosts.clear()
+	s.foes.clear()
 	var eng := TickEngine.new(repo)
 	for i in 12:
 		eng.advance(s)

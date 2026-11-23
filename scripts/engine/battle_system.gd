@@ -1266,6 +1266,11 @@ static func retreat_intent_candidate(repo: DataRepository, source: GameState, ba
 
 static func _start_retreat(repo: DataRepository, state: GameState, code: String, battle: Dictionary) -> bool:
 	var entry := _stored(state, code)
+	if TownMilitia.town_of(state, code) != "":
+		# a militia never marches: beaten, it breaks up into its town (player siege spec §5)
+		TownMilitia.disperse(repo, state, code)
+		entry["withdrawal_reason"] = "The militia breaks up into its town"
+		return false
 	if bool(entry.get("battle_retreat", false)):
 		return true if String(entry.get("order", "")) == ArmySystem.ORDER_MARCH else _fall_back(repo, state, code, battle)
 	if String(entry.get("order", "")) != ArmySystem.ORDER_MARCH and not _fall_back(repo, state, code, battle):
@@ -1324,7 +1329,12 @@ static func _exits(repo: DataRepository, state: GameState, b: Dictionary, rout: 
 		var other := "def" if side == "att" else "att"
 		for code: String in codes:
 			var why := _exit_why(repo, state, code, side, rout, odds if side == "att" else 1000 - odds)
-			if why in ["ordered", "evade", "retreat"] or unit_action(repo, state, b, code)["kind"] == "retreat":
+			if TownMilitia.town_of(state, code) != "" \
+					and (why != "" or unit_action(repo, state, b, code)["kind"] == "retreat"):
+				# a militia leaves no other way: it breaks up where it stands (player siege spec §5)
+				TownMilitia.disperse(repo, state, code)
+				why = "broken"
+			elif why in ["ordered", "evade", "retreat"] or unit_action(repo, state, b, code)["kind"] == "retreat":
 				var entry := _stored(state, code)
 				if not entry.has("withdrawal_cause"):
 					entry["withdrawal_cause"] = "withdrawn" if homeward(state, code) else (why if why in ["ordered", "evade", "retreat"] else "retreat")

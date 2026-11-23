@@ -176,6 +176,10 @@ func test_the_crowns_provinces_pay_their_taxes_each_month() -> void:
 ## works again, so a work takes exactly its build_days days.
 func test_days_step_works_and_the_thirtieth_is_a_tick() -> void:
 	var s := SuiteData.campaign(data, 42)
+	# The invasion is not this test's: an empty town's militia (player siege 4b) fights the hosts in
+	# the first months, and its battle waits for the player's acknowledgement.
+	s.ai_hosts.clear()
+	s.foes.clear()
 	engine.advance(s)
 	assert_eq(s.tick, 1)
 	assert_eq(s.day, 1)

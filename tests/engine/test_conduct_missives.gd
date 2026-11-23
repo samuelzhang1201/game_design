@@ -128,6 +128,10 @@ func test_engine_files_one_letter_a_day() -> void:
 
 
 func test_old_save_plays_a_month() -> void:
+	# The invasion is not this test's: an empty town's militia (player siege 4b) fights the hosts in
+	# the first months, and its battle waits for the player's acknowledgement.
+	state.ai_hosts.clear()
+	state.foes.clear()
 	var d := state.to_dict()
 	for k: String in ["forage_stripped", "grievance", "conduct_marks"]:
 		d.erase(k)

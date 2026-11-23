@@ -165,26 +165,32 @@ func _next_move_work(f: Dictionary, state: GameState) -> GameState:
 		state = stepped.candidate
 	return BodyDayDriver._slice_work(f.repo, state).candidate
 
-## B2b2: at a town the crown holds but does not garrison, the same column turns its host to the
-## raid in the same slice (5150 - 30k <= 5000: after the 5th move, not the 4th at 5030 m) and is
-## NOT stationed: it walks its whole 300 m, and the frozen march keeps it.
-func test_host_at_an_undefended_town_raids_and_marches_on() -> void:
+## Player siege 4b: at a town the crown holds but does not garrison, the same column BESIEGES it in
+## the arrival slice (5150 - 30k <= 5000: after the 5th move, at 45000; an empty town is besieged,
+## not raided) and is stationed where it stands. A slice's work changes no body or personnel, so
+## the town's record, and the militia it raises, opens as the day's siege settles at the close.
+func test_host_at_an_undefended_town_besieges_it_and_its_militia_rises_at_the_close() -> void:
 	var f := _host_world(80000)
 	assert_eq(EnemyAi.garrison_of(f.repo, f.state, f.town), [])
 	var manual: GameState = BodyBattle.begin_candidate(f.repo, f.state).candidate
 	for slice: int in 4: manual = _next_move_work(f, manual)
 	assert_eq([manual.foes[f.foe].x_m, manual.ai_hosts[f.host].mode, _host_events(manual)], [44970, EnemyAi.MODE_ADVANCE, []])
 	manual = _next_move_work(f, manual)
-	assert_eq([manual.foes[f.foe].x_m, manual.ai_hosts[f.host].mode, manual.foes[f.foe].order], [45000, EnemyAi.MODE_RAID, ArmySystem.ORDER_MARCH])
+	assert_eq([manual.foes[f.foe].x_m, manual.ai_hosts[f.host].mode, manual.foes[f.foe].order], [45000, EnemyAi.MODE_SIEGE, ArmySystem.ORDER_GARRISON])
+	assert_true(SiegeRecord.of_host(manual, f.host).is_empty(), "no record in the slice's work")
 	var state := _day(f.repo, f.state, "complete")
 	if state == null: return
 	assert_eq(_hash(state), _hash(BodyDayDriver.tactical_day(f.repo, manual).candidate))
-	var today := state.absolute_day()
-	assert_eq(state.ai_hosts[f.host].mode, EnemyAi.MODE_RAID)
-	assert_eq(_host_events(state), [{"type": "host_mode", "host": f.host, "mode": EnemyAi.MODE_RAID, "why": "reached an undefended target", "day": today}])
-	assert_eq([state.foes[f.foe].x_m, state.foes[f.foe].order, state.day_resolution.march_entries[f.foe].order],
-		[45150, ArmySystem.ORDER_GARRISON, ArmySystem.ORDER_GARRISON], "arrived at its route's end")
-	assert_true(state.ai_hosts[f.host].get("deployment", {}).is_empty())
+	assert_eq(_host_events(state).map(func(e: Dictionary) -> String: return String(e.mode)), [EnemyAi.MODE_DEPLOYING, EnemyAi.MODE_SIEGE])
+	assert_eq([state.foes[f.foe].x_m, state.foes[f.foe].order], [45000, ArmySystem.ORDER_GARRISON], "stationed where it arrived")
+	var closed := BodyDayDriver.day(f.repo, state)
+	assert_eq(closed.status, "complete", closed.reason)
+	if closed.candidate == null: return
+	var rec := SiegeRecord.of_host(closed.candidate, f.host)
+	assert_false(rec.is_empty(), "the siege settles: the record opens")
+	assert_eq((rec.militia as Array).size(), 1, "and the town's militia rises")
+	assert_true(closed.candidate.regiments.has(String(rec.militia[0])), "the crown's")
+	assert_eq(ArmyGround.seat_of(f.repo, closed.candidate, f.town), String(rec.militia[0]), "on the town's seat")
 
 ## B2b2: another host already deploys at the garrisoned town, so the column's host drops its target
 ## in the arrival slice and stands aside (no second siege): no event, the live order turns to

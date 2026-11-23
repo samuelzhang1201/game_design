@@ -495,12 +495,14 @@ func test_raid_templates_spell_no_kingdom() -> void:
 ## 2026-10-14: the hosts no longer share one stacked point, a raid on a manor
 ## runs its own thirty days and the town falls near day 99): a host whose last manor is stripped may come on
 ## a town the crown's camp holds (its garrison, ArmyGround.garrison_town) and
-## sit down to a siege on what it carries until hunger turns it home.
+## sit down to a siege on what it carries until hunger turns it home. Since
+## player siege step 4b an empty town is besieged too (its militia raised), so
+## the main host takes one early and HOLDs it; step 5 re-tunes the run.
 func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 	var engine := TickEngine.new(repo)
 	var s := SuiteData.campaign(repo, 11)
 	engine.advance(s)
-	var raiding_late := ""
+	var raided := ""
 	var home_by := -1
 	var days_played := 0
 	while s.absolute_day() <= 120:
@@ -512,8 +514,9 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 		Play.day(engine, s, true)
 		for h: String in EnemyAi.host_codes(s):
 			var m: Dictionary = s.ai_hosts[h]
-			if today > 33 and String(m["mode"]) == "RAID" and int(m["plunder"]) > 0 and raiding_late == "":
-				raiding_late = h
+			if String(m["mode"]) == "RAID" and raided == "" and (m.get("raided", {}) as Dictionary).values().any(
+					func(r: Dictionary) -> bool: return int(r.get("taken", 0)) > 0):
+				raided = h
 		# done: turned for home, or holding a town it took (HOLD never thinks
 		# again; on the pack's real roads, spec 2026-10-10-march-slope-detour,
 		# the raiders come on Castleton and take it)
@@ -522,10 +525,12 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 			all_home = all_home and String(s.ai_hosts[h]["mode"]) in EnemyAi.HOMEWARD + [EnemyAi.MODE_HOLD]
 		if all_home and home_by < 0:
 			home_by = today
-	assert_ne(raiding_late, "", "plunder feeds a raiding host: one still raids after day 33")
-	assert_gt(home_by, 33, "the invasion outlasts the hosts' own stores")
+	# player siege spec §5 (step 4b): an empty town is besieged, its militia
+	# raised, so the main host takes a town and HOLDs it while a host raids a
+	# manor; how long the invasion lasts is step 5's to re-tune (spec §11 row 5)
+	assert_ne(raided, "", "a host raids a plain manor and takes from it")
 	assert_true(home_by > 0 and home_by <= 120, "and every host has turned for home or holds what it took by day 120 (%d)" % home_by)
-	gut.p("raiding past day 33: %s; every host homeward from day %d" % [raiding_late, home_by])
+	gut.p("raided: %s; every host homeward or holding from day %d" % [raided, home_by])
 
 
 ## --- a town target (Ruling 5: an open town is raided like a manor) ----------------

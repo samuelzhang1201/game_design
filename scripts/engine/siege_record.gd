@@ -10,7 +10,8 @@ extends RefCounted
 ## days, integrity (0..1000, set at open: 1000 for walls or a citadel, else 0),
 ## progress (0..1000, transitional: step 10 removes it), assault (1: the next
 ## day's battles may storm), assault_due (an assault owed), starved (1: the
-## hunger was told), militia (the militia unit codes it raised, TownMilitia). A host's mind keeps only `siege_id`, set until the
+## hunger was told), militia (the militia unit codes it raised, TownMilitia),
+## woken (the standing units it woke, TownMilitia.wake). A host's mind keeps only `siege_id`, set until the
 ## siege's end has been told.
 
 ## The figures an old save kept on the host minds (migrate erases them).
@@ -177,15 +178,17 @@ static func migrate(repo: DataRepository, state: GameState) -> void:
 			"reason": "siege figures moved from ai_hosts to GameState.sieges (player siege spec §3)"}
 
 
-## Opens `town`'s record for `attacker`; with `levy`, a town with no defenders
-## raises its militia (TownMilitia.raise, the record's `militia`).
+## Opens `town`'s record for `attacker`; with `levy`, a foreign town's standing
+## garrison wakes (TownMilitia.wake, the record's `woken`), then a town with no
+## defenders raises its militia (TownMilitia.raise, the record's `militia`).
 static func _open(repo: DataRepository, state: GameState, town: String, attacker: String, levy := true) -> String:
 	state.siege_next_id += 1
 	var id := "s%d" % state.siege_next_id
 	state.sieges[id] = {"town": town, "attacker": attacker, "defender": SiegeSystem.holder_of(repo, state, town),
 		"hosts": [], "units": [], "task_id": "", "opened_day": state.absolute_day(), "days": 0,
 		"integrity": 1000 if walled(repo, town) else 0, "progress": 0, "assault": 0, "assault_due": 0,
-		"starved": 0, "militia": []}
+		"starved": 0, "militia": [], "woken": []}
 	if levy:
+		TownMilitia.wake(repo, state, id)
 		TownMilitia.raise(repo, state, id)
 	return id
