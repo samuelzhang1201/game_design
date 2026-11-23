@@ -360,6 +360,24 @@ at Retina size). Found on the way: a drag cost ~48 ms a frame at mid/far under
 EITHER renderer since the houses' 5×5 ground sampling of 2026-09-24 — every
 visible house re-sampled on each rebuild; the seat is now kept per house.
 
+**Battle site (2026-11-22, `--battle-arm foot`, still).** Ultra read
+24.6 ms (near 14.7 / mid 24.6 / far 16.7) at 3024×1964 and ~13 ms near even
+at home: it kept MSAA 4x and SSAO past `map3d_close_effects_m` and drew every
+Retina pixel. Priced in one process, A/B interleaved: high's `far_*` took mid
+24 → 13 ms and far 19 → 10.5; the 1.8 pixel cap took near ~14 → ~10; SSIL,
+`ssao_quality` and the 64/8 terrain mesh are each under 1 ms. Ultra now wears
+high's `far_*` and `max_px_scale`:
+
+| tier | size | budget | near / mid / far |
+|---|---|---|---|
+| ultra | 3024×1964 | 12.5 ms | 11.27 / 10.85 / 8.20 (again: 11.81 / 11.26 / 8.29) |
+| high | 3024×1964 | 12 ms | 10.96 / 10.25 / 8.33 |
+| medium | 1920×1080 | 8.5 ms | 6.91 / 5.28 / 3.20 |
+| low | 1920×1080 | 8.5 ms | 8.08 / 3.28 / 2.65 |
+
+The window opens shorter than asked now and then (3024×1704 when the display
+clamps it): read the bench's `window` line before trusting a row.
+
 **(Compatibility, 2026-09-20:) The `high` tier does not clear its 8 ms budget while the map is being
 dragged.** It is reported, not tuned away (the owner decides whether the
 budget, the tier's contents or the per-move work moves): a drag costs ~1.7 ms

@@ -221,8 +221,8 @@ func _sky(ssao: bool) -> Map3DSky:
 
 
 ## Owner 2026-10-02 (按缩放切换): high wears MSAA 4x and SSAO up close and
-## SMAA without SSAO past map3d_close_effects_m; ultra keeps its own at every
-## zoom (its far_* are blank).
+## SMAA without SSAO past map3d_close_effects_m; ultra as high (battle-site bench
+## gate 2026-11-22: keeping them far out cost ultra ~11 ms at 24 km).
 func test_the_finishing_effects_are_spent_up_close() -> void:
 	var vp := SubViewport.new()
 	var sky := _sky(true)
@@ -238,7 +238,9 @@ func test_the_finishing_effects_are_spent_up_close() -> void:
 	assert_eq(vp.screen_space_aa, Viewport.SCREEN_SPACE_AA_SMAA, "but SMAA")
 	assert_false(env.ssao_enabled, "and no SSAO")
 	Map3DCloseEffects.apply(Game.data, vp, sky, Map3DQuality.row(Game.data, "ultra"), edge * 2.0)
-	assert_eq(vp.msaa_3d, Viewport.MSAA_4X, "ultra keeps its MSAA far out")
+	assert_eq(vp.msaa_3d, Viewport.MSAA_DISABLED, "ultra spends its MSAA up close too")
+	assert_eq(vp.screen_space_aa, Viewport.SCREEN_SPACE_AA_SMAA, "with SMAA far out")
+	assert_false(env.ssao_enabled, "and no SSAO")
 	vp.free()
 	sky.free()
 
@@ -251,7 +253,8 @@ func after_all() -> void:
 ## The 3D view's px per design px is the tier's render_scale of the window's,
 ## held under its max_px_scale (perf P0 2026-10-11): a Retina 3024x1964 window
 ## (min(3024/1280, 1964/720) = 2.3625 per design px) renders high at 1.8, a
-## 1080p one (1.5) is untouched, ultra has no cap.
+## 1080p one (1.5) is untouched; ultra is capped too, never under high (battle-site
+## bench gate 2026-11-22: every Retina pixel read ~13 ms near against 12.5).
 func test_the_view_holds_its_pixels_under_the_tiers_cap() -> void:
 	var high := {"render_scale": "1.0", "max_px_scale": "1.8"}
 	assert_almost_eq(Map3DQuality.px_scale(high, 2.3625), 1.8, 0.0001, "Retina: capped")
@@ -261,6 +264,7 @@ func test_the_view_holds_its_pixels_under_the_tiers_cap() -> void:
 	assert_almost_eq(Map3DQuality.px_scale(low, 2.3625), 1.2, 0.0001, "Retina low: capped")
 	assert_almost_eq(Map3DQuality.px_scale({"render_scale": "1.0", "max_px_scale": ""}, 2.3625), 2.3625,
 		0.0001, "no cap: the whole window")
-	for tier: String in ["low", "medium", "high"]:
+	for tier: String in ["low", "medium", "high", "ultra"]:
 		assert_gt(Map3DQuality.num(Map3DQuality.row(Game.data, tier), "max_px_scale", 0.0), 0.0, tier + " is capped")
-	assert_eq(Map3DQuality.num(Map3DQuality.row(Game.data, "ultra"), "max_px_scale", 0.0), 0.0, "ultra renders every pixel")
+	assert_gte(Map3DQuality.num(Map3DQuality.row(Game.data, "ultra"), "max_px_scale", 0.0),
+		Map3DQuality.num(Map3DQuality.row(Game.data, "high"), "max_px_scale", 0.0), "ultra draws no fewer pixels than high")
