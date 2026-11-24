@@ -182,3 +182,21 @@ Steps after the export:
    script run drops the ext_resource UIDs, put them back and read `git diff`.
 4. Provider `scripts/map3d/map3d_heavy_infantry_locomotion.gd` (the infantry's solver on this
    plan), then the certificate, `unit_locomotion.csv` and `balance.csv` rows as above.
+
+## The axemen (installed 2026-11-23)
+
+The axemen's hand-axe soldier (`axemen`, spec `2026-11-18-axemen-arm-design.md` step 4) is this
+infantry with the owner's hand axe in place of the sword: `assets/3D/model_wip/blender_output/infantry/infantry_handaxe_shield.blend`
+(README there: the axe grip a third up the haft in the walk and the holds, the authored chop as
+ATTACK, the batch-2 clips with the axe grip). It keeps the contract and the authored body classes,
+so the export is the infantry's with ARM `axemen`: 9,105 tris, 70 bones, rest height 1.636 m,
+MARCH `stride_m` 1.4838 and `steps` 0.2121;0.9091 (the same walk: its legs match the infantry's to
+2e-7 m over a 420-phase capture), foot-lock offsets 36 / 41 mm, axe–leg gap 0.51 m. Its tunic mask
+is the infantry's byte for byte (not shipped twice); its realm tint is
+`scenes/map3d/materials/unit_realm_tint_axemen.tres` (the overlay must read the figure's own atlas).
+Pivots: `pivot_mapping.py --arm axemen` with every infantry value; plan `axemen_pivot_plan.json`,
+fixture `tests/fixtures/axemen_pivot_mapping.json`. Scene `scenes/models/units/axemen.tscn` and the
+`army_models.tres` / `realm_tint.tres` rows were made in the editor; provider
+`Map3DAxemenLocomotion`. The duel's `contact` shares were measured off the source: ATTACK 0.58 is
+the chop's impact (key 18 of 31, where the head stops), ATTACK_2 0.49, SLASH_2 0.53, SLASH_3 0.44;
+the rest are the infantry's (the same motions).

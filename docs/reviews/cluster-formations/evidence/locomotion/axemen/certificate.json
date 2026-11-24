@@ -41,7 +41,7 @@
     ],
     "length_s": 1.10000002384186,
     "loop_mode": 1,
-    "tracks": 55
+    "tracks": 56
    },
    "PIVOT_LEFT": {
     "key_times": [
@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "b4f9600aa771f65962368df0ca6f22ef74eabe5f591374fe2acc39583e7cb54c",
+  "sha256": "314ada72624beed612585c972341a91ccd651837b89f57736add889315c88a20",
   "uniform": 512
  },
  "config": {
@@ -390,12 +390,12 @@
   "march_stop_phases": [
    0.01904761904761905
   ],
-  "note": "LOCO-CERT-AXE (spec 2026-11-18-axemen-arm-design). The axemen wear the infantry's short-sword soldier until their hand-axe soldier is installed (army_models.tres binds axemen to infantry.tscn), so this is the infantry's provider and config at the axemen's footprint radius 927 and the infantry's scale. Map3DInfantryLocomotion re-solves the coupled pivot plan for each grid turn; pivots enter and leave MARCH at 8/420 only and the hold is MARCH frozen at 8/420 (owner ruling A, a consumer requirement). Installing the hand-axe soldier voids it.",
+  "note": "LOCO-CERT-AXE (spec 2026-11-18-axemen-arm-design, step 4). The hand-axe soldier's own scene and provider: Map3DAxemenLocomotion is Map3DInfantryLocomotion's solver on this body's coupled pivot plan (axemen_pivot_plan.json; the shipped clips are its +/-90 solve). The body is the infantry's on the same pack walk (MARCH legs equal to 2e-7 m, rest height 1.636 m), so pivots enter and leave MARCH at 8/420 only and the hold is MARCH frozen at 8/420 (owner ruling A, a consumer requirement), as the infantry's; stride 1.4838 measured off its MARCH; k 25.8437, contact 23217 um.",
   "patch_band_m": 0.005,
   "phase_map": null,
-  "provider": "scripts/map3d/map3d_infantry_locomotion.gd",
+  "provider": "scripts/map3d/map3d_axemen_locomotion.gd",
   "radius_m": 927,
-  "scene": "scenes/models/units/infantry.tscn",
+  "scene": "scenes/models/units/axemen.tscn",
   "stride_m": 1.4838,
   "turn_q": 400000
  },
@@ -414,22 +414,24 @@
  },
  "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
  "input_sha256": {
-  "assets/3D/units/infantry/infantry.glb": "fa7fdcb75f50b1b77756bffa325e309600c1d1b4283a9085b38737234fcab94d",
-  "assets/3D/units/infantry/infantry.glb.import": "622a873cecde657eefd5ffac2281e66d1d98554ac85c6cfc0fad6d367c25cc65",
-  "assets/3D/units/infantry/infantry_infantry_atlas.jpg": "5f6be178220a2305f4b3d31ce3fdabef24f1a364356e8381c2da74e333030e6a",
-  "assets/3D/units/infantry/infantry_infantry_atlas.jpg.import": "271eb1f94d0e35b3273bdfd6064d088e3af29ef508fcc064b69aa856afb3b457",
-  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg": "128ed90d97360fef366ac05a7e5824cf95357a61a023769adf68ef5d2bb9e20f",
-  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg.import": "c759b2678a820c71304167b6873d5b65d894bf2228906af7c12a19aab8c65f88",
-  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "532ca77c142fe4620751d00195e2c62f1ebb476ef523b41fa5a27ae813259f27",
-  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg.import": "88390be297d3271f1f4a43cccfd9d37dc68bdc5cec98712d00f552c9b6cf1542",
+  "assets/3D/units/axemen/axemen.glb": "ebaf4eb91c286703ac43563c8042d36f797841b81f16b586270675aef60f6728",
+  "assets/3D/units/axemen/axemen.glb.import": "8c4d3ea770adee5f42cf5f04bd6f12653b75f55d77a039d349283332264389bf",
+  "assets/3D/units/axemen/axemen_axemen_atlas.jpg": "a42e81dbf6fe606d4d85364ac1f4d7395b8b7e6bfe2ea960d7eea9154a4d46d6",
+  "assets/3D/units/axemen/axemen_axemen_atlas.jpg.import": "e2725d93924a341b656b521c78bd4469ac86bfa7b3bebccf5c5551f684d922a0",
+  "assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg": "8a253b7d231c93e85a04e0a9b0817dc96961b705649c1a6805fb222d7ff6a26f",
+  "assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg.import": "6c562853e71ae3b84e43210d42fb0ccc580734db83bf53706f82f486a509be89",
+  "assets/3D/units/axemen/axemen_axemen_atlas_n.jpg": "5ef0e8c3d09acb87488ca7da474c7dd5a691629e924cfe4b3f8bd5b37c3e50cf",
+  "assets/3D/units/axemen/axemen_axemen_atlas_n.jpg.import": "837d4a5606836554a50ce1003814c8512a9af5751208ca3e5cc9d6bc8c6ebca6",
+  "assets/3D/units/axemen/axemen_pivot_plan.json": "b953c2e3a4b5c49404f979e8d5ea1a5987cf4e507058c0629bebc3972fb761c9",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
-  "data/army/balance.csv": "7925c6b53eb35e138044542c0e12072f3ce6a599b629dd89d68ad8d6b6ebff39",
+  "data/army/balance.csv": "d22c86e3f2a730b1fd05c2bc7616d2057a0ddbe06ead85eb42e4dd68b11c0db4",
   "data/army/unit_footprints.csv": "81971028b03d63c2031c55f983f74df8d114414d13e461d61981ddce744aaf03",
-  "data/screens/map3d/army_art.csv": "15058277b4340dacae865aa0c0c05870de0d055787decbd91cb2507553446415",
+  "data/screens/map3d/army_art.csv": "6706ed176c90e4ecdd8877138fc21a45d077759b6a4743e001702629935a28b6",
   "data/screens/map3d/balance.csv": "33dea7e472bfe0b9245734daaa8d631526fbb67eaf9f8eb20f819bfb26446f20",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "f49cb07aecc7e87f985126d3db0751c5b8552d40ee34519da9bf638fbfd2fbd3",
-  "scenes/models/units/infantry.tscn": "69256e86dfd2d93050522bdcef422afa3ce3d4c2472d063752b7b085da848921",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "4245e17bf0ec85f220396a321db06d151827304f57b7d2be808115f7ff7c877b",
+  "scenes/models/units/axemen.tscn": "bddf8c926838e8576b5d54ff4370984b521d47d3977297b48c25663df3e15adc",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
+  "scripts/map3d/map3d_axemen_locomotion.gd": "1eb52b16841519df2cda6ee0fe0eff2392d2ad611d2ed6b139163455a015b16f",
   "scripts/map3d/map3d_infantry_locomotion.gd": "fe9b7571d2f0ca286ba97e0f4c6326fe195277382f477bee651040f05c6ebaa5",
   "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
@@ -443,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 23217,
-  "digest": "ec0c8bbf60d8ba1e80c8bf342edb6790786f59c05bd1cb46e24a96384a68877f",
+  "digest": "767f6afac86acc5d4174802b6a153140c15aad2743b71a4a2fb02195f1221ff9",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "ec0c8bbf60d8ba1e80c8bf342edb6790786f59c05bd1cb46e24a96384a68877f",
+ "payload_sha256": "767f6afac86acc5d4174802b6a153140c15aad2743b71a4a2fb02195f1221ff9",
  "report": {
   "bounds_um": {
    "contact": 23217,
@@ -461,11 +463,11 @@
    "radius_simulation_m": 431,
    "witness": {
     "clip": "MARCH",
-    "mesh": "infantry",
+    "mesh": "axemen",
     "phase": 0.303030305493305,
     "surface": 0,
     "turn_udeg": null,
-    "vertex": 4870
+    "vertex": 4932
    }
   },
   "hover": {
@@ -486,22 +488,22 @@
    "l": {
     "first": [
      {
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "vertex": 55
      },
      {
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "vertex": 56
      },
      {
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "vertex": 57
      },
      {
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "vertex": 311
      }
@@ -511,22 +513,22 @@
    "r": {
     "first": [
      {
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "vertex": 0
      },
      {
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "vertex": 1
      },
      {
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "vertex": 2
      },
      {
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "vertex": 3
      }
@@ -542,11 +544,11 @@
    "total_um": 4695,
    "witness": {
     "clip": "PIVOT_LEFT",
-    "mesh": "infantry",
+    "mesh": "axemen",
     "phase": 0.0,
     "surface": 0,
     "turn_udeg": -1,
-    "vertex": 7122
+    "vertex": 7188
    }
   },
   "planting_band": {
@@ -578,14 +580,14 @@
        "MARCH",
        0.999999
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.0
       ],
       "turn_udeg": null,
-      "vertex": 613
+      "vertex": 621
      }
     },
     {
@@ -599,14 +601,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_LEFT",
        0.0
       ],
       "turn_udeg": -1,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -620,14 +622,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_LEFT",
        0.0
       ],
       "turn_udeg": -2000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -641,14 +643,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_LEFT",
        0.0
       ],
       "turn_udeg": -45000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -662,14 +664,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_LEFT",
        0.0
       ],
       "turn_udeg": -90000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -683,14 +685,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_LEFT",
        0.0
       ],
       "turn_udeg": -135000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -704,14 +706,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_LEFT",
        0.0
       ],
       "turn_udeg": -179999999,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -725,14 +727,14 @@
        "PIVOT_LEFT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": -1,
-      "vertex": 7712
+      "vertex": 7741
      }
     },
     {
@@ -746,14 +748,14 @@
        "PIVOT_LEFT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": -2000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -767,14 +769,14 @@
        "PIVOT_LEFT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": -45000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -788,14 +790,14 @@
        "PIVOT_LEFT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": -90000000,
-      "vertex": 7712
+      "vertex": 7741
      }
     },
     {
@@ -809,14 +811,14 @@
        "PIVOT_LEFT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": -135000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -830,14 +832,14 @@
        "PIVOT_LEFT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": -179999999,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -851,14 +853,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_RIGHT",
        0.0
       ],
       "turn_udeg": 1,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -872,14 +874,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_RIGHT",
        0.0
       ],
       "turn_udeg": 2000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -893,14 +895,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_RIGHT",
        0.0
       ],
       "turn_udeg": 45000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -914,14 +916,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_RIGHT",
        0.0
       ],
       "turn_udeg": 90000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -935,14 +937,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_RIGHT",
        0.0
       ],
       "turn_udeg": 135000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -956,14 +958,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_RIGHT",
        0.0
       ],
       "turn_udeg": 179999999,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -977,14 +979,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_RIGHT",
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -998,14 +1000,14 @@
        "MARCH",
        0.01904761904761905
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "PIVOT_RIGHT",
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -1019,14 +1021,14 @@
        "PIVOT_RIGHT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": 1,
-      "vertex": 552
+      "vertex": 556
      }
     },
     {
@@ -1040,14 +1042,14 @@
        "PIVOT_RIGHT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": 2000000,
-      "vertex": 7252
+      "vertex": 7304
      }
     },
     {
@@ -1061,14 +1063,14 @@
        "PIVOT_RIGHT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": 45000000,
-      "vertex": 7484
+      "vertex": 7522
      }
     },
     {
@@ -1082,14 +1084,14 @@
        "PIVOT_RIGHT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": 90000000,
-      "vertex": 552
+      "vertex": 556
      }
     },
     {
@@ -1103,14 +1105,14 @@
        "PIVOT_RIGHT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": 135000000,
-      "vertex": 7301
+      "vertex": 3713
      }
     },
     {
@@ -1124,14 +1126,14 @@
        "PIVOT_RIGHT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": 179999999,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -1145,14 +1147,14 @@
        "PIVOT_RIGHT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": 180000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     },
     {
@@ -1166,14 +1168,14 @@
        "PIVOT_RIGHT",
        1.0
       ],
-      "mesh": "infantry",
+      "mesh": "axemen",
       "surface": 0,
       "to": [
        "MARCH",
        0.01904761904761905
       ],
       "turn_udeg": 180000000,
-      "vertex": 7608
+      "vertex": 7642
      }
     }
    ],
@@ -1186,14 +1188,14 @@
      "PIVOT_RIGHT",
      1.0
     ],
-    "mesh": "infantry",
+    "mesh": "axemen",
     "surface": 0,
     "to": [
      "MARCH",
      0.01904761904761905
     ],
     "turn_udeg": 180000000,
-    "vertex": 7608
+    "vertex": 7642
    }
   },
   "skin": {
@@ -1218,12 +1220,12 @@
      "total_um": 17240,
      "witness": {
       "clip": "MARCH",
-      "mesh": "infantry",
+      "mesh": "axemen",
       "phase": 0.212121208426709,
       "surface": 0,
       "touchdown_phase": 0.208984375,
       "turn_udeg": null,
-      "vertex": 7670
+      "vertex": 7699
      }
     },
     "PIVOT_LEFT": {
@@ -1234,12 +1236,12 @@
      "total_um": 4973,
      "witness": {
       "clip": "PIVOT_LEFT",
-      "mesh": "infantry",
+      "mesh": "axemen",
       "phase": 0.513671875,
       "surface": 0,
       "touchdown_phase": 0.224999994039536,
       "turn_udeg": -1,
-      "vertex": 7122
+      "vertex": 7188
      }
     },
     "PIVOT_RIGHT": {
@@ -1250,12 +1252,12 @@
      "total_um": 4968,
      "witness": {
       "clip": "PIVOT_RIGHT",
-      "mesh": "infantry",
+      "mesh": "axemen",
       "phase": 0.382499992847443,
       "surface": 0,
       "touchdown_phase": 0.224999994039536,
       "turn_udeg": 1,
-      "vertex": 7122
+      "vertex": 7188
      }
     }
    },
@@ -1265,12 +1267,12 @@
    "total_um": 17240,
    "witness": {
     "clip": "MARCH",
-    "mesh": "infantry",
+    "mesh": "axemen",
     "phase": 0.212121208426709,
     "surface": 0,
     "touchdown_phase": 0.208984375,
     "turn_udeg": null,
-    "vertex": 7670
+    "vertex": 7699
    }
   },
   "stance": {

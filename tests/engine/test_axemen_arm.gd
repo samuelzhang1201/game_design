@@ -50,9 +50,11 @@ func test_every_land_arm_has_its_rows() -> void:
 		assert_true(repo.army_art.has(arm), arm + " army_art")
 
 
-func test_axe_has_its_stand_in_art() -> void:
-	# Until the hand-axe soldier and its painting exist, the axemen wear the infantry's art.
-	for table: String in [GameArt.ARMY_MODELS, GameArt.ARMY_PAINTINGS, GameArt.WAR_PIECES,
+func test_axe_has_its_own_figure_and_stand_in_art() -> void:
+	# The hand-axe soldier is installed (spec step 4); until the painting, the war room's piece
+	# and the sounds exist, those are the infantry's.
+	assert_eq(GameArt.path(GameArt.ARMY_MODELS, "axemen"), "res://scenes/models/units/axemen.tscn")
+	for table: String in [GameArt.ARMY_PAINTINGS, GameArt.WAR_PIECES,
 			GameArt.UNIT_SOUNDS, GameArt.UNIT_SETTLE_SOUNDS]:
 		assert_ne(GameArt.path(table, "infantry"), "", table + " has infantry")
 		assert_eq(GameArt.path(table, "axemen"), GameArt.path(table, "infantry"), table)

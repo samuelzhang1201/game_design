@@ -33,9 +33,14 @@ const SCENES := {
 ## --battle-arm ARM stages a FIELD battle of that arm (code suffix, e.g. foot): the
 ## first own unit with open dry ground 3 km off its camp leaves it for there, the
 ## first such foe 1 km beyond; with --zoom3d and no --at3d the 3D map frames it.
+## --battle-raise ARM first raises a unit of that arm through the recruitment order
+## (BattleStage.raise; its code ends in the --battle-arm suffix) and --battle-foe SUFFIX
+## picks the foe by its own suffix (an arm no realm fields fights their foot).
 const BattleStage := preload("res://tools/battle_stage.gd")
 var _battle_case := ""
 var _battle_arm := ""
+var _battle_raise := ""
+var _battle_foe := ""
 var _battle_frame := false
 var _battle_save := ""
 var _group_evidence := ""
@@ -378,6 +383,10 @@ func _ready() -> void:
 			_battle_case = args[i + 1]
 		elif args[i] == "--battle-arm":
 			_battle_arm = args[i + 1]
+		elif args[i] == "--battle-raise":
+			_battle_raise = args[i + 1]
+		elif args[i] == "--battle-foe":
+			_battle_foe = args[i + 1]
 		elif args[i] == "--screen":
 			_screen = args[i + 1]
 		elif args[i] == "--seed":
@@ -2015,7 +2024,9 @@ func _war_chart_click(view: WarRoomView, id: String) -> int:
 ## Put one real hostile column within contact range, then use the game day
 ## entry point (tools/battle_stage.gd). No fake panel or hand-written battle result in a screenshot.
 func _stage_battle_encounter() -> void:
-	var own := BattleStage.stage(_battle_arm)
+	if _battle_raise != "" and BattleStage.raise(_battle_raise, _battle_arm) == "":
+		return
+	var own := BattleStage.stage(_battle_arm, _battle_foe)
 	if own != "" and _battle_arm != "" and _zoom3d > 0.0 and _at3d.x < 0.0:
 		_at3d = ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, own, Game.state))
 		_battle_frame = true

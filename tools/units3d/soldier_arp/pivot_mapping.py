@@ -66,7 +66,10 @@ GLB = Path(__file__).resolve().parents[3] / 'assets/3D/units/infantry/infantry.g
 # least is 11.0 at 179; soles flattest-planted 181/420 at 6.8 mm and 396/420 at 3.5 mm), so it
 # keeps them and the consumer's stop / start / hold phase is the infantry's; its bounds are
 # ceil(world bound / k * 1e6) at k = 26.4330 (rest height 1.5992 m at size 0.62).
-ARMS = {'infantry': {}, 'heavy_infantry': {'CONTACT_UM': 22699, 'SEAM_UM': 1892}}
+# The axemen's hand-axe soldier (2026-11-23) is the infantry's body and pack walk with another
+# weapon: its 420-phase MARCH capture matches the infantry's leg bones to 2e-7 m and its rest
+# height is the same 1.636 m, so it keeps every infantry value.
+ARMS = {'infantry': {}, 'heavy_infantry': {'CONTACT_UM': 22699, 'SEAM_UM': 1892}, 'axemen': {}}
 
 
 def use(arm):

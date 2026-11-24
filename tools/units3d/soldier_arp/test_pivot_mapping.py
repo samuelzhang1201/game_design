@@ -6,7 +6,7 @@
    and R-A contact audit.
 3. Baking the committed solve onto the installed GLB's own nineteen-clip prefix reproduces it byte for byte.
 4. The committed runtime plan (infantry_pivot_plan.json) is what the mapping generates.
-2-4 hold for every arm on the rig contract (ARMS: the infantry and the heavy infantry).
+2-4 hold for every arm on the rig contract (ARMS: the infantry, the heavy infantry and the axemen).
 """
 import base64
 import hashlib
@@ -37,6 +37,12 @@ ARMS = {
                    'canonical-samples.json': '795711ba5352dd9e093bf924e742b8fa2439e38d859037c20118eb42d10716aa'},
         'glb_sha256': '899ecf39af52019db6a273f8ea35badc9d94455e8d25a60c316b59f46086343f',
         'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 5776552}},
+    'axemen': {
+        'hashes': {'baseline-native.json': '8bfd9acadf4e17c2cf417e889455fd36cb3040be0ba33abc809eb4919bbdf7d1',
+                   'native-march.json': '2da85fa15bb11016597037050ae7a33563f545ccb548c2a961d377fdf1582475',
+                   'canonical-samples.json': 'f71b54f6e5ba42e2e0101f08a7d3b9b6111d8550a9a6cb14d9e22d218927c58f'},
+        'glb_sha256': 'c69bb9e6dc20642590e471ffc03a0dff752f0c4e563bdf948a622e4c4c3087d3',
+        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6602724}},
 }
 
 

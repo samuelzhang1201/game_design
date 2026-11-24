@@ -1,0 +1,18 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://c62uufawomsx1"]
+
+[ext_resource type="Shader" uid="uid://cipw05pfwbhxt" path="res://scenes/map3d/materials/unit_realm_tint.gdshader" id="1_ax4mt"]
+[ext_resource type="Texture2D" uid="uid://c4tdplom5lt4u" path="res://assets/3D/units/axemen/axemen_axemen_atlas.jpg" id="2_ndkwv"]
+[ext_resource type="Texture2D" uid="uid://wxm33fvgh0qq" path="res://assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg" id="3_q8j8o"]
+[ext_resource type="Texture2D" uid="uid://d0jo64u68yeoj" path="res://assets/3D/units/axemen/axemen_axemen_atlas_n.jpg" id="4_li2p3"]
+[ext_resource type="Texture2D" uid="uid://b4db0uhpj43sf" path="res://assets/3D/units/infantry/infantry_tunic_mask.png" id="5_j1p1w"]
+
+[resource]
+render_priority = 1
+shader = ExtResource("1_ax4mt")
+shader_parameter/albedo_atlas = ExtResource("2_ndkwv")
+shader_parameter/mr_atlas = ExtResource("3_q8j8o")
+shader_parameter/normal_atlas = ExtResource("4_li2p3")
+shader_parameter/tunic_mask = ExtResource("5_j1p1w")
+shader_parameter/tunic_luminance = 0.12
+shader_parameter/shade_max = 2.0
+shader_parameter/cloth_roughness = 0.85

@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://d0sn5aj7twhiy"]
+
+[ext_resource type="PackedScene" uid="uid://vr4tte20iix3" path="res://assets/3D/units/axemen/axemen.glb" id="1_7331g"]
+[ext_resource type="Texture2D" uid="uid://c4tdplom5lt4u" path="res://assets/3D/units/axemen/axemen_axemen_atlas.jpg" id="2_7ubh4"]
+[ext_resource type="Texture2D" uid="uid://wxm33fvgh0qq" path="res://assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg" id="3_7scdl"]
+[ext_resource type="Texture2D" uid="uid://d0jo64u68yeoj" path="res://assets/3D/units/axemen/axemen_axemen_atlas_n.jpg" id="4_mmlxs"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_s33ir"]
+resource_name = "axemen_atlas_mat"
+cull_mode = 2
+albedo_texture = ExtResource("2_7ubh4")
+metallic = 1.0
+metallic_texture = ExtResource("3_7scdl")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("3_7scdl")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("4_mmlxs")
+metadata/_gltf_primary_texture_coord = 0
+
+[node name="Axemen" unique_id=234287329 instance=ExtResource("1_7331g")]
+editor_description = "The axeman, one FIGURE of an axe regiment's piece: the owner's hand-axe + round-shield soldier on the infantry's rig and clips (tools/units3d/infantry_arp/README.md). The 3D map (Map3DLayerUnits) stands instances of this scene in formation and plays its clips by order. Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/screens/map3d/army_art.csv."
+
+[node name="axemen" parent="inf_rig/Skeleton3D" parent_id_path=PackedInt32Array(1986167054) index="0" unique_id=1831094910]
+surface_material_override/0 = SubResource("StandardMaterial3D_s33ir")
