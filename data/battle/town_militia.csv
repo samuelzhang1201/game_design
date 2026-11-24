@@ -1,5 +1,5 @@
 works,arm,men_permille,men_cap,notes
-citadel,infantry,30,600,"player siege spec §5 (first draft, step 5 tunes): a besieged town with no defenders raises population x men_permille / 1000 men of each arm of its best works (citadel over walls over none), each capped at men_cap and all bounded by what its province can still mobilise (MilitaryPopulation.available, urban). Arms take what is left in this file's order"
+citadel,infantry,30,600,"player siege spec §5 (first draft, kept by step 5: in the no-orders run the open town of Redckingin raises 63 men, who break in one round of the first storm (day 24) against a 14-column host and the town falls on day 25; three times as many (190) were tried: they hold the storm for twelve rounds, but the town still falls on day 27 at 1000/1000 while they fight on, so the first draft stays and siege_assault_days paces the hold): a besieged town with no defenders raises population x men_permille / 1000 men of each arm of its best works (citadel over walls over none), each capped at men_cap and all bounded by what its province can still mobilise (MilitaryPopulation.available, urban). Arms take what is left in this file's order"
 citadel,archers,15,300,
 walls,infantry,20,400,
 walls,archers,10,200,
