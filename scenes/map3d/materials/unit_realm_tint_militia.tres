@@ -13,6 +13,6 @@ shader_parameter/albedo_atlas = ExtResource("2_de7m6")
 shader_parameter/mr_atlas = ExtResource("3_sea86")
 shader_parameter/normal_atlas = ExtResource("4_yv4qt")
 shader_parameter/tunic_mask = ExtResource("5_ppiso")
-shader_parameter/tunic_luminance = 0.051
+shader_parameter/tunic_luminance = 0.052
 shader_parameter/shade_max = 2.0
 shader_parameter/cloth_roughness = 0.85
