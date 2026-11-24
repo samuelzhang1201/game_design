@@ -12,7 +12,7 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 - `scripts/map3d/guide/settlements_and_houses.md` — settlements, house models and their aprons (`Map3DHouses`, `Map3DLayerHouses`, `Map3DLayerAprons`, `Map3DHouseApron`, `Map3DHouseMaterials`, `Map3DAssetCache`, `house_surface.gdshader`)
 
 - `scripts/map3d/guide/king_and_camps.md` — the independent king, field-camp stages, physical courier origins (`Map3DKing`, `Map3DUnitCamps`, `Map3DCourierPalace`, `Map3DLayerUnits`, `Map3DView`)
-- `scripts/map3d/guide/pivots.md` — pivots for any turn and each arm's provider and certificate (`Map3DPivotProvider`, `Map3DInfantryLocomotion`, `Map3DArcherLocomotion`, `Map3DRoyalPivot`, `Map3DCavalryLocomotion`)
+- `scripts/map3d/guide/pivots.md` — pivots for any turn and each arm's provider and certificate (`Map3DPivotProvider`, `Map3DInfantryLocomotion`, `Map3DAxemenLocomotion`, `Map3DArcherLocomotion`, `Map3DRoyalPivot`, `Map3DCavalryLocomotion`)
 
 - `scripts/map3d/guide/picking.md` — what a click or hover picks, the selection rings (`Map3DPicker`, `Map3DSelection`, `Map3DPicker.ray_depth`, `Map3DView.kingdom_of_pick`)
 - `scripts/map3d/guide/battle_duels.md` — duels, mixed fight, desync (`Map3DDuel*`, `Map3DImpact*`, `Map3DScrum`, `rest_rate`)

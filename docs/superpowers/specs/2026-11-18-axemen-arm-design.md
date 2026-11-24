@@ -91,7 +91,7 @@ borrowed it); `army_paintings.tres` row `axemen` → `infantry.png`. Both are ed
 never text edits. The stand-in needs its own `unit_locomotion.csv` row and certificate the way
 artillery got its stand-in one (`tools/units3d/certify_locomotion.py`).
 
-## The 3D soldier (step 2)
+## The 3D soldier (step 4)
 
 Source `assets/3D/model_wip/blender_output/infantry/infantry_handaxe_shield.blend` in the main
 checkout (git-ignored: never move or delete it; open it headless or in a second Blender, never in
@@ -121,8 +121,13 @@ from `certify_locomotion.py`. Goes through `visual-review`.
    held town its arm's `attack` value for the works there. **Dropped** (owner 2026-11-18:
    "第三步不做了"): on main only enemy hosts besiege and storm towns and the player has no siege or
    assault order, so the bonus could never reach the player's axemen. The `attack` column waits for
-   a player siege feature. The feature closes with step 2; steps 4–7 below are not scheduled.
-4. **3D axe soldier** on the map with its own clips.
+   a player siege feature (its town-storming bonus later arrived with the player siege).
+4. **3D axe soldier** on the map with its own clips. **Landed** (2026-11-23, owner: "ok" to start it):
+   the hand-axe soldier installed as above (`tools/units3d/infantry_arp/README.md`, "The axemen"),
+   its own realm tint material (the tint overlay must read the figure's own atlas), duel STRIKE all
+   six strikes with contacts measured off the source (the chop's impact at 0.58), and
+   `snapshot_screen --battle-raise axemen --battle-arm axe --battle-foe foot` to shoot an axe
+   regiment raised through the recruitment order. Steps 5–7 are not scheduled.
 5. **First blow** rule and its table, test and report reason.
 6. **Formation 斧前剑后**.
 7. **Card painting** (`assets/2D/paintings/armies/axemen.png`, a B-row in

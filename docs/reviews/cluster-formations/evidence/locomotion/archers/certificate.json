@@ -329,7 +329,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "f2c76bc68fe9fc682b66052e4bbf7089fe6c45a5599376958e9adf4dab6cbc97",
+  "sha256": "9b17d104eff018a4000c161f885ccd4eb80919f5802e7b94d24a35dbcf4656f2",
   "uniform": 512
  },
  "config": {
@@ -409,11 +409,11 @@
   "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg.import": "3d1b0b7a807b6798161b3ad06e9b4fc9d38f151661dcfd68ad84fa847080348f",
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg.import": "c8dc15fa86145c123bff4e26fef8300d719dfc5d946d22be712cf4d478ce9067",
-  "data/army/balance.csv": "7925c6b53eb35e138044542c0e12072f3ce6a599b629dd89d68ad8d6b6ebff39",
+  "data/army/balance.csv": "d22c86e3f2a730b1fd05c2bc7616d2057a0ddbe06ead85eb42e4dd68b11c0db4",
   "data/army/unit_footprints.csv": "81971028b03d63c2031c55f983f74df8d114414d13e461d61981ddce744aaf03",
-  "data/screens/map3d/army_art.csv": "15058277b4340dacae865aa0c0c05870de0d055787decbd91cb2507553446415",
+  "data/screens/map3d/army_art.csv": "6706ed176c90e4ecdd8877138fc21a45d077759b6a4743e001702629935a28b6",
   "data/screens/map3d/balance.csv": "33dea7e472bfe0b9245734daaa8d631526fbb67eaf9f8eb20f819bfb26446f20",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "f49cb07aecc7e87f985126d3db0751c5b8552d40ee34519da9bf638fbfd2fbd3",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "4245e17bf0ec85f220396a321db06d151827304f57b7d2be808115f7ff7c877b",
   "scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
   "scripts/map3d/map3d_archer_locomotion.gd": "747cb3f67d51d7f82f34b6888948022f307022f72060c561dd245d4572182fea",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
@@ -427,11 +427,11 @@
    "MARCH"
   ],
   "contact_um": 28474,
-  "digest": "1a43d83311da5ff72d7b32b14f09e0969db60724abcaaa8e2eb9ce179ecb3778",
+  "digest": "33268caf2e5e3ae46a39dc8d4e014778820cd6b204b6df80db6fe3d4c5a15047",
   "radius_m": 932,
   "turn_q": 400000
  },
- "payload_sha256": "1a43d83311da5ff72d7b32b14f09e0969db60724abcaaa8e2eb9ce179ecb3778",
+ "payload_sha256": "33268caf2e5e3ae46a39dc8d4e014778820cd6b204b6df80db6fe3d4c5a15047",
  "report": {
   "bounds_um": {
    "contact": 28474,
