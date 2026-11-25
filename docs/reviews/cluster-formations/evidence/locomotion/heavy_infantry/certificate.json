@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "e32dfcfec6038593f52d948ebd4745f952fd7f0d225cb91d4d992e5caf9692ee",
+  "sha256": "60d3afae8480df05295a42dc7ea82321e0189360d79cdf2b28031eee249a7650",
   "uniform": 512
  },
  "config": {
@@ -425,8 +425,8 @@
   "assets/3D/units/heavy_infantry/heavy_infantry_pivot_plan.json": "50de38d600f4a616e4027d274930a904a28ad748379b8cf7b784288e270e1fef",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
   "data/army/balance.csv": "d22c86e3f2a730b1fd05c2bc7616d2057a0ddbe06ead85eb42e4dd68b11c0db4",
-  "data/army/unit_footprints.csv": "81971028b03d63c2031c55f983f74df8d114414d13e461d61981ddce744aaf03",
-  "data/screens/map3d/army_art.csv": "6706ed176c90e4ecdd8877138fc21a45d077759b6a4743e001702629935a28b6",
+  "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
+  "data/screens/map3d/army_art.csv": "ee1a91005a647ee1fc6de18febc77afe9b0b7605d24ef3c5d7de4be7dd973939",
   "data/screens/map3d/balance.csv": "33dea7e472bfe0b9245734daaa8d631526fbb67eaf9f8eb20f819bfb26446f20",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "4245e17bf0ec85f220396a321db06d151827304f57b7d2be808115f7ff7c877b",
   "scenes/models/units/heavy_infantry.tscn": "3efc8e2c93ee9c5b3ac833e09b61a174a3e2190637d9f5ad5219dba362d662a4",
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 22699,
-  "digest": "ffb6607e523bef6ead7e7b3d66d87924dd6b41994874c827742fa4976224f5ee",
+  "digest": "d5648dcd82a1c88fb6226d7d18c3de72f78bd533d9b0fe87fda078d3e1a646d8",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "ffb6607e523bef6ead7e7b3d66d87924dd6b41994874c827742fa4976224f5ee",
+ "payload_sha256": "d5648dcd82a1c88fb6226d7d18c3de72f78bd533d9b0fe87fda078d3e1a646d8",
  "report": {
   "bounds_um": {
    "contact": 22699,
