@@ -132,6 +132,33 @@ func test_too_few_men_close_no_entry() -> void:
 	assert_true(SiegeSystem.deployed_at(repo, s, f["unit"], f["town"]), "and still besieges the town")
 
 
+func test_a_held_entry_stays_with_its_unit() -> void:
+	var f := _foreign()
+	var s: GameState = f["s"]
+	var town: String = f["town"]
+	# the record's unit is the later code; an arrival sorting before it comes next
+	var units: Array = Play.land_regiments(repo).slice(0, 4)
+	units.sort()
+	var held := String(f["unit"])
+	var early := String(units[0]) if String(units[0]) != held else String(units[1])
+	if early > held:
+		var swap := held
+		held = early
+		early = swap
+		s.sieges[f["id"]]["units"] = [held]
+		Play.place(repo, s, held, Play.town_m(repo, town), ArmySystem.ORDER_GARRISON)
+		Play.place(repo, s, f["unit"], Play.town_m(repo, town) + Vector2i(0, 400000), ArmySystem.ORDER_STANDBY)
+	repo.balance["siege_blockade_men_per_entry"] = mini(ArmySystem.fit_count(repo, s, held), ArmySystem.fit_count(repo, s, early))
+	SiegeBlockade.close(repo, s, f["id"])
+	var entries: Dictionary = s.sieges[f["id"]]["entries"]
+	assert_eq(String(entries["zz_road"]["closed_by"]), held, "the road, by the first unit there")
+	Play.place(repo, s, early, Play.town_m(repo, town), ArmySystem.ORDER_GARRISON)
+	SiegeRecord.open_units(repo, s, town, repo.resolve_realm("player_realm"), [early], "task_test")
+	SiegeBlockade.close(repo, s, f["id"])
+	assert_eq(String(entries["zz_road"]["closed_by"]), held, "the arrival sorting first does not take it over")
+	assert_eq(String(entries[SiegeBlockade.COUNTRYSIDE]["closed_by"]), early, "the arrival closes the next entry")
+
+
 func test_a_sea_entry_never_closes() -> void:
 	var f := _foreign()
 	var s: GameState = f["s"]

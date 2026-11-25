@@ -24,6 +24,7 @@
 - The countryside entry stands at the town's point. Any besieger stationed at the town (`deployed_at`) closes it, and no supply line passes it.
 - An entry's point is on its route, `siege_entry_km` from the route's end nearest the town.
 - A unit closes one entry at most. It cannot split its men between two.
+- A unit already standing at a road entry keeps it before the code order fills the rest. Without this, an arrival whose code sorts first reshuffled the blockade and reopened the trail in the seed-11 run on day 21 (`test_a_held_entry_stays_with_its_unit`).
 - A closing unit that does not yet stand within `siege_entry_reach_m` of its entry camps at the free slot nearest the entry (`ArmyGround.free_slot`, the way `_spread_foe` places a host's columns). It does not move while it fights a battle or while it carries bodies (`body_groups`).
 - A crown town's withheld month (the closed share of the crown's and the lord's units) lands in the nearest other realm town. The house's withheld share is lost. A realm whose only town is besieged keeps it in that town.
 - The yield reads `own_surrender` of the first defender and `quarter` of the first stationed besieger, in code order, the way the sack reads `plunder`.

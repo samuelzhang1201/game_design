@@ -110,9 +110,10 @@ static func open_share(rec: Dictionary) -> int:
 
 ## The besiegers close the entries (spec §4.1): every entry but a sea one, by
 ## share descending then id, takes the stationed besiegers (SiegeSystem.stationed)
-## in code order until it holds siege_blockade_men_per_entry fit men; an entry
-## short of them stays open, and so does every entry after it. A unit closes
-## one entry at most. The closing units camp at it (_camp), and its closed_by
+## until it holds siege_blockade_men_per_entry fit men — first those already
+## standing at it (a road entry; code order), then the others in code order;
+## an entry short of them stays open, and so does every entry after it. A unit
+## closes one entry at most. The closing units camp at it (_camp), and its closed_by
 ## is the first of them that stands at it (_holds), else "".
 static func close(repo: DataRepository, state: GameState, id: String) -> void:
 	var rec: Dictionary = state.sieges[id]
@@ -127,17 +128,33 @@ static func close(repo: DataRepository, state: GameState, id: String) -> void:
 		var sa := int(entries[a]["inflow_share"])
 		var sb := int(entries[b]["inflow_share"])
 		return sa > sb or (sa == sb and a < b))
-	var units := SiegeSystem.stationed(repo, state, id)
-	units.sort()
-	var per := int(repo.bal("siege_blockade_men_per_entry"))
-	var next := 0
+	var free := SiegeSystem.stationed(repo, state, id)
+	free.sort()
+	# a unit already standing at a road entry keeps it, so an arrival that
+	# sorts first does not move the blockade round
+	var standing: Dictionary = {}
 	for e: String in order:
+		standing[e] = []
+		if String(entries[e]["group"]) == COUNTRYSIDE:
+			continue
+		for c: String in free.duplicate():
+			if _holds(repo, state, c, entries[e], town):
+				standing[e].append(c)
+				free.erase(c)
+	var per := int(repo.bal("siege_blockade_men_per_entry"))
+	for e: String in order:
+		var pool: Array = (standing[e] as Array) + free
 		var men := 0
 		var mine: Array = []
-		while men < per and next < units.size():
-			men += ArmySystem.fit_count(repo, state, String(units[next]))
-			mine.append(units[next])
-			next += 1
+		while men < per and not pool.is_empty():
+			var c := String(pool.pop_front())
+			men += ArmySystem.fit_count(repo, state, c)
+			mine.append(c)
+			free.erase(c)
+		for c: String in standing[e]:
+			if not c in mine and not c in free:
+				free.append(c)   # more than the entry needs: free for the next
+		free.sort()
 		if men < per or per <= 0:
 			break
 		var entry: Dictionary = entries[e]
