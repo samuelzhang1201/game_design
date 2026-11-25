@@ -841,10 +841,12 @@ func test_a_garrison_waits_for_the_assault() -> void:
 	assert_eq(_of(BattleSystem.settle_day(repo, s), "start").size(), 1, "the assault day's battle")
 
 
-## A supply line into a besieged town is CUT (spec §5.1: the siege starves the
-## town): the line's regiment garrisons the town, its line is flowing from the
-## depot — the day's step delivers nothing, says `cut` by the besiegers'
-## kingdom (the host named), and the line flows again once the siege is gone.
+## A supply line into a besieged town is CUT where its road passes a closed
+## entry (player siege spec §4.1): the line's regiment garrisons the town, its
+## line is flowing from the depot, and a besieger holds an entry on its road —
+## the day's step delivers nothing, says `cut` by the besiegers' kingdom (the
+## host named), and the line flows again once the siege is gone. While the
+## entry stands open the line flows.
 func test_a_supply_line_into_a_besieged_town_is_cut() -> void:
 	var main := _host("main")
 	var s := SuiteData.campaign(repo, 7)
@@ -861,6 +863,14 @@ func test_a_supply_line_into_a_besieged_town_is_cut() -> void:
 	s.supply_lines[g] = SupplyLines._new_record(dep, 1000, 1)
 	s.supply_lines[g]["state"] = SupplyLines.FLOWING
 	s.regiments[g]["supplies"] = 0
+	var rec := SiegeRecord.ensure_for(repo, s, main)
+	var route := SupplyLines.road_px(repo, s, g, dep)
+	@warning_ignore("integer_division")
+	var on_road := ArmySystem.pack_to_metres(repo, route[route.size() / 2])
+	rec["entries"] = {"zz_road": {"group": "roads", "x_m": on_road.x, "y_m": on_road.y, "inflow_share": 1000,
+		"closed_by": ""}}
+	assert_true(SupplyLines.siege_cut(repo, s, g).is_empty(), "an open entry lets the line through")
+	rec["entries"]["zz_road"]["closed_by"] = String(EnemyAi.regiments_of(s, main)[0])
 	var ev := SupplyLines.day_step(repo, s)
 	var cut: Array = ev.filter(func(e: Dictionary) -> bool:
 		return String(e["type"]) == "cut" and String(e["regiment"]) == g)

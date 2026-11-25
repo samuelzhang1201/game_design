@@ -288,23 +288,41 @@ static func _hostiles(repo: DataRepository, state: GameState) -> Array:
 	return out
 
 
-## Where a hostile regiment stands within supply_cut_reach_m of the road:
-## {at: the nearest road point (pack px), by: its kingdom}; {} when clear.
 ## A line whose regiment GARRISONS a town under siege (ArmyGround.garrison_town,
-## SiegeSystem.besieged) is cut by the besiegers (spec §5.1: a besieged town is
-## cut off, lines too, so its hunger cannot be fed by a supply point): {at (the
-## town's point, PACK px), by (the leading host's kingdom), host}; {} otherwise.
-static func siege_cut(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+## SiegeSystem.besieged) is cut by the besiegers only where its road (`route`,
+## pack px; its line's road_px when empty) passes within siege_entry_reach_m of
+## a CLOSED road entry of the town (SiegeBlockade; never the countryside or a
+## sea entry; entry id order) (player siege spec §4.1): {at (that entry's
+## point, PACK px), by (the leading host's kingdom), host}; {} otherwise.
+static func siege_cut(repo: DataRepository, state: GameState, code: String,
+		route := PackedVector2Array()) -> Dictionary:
 	var held := ArmyGround.garrison_town(repo, state, code)
 	if held == "" or not SiegeSystem.besieged(repo, state, held):
 		return {}
-	var host := SiegeSystem.lead_of(repo, state, held)
-	var kingdom := ""
-	for c: String in EnemyAi.regiments_of(state, host):
-		kingdom = String(ArmySystem.regiment(repo, c, state).get("kingdom_code", ""))
-		break
-	return {"at": ArmySystem.metres_to_pack(repo, EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, held)),
-		"by": kingdom if kingdom != "" else host, "host": host}
+	if route.is_empty() and not line(state, code).is_empty():
+		route = road_px(repo, state, code, String(line(state, code)["town"]))
+	var entries: Dictionary = (state.sieges.get(SiegeRecord.of_town(state, held), {}) as Dictionary).get("entries", {})
+	var reach := float(repo.bal("siege_entry_reach_m")) / float(ArmySystem.metres_per_pack_px(repo))
+	var ids: Array = entries.keys()
+	ids.sort()
+	for e: String in ids:
+		var en: Dictionary = entries[e]
+		if String(en.get("closed_by", "")) == "" or String(en["group"]) in [SiegeBlockade.COUNTRYSIDE, SiegeBlockade.SEA]:
+			continue
+		var p := ArmySystem.metres_to_pack(repo, Vector2i(int(en["x_m"]), int(en["y_m"])))
+		for i in range(1, route.size()):
+			if Geometry2D.get_closest_point_to_segment(p, route[i - 1], route[i]).distance_to(p) <= reach:
+				var host := SiegeSystem.lead_of(repo, state, held)
+				var kingdom := ""
+				for c: String in EnemyAi.regiments_of(state, host):
+					kingdom = String(ArmySystem.regiment(repo, c, state).get("kingdom_code", ""))
+					break
+				return {"at": p, "by": kingdom if kingdom != "" else host, "host": host}
+	return {}
+
+
+## Where a hostile regiment stands within supply_cut_reach_m of the road:
+## {at: the nearest road point (pack px), by: its kingdom}; {} when clear.
 
 
 static func cut_point(repo: DataRepository, state: GameState, route: PackedVector2Array) -> Dictionary:
@@ -724,7 +742,7 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 			if not front_of(repo, state, code, town, false):
 				events.append({"type": "opened", "regiment": code, "town": town})
 		var route := road_px(repo, state, code, town)
-		var cut := siege_cut(repo, state, code)
+		var cut := siege_cut(repo, state, code, route)
 		if cut.is_empty():
 			cut = cut_point(repo, state, route)
 		if not cut.is_empty():

@@ -1,0 +1,5 @@
+group,entry_share,notes
+roads,400,"player siege spec §4.1 (SiegeBlockade, first draft): the raw share of a town's food an entry carries, by its route's group (geography/routes.csv), normalised over the town's entries to 1000; countryside is the one entry every town has"
+trails,200,
+searoutes,300,"a sea entry never closes (naval blockade is a non-goal): a port keeps its sea share"
+countryside,300,

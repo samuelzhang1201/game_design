@@ -168,8 +168,15 @@ func _init() -> void:
 				continue  # a host_mode, told above among the minds
 			if k == "siege_day":
 				sums["best"] = maxi(int(sums["best"]), int(e["progress"]))
-				lines.append("  SIEGE  %s: attack %d defend %d gain %d -> %d/1000%s" % [e["town"], int(e["attack"]),
-					int(e["defend"]), int(e["gain"]), int(e["progress"]), " STARVING" if bool(e["starving"]) else ""])
+				# the blockade: the open share of the town's entries, and its food (a crown
+				# town's is its TownStores, any other's the record's stores)
+				var food := int(e.get("stores", 0))
+				if SiegeSystem.holder_of(repo, s, String(e["town"])) == repo.resolve_realm("player_realm"):
+					var st := TownStores.stock_of(s, String(e["town"]))
+					food = int(st["crown"]) + int(st["lord"]) + int(st["house"])
+				lines.append("  SIEGE  %s: attack %d defend %d gain %d -> %d/1000, open %d/1000, stores %d%s" % [
+					e["town"], int(e["attack"]), int(e["defend"]), int(e["gain"]), int(e["progress"]),
+					int(e.get("open_share", 1000)), food, " STARVING" if bool(e["starving"]) else ""])
 			elif k == "siege_fallen":
 				sums["fell"] = today
 				lines.append("  FALL   %s after %d days of siege: %s" % [e["town"], int(e["days"]), e["reason"]])

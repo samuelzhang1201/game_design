@@ -164,6 +164,12 @@ var ai_doctrines: Dictionary = {}
 ## data/battle/town_militia.csv (player siege spec §5): a besieged town's militia
 ## by works, in file order: [{works, arm, men_permille, men_cap}].
 var town_militia: Array[Dictionary] = []
+## data/battle/siege_tactics.csv (player siege spec §4.1): works ->
+## {stores_days}.
+var siege_tactics: Dictionary = {}
+## data/battle/siege_entries.csv (§4.1): route group (or "countryside") -> the
+## raw share of a town's food an entry of it carries.
+var siege_entries: Dictionary = {}
 ## The pack's military/raid_hosts.csv (§2) in file order: [{host_code,
 ## regiments (Array of regiment codes), appear_day, role, start_x, start_y}].
 ## Cleared by load_map.
@@ -1134,6 +1140,14 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(table_path(dir, "town_militia"), ["works", "arm", "men_permille", "men_cap"],
 			func(r): town_militia.append({"works": String(r["works"]), "arm": String(r["arm"]),
 				"men_permille": int(r["men_permille"]), "men_cap": int(r["men_cap"])})):
+		return false
+	siege_tactics.clear()
+	if not _load_if_present(table_path(dir, "siege_tactics"), ["works", "stores_days"],
+			func(r): siege_tactics[String(r["works"])] = {"stores_days": int(r["stores_days"])}):
+		return false
+	siege_entries.clear()
+	if not _load_if_present(table_path(dir, "siege_entries"), ["group", "entry_share"],
+			func(r): siege_entries[String(r["group"])] = int(r["entry_share"])):
 		return false
 	if not _load_if_present(table_path(dir, "army_formations"), ["figures", "min_fit_permille", "slots"],
 			func(r):

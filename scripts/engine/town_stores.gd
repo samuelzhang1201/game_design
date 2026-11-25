@@ -288,7 +288,11 @@ static func month_inflow(repo: DataRepository, state: GameState) -> Dictionary:
 
 ## Settle the month's goods into the towns (TickEngine._settle_economy, beside
 ## the purse lines that raise the two metrics by the same gold). A house keeps
-## at most `town_house_stock_months` of its own goods in a town.
+## at most `town_house_stock_months` of its own goods in a town. A besieged
+## town (SiegeSystem.besieged) takes each pool x its open share / 1000
+## (SiegeBlockade.open_share, player siege spec §4.1); the crown's and the
+## lord's goods its blockade keeps out land in the nearest realm town not
+## besieged (itself when there is none), the house's are lost.
 static func deposit_month(repo: DataRepository, state: GameState) -> void:
 	var upg := units_per_gold(repo)
 	var months := int(repo.bal("town_house_stock_months"))
@@ -297,12 +301,35 @@ static func deposit_month(repo: DataRepository, state: GameState) -> void:
 	towns.sort()
 	for t: String in towns:
 		var row: Dictionary = inflow[t]
-		add(state, t, "lord", int(row["lord"]) * upg)
-		add(state, t, "crown", int(row["crown"]) * upg)
+		var share := _open_share(repo, state, t)
+		var outside := t if share >= 1000 else _outside(repo, state, t)
+		for pool: String in ["lord", "crown"]:
+			@warning_ignore("integer_division")  # whole gold in, the rest kept out
+			var got := int(row[pool]) * share / 1000
+			add(state, t, pool, got * upg)
+			add(state, outside, pool, (int(row[pool]) - got) * upg)
+		@warning_ignore("integer_division")
+		var house := int(row["house"]) * share / 1000
 		var cap := int(row["house"]) * months * upg
 		var s := stock_of(state, t)
-		s["house"] = mini(int(s["house"]) + int(row["house"]) * upg, cap)
+		s["house"] = mini(int(s["house"]) + house * upg, cap)
 		state.town_stock[t] = s
+
+
+## The per-mille share of a town's inflow its blockade lets in: 1000 unless
+## it is besieged (SiegeBlockade.open_share of its record).
+static func _open_share(repo: DataRepository, state: GameState, town: String) -> int:
+	if not SiegeSystem.besieged(repo, state, town):
+		return 1000
+	return SiegeBlockade.open_share(state.sieges.get(SiegeRecord.of_town(state, town), {}))
+
+
+## The nearest realm town to `town` that is not besieged; `town` with none.
+static func _outside(repo: DataRepository, state: GameState, town: String) -> String:
+	for t: String in nearest_first(repo, state, town):
+		if not SiegeSystem.besieged(repo, state, t):
+			return t
+	return town
 
 
 ## Spread the two pools as they stand over the towns by each town's share of
