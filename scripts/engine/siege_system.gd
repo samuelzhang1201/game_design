@@ -297,10 +297,12 @@ static func defend_power(repo: DataRepository, state: GameState, town: String) -
 ## True when the town STARVES: its own stores (TownStores: crown, lord and
 ## house) are spent AND its garrison's hungriest regiment has no day in hand
 ## (ArmySystem.days_in_hand) — the men eat what they carry first. A town with
-## no garrison does not, nor one the crown does not hold (its stores are step 6).
+## no garrison does not. A town the crown does not hold starves when its
+## record's stores (SiegeBlockade) are spent and defenders stand in it.
 static func starving(repo: DataRepository, state: GameState, town: String) -> bool:
 	if holder_of(repo, state, town) != repo.resolve_realm("player_realm"):
-		return false
+		var rec: Dictionary = state.sieges.get(SiegeRecord.of_town(state, town), {})
+		return rec.has("stores") and int(rec["stores"]) <= 0 and not defenders_of(repo, state, town).is_empty()
 	var st := TownStores.stock_of(state, town)
 	if int(st["crown"]) + int(st["lord"]) + int(st["house"]) > 0:
 		return false
@@ -350,7 +352,8 @@ static func news(events: Array) -> Array:
 ## Every mode change is EnemyAi.set_mode's, its host_mode event ({type}) among
 ## the returned events. The siege's own events: {kind, host, town, day,
 ## progress, ...}: siege_begin and siege_day {attack, defend, gain, starving},
-## siege_starving, siege_repulsed {lost}, siege_fallen {days, reason,
+## {open_share, stores} (SiegeBlockade.day; stores 0 for a crown town, whose
+## food is TownStores), siege_starving, siege_repulsed {lost}, siege_fallen {days, reason,
 ## garrison_out}, siege_undefended, siege_lifted {why}, siege_liberated {why};
 ## after a siege_fallen, its cost (DefeatSystem.on_town_lost: defeat_town_lost).
 static func settle_day(repo: DataRepository, state: GameState, battle_events: Array = []) -> Array:
@@ -749,6 +752,13 @@ static func _siege_day(repo: DataRepository, state: GameState, lead: String, id:
 	if progress >= 1000:
 		_fall(repo, state, lead, id, hosts, events)
 		return
+	# the blockade's day (spec §4.1): entries close, the stores move, and a
+	# starving garrison may yield under the laws, handing the town over
+	var sid := id if crown else SiegeRecord.of_town(state, town)
+	var blockade := SiegeBlockade.day(repo, state, sid)
+	if SiegeBlockade.yields(repo, state, sid) and not SiegeBlockade.hand_over(repo, state, sid).has("error"):
+		_fall(repo, state, lead, id, hosts, events, true)
+		return
 	var att := attack_power(repo, state, town)
 	var def := defend_power(repo, state, town)
 	var hungry := starving(repo, state, town)
@@ -757,7 +767,8 @@ static func _siege_day(repo: DataRepository, state: GameState, lead: String, id:
 	rec["progress"] = progress
 	rec["days"] = int(rec["days"]) + 1
 	var day := {"kind": k + "day", "host": lead, "town": town, "day": today, "progress": progress,
-		"attack": att, "defend": def, "gain": gain, "starving": hungry}
+		"attack": att, "defend": def, "gain": gain, "starving": hungry,
+		"open_share": int(blockade["open_share"]), "stores": int(blockade["stores"])}
 	if int(rec["days"]) == 1:
 		var begin := day.duplicate()
 		begin["kind"] = k + "begin"
@@ -775,15 +786,26 @@ static func _siege_day(repo: DataRepository, state: GameState, lead: String, id:
 	rec["assault"] = 1 if int(rec["assault_due"]) == 1 or _assault_running(state, town, hosts, units) else 0
 
 
-static func _fall(repo: DataRepository, state: GameState, lead: String, id: String, hosts: Array, events: Array) -> void:
+## The town falls to the record's besiegers (an AI record's leading host
+## `lead`, or the crown's record `id`). `yielded`: its garrison yielded to
+## hunger and is the besiegers' captives (SiegeBlockade.hand_over), so no
+## column needs to stand at the gate; the fall's event carries yielded 1.
+static func _fall(repo: DataRepository, state: GameState, lead: String, id: String, hosts: Array, events: Array,
+		yielded := false) -> void:
 	var ev: Dictionary
 	if lead == "":
 		var rec: Dictionary = state.sieges[id]
 		ev = _take(repo, state, String(rec["town"]), String(rec["attacker"]), String(rec["defender"]),
 			side_label(repo, state, id), "", [], (rec["units"] as Array).duplicate(), events)
+	elif yielded:
+		var town := String(state.ai_hosts[lead].get("target_id", ""))
+		ev = _take(repo, state, town, _kingdom_of(repo, state, lead), repo.resolve_realm("player_realm"),
+			host_label(repo, lead), lead, besiegers(repo, state, town), [], events)
 	else:
 		# the capture reads its host in SIEGE: every host before the town still is
 		ev = capture(repo, state, lead, events)
+	if yielded and not ev.is_empty():
+		ev["yielded"] = 1
 	if not ev.is_empty():
 		# the fall is told before what it costs (capture appended the defeat's events)
 		var at := events.size()

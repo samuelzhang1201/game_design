@@ -11,7 +11,8 @@ extends RefCounted
 ## progress (0..1000, transitional: step 10 removes it), assault (1: the next
 ## day's battles may storm), assault_due (an assault owed), starved (1: the
 ## hunger was told), militia (the militia unit codes it raised, TownMilitia),
-## woken (the standing units it woke, TownMilitia.wake). A host's mind keeps only `siege_id`, set until the
+## woken (the standing units it woke, TownMilitia.wake), entries and stores
+## (the blockade, SiegeBlockade). A host's mind keeps only `siege_id`, set until the
 ## siege's end has been told.
 
 ## The figures an old save kept on the host minds (migrate erases them).
@@ -191,4 +192,6 @@ static func _open(repo: DataRepository, state: GameState, town: String, attacker
 	if levy:
 		TownMilitia.wake(repo, state, id)
 		TownMilitia.raise(repo, state, id)
+	# its entries and its food, once its defenders stand (SiegeBlockade, spec §4.1)
+	SiegeBlockade.ensure(repo, state, id)
 	return id

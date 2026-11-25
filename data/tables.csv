@@ -71,6 +71,8 @@ battle,battle_outcomes
 battle,battle_stances
 battle,ai_doctrines
 battle,town_militia
+battle,siege_tactics
+battle,siege_entries
 intel,spy_difficulty
 intel,courier_kinds
 intel,intel_facts
