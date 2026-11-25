@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://d0sn5aj7twhiy" path="res://scenes/models/units/axemen.tscn" id="3_dk1fx"]
 [ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="3_y4xoy"]
 [ext_resource type="PackedScene" uid="uid://cpqlbrtq06nvf" path="res://scenes/models/units/heavy_infantry.tscn" id="4_qet1l"]
+[ext_resource type="PackedScene" uid="uid://worw628ru4km" path="res://scenes/models/units/militia.tscn" id="5_qet1l"]
 
 [resource]
 script = ExtResource("3_y4xoy")
@@ -17,5 +18,6 @@ art = Dictionary[String, Resource]({
 "cavalry": ExtResource("2_0vt4k"),
 "heavy_infantry": ExtResource("4_qet1l"),
 "infantry": ExtResource("1_33jbd"),
+"militia": ExtResource("5_qet1l"),
 "royal": ExtResource("3_0vt4k")
 })

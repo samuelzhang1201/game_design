@@ -41,6 +41,8 @@ baked by `tools/units3d/cloth_mask.py` (an HSV window per atlas on the dyed
 cloth; it prints the `tunic_luminance` for the arm's
 `unit_realm_tint_<model>.tres`). The axemen's hand-axe soldier is the infantry's body on its own atlas: its
 `unit_realm_tint_axemen.tres` is the infantry's overlay reading the axe atlas, with the infantry's tunic mask
-(the body's region of the two atlases is the same). An overlay is painted only on a mesh drawn from
+(the body's region of the two atlases is the same). The militia's mask comes from its exporter
+(`tools/units3d/militia_arp/game_export.py`: the tunic's and skirt's faces by the
+source's `part_id`), under `unit_realm_tint_militia.tres`. An overlay is painted only on a mesh drawn from
 its material's `albedo_atlas`, so a prop on its own texture (the archer's bow,
 quiver, arrow) keeps its colours.

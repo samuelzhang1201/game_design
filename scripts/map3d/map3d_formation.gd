@@ -143,14 +143,22 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 		"clip_s": (anims[0] as AnimationPlayer).get_animation(clip).length if clip != "" else 0.0}
 
 
-## A regiment's piece (piece) from its arm's model (army_models.tres, loaded once
+## The figure a regiment is drawn with, an army_models.tres / army_art.csv key:
+## its roster row's `figure` when the art has that row (a town militia's,
+## TownMilitia.FIGURE), else its piece (MapObjects.army_piece).
+static func figure_of(repo: DataRepository, reg: Dictionary) -> String:
+	var figure := String(reg.get("figure", ""))
+	return figure if repo.army_art.has(figure) else MapObjects.army_piece(repo, reg)
+
+
+## A regiment's piece (piece) from its figure's model (army_models.tres, loaded once
 ## and kept between views) and army_art.csv row, laid out `layout`; {} for an
 ## empty row or an arm with no model (a fleet).
 static func of_regiment(repo: DataRepository, reg: Dictionary, tier: Dictionary, gap: float,
 		layout := BLOCK) -> Dictionary:
 	if reg.is_empty() or slots_of(tier, layout).is_empty():
 		return {}
-	var model := MapObjects.army_piece(repo, reg)
+	var model := figure_of(repo, reg)
 	var path := GameArt.path(GameArt.ARMY_MODELS, model)
 	var scene := Map3DAssetCache.scene(path) if path != "" else null
 	if path != "" and scene == null:
@@ -159,6 +167,7 @@ static func of_regiment(repo: DataRepository, reg: Dictionary, tier: Dictionary,
 		return {}
 	var built := piece(repo, scene, repo.army_art.get(model, {}), tier, gap, layout)
 	built["model"] = model  # keys its march's sound (Map3DUnitSound)
+	built["footprint"] = MapObjects.army_piece(repo, reg)  # its engine bodies' unit_footprints.csv row
 	if bool(built.get("exact_pace", false)):  # each man his own height and cadence (Map3DMarchLag.stature)
 		var spread := repo.bal("map3d_march_stature_spread")
 		built["statures"] = range(built["figs"].size()).map(func(i: int) -> float:

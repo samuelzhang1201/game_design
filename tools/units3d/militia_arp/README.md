@@ -3,8 +3,10 @@
 The town militia's figure: `assets/3D/units/militia/militia.glb` (armature `mil_rig`, one skinned mesh
 `militia`, ONE two-sided material on the 2048 atlas `militia_militia_atlas{,_mr,_n}.jpg`; 17,437 tris, 100
 bones). Built for the raised town militia of the player siege
-(`docs/superpowers/specs/2026-11-18-player-siege-design.md`). No arm wears it yet: a scene under
-`scenes/models/units/`, its row in `army_models.tres` and its `army_art.csv` row are the wiring step.
+(`docs/superpowers/specs/2026-11-18-player-siege-design.md`). It is no arm's piece: a raised militia's roster
+row names it as its `figure` (`TownMilitia.FIGURE`), and the 3D map draws that unit with
+`scenes/models/units/militia.tscn` (`army_models.tres` and `army_art.csv` row `militia`,
+`Map3DFormation.figure_of`) while its card, footprint and engine bodies stay its first arm's.
 
 The body is the owner's parts Tripo militiaman (kettle hat, coif, knee-length tunic, belt, trousers, leg wraps,
 shoes); the sword and shield are the infantry's. The clips are the infantry's first ten, on the infantry's
@@ -50,7 +52,9 @@ for the tunic:
 - Sole grounding by the foot vertices (`ground.py`) and gear clearance (`solve_clear.py`; the sword and shield
   may brush the free lower skirt).
 
-No duel clips (BLOCK*, HIT*, DEATH*), pivots or locomotion certificate: they come with the arm's wiring.
+No duel clips (BLOCK*, HIT*, DEATH*), pivots or locomotion certificate, so on the map it strikes its chain in
+place, is never gathered into a duel, and a loss is freed at once with no fall (`army_art.csv` `militia` has no
+`duel` / `contact`). It never marches, so nothing asks it for a pivot.
 
 ## Install
 

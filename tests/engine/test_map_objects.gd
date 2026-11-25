@@ -193,7 +193,10 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 		checked += 1
 	assert_gt(checked, 0)
 	assert_true(MapObjects.army_card(Game.data, "no_such_regiment").is_empty())
+	var arms := Game.data.world_table("military", "unit_types")
 	for piece: String in Game.data.army_art:
+		if not (arms.has(piece) or piece in ["fleet", "royal"]):
+			continue  # a figure only (the militia's): MapObjects.army_piece never returns it, so no card shows it
 		assert_true(GameArt.table(GameArt.ARMY_PAINTINGS).of(piece) is Texture2D, "%s's card painting is installed" % piece)
 
 ## The regiment card names its BATTLE stance (battle_stances.csv label; not
