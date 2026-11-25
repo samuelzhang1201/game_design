@@ -135,3 +135,68 @@ are admitted at MARCH 8/420 only.
 Then `tools/units3d/certify_locomotion.py` re-issues the infantry and artillery certificates
 (`docs/reviews/cluster-formations/evidence/locomotion/{infantry,artillery}/`) and their rows in
 `data/army/unit_locomotion.csv`, `body_locomotion_*_contact_um` in `data/army/balance.csv`.
+
+## Another body on the same contract: the heavy infantry (installed 2026-11-20)
+
+`game_export.py -- ROOT [OUT.json] ARM` installs any source that keeps the contract above (rig
+`rig`, body `Infantry_body`, gear `Weapon` / `Shield` on `cc_weapon.r / .l`, body maps
+`textures/*_{base,mr,normal}.png`, the same action names) as `assets/3D/units/<ARM>/<ARM>.glb`:
+mesh `<ARM>`, atlas files `<ARM>_<ARM>_atlas{,_mr,_n}.jpg`, the armature `inf_rig` for every arm.
+With no ARM the infantry's files come out byte for byte as before. A source with no
+`textures/body_class.npy` has no authored material classes: the class polish (mail, body lift) is
+skipped, the rest (shield wood, thumb, MARCH lock, loops, in-place strikes) applies.
+
+The heavy infantry (`heavy_infantry`, spec `2026-11-20-heavy-infantry-arm-design.md`) is the owner's
+Tripo plate soldier, `assets/3D/model_wip/blender_output/heavy_infantry_parts/hip_shortsword_shield.blend`
+(README there: 79 parts joined, decimated per part 53,269 → 11,410 tris, maps baked from the high
+mesh, the infantry's 30 clips retargeted): 14,709 tris with the gear, 70 bones, rest height
+1.599 m, MARCH `stride_m` 1.473 (0.044636 m a frame × 33), `steps` 0.2121;0.9091, foot lock
+offsets 73 / 55 mm, blade–leg gap 0.49 m.
+
+Its MARCH lock adds one thing (`ARM_LOCK`, `approach_frames` 1; `INFANTRY_LOCK` overrides it as
+JSON for a trial): the last swing frame before each touchdown is moved so the sole already travels
+back with the ground to its landing place, its height kept, and the swing before it eases onto
+that offset; the stance is not moved. This boot is skinned across the ankle, so its sole sinks
+3 mm under the lock's ground and enters the certifier's planting band a sixth of a frame before
+the touchdown key, the foot still closing on its landing place at 0.09 m a frame: 12.1 mm of
+slide and an 11.6 mm margin against a 22.7 mm bound. With the approach the left foot's worst is
+5.2 + 11.8 mm (a pinned approach point 9 mm past the leg's reach is pulled back to it, in the
+air). Moving the whole stance back instead (integrating the lock from the approach frame) left
+the leg 16 mm short at the end of its stance; two approach frames 36 mm short. A quick reading of
+the certifier's MARCH slide without its full run: capture MARCH with `pivot_native.gd` (keys,
+quarter points and a 512 grid, `"baseline": true`) and feed each foot's vertices to
+`certify_locomotion.vertex_slide`.
+
+Steps after the export:
+
+1. `.import` files: copies of the infantry's (loops, `force_disable_compression`, the pivot
+   post-import script) with the paths renamed and `uid` / `path` / `dest_files` removed; one
+   `--import` pass fills them.
+2. Pivot pair: the same pipeline with `pivot_native.gd … ARM` and `pivot_mapping.py --arm ARM`
+   (its `ARMS` table holds what differs: this body keeps the infantry's phases, its bounds are
+   22699 / 1892 µm at k 26.4330); `pivot.bake` onto the bare export; `plan` writes
+   `assets/3D/units/heavy_infantry/heavy_infantry_pivot_plan.json`, `fixture`
+   `tests/fixtures/heavy_infantry_pivot_mapping.json`; `test_pivot_mapping.py` checks both arms.
+3. Scene: `make_scene.gd -- ARM` writes `scenes/models/units/<ARM>.tscn` (an inherited scene
+   wearing the infantry scene's material with this arm's atlas) and its `army_models.tres` row; a
+   script run drops the ext_resource UIDs, put them back and read `git diff`.
+4. Provider `scripts/map3d/map3d_heavy_infantry_locomotion.gd` (the infantry's solver on this
+   plan), then the certificate, `unit_locomotion.csv` and `balance.csv` rows as above.
+
+## The axemen (installed 2026-11-23)
+
+The axemen's hand-axe soldier (`axemen`, spec `2026-11-18-axemen-arm-design.md` step 4) is this
+infantry with the owner's hand axe in place of the sword: `assets/3D/model_wip/blender_output/infantry/infantry_handaxe_shield.blend`
+(README there: the axe grip a third up the haft in the walk and the holds, the authored chop as
+ATTACK, the batch-2 clips with the axe grip). It keeps the contract and the authored body classes,
+so the export is the infantry's with ARM `axemen`: 9,105 tris, 70 bones, rest height 1.636 m,
+MARCH `stride_m` 1.4838 and `steps` 0.2121;0.9091 (the same walk: its legs match the infantry's to
+2e-7 m over a 420-phase capture), foot-lock offsets 36 / 41 mm, axe–leg gap 0.51 m. Its tunic mask
+is the infantry's byte for byte (not shipped twice); its realm tint is
+`scenes/map3d/materials/unit_realm_tint_axemen.tres` (the overlay must read the figure's own atlas).
+Pivots: `pivot_mapping.py --arm axemen` with every infantry value; plan `axemen_pivot_plan.json`,
+fixture `tests/fixtures/axemen_pivot_mapping.json`. Scene `scenes/models/units/axemen.tscn` and the
+`army_models.tres` / `realm_tint.tres` rows were made in the editor; provider
+`Map3DAxemenLocomotion`. The duel's `contact` shares were measured off the source: ATTACK 0.58 is
+the chop's impact (key 18 of 31, where the head stops), ATTACK_2 0.49, SLASH_2 0.53, SLASH_3 0.44;
+the rest are the infantry's (the same motions).

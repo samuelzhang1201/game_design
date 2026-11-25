@@ -19,6 +19,7 @@ soldier, tools/units3d/infantry_arp/README.md): re-derive them when MARCH or the
   pivot_mapping.py plan BASELINE NATIVE OUT            the runtime plan (infantry_pivot_plan.json)
   pivot_mapping.py fixture OUT NAME=PATH...            pack sources losslessly (test fixture format)
   pivot_mapping.py --self-check                        uncoupled parameters reproduce the frozen references exactly
+  pivot_mapping.py --arm ARM <command> ...             another body on the infantry's rig contract (ARMS; default infantry)
 
 Gates (owner rulings 2026-11-10): an edge flags when length > 4 x native-entry AND > .03 m; a
 flag fails unless native MARCH at the same body phase is flagged (R-B). Penetration, stance hover
@@ -58,6 +59,24 @@ CANONICAL_PHASE = 8 / 420
 CONTACT_UM = 23217
 SEAM_UM = 1935
 GLB = Path(__file__).resolve().parents[3] / 'assets/3D/units/infantry/infantry.glb'
+# Another body on the same rig contract (`inf_rig`, the same pack walk) overrides what its own MARCH
+# and scale give; `use(arm)` binds the module to it. The heavy infantry's plate soldier
+# (2026-11-20): on a 420-phase scan of its MARCH the infantry's phases sit on the same events
+# (8/420: right boot 0.6 mm, left lifted 14 mm, thighs 15.8 deg; 182/420: thighs 11.3 deg, their
+# least is 11.0 at 179; soles flattest-planted 181/420 at 6.8 mm and 396/420 at 3.5 mm), so it
+# keeps them and the consumer's stop / start / hold phase is the infantry's; its bounds are
+# ceil(world bound / k * 1e6) at k = 26.4330 (rest height 1.5992 m at size 0.62).
+# The axemen's hand-axe soldier (2026-11-23) is the infantry's body and pack walk with another
+# weapon: its 420-phase MARCH capture matches the infantry's leg bones to 2e-7 m and its rest
+# height is the same 1.636 m, so it keeps every infantry value.
+ARMS = {'infantry': {}, 'heavy_infantry': {'CONTACT_UM': 22699, 'SEAM_UM': 1892}, 'axemen': {}}
+
+
+def use(arm):
+    """Bind the module's parameters and GLB to `arm`."""
+    global GLB
+    globals().update(ARMS[arm])
+    GLB = Path(__file__).resolve().parents[3] / f'assets/3D/units/{arm}/{arm}.glb'
 SOLE_PATCH_M = .005
 ROOT = 'root.x'
 
@@ -403,10 +422,10 @@ def build(model, witness=False, params=COUPLED):
                        params['foot'], params['plane']) for op in canonical_ops()]
 
 
-def installed_model(baseline, natives=(), glb=GLB):
+def installed_model(baseline, natives=(), glb=None):
     """The installed infantry: BASELINE's skin and mesh, the GLB's template, and the captures
     (BASELINE's own samples first)."""
-    return Model(baseline, [installed_template(glb, baseline)], [baseline, *natives])
+    return Model(baseline, [installed_template(glb or GLB, baseline)], [baseline, *natives])
 
 
 def requested_phases(model):
@@ -545,6 +564,7 @@ def pack(out, sources):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--self-check', action='store_true')
+    parser.add_argument('--arm', choices=sorted(ARMS), default='infantry')
     sub = parser.add_subparsers(dest='command')
     r = sub.add_parser('request')
     r.add_argument('baseline', type=Path)
@@ -564,6 +584,7 @@ def main():
     f.add_argument('out', type=Path)
     f.add_argument('sources', nargs='+')
     args = parser.parse_args()
+    use(args.arm)
     if args.self_check:
         self_check(frozen_model())
         print('PIVOT_MAPPING_SELF_CHECK_MATCH')

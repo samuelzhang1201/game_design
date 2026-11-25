@@ -102,5 +102,8 @@ out, 4 s, positive pack turn = RIGHT; body yaw stays in the engine). Built witho
    contact (R-A) gates; `pivot.bake` appends the pair. NEUTRAL_PHASE, FOOT_PHASES and the bounds
    are the installed MARCH's: re-derive them when it changes (`tools/units3d/infantry_arp/README.md`).
 
-`test_pivot_mapping.py` re-audits the committed solve and re-bakes the installed GLB byte for byte.
+Another body on the rig contract (the heavy infantry, the axemen) runs the same three steps with
+`pivot_native.gd … ARM` and `pivot_mapping.py --arm ARM` (`ARMS`: what its own MARCH and scale change).
+
+`test_pivot_mapping.py` re-audits the committed solve and re-bakes the installed GLB byte for byte, per arm.
 Evidence: `docs/reviews/cluster-formations/evidence/locomotion/infantry/pivot-clip-acceptance.json`.

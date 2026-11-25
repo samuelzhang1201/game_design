@@ -2,7 +2,7 @@ extends GutTest
 ## The mixed fight in the duel driver (Map3DDuelDriver + Map3DDuelScrum; spec
 ## 2026-11-21-infantry-melee-scrum-design.md): both ranks of two opposed
 ## infantry sides leave their blocks for ONE fighting area per battle, keep
-## their space, pair nearest across it; the standard bearer keeps its slot.
+## their space, pair nearest across it.
 
 const SuiteData = preload("res://tests/suite_data.gd")
 const ART := {"duel": "STRIKE:ATTACK;SLASH|BLOCK:BLOCK|HIT:HIT|DEATH:DEATH",
@@ -82,10 +82,10 @@ func test_both_ranks_enter_the_area() -> void:
 	var pieces := _fight({"A": a}, {"B": b})
 	var driver := Map3DDuelDriver.new()
 	driver.run(Map3DDuelDriver.gather(ctx, pieces), DT, true, tune)
-	assert_eq(_claimed(a).size() + _claimed(b).size(), 18, "both ranks of both sides, bearers out")
+	assert_eq(_claimed(a).size() + _claimed(b).size(), 20, "both ranks of both sides, every figure")
 	var targets := driver.scrum_targets(1)
 	var area := driver.scrum_area(1)
-	assert_eq(targets.size(), 18)
+	assert_eq(targets.size(), 20)
 	for piece: Dictionary in [a, b]:
 		for g: Dictionary in _claimed(piece):
 			var key := "%s:%d" % ["A" if piece == a else "B", int(g["slot"])]
@@ -95,17 +95,6 @@ func test_both_ranks_enter_the_area() -> void:
 				key + " walks to its target, no step limit")
 
 
-func test_the_bearer_keeps_its_slot() -> void:
-	var a := _piece(10, 0, 0, -1)
-	var b := _piece(10, 0, 8, 1)
-	var pieces := _fight({"A": a}, {"B": b})
-	var driver := Map3DDuelDriver.new()
-	for i in 40:
-		driver.run(Map3DDuelDriver.gather(ctx, pieces), DT, true, tune)
-	for piece: Dictionary in [a, b]:
-		var bearer: Dictionary = piece["groups"][0]["piece"]
-		assert_false((bearer["anims"][0] as AnimationPlayer).has_meta("duel"), "the standard bearer is never claimed")
-		assert_false(bearer.has("duel_offset"), "and stands at the block")
 
 
 func test_scrum_figures_keep_their_space() -> void:
@@ -130,7 +119,7 @@ func test_pairs_are_nearest_across_the_area() -> void:
 	var pieces := _fight({"A": a}, {"B": b})
 	var driver := Map3DDuelDriver.new()
 	driver.run(Map3DDuelDriver.gather(ctx, pieces), DT, true, tune)
-	assert_eq(driver.paired_slots("A").size(), 9, "nine a side, all paired")
+	assert_eq(driver.paired_slots("A").size(), 10, "ten a side, all paired")
 	assert_true(driver.paired_slots("A").any(func(s: int) -> bool: return s >= 5), "reserves fight too")
 
 
@@ -235,7 +224,7 @@ func test_one_area_per_battle_archers_stay_out() -> void:
 	var driver := Map3DDuelDriver.new()
 	driver.run(battles, DT, true, tune)
 	var targets := driver.scrum_targets(1)
-	assert_eq(targets.size(), 15, "every infantry figure but the bearers, both sides, in the one area")
+	assert_eq(targets.size(), 20, "every infantry figure, both sides, in the one area")
 	assert_false(targets.keys().any(func(k: String) -> bool: return k.begins_with("AR:")), "no archer in the area")
 	assert_eq(_claimed(att["AR"]).size(), 0, "the archers keep their block")
 	var area := driver.scrum_area(1)

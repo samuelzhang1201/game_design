@@ -1,19 +1,22 @@
 [gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://c6680vpgosgtt"]
 
 [ext_resource type="Material" uid="uid://hhxve3jv5lxh" path="res://scenes/map3d/materials/unit_realm_tint.tres" id="1_ujrw1"]
-[ext_resource type="Material" path="res://scenes/map3d/materials/unit_realm_tint_archers.tres" id="3_arc"]
-[ext_resource type="Material" path="res://scenes/map3d/materials/unit_realm_tint_cavalry.tres" id="4_cav"]
-[ext_resource type="Material" path="res://scenes/map3d/materials/unit_realm_tint_royal.tres" id="5_roy"]
 [ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="2_no1d4"]
+[ext_resource type="Material" path="res://scenes/map3d/materials/unit_realm_tint_archers.tres" id="3_arc"]
+[ext_resource type="Material" uid="uid://c62uufawomsx1" path="res://scenes/map3d/materials/unit_realm_tint_axemen.tres" id="3_fpujd"]
+[ext_resource type="Material" path="res://scenes/map3d/materials/unit_realm_tint_cavalry.tres" id="4_cav"]
+[ext_resource type="Material" uid="uid://csnrv2c26otee" path="res://scenes/map3d/materials/unit_realm_tint_militia.tres" id="5_fpujd"]
+[ext_resource type="Material" path="res://scenes/map3d/materials/unit_realm_tint_royal.tres" id="5_roy"]
 
 [resource]
 script = ExtResource("2_no1d4")
 art = Dictionary[String, Resource]({
 "archers": ExtResource("3_arc"),
 "artillery": ExtResource("1_ujrw1"),
-"axemen": ExtResource("1_ujrw1"),
+"axemen": ExtResource("3_fpujd"),
 "cavalry": ExtResource("4_cav"),
 "heavy_infantry": ExtResource("1_ujrw1"),
 "infantry": ExtResource("1_ujrw1"),
+"militia": ExtResource("5_fpujd"),
 "royal": ExtResource("5_roy")
 })

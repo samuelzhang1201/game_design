@@ -4,16 +4,20 @@
 [ext_resource type="PackedScene" uid="uid://0eb3lmxn52ny" path="res://scenes/models/units/archers.tscn" id="1_y4xoy"]
 [ext_resource type="PackedScene" uid="uid://baiytx1l41c33" path="res://scenes/models/units/cavalry.tscn" id="2_0vt4k"]
 [ext_resource type="PackedScene" uid="uid://cw4ttyg7e6c3r" path="res://scenes/models/units/royal.tscn" id="3_0vt4k"]
+[ext_resource type="PackedScene" uid="uid://d0sn5aj7twhiy" path="res://scenes/models/units/axemen.tscn" id="3_dk1fx"]
 [ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="3_y4xoy"]
+[ext_resource type="PackedScene" uid="uid://cpqlbrtq06nvf" path="res://scenes/models/units/heavy_infantry.tscn" id="4_qet1l"]
+[ext_resource type="PackedScene" uid="uid://worw628ru4km" path="res://scenes/models/units/militia.tscn" id="5_qet1l"]
 
 [resource]
 script = ExtResource("3_y4xoy")
 art = Dictionary[String, Resource]({
 "archers": ExtResource("1_y4xoy"),
 "artillery": ExtResource("1_33jbd"),
-"axemen": ExtResource("1_33jbd"),
+"axemen": ExtResource("3_dk1fx"),
 "cavalry": ExtResource("2_0vt4k"),
-"heavy_infantry": ExtResource("1_33jbd"),
+"heavy_infantry": ExtResource("4_qet1l"),
 "infantry": ExtResource("1_33jbd"),
+"militia": ExtResource("5_qet1l"),
 "royal": ExtResource("3_0vt4k")
 })

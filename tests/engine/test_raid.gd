@@ -496,14 +496,21 @@ func test_raid_templates_spell_no_kingdom() -> void:
 ## runs its own thirty days and the town falls near day 99): a host whose last manor is stripped may come on
 ## a town the crown's camp holds (its garrison, ArmyGround.garrison_town) and
 ## sit down to a siege on what it carries until hunger turns it home. Since
-## player siege step 4b an empty town is besieged too (its militia raised), so
-## the main host takes one early and HOLDs it; step 5 re-tunes the run.
+## player siege step 4b an empty town is besieged too (its militia raised):
+## the main host sits down before it, its militia break on the first storm
+## (siege_assault_days into the siege, step 5's tuning) and the town falls the
+## next day, and the host HOLDs it.
 func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 	var engine := TickEngine.new(repo)
 	var s := SuiteData.campaign(repo, 11)
 	engine.advance(s)
+	var main := Play.host(repo, "main")
 	var raided := ""
 	var home_by := -1
+	var begun := -1
+	var storm := -1
+	var fell := -1
+	var town := ""
 	var days_played := 0
 	while s.absolute_day() <= 120:
 		days_played += 1
@@ -512,6 +519,16 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 			return
 		var today := s.absolute_day()
 		Play.day(engine, s, true)
+		for e: Dictionary in engine.day_siege:
+			if String(e.get("host", "")) == main and String(e.get("kind", "")) == "siege_begin" and begun < 0:
+				begun = today
+				town = String(e["town"])
+			if String(e.get("kind", "")) == "siege_fallen" and String(e.get("town", "")) == town and fell < 0:
+				fell = today
+		for e: Dictionary in engine.day_battles:
+			if String(e.get("kind", "")) == "start" and storm < 0 and (e["def"] as Array).any(
+					func(c: String) -> bool: return c.begins_with("militia:")):
+				storm = today
 		for h: String in EnemyAi.host_codes(s):
 			var m: Dictionary = s.ai_hosts[h]
 			if String(m["mode"]) == "RAID" and raided == "" and (m.get("raided", {}) as Dictionary).values().any(
@@ -526,11 +543,15 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 		if all_home and home_by < 0:
 			home_by = today
 	# player siege spec §5 (step 4b): an empty town is besieged, its militia
-	# raised, so the main host takes a town and HOLDs it while a host raids a
-	# manor; how long the invasion lasts is step 5's to re-tune (spec §11 row 5)
+	# raised; step 5 paces its fall by siege_assault_days (spec §11 row 5)
+	assert_gt(begun, 0, "the main host sits down before a town")
+	assert_eq(storm, begun + int(repo.bal("siege_assault_days")), "its militia meet the first storm siege_assault_days in")
+	assert_eq(fell, storm + 1, "the town falls the day after its militia break")
+	assert_eq(String(s.ai_hosts[main]["mode"]), EnemyAi.MODE_HOLD, "and the main host holds it")
 	assert_ne(raided, "", "a host raids a plain manor and takes from it")
 	assert_true(home_by > 0 and home_by <= 120, "and every host has turned for home or holds what it took by day 120 (%d)" % home_by)
-	gut.p("raided: %s; every host homeward or holding from day %d" % [raided, home_by])
+	gut.p("siege of %s from day %d, storm day %d, fell day %d; raided: %s; every host homeward or holding from day %d" % [
+		town, begun, storm, fell, raided, home_by])
 
 
 ## --- a town target (Ruling 5: an open town is raided like a manor) ----------------

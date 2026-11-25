@@ -87,9 +87,10 @@ func test_heavy_has_every_land_arm_row() -> void:
 	assert_false(BodyMotion._loco_policy(repo, arm).is_empty(), "an installed locomotion certificate")
 
 
-func test_heavy_has_its_stand_in_art() -> void:
-	# Until the plate soldier and its painting are installed, the heavy infantry wear the infantry's art.
-	for table: String in [GameArt.ARMY_MODELS, GameArt.ARMY_PAINTINGS, GameArt.WAR_PIECES,
+func test_heavy_draws_its_own_soldier_and_borrows_the_rest() -> void:
+	# The plate soldier is installed; its painting, war piece and sounds are still the infantry's.
+	assert_eq(GameArt.path(GameArt.ARMY_MODELS, "heavy_infantry"), "res://scenes/models/units/heavy_infantry.tscn")
+	for table: String in [GameArt.ARMY_PAINTINGS, GameArt.WAR_PIECES,
 			GameArt.UNIT_SOUNDS, GameArt.UNIT_SETTLE_SOUNDS]:
 		assert_ne(GameArt.path(table, "infantry"), "", table + " has infantry")
 		assert_eq(GameArt.path(table, "heavy_infantry"), GameArt.path(table, "infantry"), table)

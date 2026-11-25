@@ -18,6 +18,10 @@ extends RefCounted
 ## the militia an empty town would raise (defend_power).
 
 const FIELD := "urban_population"
+## The figure a militia is drawn with: its roster row's `figure`, an
+## army_art.csv row. Its piece (MapObjects.army_piece: card, footprint, bodies)
+## stays its first arm's.
+const FIGURE := "militia"
 
 
 ## The town's best works: "citadel", "walls" or "town" (ArmySystem.works_of's
@@ -168,8 +172,8 @@ static func size(repo: DataRepository, state: GameState, town: String) -> Dictio
 ## standing one): one unit "militia:<id>" of the size (size), for the record's
 ## defender, its men one commoner cohort enlisted from the town's province
 ## (MilitaryRoster.mobilize, reason "militia of <town> raised"), an army_roster
-## row with its equipment, standing on the town's seat. The record's `militia`
-## lists it. Returns the unit's code, "" when none is raised.
+## row with its equipment and its `figure` (FIGURE), standing on the town's
+## seat. The record's `militia` lists it. Returns the unit's code, "" when none is raised.
 static func raise(repo: DataRepository, state: GameState, id: String) -> String:
 	var rec: Dictionary = state.sieges.get(id, {})
 	var town := String(rec.get("town", ""))
@@ -195,7 +199,8 @@ static func raise(repo: DataRepository, state: GameState, id: String) -> String:
 	var types := repo.world_table("military", "unit_types")
 	var row := {"regiment_code": code, "label": "%s militia" % label, "kingdom_code": defender,
 		"province_code": prov, "parent_code": "", "organization_arm": String(arms.keys()[0]), "is_royal": "0",
-		"is_naval": "0", "camp_town": town, "x": str(b["x"]), "y": str(b["y"]), "source_parts": []}
+		"is_naval": "0", "camp_town": town, "x": str(b["x"]), "y": str(b["y"]), "source_parts": [],
+		"figure": FIGURE}
 	for kind: String in types:
 		row[kind] = "0"
 	for arm: String in arms:

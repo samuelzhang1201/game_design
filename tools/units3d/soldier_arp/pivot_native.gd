@@ -1,6 +1,7 @@
 extends SceneTree
 ## Samples the imported infantry clips with the real AnimationPlayer (pivot_mapping.py input).
-## Godot --headless --path . -s tools/units3d/soldier_arp/pivot_native.gd -- REQUEST.json OUT.json
+## Godot --headless --path . -s tools/units3d/soldier_arp/pivot_native.gd -- REQUEST.json OUT.json [ARM]
+## ARM (default infantry) names the installed model: assets/3D/units/<ARM>/<ARM>.glb.
 ## REQUEST: {"clip": "MARCH", "samples": [{"id": <exact float hex>, "phase": <0..1>}], "baseline": bool}.
 ## OUT: skeleton-space bone globals per sample; no interpolation outside the player. With
 ## "baseline" it also holds the imported skin (bind poses by name) and the mesh's first surface
@@ -27,7 +28,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
-	var path: String = "res://assets/3D/units/infantry/infantry.glb"
+	var arm: String = args[2] if args.size() > 2 else "infantry"
+	var path: String = "res://assets/3D/units/%s/%s.glb" % [arm, arm]
 	var model: Node3D = (load(path) as PackedScene).instantiate() as Node3D
 	root.add_child(model)
 	await process_frame

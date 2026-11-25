@@ -1,8 +1,8 @@
 {
  "arm": "axemen",
- "note": "LOCO-CERT-AXE (spec 2026-11-18-axemen-arm-design). The axemen wear the infantry's short-sword soldier until their hand-axe soldier is installed (army_models.tres binds axemen to infantry.tscn), so this is the infantry's provider and config at the axemen's footprint radius 927 and the infantry's scale. Map3DInfantryLocomotion re-solves the coupled pivot plan for each grid turn; pivots enter and leave MARCH at 8/420 only and the hold is MARCH frozen at 8/420 (owner ruling A, a consumer requirement). Installing the hand-axe soldier voids it.",
- "scene": "scenes/models/units/infantry.tscn",
- "provider": "scripts/map3d/map3d_infantry_locomotion.gd",
+ "note": "LOCO-CERT-AXE (spec 2026-11-18-axemen-arm-design, step 4). The hand-axe soldier's own scene and provider: Map3DAxemenLocomotion is Map3DInfantryLocomotion's solver on this body's coupled pivot plan (axemen_pivot_plan.json; the shipped clips are its +/-90 solve). The body is the infantry's on the same pack walk (MARCH legs equal to 2e-7 m, rest height 1.636 m), so pivots enter and leave MARCH at 8/420 only and the hold is MARCH frozen at 8/420 (owner ruling A, a consumer requirement), as the infantry's; stride 1.4838 measured off its MARCH; k 25.8437, contact 23217 um.",
+ "scene": "scenes/models/units/axemen.tscn",
+ "provider": "scripts/map3d/map3d_axemen_locomotion.gd",
  "feet": {
   "l": [
    "foot.l",

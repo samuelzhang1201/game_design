@@ -70,7 +70,8 @@ const FILE_OUT := 0.4  ## the last lane sets off this share of the walk after th
 static func build(repo: DataRepository, reg: Dictionary, sampled: Dictionary, starts: Array = []) -> Dictionary:
 	var piece := {"node": Node3D.new(), "layout": "physical_groups", "groups": [], "anims": [],
 		"figures": 0, "height_m": 0.0, "extent": Vector2.ZERO, "half_w_m": 0.0,
-		"model": MapObjects.army_piece(repo, reg), "candidate_bodies": sampled.get("mode", "") == "bodies"}
+		"model": Map3DFormation.figure_of(repo, reg), "footprint": MapObjects.army_piece(repo, reg),
+		"candidate_bodies": sampled.get("mode", "") == "bodies"}
 	(piece["node"] as Node3D).top_level = true
 	sync(repo, reg, piece, sampled)
 	if not starts.is_empty() and not piece["candidate_bodies"]:
@@ -424,7 +425,7 @@ static func stand_xz(ctx: Map3DContext, piece: Dictionary, group: Dictionary) ->
 ## the layer's formation_gap, at the piece's scale) over the arm's
 ## unit_footprints.csv pitch_m in world metres; ONE for an arm with no footprint.
 static func close_of(ctx: Map3DContext, piece: Dictionary, gap: float) -> Vector2:
-	var pitch_m := int(ctx.repo.unit_footprints.get(String(piece.get("model", "")), {}).get("pitch_m", 0))
+	var pitch_m := int(ctx.repo.unit_footprints.get(String(piece.get("footprint", "")), {}).get("pitch_m", 0))
 	if pitch_m <= 0 or (piece["groups"] as Array).is_empty() or not piece.has("camp_scale"):
 		return Vector2.ONE
 	var world := ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(pitch_m, 0))).distance_to(
