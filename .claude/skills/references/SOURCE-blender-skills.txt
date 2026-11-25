@@ -1,0 +1,1 @@
+source: https://github.com/arjun988/blender-skills @ 904f095d (v1.3.0), subset of 30 skills

@@ -44,6 +44,7 @@ class PrGateTests(unittest.TestCase):
         body = 'prd_step: harness\nplayer_outcome: none: rule maintenance\nwired: false\n'
         self.assertEqual(self.pr_problems(body, files=['cicd_procedure.md', 'AGENTS.md', '.github/workflows/tests.yml']), [])
         self.assertEqual(self.pr_problems(body, branch='claude/x', files=['.claude/agents/architect.md', 'CLAUDE.md']), [])
+        self.assertEqual(self.pr_problems(body, branch='claude/x', files=['.claude/skills/rigging/SKILL.md']), [])
         self.assertIn('scripts/a.gd', ' '.join(self.pr_problems(body, files=['cicd_procedure.md', 'scripts/a.gd'])))
         self.assertIn('wired', ' '.join(self.pr_problems(body.replace('wired: false', 'wired: true'),
                                                          files=['AGENTS.md'])))
