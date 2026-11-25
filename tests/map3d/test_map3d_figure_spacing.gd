@@ -49,7 +49,12 @@ func test_entering_a_battle_keeps_the_figures_spacing() -> void:
 		before[code] = [_pitch((block["figs"] as Array).map(xz)), _span((block["figs"] as Array).map(xz))]
 	assert_false(BattleSystem.discover_contacts(repo, state).is_empty(), "real contact starts the encounter")
 	layer.refresh()
-	layer.step(repo.bal("map3d_battle_walk_s") + 0.1)
+	layer.step(0.1)  # the walk-in begins: it lasts its farthest walker's paced length (Map3DBattleGroups.walk_in_s)
+	var walk_s := 0.0
+	for code: String in before:
+		for group: Dictionary in layer.built_piece(code)["groups"]:
+			walk_s = maxf(walk_s, float(group["piece"].get("walk", {}).get("s", 0.0)))
+	layer.step(walk_s + 0.1)
 	for code: String in before:
 		var piece: Dictionary = layer.built_piece(code)
 		assert_eq(piece.get("layout", ""), "physical_groups")

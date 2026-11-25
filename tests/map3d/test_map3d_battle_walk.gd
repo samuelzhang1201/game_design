@@ -81,7 +81,11 @@ func test_entering_a_battle_walks_the_figures_in() -> void:
 	assert_true(bool(piece.get("easing", false)))
 	layer.step(0.1)
 	assert_eq(String(piece.get("action", "")), "MARCH", "it walks in, on a stopped clock too")
-	layer.step(repo.bal("map3d_battle_walk_s"))
+	var walk_s := float(piece["groups"][0]["piece"]["walk"]["s"])
+	assert_gte(walk_s, repo.bal("map3d_battle_walk_s"), "a walk-in lasts its paced length, never under the gentle floor")
+	for group: Dictionary in piece["groups"]:
+		assert_eq(float(group["piece"]["walk"]["s"]), walk_s, "every figure of the block arrives together")
+	layer.step(walk_s)
 	var row: Dictionary = piece["groups"][0]
 	assert_almost_eq(Vector2(node.global_position.x, node.global_position.z), Groups.stand_xz(ctx, piece, row), Vector2(0.01, 0.01),
 		"and ends where it stands for its saved point, at the block's spacing")
@@ -127,3 +131,68 @@ func test_a_duel_step_keeps_its_facing() -> void:
 	var half: Dictionary = Groups.eased(from, 1.0, to, 1.2, 0.5, 0.0, true)
 	assert_eq(half["xz"], Vector2(0, -1.5))
 	assert_almost_eq(float(half["yaw"]), lerp_angle(1.0, 1.2, 0.5), 0.0001, "it turns straight from its facing to the next")
+
+
+## A block's walk-in lasts what its farthest walker needs at the stride's own pace
+## (k 10: 1.4838 model m a 1.1 s loop = 13.489091 world m/s), a late lane over
+## the share it has left; never shorter than `map3d_battle_walk_s` (1.6 here).
+func test_a_walk_in_lasts_its_farthest_walkers_pace() -> void:
+	assert_almost_eq(Groups.walk_in_s([40.0, 20.0], [0.0, 0.4], 10.0, 1.1, 1.4838, 1.6), 2.965373, 0.0001,
+		"40 m at 13.489091 m/s; the late 20 m needs only 2.471144")
+	assert_almost_eq(Groups.walk_in_s([40.0, 30.0], [0.0, 0.4], 10.0, 1.1, 1.4838, 1.6), 3.706716, 0.0001,
+		"the late lane's 30 m over 0.6 of the walk wins")
+	assert_almost_eq(Groups.walk_in_s([10.0], [0.0], 10.0, 1.1, 1.4838, 1.6), 1.6, 0.0001, "a short walk keeps the gentle floor")
+	assert_almost_eq(Groups.walk_in_s([40.0], [0.0], 10.0, 1.1, 0.0, 1.6), 1.6, 0.0001, "no stride: the floor")
+
+
+func _walker() -> Array:
+	var anim := AnimationPlayer.new()
+	var lib := AnimationLibrary.new()
+	for spec: Array in [["GARRISON", 1.0], ["MARCH", 1.1]]:
+		var clip := Animation.new()
+		clip.length = spec[1]
+		clip.loop_mode = Animation.LOOP_LINEAR
+		lib.add_animation(spec[0], clip)
+	anim.add_animation_library("", lib)
+	add_child_autofree(anim)
+	anim.play("MARCH")
+	var child := {"anims": [anim], "walking": true, "clip_s": 1.1, "stride_m": 1.4838, "at": {"xz": Vector2(0, 50), "yaw": 0.0}}
+	return [{"action": "MARCH", "clock": 0.0}, child, anim]
+
+
+## Each frame a walking figure's MARCH plays at its ground over its stride
+## (2 world m in 0.1 s facing its way at k 10: 2 / 0.1 / 10 × 1.1 / 1.4838 = 1.482679).
+func test_a_walking_figure_marches_at_its_ground_pace() -> void:
+	var w := _walker()
+	var piece: Dictionary = w[0]
+	var child: Dictionary = w[1]
+	var anim: AnimationPlayer = w[2]
+	for i in 3:
+		piece["clock"] = 0.1 * i
+		child["at"] = {"xz": Vector2(0, 50 - 2.0 * i), "yaw": 0.0}
+		Groups.pace_walk(piece, child, 10.0)
+	assert_eq(anim.current_animation, "MARCH")
+	assert_almost_eq(anim.speed_scale, 1.482679, 0.0001, "its feet keep the ground")
+	for i in 2:  # its lane held back: it stands where it is
+		piece["clock"] = 0.3 + 0.1 * i
+		Groups.pace_walk(piece, child, 10.0)
+	assert_eq(anim.current_animation, "GARRISON", "held back, it stands its guard, never marches on the spot")
+	piece["clock"] = 0.5
+	child["at"] = {"xz": Vector2(0, 42), "yaw": 0.0}
+	Groups.pace_walk(piece, child, 10.0)
+	assert_eq(anim.current_animation, "MARCH", "and steps off again")
+	child["walking"] = false
+	Groups.pace_walk(piece, child, 10.0)
+	assert_eq(anim.speed_scale, 1.0, "arrived, its clips play at their own speed")
+
+
+func test_a_duellist_is_left_to_its_driver() -> void:
+	var w := _walker()
+	var anim: AnimationPlayer = w[2]
+	anim.set_meta("duel", true)
+	anim.speed_scale = 0.7
+	for i in 2:
+		w[0]["clock"] = 0.1 * i
+		w[1]["at"] = {"xz": Vector2(0, 50 - 2.0 * i), "yaw": 0.0}
+		Groups.pace_walk(w[0], w[1], 10.0)
+	assert_almost_eq(anim.speed_scale, 0.7, 0.0001, "the duel driver paces its own steps")

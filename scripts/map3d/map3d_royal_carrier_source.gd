@@ -24,7 +24,7 @@ const _SOURCES: Dictionary = {
 	"res://scripts/engine/march_path.gd":"8f4b63b38c2f1e447ece94f09851939b1336a1a9f51880e05a07c8719264e568",
 	"res://scripts/engine/unit_bodies.gd":"e5ef5385575531e95914d0adb6cd6dcf59751d093a29e428fc48284a8621b4ca",
 	"res://scripts/engine/war_front.gd":"73c5fa064b95c84f4e5c5215bf120bd7ff7e496792179810ed59ba64d053a6dc",
-	"res://scripts/map3d/map3d_battle_groups.gd":"1411a38d3d6f207cbe0b91fe83af9347f6c5354b53c6ce5acb3fa5e73a0e91a7",
+	"res://scripts/map3d/map3d_battle_groups.gd":"80d5c09b0a3484ee03cb7d51ea9c56873d291116f5a89ab6591161942ef63a3e",
 	"res://scripts/map3d/map3d_units.gd":"e842566f033267ae5cbb8bf548bed2aefc88103a9234b344cdc1b3554e32fb4d",
 	"res://scripts/map3d/map3d_formation.gd":"32e2ec41417dac078eac796bea104cca5982963b578ae37c6e6859c5b9d1d720",
 	"res://scripts/map3d/map3d_geometry.gd":"64797a53505cff9bd849e9245107f9be9f73fbb78cc2d27ab9f58b71bfce9e4c",

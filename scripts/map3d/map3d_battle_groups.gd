@@ -142,6 +142,44 @@ static func paced_s(dist_m: float, k: float, clip_s: float, stride_m: float, fal
 	return dist_m / speed if speed > 0.0 and dist_m > 0.0 else fallback  # standing still it only turns
 
 
+## The seconds a block's walk-in lasts: its farthest walker's `dist_m` at the stride's
+## own pace (paced_s), a late lane's over the share left to it (`waits`), at least `floor_s`.
+static func walk_in_s(dists: Array, waits: Array, k: float, clip_s: float, stride_m: float, floor_s: float) -> float:
+	var s := floor_s
+	for i in dists.size():
+		s = maxf(s, paced_s(float(dists[i]), k, clip_s, stride_m, 0.0) / (1.0 - float(waits[i])))
+	return s
+
+
+## One frame of a walking figure's MARCH at its ground over its stride (Map3DDuelDriver.step_rate,
+## on the walks' clock), so its feet keep the ground at any length of walk; held back on a late
+## lane it stands its guard, arrived its clips play at their own speed. A duellist's driver paces it.
+static func pace_walk(piece: Dictionary, child: Dictionary, k: float) -> void:
+	var anim: AnimationPlayer = (child["anims"] as Array)[0]
+	var march := Map3DUnits.clip_named(anim, "MARCH")
+	if anim.has_meta("duel") or march == "" or String(piece.get("action", "")) != "MARCH" or not child["walking"]:
+		if child.has("paced") and not anim.has_meta("duel"):
+			anim.speed_scale = 1.0
+		child.erase("paced")
+		return
+	var at: Dictionary = child["at"]
+	var clock := float(piece.get("clock", 0.0))
+	var was: Array = child.get("paced", [at["xz"], clock])
+	child["paced"] = [at["xz"], clock]
+	if clock <= float(was[1]):
+		return
+	var rate := Map3DDuelDriver.step_rate((at["xz"] as Vector2) - (was[0] as Vector2), float(at["yaw"]), clock - float(was[1]),
+		k, float(child.get("clip_s", 0.0)), float(child.get("stride_m", 0.0)))
+	if absf(rate) < 0.05:
+		anim.speed_scale = 1.0
+		if anim.current_animation == march:
+			anim.play(Map3DUnits.clip_named(anim, "GARRISON"), 0.15)
+		return
+	if anim.current_animation != march:
+		anim.play(march, 0.15)
+	anim.speed_scale = rate
+
+
 ## The walks' own clock: true (and `delta` counted) while a figure of `piece` is on its way.
 static func tick(piece: Dictionary, delta: float) -> bool:
 	if not piece.get("easing", false):
@@ -165,6 +203,9 @@ static func _walk(repo: DataRepository, piece: Dictionary, child: Dictionary, xz
 		if child.get("step_facing", false) or child.get("step_up", false):
 			walk["s"] = paced_s((at["xz"] as Vector2).distance_to(xz), k, float(child.get("clip_s", 0.0)),
 				float(child.get("stride_m", 0.0)), float(walk["s"]))
+		else:  # its block's walk-in: `place` gives every walk begun with it the longest one's length
+			walk["need"] = walk_in_s([(at["xz"] as Vector2).distance_to(xz)], [float(at.get("delay", 0.0))], k,
+				float(child.get("clip_s", 0.0)), float(child.get("stride_m", 0.0)), 0.0)
 		child["walk"] = walk
 	var walk_s := float(walk.get("s", repo.bal("map3d_battle_walk_s")))
 	var wait := float(walk["from"].get("delay", 0.0))   # a lane sets off this share of the walk late
@@ -301,6 +342,7 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 			xz = drawn["xz"]
 			yaw = drawn["yaw"]
 			easing = easing or bool(child["walking"])
+			pace_walk(piece, child, k)
 		xz += child.get("knock_offset", Vector2.ZERO)  # a blow's knock-back (Map3DDuelDriver), drawn at once, never walked
 		var y := ctx.height_at(xz)
 		for offset: Vector2 in Map3DUnits.footprint(child["extent"], yaw, k, int(repo.bal("map3d_unit_seat_ring"))):
@@ -330,6 +372,12 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 			figure_rects.append(child_box)
 			box = box.merge(child_box) if has_box else child_box
 			has_box = true
+	var begun: Array = piece["groups"].map(func(group: Dictionary) -> Dictionary: return group["piece"].get("walk", {})) \
+		.filter(func(walk: Dictionary) -> bool: return walk.has("need"))
+	var walk_s: float = begun.reduce(func(s: float, walk: Dictionary) -> float: return maxf(s, float(walk["need"])), repo.bal("map3d_battle_walk_s"))
+	for walk: Dictionary in begun:
+		walk["s"] = walk_s  # begun this frame, still on its first step: every walk of the block ends together
+		walk.erase("need")
 	piece["figure_rects"] = figure_rects
 	piece["height_m"] = height
 	piece["extent"] = extent
