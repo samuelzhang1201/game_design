@@ -105,3 +105,4 @@ army_supply_line,Supply line,tower,The road the regiment's supplies travel from 
 bld_war_workshop,War workshop,flame,"Turns the lord's civil goods into strategic goods each month, as its rate allows."
 axemen,Axemen,swords,Axemen: shock foot that break shield walls and gates.
 heavy_infantry,Heavy infantry,shield,"Heavy infantry: plate-armoured foot. Slow and dear, hard to break, hardest behind walls."
+militia,Militia,shield,"Militia: townsmen under arms. Cheap and quick to raise, poor in the open, steady on their own walls."

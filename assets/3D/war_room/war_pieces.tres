@@ -16,5 +16,6 @@ art = Dictionary[String, Resource]({
 "cavalry": ExtResource("3_8e73k"),
 "heavy_infantry": ExtResource("1_m3lp0"),
 "infantry": ExtResource("1_m3lp0"),
+"militia": ExtResource("1_m3lp0"),
 "royal": ExtResource("4_pu4fm")
 })

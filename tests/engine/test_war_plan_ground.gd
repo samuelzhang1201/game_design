@@ -41,19 +41,19 @@ func _land_code() -> String:
 
 
 ## Hand figures (test_army_power.gd): 2,000 archers at the assumed training 10
-## and morale 75 — plains 972 both ways; hills defend 1117 (x1150), attack
-## 1020 (x1050). The slip's factor is the ratio of those whole powers:
-## 1117*1000/972 = 1149, 1020*1000/972 = 1049; men 2000*1149/1000 = 2298,
-## 2000*1049/1000 = 2098.
+## and morale 75 — plains 998 both ways; hills defend 1148 (x1150), attack
+## 1048 (x1050). The slip's factor is the ratio of those whole powers:
+## 1148*1000/998 = 1150, 1048*1000/998 = 1050; men 2000*1150/1000 = 2300,
+## 2000*1050/1000 = 2100.
 func test_men_on_this_ground_by_hand() -> void:
 	var at := _open("hills")
 	assert_ne(at, Vector2(-1, -1), "the pack has open hills")
 	var r := WarGround.plan_reading(repo, state, _piece("archers", 2000, WarPlans.UNKNOWN, at), "")
 	var p: Dictionary = r["plan"]
-	assert_eq(int(p["defend_f"]), 1149)
-	assert_eq(int(p["attack_f"]), 1049)
-	assert_eq(int(p["defend"]), 2298)
-	assert_eq(int(p["attack"]), 2098)
+	assert_eq(int(p["defend_f"]), 1150)
+	assert_eq(int(p["attack_f"]), 1050)
+	assert_eq(int(p["defend"]), 2300)
+	assert_eq(int(p["attack"]), 2100)
 	assert_eq(String(r["terrain"]), "hills")
 
 
@@ -64,8 +64,8 @@ func test_the_slip_writes_men_and_factors() -> void:
 	assert_eq(texts[0], "Supposed bows")
 	assert_eq(texts[1], "Unknown")
 	assert_true(texts.has("2,000 archers · assumed %s" % ArmySystem.training_grade(repo, int(repo.bal("war_plan_training"))).to_lower()))
-	assert_true(texts.has("Defends as 2,298 (×1.15 hills)"), str(texts))
-	assert_true(texts.has("Attacks as 2,098 (×1.05)"), str(texts))
+	assert_true(texts.has("Defends as 2,300 (×1.15 hills)"), str(texts))
+	assert_true(texts.has("Attacks as 2,100 (×1.05)"), str(texts))
 
 
 ## A town a foreign kingdom holds: its works count for that side only.
@@ -106,7 +106,7 @@ func test_with_a_regiment_both_sides_side_by_side_and_no_odds() -> void:
 	@warning_ignore("integer_division")
 	assert_eq(int(g["ours"]), fit * ours_f / 1000 * ArmySystem.height_factor(repo, delta) / 1000)
 	@warning_ignore("integer_division")
-	assert_eq(int(g["theirs"]), 2298 * ArmySystem.height_factor(repo, -delta) / 1000)
+	assert_eq(int(g["theirs"]), 2300 * ArmySystem.height_factor(repo, -delta) / 1000)
 	var texts: Array = WarGround.plan_lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))
 	assert_true(texts.has("Theirs %s · ours %s on this ground" % [Intel.num(int(g["theirs"])), Intel.num(int(g["ours"]))]), str(texts))
 	for t: String in texts:

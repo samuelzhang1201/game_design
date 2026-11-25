@@ -22,3 +22,7 @@ heavy_infantry,cuirass,Breastplate,"plate with pauldrons at the shoulders and ta
 heavy_infantry,clothes,Sleeves and breeches,"puffed and slashed cloth under the plate"
 heavy_infantry,shield,Round shield,"a steel-faced round shield"
 heavy_infantry,sword,Short sword,"a broad short blade for the press"
+militia,helmet,Kettle hat,"a broad-brimmed iron hat over a linen coif"
+militia,tunic,Tunic,"belted wool to the knee, dyed in the realm's colour; trousers and leg wraps under it"
+militia,shield,Round shield,"planked wood with an iron boss"
+militia,sword,Short sword,"a plain short blade"

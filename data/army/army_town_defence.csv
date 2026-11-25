@@ -17,3 +17,6 @@ citadel,axemen,1200,1250,
 town,heavy_infantry,1150,1000,"owner 2026-11-20 (spec 2026-11-20-heavy-infantry-arm-design): the armoured core is at its best behind works"
 walls,heavy_infantry,1350,1000,
 citadel,heavy_infantry,1450,1000,
+town,militia,1100,1000,"owner 2026-11-26 (spec 2026-11-26-militia-arm-design): on their own walls the militia are worth the infantry's rows"
+walls,militia,1300,1000,
+citadel,militia,1400,1000,

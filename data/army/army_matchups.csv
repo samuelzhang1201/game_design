@@ -5,24 +5,28 @@ infantry,cavalry,1200,1300,"spears hold a charge"
 infantry,artillery,1100,900,
 infantry,axemen,1000,800,"owner 2026-11-18 (spec 2026-11-18-axemen-arm-design, step 2): axes break a shield wall; arrows and horse cut down an open line"
 infantry,heavy_infantry,900,900,"owner 2026-11-20 (spec 2026-11-20-heavy-infantry-arm-design): plate is hard to hurt and hard to shift; every arm does worse against it, the guns least (a slow close target)"
+infantry,militia,1200,1100,"owner 2026-11-26 (spec 2026-11-26-militia-arm-design): townsmen with short swords and no armour; every arm does better against them"
 archers,infantry,1200,800,"arrows thin a slow line"
 archers,archers,1000,1000,
 archers,cavalry,800,700,
 archers,artillery,1000,900,
 archers,axemen,1200,800,
 archers,heavy_infantry,900,800,"plate turns arrows"
+archers,militia,1300,900,
 cavalry,infantry,900,800,
 cavalry,archers,1300,1200,"horse rides down bowmen"
 cavalry,cavalry,1000,1000,
 cavalry,artillery,1300,1100,
 cavalry,axemen,1300,1000,
 cavalry,heavy_infantry,800,800,
+cavalry,militia,1300,1100,
 artillery,infantry,1100,700,
 artillery,archers,900,800,
 artillery,cavalry,800,600,
 artillery,artillery,1000,1000,
 artillery,axemen,1100,700,
 artillery,heavy_infantry,1200,700,"a slow close target"
+artillery,militia,1100,700,
 fleet,fleet,1000,1000,
 axemen,infantry,1300,1000,owner 2026-11-18 (spec 2026-11-18-axemen-arm-design): axes break a shield wall but cannot keep a line
 axemen,archers,1100,900,
@@ -30,9 +34,18 @@ axemen,cavalry,900,700,no reach: horse rides them down
 axemen,artillery,1200,900,
 axemen,axemen,1000,1000,
 axemen,heavy_infantry,1100,900,"plate does not split like a shield wall"
+axemen,militia,1300,1100,
 heavy_infantry,infantry,1100,1200,"owner 2026-11-20 (spec 2026-11-20-heavy-infantry-arm-design): the armoured core holds a line"
 heavy_infantry,archers,1000,1200,"plate turns arrows"
 heavy_infantry,cavalry,1100,1300,"the line holds a charge"
 heavy_infantry,artillery,1100,800,
 heavy_infantry,axemen,1100,1000,
 heavy_infantry,heavy_infantry,1000,1000,
+heavy_infantry,militia,1300,1300,
+militia,infantry,800,800,"owner 2026-11-26 (spec 2026-11-26-militia-arm-design): weak in the open against every arm"
+militia,archers,800,900,
+militia,cavalry,900,1000,
+militia,artillery,1000,800,
+militia,axemen,800,700,
+militia,heavy_infantry,700,800,
+militia,militia,1000,1000,
