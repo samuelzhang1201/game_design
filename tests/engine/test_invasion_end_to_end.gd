@@ -275,6 +275,9 @@ func test_weak_defence_loses_the_town_and_the_campaign_plays_on() -> void:
 	assert_gt(contacts.size(), 0, "the main host fought the target's defenders")
 	var first_contact := int(contacts[0]["on"]) if not contacts.is_empty() else -1
 	assert_gte(first_contact, begun, "contact follows the host's deployment")
+	# the host holds its ground, so the first fight is the storm it owes
+	# siege_assault_days into the siege (player siege step 5's pacing)
+	assert_eq(first_contact, begun + int(repo.bal("siege_assault_days")), "the first storm is the first contact")
 	assert_true(first_contact in seen["battle_letters"], "the engagement has a battle report")
 	var fell := int(seen["fell"])
 	assert_gte(fell, first_contact, "the target falls after its defenders are engaged")
