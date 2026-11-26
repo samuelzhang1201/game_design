@@ -174,11 +174,24 @@ func _court() -> GameRoot:
 	return r
 
 
-func test_hovering_the_3d_map_puts_the_country_card_in_the_left_column() -> void:
+func test_a_hover_alone_never_opens_the_hidden_column() -> void:
 	var r: GameRoot = await _court()
 	var screen: CourtScreen = r.current_screen
 	var view := screen.map3d_view()
 	assert_not_null(view)
+	var column := screen.get_node("%LogPanel") as Control
+	view.country_hovered.emit(Game.data.resolve_realm("raider_realm"))
+	assert_false(column.visible, "nothing chosen: a hover leaves the map whole (owner 2026-11-26)")
+	view.country_hovered.emit("")
+	assert_false(column.visible)
+
+
+func test_hovering_the_3d_map_puts_the_country_card_over_the_realms_card() -> void:
+	var r: GameRoot = await _court()
+	var screen: CourtScreen = r.current_screen
+	var view := screen.map3d_view()
+	screen.toggle_realm_card()
+	assert_true(screen.dashboard().visible, "the Crown opened the realm's card")
 	view.country_hovered.emit(Game.data.resolve_realm("raider_realm"))
 	assert_true(screen.country_panel().visible, "the hovered country's card")
 	assert_false(screen.dashboard().visible)

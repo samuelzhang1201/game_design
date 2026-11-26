@@ -246,8 +246,11 @@ func test_the_report_runs_down_where_the_compass_lay() -> void:
 		await wait_process_frames(4)
 		var tag := " at %s (design %s)" % [shape, r.size]
 		assert_null(court.find_child("TableCompass", true, false), "no compass on the table" + tag)
-		var col := (court.get_node("%LogPanel") as Control).get_global_rect()
-		assert_almost_eq(col.end.y, r.size.y - 12.0, 0.5, "the column reaches the foot margin" + tag)
+		var column := court.get_node("%LogPanel") as Control
+		column.visible = true   # hidden until something is chosen (owner 2026-11-26)
+		var col := column.get_global_rect()
+		assert_lt(col.end.y, court.map_panel().get_global_rect().end.y,
+			"the column ends on the map sheet, above the bookmarks" + tag)
 		for tab: String in BottomBar.TABS:
 			var b := r.bottom_bar().button(tab)
 			if b != null and b.visible:

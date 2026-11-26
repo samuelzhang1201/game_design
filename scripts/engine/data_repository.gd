@@ -159,13 +159,16 @@ var battle_behaviors: Dictionary = {}
 var battle_events: Dictionary = {}
 var battle_event_choices: Array[Dictionary] = []
 ## data/battle/ai_doctrines.csv (§3.3): host role -> {greed_permille, caution_permille,
-## dist_cost, engage_odds_permille, retreat_morale, town_bonus}.
+## dist_cost, engage_odds_permille, retreat_morale, town_bonus} and the siege's
+## per-tactic shares SIEGE_DOCTRINE (player siege spec §4, SiegeTactics.plan).
 var ai_doctrines: Dictionary = {}
+const SIEGE_DOCTRINE := ["siege_blockade_permille", "siege_mine_permille", "siege_bombard_permille",
+	"siege_ladders_permille", "siege_engines_permille"]
 ## data/battle/town_militia.csv (player siege spec §5): a besieged town's militia
 ## by works, in file order: [{works, arm, men_permille, men_cap}].
 var town_militia: Array[Dictionary] = []
-## data/battle/siege_tactics.csv (player siege spec §4.1): works ->
-## {stores_days}.
+## data/battle/siege_tactics.csv (player siege spec §4.1, §4.2): works ->
+## {stores_days, bombard_damage}.
 var siege_tactics: Dictionary = {}
 ## data/battle/siege_entries.csv (§4.1): route group (or "countryside") -> the
 ## raw share of a town's food an entry of it carries.
@@ -1130,11 +1133,15 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(table_path(dir, "ai_doctrines"),
 			["role", "greed_permille", "caution_permille", "dist_cost", "engage_odds_permille",
-			"retreat_morale", "town_bonus"],
-			func(r): ai_doctrines[String(r["role"])] = {"greed_permille": int(r["greed_permille"]),
-				"caution_permille": int(r["caution_permille"]), "dist_cost": int(r["dist_cost"]),
-				"engage_odds_permille": int(r["engage_odds_permille"]),
-				"retreat_morale": int(r["retreat_morale"]), "town_bonus": int(r["town_bonus"])}):
+			"retreat_morale", "town_bonus"] + SIEGE_DOCTRINE,
+			func(r):
+				var row := {"greed_permille": int(r["greed_permille"]),
+					"caution_permille": int(r["caution_permille"]), "dist_cost": int(r["dist_cost"]),
+					"engage_odds_permille": int(r["engage_odds_permille"]),
+					"retreat_morale": int(r["retreat_morale"]), "town_bonus": int(r["town_bonus"])}
+				for k: String in SIEGE_DOCTRINE:
+					row[k] = int(r[k])
+				ai_doctrines[String(r["role"])] = row):
 		return false
 	town_militia.clear()
 	if not _load_if_present(table_path(dir, "town_militia"), ["works", "arm", "men_permille", "men_cap"],
@@ -1142,8 +1149,9 @@ func _load(dir: String) -> bool:
 				"men_permille": int(r["men_permille"]), "men_cap": int(r["men_cap"])})):
 		return false
 	siege_tactics.clear()
-	if not _load_if_present(table_path(dir, "siege_tactics"), ["works", "stores_days"],
-			func(r): siege_tactics[String(r["works"])] = {"stores_days": int(r["stores_days"])}):
+	if not _load_if_present(table_path(dir, "siege_tactics"), ["works", "stores_days", "bombard_damage"],
+			func(r): siege_tactics[String(r["works"])] = {"stores_days": int(r["stores_days"]),
+				"bombard_damage": int(r["bombard_damage"])}):
 		return false
 	siege_entries.clear()
 	if not _load_if_present(table_path(dir, "siege_entries"), ["group", "entry_share"],

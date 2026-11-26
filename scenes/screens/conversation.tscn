@@ -1,24 +1,24 @@
 [gd_scene format=3 uid="uid://x10wk6i843n2"]
 
-[ext_resource type="Script" uid="uid://bjfj0a5io4f7y" path="res://scripts/ui/conversation_scene.gd" id="1_ovjs3"]
-[ext_resource type="Script" uid="uid://gl63edwhrq2g" path="res://scripts/ui/war_table/war_table_backdrop.gd" id="2_80gft"]
-[ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="3_ivri7"]
-[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/map_sheet.tres" id="4_03wsj"]
-[ext_resource type="PackedScene" uid="uid://cbqhq1qgdyef8" path="res://scenes/hud/top_bar.tscn" id="5_v8j15"]
-[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="6_oeip7"]
-[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_pe3qh"]
-[ext_resource type="StyleBox" uid="uid://dkmwlf8acscqq" path="res://assets/2D/ui/panels/styles/leather_window.tres" id="8_4d3yy"]
-[ext_resource type="StyleBox" uid="uid://bjddf0cjlcs34" path="res://assets/2D/ui/panels/styles/audience_banner.tres" id="9_arvkg"]
-[ext_resource type="StyleBox" uid="uid://36epxikbc22a" path="res://assets/2D/ui/panels/styles/portrait_frame.tres" id="10_kdha7"]
-[ext_resource type="Script" uid="uid://dgo56mr5okaon" path="res://scripts/ui/audience_backdrop.gd" id="11_nusqr"]
-[ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="12_sop0l"]
-[ext_resource type="StyleBox" uid="uid://clgvpa72i73d2" path="res://assets/2D/ui/panels/styles/bar_track.tres" id="13_3tsmo"]
-[ext_resource type="StyleBox" uid="uid://x16loajcjew1" path="res://assets/2D/ui/panels/styles/leather_council.tres" id="14_4q174"]
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="15_qetrq"]
-[ext_resource type="StyleBox" uid="uid://dqadyp0wbwm2i" path="res://assets/2D/ui/panels/styles/leather_popup.tres" id="16_hcofa"]
-[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="17_e3vqp"]
-[ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="18_w6l2q"]
-[ext_resource type="PackedScene" uid="uid://rkch67nhd00f" path="res://scenes/war_table/council_seal.tscn" id="19_cy0f3"]
+[ext_resource type="Script" uid="uid://bjfj0a5io4f7y" path="res://scripts/ui/conversation_scene.gd" id="1_crqts"]
+[ext_resource type="Script" uid="uid://gl63edwhrq2g" path="res://scripts/ui/war_table/war_table_backdrop.gd" id="2_ymyfy"]
+[ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="3_qmdin"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/map_sheet.tres" id="4_ya6at"]
+[ext_resource type="PackedScene" uid="uid://cbqhq1qgdyef8" path="res://scenes/hud/top_bar.tscn" id="5_iyiwv"]
+[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="6_r20hk"]
+[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_0llnm"]
+[ext_resource type="StyleBox" uid="uid://dkmwlf8acscqq" path="res://assets/2D/ui/panels/styles/leather_window.tres" id="8_i8gso"]
+[ext_resource type="StyleBox" uid="uid://bjddf0cjlcs34" path="res://assets/2D/ui/panels/styles/audience_banner.tres" id="9_u6c3k"]
+[ext_resource type="StyleBox" uid="uid://36epxikbc22a" path="res://assets/2D/ui/panels/styles/portrait_frame.tres" id="10_x07jl"]
+[ext_resource type="Script" uid="uid://dgo56mr5okaon" path="res://scripts/ui/audience_backdrop.gd" id="11_yn8im"]
+[ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="12_atpxh"]
+[ext_resource type="StyleBox" uid="uid://clgvpa72i73d2" path="res://assets/2D/ui/panels/styles/bar_track.tres" id="13_8vu3j"]
+[ext_resource type="StyleBox" uid="uid://x16loajcjew1" path="res://assets/2D/ui/panels/styles/leather_council.tres" id="14_dekjd"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="15_vql7j"]
+[ext_resource type="StyleBox" uid="uid://dqadyp0wbwm2i" path="res://assets/2D/ui/panels/styles/leather_popup.tres" id="16_wjckq"]
+[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="17_gqhc3"]
+[ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="18_2l08m"]
+[ext_resource type="PackedScene" uid="uid://rkch67nhd00f" path="res://scenes/war_table/council_seal.tscn" id="19_wq8a6"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bwxhs"]
 content_margin_left = 14.0
@@ -92,7 +92,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_ovjs3")
+script = ExtResource("1_crqts")
 narration_left_frame = NodePath("AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationLeftFrame")
 narration_right_frame = NodePath("AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationRightFrame")
 narration_left = NodePath("AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationLeftFrame/NarrationLeft")
@@ -114,25 +114,25 @@ anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-script = ExtResource("2_80gft")
-texture = ExtResource("3_ivri7")
+script = ExtResource("2_ymyfy")
+texture = ExtResource("3_qmdin")
 tone = Color(0.627451, 0.4392157, 0.22745098, 0.13333334)
 light = Color(1, 0.9490196, 0.8156863, 0.14117648)
 vignette = Color(0, 0, 0, 0.17254902)
 
 [node name="MapPanel" type="PanelContainer" parent="." unique_id=1804200223]
 unique_name_in_owner = true
-editor_description = "Its right edge is brought in to council_gap (on the screen's root) short of DialoguePanel while the council column is open (ScreenLayout.open_right); every other place and look is this scene's. The 3D map is put inside it at runtime."
+editor_description = "Its right edge is brought in to council_gap (on the screen's root) short of DialoguePanel while the council column is open (ScreenLayout.open_right); every other place and look is this scene's. The 3D map is put inside it at runtime. Its left edge is the screen's margin: the facts column is hidden until something is chosen and then lies OVER the map."
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 268.0
+offset_left = 12.0
 offset_top = 67.0
 offset_right = -12.0
 offset_bottom = -48.0
-theme_override_styles/panel = ExtResource("4_03wsj")
+theme_override_styles/panel = ExtResource("4_ya6at")
 
-[node name="TopBar" parent="." unique_id=1742348619 instance=ExtResource("5_v8j15")]
+[node name="TopBar" parent="." unique_id=1742348619 instance=ExtResource("5_iyiwv")]
 unique_name_in_owner = true
 layout_mode = 1
 
@@ -144,9 +144,9 @@ anchor_bottom = 1.0
 offset_left = 12.0
 offset_top = 67.0
 offset_right = 252.0
-offset_bottom = -12.0
-theme = ExtResource("6_oeip7")
-theme_override_styles/panel = ExtResource("7_pe3qh")
+offset_bottom = -60.0
+theme = ExtResource("6_r20hk")
+theme_override_styles/panel = ExtResource("7_0llnm")
 metadata/paper_ground = Color(0.8235294, 0.7411765, 0.5647059, 1)
 
 [node name="MVBox" type="VBoxContainer" parent="MinisterPanel" unique_id=1601692104]
@@ -159,7 +159,7 @@ editor_description = "Laid exactly over MapPanel at runtime (it follows the map 
 anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 268.0
+offset_left = 12.0
 offset_top = 67.0
 offset_right = -12.0
 offset_bottom = -48.0
@@ -183,7 +183,7 @@ mouse_filter = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(760, 500)
 layout_mode = 2
-theme_override_styles/panel = ExtResource("8_4d3yy")
+theme_override_styles/panel = ExtResource("8_i8gso")
 
 [node name="AudienceCol" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow" unique_id=5494348]
 layout_mode = 2
@@ -192,7 +192,7 @@ theme_override_constants/separation = 10
 [node name="AudienceBanner" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol" unique_id=1193525787]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_styles/panel = ExtResource("9_arvkg")
+theme_override_styles/panel = ExtResource("9_u6c3k")
 
 [node name="AudienceTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBanner" unique_id=1782393403]
 unique_name_in_owner = true
@@ -222,7 +222,7 @@ visible = false
 layout_mode = 2
 size_flags_vertical = 0
 mouse_filter = 2
-theme_override_styles/panel = ExtResource("10_kdha7")
+theme_override_styles/panel = ExtResource("10_x07jl")
 
 [node name="NarrationLeft" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationLeftFrame" unique_id=2135733396]
 custom_minimum_size = Vector2(150, 200)
@@ -239,7 +239,7 @@ theme_override_constants/separation = 6
 [node name="PortraitFrame" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide" unique_id=309489969]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_styles/panel = ExtResource("10_kdha7")
+theme_override_styles/panel = ExtResource("10_x07jl")
 
 [node name="FrameStack" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame" unique_id=2044004590]
 custom_minimum_size = Vector2(222, 250)
@@ -253,7 +253,7 @@ anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-script = ExtResource("11_nusqr")
+script = ExtResource("11_yn8im")
 
 [node name="PortraitBox" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame/FrameStack" unique_id=1046049573]
 unique_name_in_owner = true
@@ -278,7 +278,7 @@ custom_minimum_size = Vector2(30.6, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
-script = ExtResource("12_sop0l")
+script = ExtResource("12_atpxh")
 
 [node name="MinisterName" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/PlateRow" unique_id=1198441752]
 unique_name_in_owner = true
@@ -314,7 +314,7 @@ custom_minimum_size = Vector2(40, 8)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-theme_override_styles/background = ExtResource("13_3tsmo")
+theme_override_styles/background = ExtResource("13_8vu3j")
 min_value = -100.0
 show_percentage = false
 
@@ -481,7 +481,7 @@ visible = false
 layout_mode = 2
 size_flags_vertical = 0
 mouse_filter = 2
-theme_override_styles/panel = ExtResource("10_kdha7")
+theme_override_styles/panel = ExtResource("10_x07jl")
 
 [node name="NarrationRight" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationRightFrame" unique_id=481542770]
 custom_minimum_size = Vector2(150, 200)
@@ -501,7 +501,7 @@ offset_left = -332.0
 offset_top = 67.0
 offset_right = -12.0
 offset_bottom = -56.0
-theme_override_styles/panel = ExtResource("14_4q174")
+theme_override_styles/panel = ExtResource("14_dekjd")
 
 [node name="Col" type="VBoxContainer" parent="DialoguePanel" unique_id=746815519]
 layout_mode = 2
@@ -511,7 +511,7 @@ theme_override_constants/separation = 6
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
-theme_override_fonts/font = ExtResource("15_qetrq")
+theme_override_fonts/font = ExtResource("15_vql7j")
 theme_override_font_sizes/font_size = 14
 text = "Leave the Council"
 
@@ -536,7 +536,7 @@ theme_override_constants/v_separation = 4
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
-theme_override_fonts/font = ExtResource("15_qetrq")
+theme_override_fonts/font = ExtResource("15_vql7j")
 theme_override_font_sizes/font_size = 16
 text = "Move"
 
@@ -598,7 +598,7 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = ExtResource("16_hcofa")
+theme_override_styles/panel = ExtResource("16_wjckq")
 
 [node name="PopupCol" type="VBoxContainer" parent="EventPopup/PopupPanel" unique_id=414715254]
 layout_mode = 2
@@ -630,13 +630,13 @@ theme_override_constants/separation = 4
 
 [node name="ArmyOrders" type="PopupMenu" parent="." unique_id=1559366654]
 unique_name_in_owner = true
-script = ExtResource("17_e3vqp")
+script = ExtResource("17_gqhc3")
 
 [node name="SpyOrders" type="PopupMenu" parent="." unique_id=2035525363]
 unique_name_in_owner = true
-script = ExtResource("18_w6l2q")
+script = ExtResource("18_2l08m")
 
-[node name="CouncilHandle" parent="." unique_id=1423902817 instance=ExtResource("19_cy0f3")]
+[node name="CouncilHandle" parent="." unique_id=1423902817 instance=ExtResource("19_wq8a6")]
 unique_name_in_owner = true
 editor_description = "Grows leftward with the council row: the councillors, who waits to be heard (WaxSeal.refresh) and their miniatures are set at runtime. Hidden while the council column is open."
 custom_minimum_size = Vector2(137, 96)

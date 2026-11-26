@@ -24,6 +24,10 @@ signal plans_changed
 ## menu; GameRoot (the flow owner) listens and shows it.
 @warning_ignore("unused_signal")
 signal menu_requested
+## The TopBar's Crown asks for the realm's card in the facts column (owner
+## 2026-11-26: the column is hidden until something is chosen); the screens toggle it.
+@warning_ignore("unused_signal")
+signal realm_card_requested
 ## A chronicle headline for the persistent bottom news strip (user request
 ## 2026-08-31). Emitted via publish_news — GameRoot feeds it as works
 ## progress and the month closes; the NewsTicker (GameRoot-owned) displays it.

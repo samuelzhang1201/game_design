@@ -47,6 +47,11 @@ func test_doctrines_cover_every_host_role() -> void:
 		for k: String in ["greed_permille", "caution_permille", "dist_cost", "engage_odds_permille",
 				"retreat_morale", "town_bonus"]:
 			assert_true(row.has(k), "%s has %s" % [role, k])
+		var share := 0
+		for k: String in DataRepository.SIEGE_DOCTRINE:
+			assert_true(int(row.get(k, -1)) >= 0, "%s has %s" % [role, k])
+			share += int(row.get(k, 0))
+		assert_eq(share, 1000, "%s's siege shares sum to 1000" % role)
 
 func test_balance_keys_present() -> void:
 	for k: String in ["battle_contact_km", "battle_break_morale", "battle_max_units",
