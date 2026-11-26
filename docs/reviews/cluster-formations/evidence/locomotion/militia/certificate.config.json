@@ -1,0 +1,36 @@
+{
+ "arm": "militia",
+ "note": "LOCO-CERT-MIL (spec 2026-11-26-militia-arm-design). The militiaman's own scene and provider: Map3DMilitiaLocomotion is Map3DInfantryLocomotion's solver on this body's coupled pivot plan (militia_pivot_plan.json; the shipped clips are its +/-90 solve, the skirt's bones holding the passing frame's keys with the legs). The body walks the infantry's authored stances, so pivots enter and leave MARCH at 8/420 only and the hold is MARCH frozen at 8/420 (owner ruling A, a consumer requirement), as the infantry's. Stride 1.3597 measured off its MARCH; k 24.7922 (rest height 1.7051 m at size 0.62), contact 24202 um.",
+ "scene": "scenes/models/units/militia.tscn",
+ "provider": "scripts/map3d/map3d_militia_locomotion.gd",
+ "feet": {
+  "l": [
+   "foot.l",
+   "toes_01.l"
+  ],
+  "r": [
+   "foot.r",
+   "toes_01.r"
+  ]
+ },
+ "patch_band_m": 0.005,
+ "forward": [
+  0,
+  0,
+  -1
+ ],
+ "stride_m": 1.3597,
+ "turn_q": 400000,
+ "radius_m": 927,
+ "entry_phase": 0.01904761904761905,
+ "hold_clip": "MARCH",
+ "march_stop_phases": [
+  0.01904761904761905
+ ],
+ "march_start_phases": [
+  0.01904761904761905
+ ],
+ "hold_phases": [
+  0.01904761904761905
+ ]
+}

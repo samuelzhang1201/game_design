@@ -146,7 +146,7 @@ static func export_all(repo: DataRepository, out_path: String) -> Dictionary:
 	var view_h := 1600.0
 	var ref_m := Map3DGeometry.distance_for_bar(repo, meta, repo.bal("map3d_zoom_start_scale"), view_h)
 	var ratio := float(meta.m_per_px) / float(ArmySystem.metres_per_pack_px(repo))
-	var attack_bones := {"infantry": ["cc_weapon.r"], "artillery": ["cc_weapon.r"], "axemen": ["cc_weapon.r"], "heavy_infantry": ["cc_weapon.r"],
+	var attack_bones := {"infantry": ["cc_weapon.r"], "artillery": ["cc_weapon.r"], "axemen": ["cc_weapon.r"], "heavy_infantry": ["cc_weapon.r"], "militia": ["cc_weapon.r"],
 		"cavalry": ["cc_weapon.r"], "royal": ["Sword"], "archers": ["DEF-weapon.R"]}
 	var rows: Dictionary = {}
 	var hashes: Dictionary = {}
@@ -155,7 +155,7 @@ static func export_all(repo: DataRepository, out_path: String) -> Dictionary:
 		"res://scripts/map3d/map3d_formation.gd", "res://scripts/engine/army_system.gd",
 		"res://data/screens/map3d/balance.csv", "res://data/world/maps.csv", "res://tools/units3d/measure_unit_bodies.gd"]:
 		_hash_dependencies(path, hashes)
-	for arm: String in ["infantry", "archers", "cavalry", "artillery", "royal", "axemen", "heavy_infantry"]:
+	for arm: String in ["infantry", "archers", "cavalry", "artillery", "royal", "axemen", "heavy_infantry", "militia"]:
 		var path := GameArt.path(GameArt.ARMY_MODELS, arm)
 		_hash_dependencies(path, hashes)
 		var art: Dictionary = repo.army_art.get(arm, {}).duplicate(true)

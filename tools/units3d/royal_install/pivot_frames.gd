@@ -1,15 +1,16 @@
 extends SceneTree
-## Real-window frames of a horsed pivot (visual review of Map3DRoyalPivot, or with --arm cavalry of
-## Map3DCavalryLocomotion; NEVER --headless).
+## Real-window frames of a pivot (visual review of Map3DRoyalPivot, with --arm cavalry of
+## Map3DCavalryLocomotion, with --arm militia of Map3DMilitiaLocomotion; NEVER --headless).
 ##   Godot --path . -s res://tools/units3d/royal_install/pivot_frames.gd -- --out DIR
-##       [--arm royal|cavalry] [--turn UDEG] [--frames N] [--mode provider|native] [--plan key=value ...] [--yaw DEG]
+##       [--arm royal|cavalry|militia] [--dist M] [--turn UDEG] [--frames N] [--mode provider|native] [--plan key=value ...] [--yaw DEG]
 ## provider: the pivot posed by the arm's provider `solve`. native: the installed PIVOT clip seeked
 ## (the bake-only playback the provider replaces). Either way the node yaws as BodyMotion does
 ## (positive turn = RIGHT, decreasing yaw), on a plane at the seat (the seated plane), lit by
 ## one sun. Frames 0 and N - 1 are the operation's ends; frame -1 is MARCH at the plan's phase.
 
 const PROVIDERS: Dictionary = {"royal": "res://scripts/map3d/map3d_royal_pivot.gd",
-	"cavalry": "res://scripts/map3d/map3d_cavalry_locomotion.gd"}
+	"cavalry": "res://scripts/map3d/map3d_cavalry_locomotion.gd",
+	"militia": "res://scripts/map3d/map3d_militia_locomotion.gd"}
 const Shell = preload("res://scripts/map3d/map3d_pivot_provider.gd")
 
 
@@ -18,7 +19,7 @@ func _initialize() -> void:
 
 
 func run() -> void:
-	var args: Dictionary = {"out": "", "arm": "royal", "turn": "90000000", "frames": "9", "mode": "provider", "yaw": "35"}
+	var args: Dictionary = {"out": "", "arm": "royal", "turn": "90000000", "frames": "9", "mode": "provider", "yaw": "35", "dist": "5.2"}
 	var plan_args: Array[String] = []
 	var user: PackedStringArray = OS.get_cmdline_user_args()
 	var i: int = 0
@@ -30,10 +31,15 @@ func run() -> void:
 			args[key] = user[i + 1]
 		i += 2
 	var Provider: GDScript = load(PROVIDERS[args.arm])
-	var plan: Dictionary = Provider.plan().duplicate()
-	for pair: String in plan_args:
-		plan[pair.get_slice("=", 0)] = float(pair.get_slice("=", 1))
-	Provider._plan = plan
+	# a horsed provider owns its plan (--plan overrides a value); a foot arm's is the infantry solver's file
+	var plan: Dictionary
+	if Provider.get_script_method_list().any(func(m: Dictionary) -> bool: return m.name == "plan"):
+		plan = Provider.plan().duplicate()
+		for pair: String in plan_args:
+			plan[pair.get_slice("=", 0)] = float(pair.get_slice("=", 1))
+		Provider._plan = plan
+	else:
+		plan = Provider.Infantry.load_plan(Provider.PLAN_PATH)
 	root.size = Vector2i(1200, 900)
 	var world := Node3D.new()
 	root.add_child(world)
@@ -61,7 +67,8 @@ func run() -> void:
 	var camera := Camera3D.new()
 	world.add_child(camera)
 	var yaw_view: float = deg_to_rad(float(args.yaw))
-	camera.position = Vector3(sin(yaw_view) * 5.2, 1.9, cos(yaw_view) * 5.2)
+	var dist: float = float(args.dist)
+	camera.position = Vector3(sin(yaw_view) * dist, 1.9 * dist / 5.2, cos(yaw_view) * dist)
 	camera.look_at(Vector3(0, 0.95, 0))
 	camera.fov = 40
 	await process_frame

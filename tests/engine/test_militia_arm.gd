@@ -103,8 +103,11 @@ func test_militia_draws_the_militiaman_and_borrows_the_rest() -> void:
 		assert_eq(GameArt.path(table, "militia"), GameArt.path(table, "infantry"), table)
 
 
-func test_the_candidate_locomotion_path_does_not_admit_the_militia_yet() -> void:
-	# The militiaman has no pivot pair, so the arm has no unit_locomotion.csv row and no
-	# body_locomotion_militia_* keys: the opt-in v2 march candidate refuses it by name, never guesses.
-	assert_true(BodyMotion._loco_policy(repo, "militia").is_empty())
-	assert_false(repo.unit_footprints["militia"].has("locomotion_certificate"))
+func test_the_candidate_locomotion_path_admits_the_militia() -> void:
+	# The militiaman has his pivot pair and certificate (unit_locomotion.csv, body_locomotion_militia_*):
+	# the opt-in v2 march candidate admits the arm like every other land arm.
+	var policy := BodyMotion._loco_policy(repo, "militia")
+	assert_false(policy.is_empty())
+	assert_eq(int(policy.turn_q), 400000)
+	assert_eq(int(policy.contact_um), 24202, "ceil(0.60e6 / 24.7922): the militiaman's own scale")
+	assert_eq(int(policy.radius_m), int(repo.unit_footprints["militia"].radius_m))
