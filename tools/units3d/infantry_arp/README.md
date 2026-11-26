@@ -115,13 +115,22 @@ variable as JSON):
   take the piece's mean plate colour with the old relief flattened, and plate is drawn 0.7 of the
   way to bare steel, value x0.80 (x1.05 clipped the knee cops on the map), roughness 0.40 (`PLATE_STEEL` / `PLATE_VALUE` / `PLATE_ROUGH` in
   `scripts/matmaps.py`; the olive paint and bare cold steel were the other two shown). Grey smooth
-  texels anywhere else are mail, never plate. The tunic mask lost the brim's green patches with it.
+  texels anywhere else are mail, never plate. Each piece is one sheet of steel: it keeps only its fine
+  detail (rivets, scratches) on its mean colour, since Tripo shaded every UV island on its own and
+  left darker rectangles on the dome; the brim's normal map is flat and plate's detail bump halved.
+  The brim's warped look was its custom split normals, kept from the high mesh and pleating the
+  decimated fan: `scripts/brim_normals.py` beside the source gives the brim's loops the
+  area-weighted normal of the brim faces round each vertex (the rim stays a hard edge; the glTF
+  splits 18 more vertices at the dome's foot). The tunic mask lost the brim's green patches with it.
 
 A texture-only re-author needs no new pivot solve: export to a scratch ROOT, copy its three atlas
 files and the tunic mask in, and `pivot.bake(ROOT's <ARM>.glb, the fixture's canonical-samples.json,
 assets/3D/units/<ARM>/<ARM>.glb, 4.0)` re-appends the committed pair (every buffer view but the three
 images comes out as it was); then renew the arm's `glb_sha256` and `binary` in
 `tools/units3d/soldier_arp/test_pivot_mapping.py` (the export's SHA-256 and its binary chunk's length).
+The locomotion certificates and `cf01/measurements.json` bind the GLB's and the atlas's hashes, so
+any re-install ends with the re-measure (`cf01/export.gd.txt`) and a re-issue of every certificate,
+their digests written to `data/army/unit_locomotion.csv`.
 
 The new clips' loop modes are the `.glb.import` settings (STANDBY / DEFEND loop). Then the pivot
 pair is regenerated (below) and appended to the GLB.
