@@ -1,4 +1,4 @@
-works,stores_days,notes
-town,30,"player siege spec §4.1 (SiegeBlockade, first draft): a besieged town with no TownStores (any town but the crown's) opens with need x stores_days supply units by its works (citadel over walls over none, TownMilitia.works_of_town); need is its defenders' daily ration plus population x siege_civil_need_permille / 1000"
-walls,60,
-citadel,90,
+works,stores_days,bombard_damage,notes
+town,30,0,"player siege spec §4.1 (SiegeBlockade, first draft): a besieged town with no TownStores (any town but the crown's) opens with need x stores_days supply units by its works (citadel over walls over none, TownMilitia.works_of_town); need is its defenders' daily ration plus population x siege_civil_need_permille / 1000. bombard_damage (§4.2, SiegeTactics.bombard, step 8): the integrity (of 1000) each crewed engine knocks off the works a day; an open town has no works to batter (0), a citadel stands it better than walls (first draft)"
+walls,60,40,
+citadel,90,25,

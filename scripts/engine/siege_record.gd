@@ -13,13 +13,16 @@ extends RefCounted
 ## hunger was told), militia (the militia unit codes it raised, TownMilitia),
 ## woken (the standing units it woke, TownMilitia.wake), entries and stores
 ## (the blockade, SiegeBlockade), alloc and history (the men's plan and its
-## cuts, SiegeTactics; absent in an old save, read empty). A host's mind keeps only `siege_id`, set until the
+## cuts, SiegeTactics; absent in an old save, read empty), engines_built,
+## engine_work, engine_wear and breach (the bombardment, SiegeTactics.bombard;
+## absent in an old save, read 0). A host's mind keeps only `siege_id`, set until the
 ## siege's end has been told.
 
 ## The figures an old save kept on the host minds (migrate erases them).
 const LEGACY := ["siege_progress", "siege_days", "siege_town", "assault", "assault_due", "starved"]
 ## The figures a record resets when its last host leaves.
-const FIGURES := ["progress", "days", "assault", "assault_due", "starved"]
+const FIGURES := ["progress", "days", "assault", "assault_due", "starved", "engines_built", "engine_work",
+	"engine_wear", "breach"]
 
 
 ## True when the town's burg features hold walls or a citadel.
@@ -189,7 +192,8 @@ static func _open(repo: DataRepository, state: GameState, town: String, attacker
 	state.sieges[id] = {"town": town, "attacker": attacker, "defender": SiegeSystem.holder_of(repo, state, town),
 		"hosts": [], "units": [], "task_id": "", "opened_day": state.absolute_day(), "days": 0,
 		"integrity": 1000 if walled(repo, town) else 0, "progress": 0, "assault": 0, "assault_due": 0,
-		"starved": 0, "militia": [], "woken": [], "alloc": {}, "history": []}
+		"starved": 0, "militia": [], "woken": [], "alloc": {}, "history": [],
+		"engines_built": 0, "engine_work": 0, "engine_wear": 0, "breach": 0}
 	if levy:
 		TownMilitia.wake(repo, state, id)
 		TownMilitia.raise(repo, state, id)
