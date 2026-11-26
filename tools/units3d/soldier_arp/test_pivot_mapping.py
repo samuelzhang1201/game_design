@@ -46,10 +46,10 @@ ARMS = {
         'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6602724}},
     # the militiaman: its own skeleton (mil_rig, 100 bones) and a ten-clip export
     'militia': {
-        'hashes': {'baseline-native.json': '5198c219aab323b17a5b2b59ba6a1b844f86b2e64314ff2880ed20012b87b333',
-                   'native-march.json': '05dcead686e7a650426dbc8933cda525d707de08670451d6b0908b7637c90f51',
-                   'canonical-samples.json': '3950f2786e8a0ce5adceb85d8470d363cb52baadafc97708fdb87865898222d8'},
-        'glb_sha256': 'f3d83183cb7bc3df858c93f25912a33b96c39861ffdd3ae104adf4171724150e',
+        'hashes': {'baseline-native.json': '0dcc5bd4fea742a2d40365e4df2ea159eb07f16933be1fd93f41a25e7a73a30a',
+                   'native-march.json': 'fecc3855c3d8f2c31ec2f5ddd52829b8ebe1cf8f55b53121affd86648eb8604a',
+                   'canonical-samples.json': 'e0d8eb9873b349f10695c36f1d47619ba810e98f21e7e3e32fe54a36ab058810'},
+        'glb_sha256': '4eaf1ad6938aeeb7fd1b5465b596b9f4febb3c5beec5ee40128c99690a92622e',
         'old': {'animations': 10, 'accessors': 3017, 'bufferViews': 3020, 'binary': 5919560}},
 }
 

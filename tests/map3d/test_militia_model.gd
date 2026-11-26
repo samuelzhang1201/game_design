@@ -97,7 +97,7 @@ func test_a_militia_wears_its_own_figure_and_no_other_unit_of_its_arm_does() -> 
 	assert_eq(String(built["model"]), "militia")
 	assert_eq(String(built["footprint"]), "infantry", "the battle rows close up by the engine bodies' footprint")
 	assert_not_null((built["figs"][0] as Node).get_node_or_null("mil_rig"), "the militia scene stands")
-	assert_almost_eq(float(built["stride_m"]), 1.3597, 1e-9, "its own MARCH's stride (the infantry's slides its feet)")
+	assert_almost_eq(float(built["stride_m"]), 1.5042, 1e-9, "its own MARCH's stride (the lock's planted-sole speed x 33 frames)")
 	var other := Map3DFormation.of_regiment(repo, rows.plain, tier, 1.6)
 	autofree(other["node"])
 	assert_null((other["figs"][0] as Node).get_node_or_null("mil_rig"), "the infantry keeps its figure")

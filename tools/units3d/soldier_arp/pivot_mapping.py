@@ -61,7 +61,7 @@ SEAM_UM = 1935
 GLB = Path(__file__).resolve().parents[3] / 'assets/3D/units/infantry/infantry.glb'
 RIG = 'inf_rig'  # the armature node above the joints
 NUDGE_LEAD = .03  # the swing-out leads and trails the step by this share of the pivot
-NUDGE = {}  # leg index -> (bones under ROOT, degrees): swung out at that leg's mid swing
+NUDGE = ()  # (leg index, bones under ROOT, degrees): swung out while that leg steps
 HELD = None  # name prefix of bones that hold their NEUTRAL_PHASE keys with the legs (the militia's skirt)
 # Another body on the same rig contract (`inf_rig`, the same pack walk) overrides what its own MARCH
 # and scale give; `use(arm)` binds the module to it. The heavy infantry's plate soldier
@@ -76,17 +76,20 @@ HELD = None  # name prefix of bones that hold their NEUTRAL_PHASE keys with the 
 # The militiaman (2026-11-26) is another skeleton (`mil_rig`, 100 bones: 30 skirt bones under
 # root.x whose keys are baked into every clip) walking the infantry's authored stances at its own
 # stride. On a 420-phase scan of its MARCH the infantry's phases sit on the same events (8/420:
-# right shoe planted at -2.3 mm, left lifted 10.5 mm, thighs 15.0 deg; 182/420: thighs 7.3 deg,
-# their least is 7.2 at 184; planted soles 181/420 at 7.5 mm and 396/420 at 3.7 mm, the right's
-# flattest), so it keeps them; its bounds are ceil(world bound / k * 1e6) at k = 24.7922 (rest
+# right shoe planted at 0.3 mm, left lifted 11.5 mm, thighs 12.2 deg; 182/420: thighs 8.4 deg,
+# their least is 7.1 at 187; planted soles 181/420 at 7.5 mm and 396/420 at 3.7 mm, the right's
+# flattest within 0.1 mm), so it keeps them; its bounds are ceil(world bound / k * 1e6) at k = 24.7922 (rest
 # height 1.7051 m at size 0.62). The skirt's keys are baked for MARCH's legs, so played at the
 # body phase over legs held at the passing frame a leg cuts the cloth: the skirt holds the passing
 # frame's keys with the legs (HELD), and the two front chains over a stepping knee swing out 15
-# degrees (NUDGE: 9 still cut two frames, 12 is the least that clears; check_glb.py prints no
-# crossing at 1, 45, 90, 135 and 179.999999 degrees either way).
+# degrees, the chain on either side of them half of that so the hem keeps a curve (NUDGE: 9 still
+# cut two frames, 12 is the least that clears, and the legs cut at a 1 degree turn as at 90, so
+# the swing is not scaled by the turn; check_glb.py prints no crossing at 1, 45, 90, 135 and
+# 179.999999 degrees either way).
 ARMS = {'infantry': {}, 'heavy_infantry': {'CONTACT_UM': 22699, 'SEAM_UM': 1892}, 'axemen': {},
         'militia': {'RIG': 'mil_rig', 'HELD': 'skirt_', 'CONTACT_UM': 24202, 'SEAM_UM': 2017,
-                    'NUDGE': {0: (('skirt_00_a', 'skirt_01_a'), 15.), 1: (('skirt_08_a', 'skirt_09_a'), 15.)}}}
+                    'NUDGE': ((0, ('skirt_00_a', 'skirt_01_a'), 15.), (0, ('skirt_02_a', 'skirt_09_a'), 7.5),
+                              (1, ('skirt_08_a', 'skirt_09_a'), 15.), (1, ('skirt_07_a', 'skirt_00_a'), 7.5))}}
 
 
 def use(arm):
@@ -356,9 +359,9 @@ def build_case(model, template, op, phases, neutral, last_step, foot, plane):
                 if n.startswith(HELD):
                     local[n] = blend(blend(held[0][n], held[1][n], qi*qi*(3-2*qi)), held[2][n], qo*qo*(3-2*qo))
             # A swinging leg's knee rises under the front of the cloth: its chains swing out and back
-            # with the step (NUDGE: per leg, the chains' first bones and the degrees at mid swing).
+            # with the step (NUDGE: a leg, chains' first bones and their degrees while it steps).
             parents = {b['name']: b['parent'] for b in f['rest']['bones']}
-            for li, (chains, degrees) in NUDGE.items():
+            for li, chains, degrees in NUDGE:
                 s = max((_ease((u-a+NUDGE_LEAD)/(2*NUDGE_LEAD))*_ease((z+NUDGE_LEAD-u)/(2*NUDGE_LEAD))
                          for a, z in swings_of(ev, li)), default=0.)
                 s *= _ease(u/(2*NUDGE_LEAD))*_ease((1-u)/(2*NUDGE_LEAD))  # both ends stay native MARCH

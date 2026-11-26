@@ -1,0 +1,1394 @@
+{
+ "arm": "militia",
+ "capture": {
+  "clips": {
+   "MARCH": {
+    "key_times": [
+     0.0,
+     0.0333333350718021,
+     0.0666666701436043,
+     0.100000001490116,
+     0.133333340287209,
+     0.16666667163372,
+     0.200000002980232,
+     0.233333334326744,
+     0.266666680574417,
+     0.300000011920929,
+     0.333333343267441,
+     0.366666674613953,
+     0.400000005960464,
+     0.433333337306976,
+     0.466666668653488,
+     0.5,
+     0.533333361148834,
+     0.566666662693024,
+     0.600000023841858,
+     0.633333325386047,
+     0.666666686534882,
+     0.699999988079071,
+     0.733333349227905,
+     0.766666650772095,
+     0.800000011920929,
+     0.833333313465118,
+     0.866666674613953,
+     0.899999976158142,
+     0.933333337306976,
+     0.966666638851166,
+     1.0,
+     1.03333330154419,
+     1.06666672229767,
+     1.10000002384186
+    ],
+    "length_s": 1.10000002384186,
+    "loop_mode": 1,
+    "tracks": 106
+   },
+   "PIVOT_LEFT": {
+    "key_times": [
+     0.0,
+     0.0299999993294477,
+     0.0599999986588955,
+     0.0900000035762787,
+     0.119999997317791,
+     0.150000005960464,
+     0.180000007152557,
+     0.209999993443489,
+     0.239999994635582,
+     0.270000010728836,
+     0.300000011920929,
+     0.330000013113022,
+     0.360000014305115,
+     0.389999985694885,
+     0.419999986886978,
+     0.449999988079071,
+     0.479999989271164,
+     0.509999990463257,
+     0.540000021457672,
+     0.569999992847443,
+     0.600000023841858,
+     0.629999995231628,
+     0.660000026226044,
+     0.689999997615814,
+     0.720000028610229,
+     0.75,
+     0.779999971389771,
+     0.810000002384186,
+     0.839999973773956,
+     0.870000004768372,
+     0.899999976158142,
+     0.930000007152557,
+     0.959999978542328,
+     0.990000009536743,
+     1.01999998092651,
+     1.04999995231628,
+     1.08000004291534,
+     1.11000001430511,
+     1.13999998569489,
+     1.16999995708466,
+     1.20000004768372,
+     1.23000001907349,
+     1.25999999046326,
+     1.28999996185303,
+     1.32000005245209,
+     1.35000002384186,
+     1.37999999523163,
+     1.4099999666214,
+     1.44000005722046,
+     1.47000002861023,
+     1.5,
+     1.52999997138977,
+     1.55999994277954,
+     1.5900000333786,
+     1.62000000476837,
+     1.64999997615814,
+     1.67999994754791,
+     1.71000003814697,
+     1.74000000953674,
+     1.76999998092651,
+     1.79999995231628,
+     1.83000004291534,
+     1.86000001430511,
+     1.88999998569489,
+     1.91999995708466,
+     1.95000004768372,
+     1.98000001907349,
+     2.00999999046326,
+     2.03999996185303,
+     2.0699999332428,
+     2.09999990463257,
+     2.13000011444092,
+     2.16000008583069,
+     2.19000005722046,
+     2.22000002861023,
+     2.25,
+     2.27999997138977,
+     2.30999994277954,
+     2.33999991416931,
+     2.36999988555908,
+     2.40000009536743,
+     2.4300000667572,
+     2.46000003814697,
+     2.49000000953674,
+     2.51999998092651,
+     2.54999995231628,
+     2.57999992370605,
+     2.60999989509583,
+     2.64000010490417,
+     2.67000007629395,
+     2.70000004768372,
+     2.73000001907349,
+     2.75999999046326,
+     2.78999996185303,
+     2.8199999332428,
+     2.84999990463257,
+     2.88000011444092,
+     2.91000008583069,
+     2.94000005722046,
+     2.97000002861023,
+     3.0,
+     3.02999997138977,
+     3.05999994277954,
+     3.08999991416931,
+     3.11999988555908,
+     3.15000009536743,
+     3.1800000667572,
+     3.21000003814697,
+     3.24000000953674,
+     3.26999998092651,
+     3.29999995231628,
+     3.32999992370605,
+     3.35999989509583,
+     3.375,
+     3.39000010490417,
+     3.40499997138977,
+     3.42000007629395,
+     3.43499994277954,
+     3.45000004768372,
+     3.46499991416931,
+     3.48000001907349,
+     3.49499988555908,
+     3.50999999046326,
+     3.52500009536743,
+     3.53999996185303,
+     3.5550000667572,
+     3.5699999332428,
+     3.58500003814697,
+     3.59999990463257,
+     3.625,
+     3.65000009536743,
+     3.67499995231628,
+     3.70000004768372,
+     3.72499990463257,
+     3.75,
+     3.77500009536743,
+     3.79999995231628,
+     3.82500004768372,
+     3.84999990463257,
+     3.875,
+     3.90000009536743,
+     3.92499995231628,
+     3.95000004768372,
+     3.97499990463257,
+     4.0
+    ],
+    "length_s": 4.0,
+    "loop_mode": 0,
+    "tracks": 300
+   },
+   "PIVOT_RIGHT": {
+    "key_times": [
+     0.0,
+     0.0299999993294477,
+     0.0599999986588955,
+     0.0900000035762787,
+     0.119999997317791,
+     0.150000005960464,
+     0.180000007152557,
+     0.209999993443489,
+     0.239999994635582,
+     0.270000010728836,
+     0.300000011920929,
+     0.330000013113022,
+     0.360000014305115,
+     0.389999985694885,
+     0.419999986886978,
+     0.449999988079071,
+     0.479999989271164,
+     0.509999990463257,
+     0.540000021457672,
+     0.569999992847443,
+     0.600000023841858,
+     0.629999995231628,
+     0.660000026226044,
+     0.689999997615814,
+     0.720000028610229,
+     0.75,
+     0.779999971389771,
+     0.810000002384186,
+     0.839999973773956,
+     0.870000004768372,
+     0.899999976158142,
+     0.930000007152557,
+     0.959999978542328,
+     0.990000009536743,
+     1.01999998092651,
+     1.04999995231628,
+     1.08000004291534,
+     1.11000001430511,
+     1.13999998569489,
+     1.16999995708466,
+     1.20000004768372,
+     1.23000001907349,
+     1.25999999046326,
+     1.28999996185303,
+     1.32000005245209,
+     1.35000002384186,
+     1.37999999523163,
+     1.4099999666214,
+     1.44000005722046,
+     1.47000002861023,
+     1.5,
+     1.52999997138977,
+     1.55999994277954,
+     1.5900000333786,
+     1.62000000476837,
+     1.64999997615814,
+     1.67999994754791,
+     1.71000003814697,
+     1.74000000953674,
+     1.76999998092651,
+     1.79999995231628,
+     1.83000004291534,
+     1.86000001430511,
+     1.88999998569489,
+     1.91999995708466,
+     1.95000004768372,
+     1.98000001907349,
+     2.00999999046326,
+     2.03999996185303,
+     2.0699999332428,
+     2.09999990463257,
+     2.13000011444092,
+     2.16000008583069,
+     2.19000005722046,
+     2.22000002861023,
+     2.25,
+     2.27999997138977,
+     2.30999994277954,
+     2.33999991416931,
+     2.36999988555908,
+     2.40000009536743,
+     2.4300000667572,
+     2.46000003814697,
+     2.49000000953674,
+     2.51999998092651,
+     2.54999995231628,
+     2.57999992370605,
+     2.60999989509583,
+     2.64000010490417,
+     2.67000007629395,
+     2.70000004768372,
+     2.73000001907349,
+     2.75999999046326,
+     2.78999996185303,
+     2.8199999332428,
+     2.84999990463257,
+     2.88000011444092,
+     2.91000008583069,
+     2.94000005722046,
+     2.97000002861023,
+     3.0,
+     3.02999997138977,
+     3.05999994277954,
+     3.08999991416931,
+     3.11999988555908,
+     3.15000009536743,
+     3.1800000667572,
+     3.21000003814697,
+     3.24000000953674,
+     3.26999998092651,
+     3.29999995231628,
+     3.32999992370605,
+     3.35999989509583,
+     3.375,
+     3.39000010490417,
+     3.40499997138977,
+     3.42000007629395,
+     3.43499994277954,
+     3.45000004768372,
+     3.46499991416931,
+     3.48000001907349,
+     3.49499988555908,
+     3.50999999046326,
+     3.52500009536743,
+     3.53999996185303,
+     3.5550000667572,
+     3.5699999332428,
+     3.58500003814697,
+     3.59999990463257,
+     3.625,
+     3.65000009536743,
+     3.67499995231628,
+     3.70000004768372,
+     3.72499990463257,
+     3.75,
+     3.77500009536743,
+     3.79999995231628,
+     3.82500004768372,
+     3.84999990463257,
+     3.875,
+     3.90000009536743,
+     3.92499995231628,
+     3.95000004768372,
+     3.97499990463257,
+     4.0
+    ],
+    "length_s": 4.0,
+    "loop_mode": 0,
+    "tracks": 300
+   }
+  },
+  "godot": {
+   "build": "official",
+   "hash": "ed1daf0bf001b61586d9930840f2f1394092c079",
+   "hex": 263938,
+   "major": 4,
+   "minor": 7,
+   "patch": 2,
+   "status": "stable",
+   "string": "4.7.2-stable (official)",
+   "timestamp": 0
+  },
+  "sha256": "09edbe3ddc0333260ddbae5ad37c2c2885182739da3e205c9922a91187043186",
+  "uniform": 512
+ },
+ "config": {
+  "arm": "militia",
+  "entry_phase": 0.01904761904761905,
+  "feet": {
+   "l": [
+    "foot.l",
+    "toes_01.l"
+   ],
+   "r": [
+    "foot.r",
+    "toes_01.r"
+   ]
+  },
+  "forward": [
+   0,
+   0,
+   -1
+  ],
+  "hold_clip": "MARCH",
+  "hold_phases": [
+   0.01904761904761905
+  ],
+  "march_start_phases": [
+   0.01904761904761905
+  ],
+  "march_stop_phases": [
+   0.01904761904761905
+  ],
+  "note": "LOCO-CERT-MIL (spec 2026-11-26-militia-arm-design). The militiaman's own scene and provider: Map3DMilitiaLocomotion is Map3DInfantryLocomotion's solver on this body's coupled pivot plan (militia_pivot_plan.json; the shipped clips are its +/-90 solve, the skirt's bones holding the passing frame's keys with the legs). The body walks the infantry's authored stances, so pivots enter and leave MARCH at 8/420 only and the hold is MARCH frozen at 8/420 (owner ruling A, a consumer requirement), as the infantry's. Stride 1.5042 measured off its MARCH; k 24.7922 (rest height 1.7051 m at size 0.62), contact 24202 um.",
+  "patch_band_m": 0.005,
+  "phase_map": null,
+  "provider": "scripts/map3d/map3d_militia_locomotion.gd",
+  "radius_m": 927,
+  "scene": "scenes/models/units/militia.tscn",
+  "stride_m": 1.5042,
+  "turn_q": 400000
+ },
+ "consumer_requirements": {
+  "hold_clip": "MARCH",
+  "hold_phases": [
+   0.01904761904761905
+  ],
+  "march_start_phases": [
+   0.01904761904761905
+  ],
+  "march_stop_phases": [
+   0.01904761904761905
+  ],
+  "rule": "stop, start and hold only at these MARCH phases; a MARCH hold resumes at the phase it holds"
+ },
+ "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
+ "input_sha256": {
+  "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
+  "assets/3D/units/militia/militia.glb": "06e89e974643d37b417d41fa63ddc79171d1a01392501b373217725de3f4a381",
+  "assets/3D/units/militia/militia.glb.import": "8047961d46e16747dd3f7143b0c97d928f1fd640ed6386dad21cfe931a1de039",
+  "assets/3D/units/militia/militia_militia_atlas.jpg": "198a0c29d11917c94431ab100f9ccef9290a654247167ef72c464c8da3e4488e",
+  "assets/3D/units/militia/militia_militia_atlas.jpg.import": "0e2264f9e82da7019cac05ca567a98ec05fce282940631d30d0e92f09aa377da",
+  "assets/3D/units/militia/militia_militia_atlas_mr.jpg": "5859d236d244d719000006c2e1e9e985db96af479f9115476199d054334c2333",
+  "assets/3D/units/militia/militia_militia_atlas_mr.jpg.import": "155b54980e53b22180055c34ec452a0cd0a4750fa555665c45f3afcc62bab03a",
+  "assets/3D/units/militia/militia_militia_atlas_n.jpg": "f90fbe7fafe3336fe5069a9c7c7fbf8b0927cdfe7d19ffb53ee40d46adfec510",
+  "assets/3D/units/militia/militia_militia_atlas_n.jpg.import": "f0a245b8bd0626528fc065bb9b62548e11c1c72d5de44bf3bc9b8320febe8270",
+  "assets/3D/units/militia/militia_pivot_plan.json": "7785d3eea502cf4621aeb190ef49ea5686fa5d8ce5d245fd29e92941223b12dc",
+  "data/army/balance.csv": "ceafddedc73a2bc3b98a4855ec6b95e1f36df8fde1f22f9993427eaa08f7bfce",
+  "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
+  "data/screens/map3d/army_art.csv": "a5bf9b79375f3bf980304ec666e2f5baca9a5c45952fe9d89b47a9e530571563",
+  "data/screens/map3d/balance.csv": "e81186839ca6f05b399224f1c7c9543957d503e2ccd2bdc3259724178e18cc0d",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "8affa6da03e16be55509d2cdf20900cd88f461f43e8f0053ac90fb40e1f26b33",
+  "scenes/models/units/militia.tscn": "35f1417d1c72eea009b6d37a21f7649f0b9aab20015695b16af099a8036c522f",
+  "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
+  "scripts/map3d/map3d_infantry_locomotion.gd": "ec3c26c6682d1685b15103db04f1a911237b4fc6e6bdf706422407361bfb79e3",
+  "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
+  "scripts/map3d/map3d_militia_locomotion.gd": "c2c209ca8075a9b349af4eece6936e470e2ea2204a3342deca843310e3e84c26",
+  "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
+  "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
+ },
+ "locomotion_certificate": {
+  "all_turns": true,
+  "clips": [
+   "PIVOT_LEFT",
+   "PIVOT_RIGHT",
+   "MARCH"
+  ],
+  "contact_um": 24202,
+  "digest": "d9b27ccb73d5defc4808665cc56c1f35301f5c45a69495903b563d777a0eefec",
+  "radius_m": 927,
+  "turn_q": 400000
+ },
+ "payload_sha256": "d9b27ccb73d5defc4808665cc56c1f35301f5c45a69495903b563d777a0eefec",
+ "report": {
+  "bounds_um": {
+   "contact": 24202,
+   "seam": 2017
+  },
+  "envelope": {
+   "footprint_radius_m": 927,
+   "margin_um": 8506,
+   "pass": true,
+   "radius_model_um": 793593,
+   "radius_simulation_m": 398,
+   "witness": {
+    "clip": "MARCH",
+    "mesh": "militia",
+    "phase": 0.303030305493305,
+    "surface": 0,
+    "turn_udeg": null,
+    "vertex": 2979
+   }
+  },
+  "hover": {
+   "bound_um": 24202,
+   "margin_um": 4349,
+   "pass": true,
+   "sampled_um": 500,
+   "total_um": 4849,
+   "witness": {
+    "clip": "PIVOT_RIGHT",
+    "foot": "r",
+    "phase": 0.223124995827675,
+    "turn_udeg": 2000000
+   }
+  },
+  "pass": true,
+  "patches": {
+   "l": {
+    "first": [
+     {
+      "mesh": "militia",
+      "surface": 0,
+      "vertex": 8979
+     },
+     {
+      "mesh": "militia",
+      "surface": 0,
+      "vertex": 8980
+     },
+     {
+      "mesh": "militia",
+      "surface": 0,
+      "vertex": 8981
+     },
+     {
+      "mesh": "militia",
+      "surface": 0,
+      "vertex": 8982
+     }
+    ],
+    "vertices": 492
+   },
+   "r": {
+    "first": [
+     {
+      "mesh": "militia",
+      "surface": 0,
+      "vertex": 8994
+     },
+     {
+      "mesh": "militia",
+      "surface": 0,
+      "vertex": 9064
+     },
+     {
+      "mesh": "militia",
+      "surface": 0,
+      "vertex": 9096
+     },
+     {
+      "mesh": "militia",
+      "surface": 0,
+      "vertex": 9097
+     }
+    ],
+    "vertices": 485
+   }
+  },
+  "penetration": {
+   "bound_um": 24202,
+   "margin_um": 4349,
+   "pass": true,
+   "sampled_um": 0,
+   "total_um": 4349,
+   "witness": {
+    "clip": "PIVOT_LEFT",
+    "mesh": "militia",
+    "phase": 0.0,
+    "surface": 0,
+    "turn_udeg": -1,
+    "vertex": 16401
+   }
+  },
+  "planting_band": {
+   "feet": {
+    "l": {
+     "H_m": -0.001896342323737149,
+     "band_m": 0.0005
+    },
+    "r": {
+     "H_m": -0.0010759825017800598,
+     "band_m": 0.0005
+    }
+   },
+   "inherited_from": "shipped native MARCH",
+   "rule": "per foot: b_f = max(0.5 mm, H_f + 0.5 mm); H_f = highest of the foot's per-stance minimum sole heights, stances = runs among the lower half of the feet; a vertex belongs to the foot whose bone carries its largest skin weight (ties: lower bone index); vertices of no foot are never planted"
+  },
+  "sample_count": 18442,
+  "seam": {
+   "bound_um": 2017,
+   "boundaries": [
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.999999
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.0
+      ],
+      "turn_udeg": null,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -1,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -2000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -45000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -90000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -135000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_LEFT",
+       0.0
+      ],
+      "turn_udeg": -179999999,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": -1,
+      "vertex": 1685
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": -2000000,
+      "vertex": 1685
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": -45000000,
+      "vertex": 1685
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": -90000000,
+      "vertex": 15716
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": -135000000,
+      "vertex": 15716
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_LEFT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": -179999999,
+      "vertex": 15716
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 1,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 2000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 45000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 90000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 135000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 179999999,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 180000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "PIVOT_RIGHT",
+       0.0
+      ],
+      "turn_udeg": 180000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": 1,
+      "vertex": 8939
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": 2000000,
+      "vertex": 8939
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": 45000000,
+      "vertex": 8939
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": 90000000,
+      "vertex": 8939
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": 135000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": 179999999,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": 180000000,
+      "vertex": 8937
+     }
+    },
+    {
+     "bound_um": 2017,
+     "margin_um": 0,
+     "pass": true,
+     "sampled_um": 1,
+     "total_um": 1,
+     "witness": {
+      "from": [
+       "PIVOT_RIGHT",
+       1.0
+      ],
+      "mesh": "militia",
+      "surface": 0,
+      "to": [
+       "MARCH",
+       0.01904761904761905
+      ],
+      "turn_udeg": 180000000,
+      "vertex": 8937
+     }
+    }
+   ],
+   "margin_um": 0,
+   "pass": true,
+   "sampled_um": 1,
+   "total_um": 1,
+   "witness": {
+    "from": [
+     "PIVOT_RIGHT",
+     1.0
+    ],
+    "mesh": "militia",
+    "surface": 0,
+    "to": [
+     "MARCH",
+     0.01904761904761905
+    ],
+    "turn_udeg": 180000000,
+    "vertex": 8937
+   }
+  },
+  "skin": {
+   "flagged_pairs_inherited": 6,
+   "flagged_pairs_introduced": 0,
+   "introduced_witnesses": [],
+   "pass": true,
+   "rule": "length > 4 x native-entry AND > 0.03 model m; fails unless the native seek at the same phase is flagged"
+  },
+  "slide": {
+   "band_m": {
+    "l": 0.0005,
+    "r": 0.0005
+   },
+   "bound_um": 24202,
+   "by_clip": {
+    "MARCH": {
+     "bound_um": 24202,
+     "margin_um": 11751,
+     "pass": true,
+     "sampled_um": 4223,
+     "total_um": 15973,
+     "witness": {
+      "clip": "MARCH",
+      "mesh": "militia",
+      "phase": 0.787878778026781,
+      "surface": 0,
+      "touchdown_phase": 0.66015625,
+      "turn_udeg": null,
+      "vertex": 16565
+     }
+    },
+    "PIVOT_LEFT": {
+     "bound_um": 24202,
+     "margin_um": 1637,
+     "pass": true,
+     "sampled_um": 5948,
+     "total_um": 7584,
+     "witness": {
+      "clip": "PIVOT_LEFT",
+      "mesh": "militia",
+      "phase": 0.806640625,
+      "surface": 0,
+      "touchdown_phase": 0.21484375,
+      "turn_udeg": -1,
+      "vertex": 16401
+     }
+    },
+    "PIVOT_RIGHT": {
+     "bound_um": 24202,
+     "margin_um": 1637,
+     "pass": true,
+     "sampled_um": 5948,
+     "total_um": 7584,
+     "witness": {
+      "clip": "PIVOT_RIGHT",
+      "mesh": "militia",
+      "phase": 0.689999997615814,
+      "surface": 0,
+      "touchdown_phase": 0.21484375,
+      "turn_udeg": 1,
+      "vertex": 16401
+     }
+    }
+   },
+   "margin_um": 11751,
+   "pass": true,
+   "sampled_um": 5948,
+   "total_um": 17698,
+   "witness": {
+    "clip": "PIVOT_RIGHT",
+    "mesh": "militia",
+    "phase": 0.689999997615814,
+    "surface": 0,
+    "touchdown_phase": 0.21484375,
+    "turn_udeg": 1,
+    "vertex": 16401
+   }
+  },
+  "stance": {
+   "missing": [],
+   "pass": true
+  },
+  "turn_grid": [
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 1,
+    "name": "+1 microdegree",
+    "turn_udeg": 1,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 1,
+    "name": "-1 microdegree",
+    "turn_udeg": -1,
+    "yaw0_udeg": 1
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 2223,
+    "name": "359 to 1 wrap",
+    "turn_udeg": 2000000,
+    "yaw0_udeg": 359000000
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 2223,
+    "name": "1 to 359 wrap",
+    "turn_udeg": -2000000,
+    "yaw0_udeg": 1000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 50000,
+    "name": "+45",
+    "turn_udeg": 45000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 50000,
+    "name": "-45",
+    "turn_udeg": -45000000,
+    "yaw0_udeg": 45000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 100000,
+    "name": "+90",
+    "turn_udeg": 90000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 100000,
+    "name": "-90",
+    "turn_udeg": -90000000,
+    "yaw0_udeg": 90000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 150000,
+    "name": "+135",
+    "turn_udeg": 135000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 150000,
+    "name": "-135",
+    "turn_udeg": -135000000,
+    "yaw0_udeg": 135000000
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 200000,
+    "name": "+179.999999",
+    "turn_udeg": 179999999,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_LEFT",
+    "duration_q": 200000,
+    "name": "-179.999999",
+    "turn_udeg": -179999999,
+    "yaw0_udeg": 179999999
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 200000,
+    "name": "180 tie",
+    "turn_udeg": 180000000,
+    "yaw0_udeg": 0
+   },
+   {
+    "clip": "PIVOT_RIGHT",
+    "duration_q": 200000,
+    "name": "180 tie reversed",
+    "turn_udeg": 180000000,
+    "yaw0_udeg": 180000000
+   }
+  ]
+ },
+ "ruling": "docs/reviews/cluster-formations/owner-rulings-2026-11-10.md R-A R-B R-C",
+ "scale": {
+  "k": 24.7921813547024,
+  "lift_model_m": 0.02557624518871305,
+  "model_height_m": 1.70508301258087,
+  "simulation_scale": 495.843627094048
+ },
+ "schema": 1,
+ "status": "NUMERIC_PASS",
+ "tool_sha256": "e3b2de36f443b4d3b5a0fab1bee396433b6c951473f38be03922561bf3960231",
+ "visual_review": "PENDING: R-C requires the real-window review after this numeric pass"
+}

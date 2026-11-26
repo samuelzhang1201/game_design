@@ -64,10 +64,11 @@ PIVOT_RIGHT / PIVOT_LEFT are appended to the installed GLB by the infantry's pip
 `pivot_mapping.py --arm militia` (`ARMS`: rig `mil_rig`, bounds 24202 / 2017 µm at k 24.7922, the infantry's
 phases: on a 420-phase scan this MARCH has the same events at 8, 181, 182 and 396 of 420), then
 `pivot.bake(bare GLB, solve, GLB, 4.0, rig="mil_rig")`. The `.import` names the pivot post-import script.
+A re-export (`game_export.py`) writes the bare ten-clip GLB again: re-run all of it and the certificates.
 Plan `assets/3D/units/militia/militia_pivot_plan.json`, fixture `tests/fixtures/militia_pivot_mapping.json`
 (`test_pivot_mapping.py` re-audits and re-bakes it), provider `Map3DMilitiaLocomotion`, certificate
 `docs/reviews/cluster-formations/evidence/locomotion/militia/`. Audit: skin flags introduced 0, penetration
-2.3 mm (the planted shoe's own sink in MARCH), hover, slide and seam 1 µm.
+1 µm, hover 278 µm, slide and seam 1 µm.
 
 The skirt in a pivot. Its keys are baked for MARCH's legs at each frame, and a pivot plays the body through
 one MARCH cycle over legs held at the passing frame: played as they are, a leg crosses the cloth in half the
@@ -77,7 +78,9 @@ frames. So (`pivot_mapping.py` `HELD`, `NUDGE`):
   and out over the last two;
 - the two front chains over a leg (`skirt_00` / `01` left, `skirt_08` / `09` right) swing out 15° while that
   leg steps, leading and trailing the step by 3 % of the pivot (the knee rises under them; 9° still crossed on
-  two frames, 12° is the least that clears);
+  two frames, 12° is the least that clears), and the chain on either side of them swings half of that so the
+  hem keeps a curve (alone, the two chains kicked the hem out to a corner). The legs cut at a 1° turn as at
+  90°, so the swing is not scaled by the turn;
 - at run time the plan's `held` list keeps those keys at every turn (a smaller turn eases the arms toward the
   entry pose, never the skirt).
 
@@ -102,8 +105,20 @@ material classes, so no mail calming. The realm tint's mask `militia_tunic_mask.
 body's `part_id`: the tunic's and the skirt's faces where the body sits in the atlas, grown by the bake's
 margin without entering another part's island, the bright linen at the neck left out (`LINEN`), softened
 outward only and never onto another part's faces; the export reports its coverage and the cloth's mean linear luminance,
-the tint material's `tunic_luminance` (0.052). It returns the MARCH measure: `stride_m` 1.3597 (the
-militia's own; with the infantry's 1.4838 its feet slide), steps 0.2121; 0.9091.
+the tint material's `tunic_luminance` (0.052). It returns the MARCH measure: `stride_m` 1.5042 (the
+lock's planted-sole speed, 0.045583 m a frame, over 33 frames), steps 0.2121; 0.9091.
+
+MARCH's ground contact (2026-11-26, found by the locomotion certifier). The body carries its parts as vertex
+groups (`p_shoes`, `p_wraps`, weight 1) beside the bones' groups, so the lock, which takes a foot's vertices by
+their heaviest group, saw 79 of the right shoe's vertices and not its heel: the planted right shoe sank to 21 mm
+under the ground, its toe scuffed 11 mm under it in the swing, and the stride came out 1.3597. The lock now
+takes bone groups only (`_foot_points`), and for this body also sets each frame's height by the SKINNED sole
+(`ARM_LOCK` `skin_ground`: the low shoe is skinned across the ankle, so a rigid sole on the ground still leaves
+the skin 2 mm off it): every stance frame's lowest sole vertex is on the ground, every swing frame's 12 mm
+clear until its last two; and the last swing frame before a touchdown already travels back with the ground
+(`approach_frames` 1, as the plate soldier's). The legs moved, so two frames of MARCH crossed the skirt again: `SKIRT_NUDGE` in
+`game_export.py` swings those chains out at export, as the source's `nudge` does (chains 8, 9 round frame 22
+to 24, chains 3, 4 round 25 to 27), and the source is left as it is.
 
 The `.import` files carry the infantry's settings: mesh compression off, MARCH / GARRISON / STANDBY / DEFEND
 set to loop, the atlas textures and the mask as the infantry's.
