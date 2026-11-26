@@ -94,6 +94,21 @@ func test_map_projection_obeys_our_delivered_law_and_omits_hidden_armies() -> vo
 	state.foes[enemy]["morale"] = 1
 	assert_eq(presentation.map_snapshot(repo, state, repo.resolve_realm("player_realm")), before)
 
+func test_a_seen_foe_in_a_fought_battle_fights_without_telling_its_order() -> void:
+	var battle: Dictionary = state.battles[0]
+	var enemy := String(battle["att"][0])
+	battle["rounds"] = 1
+	var realm := repo.resolve_realm("player_realm")
+	assert_true(enemy in Sighting.seen_foes(repo, state), "the fixture's foe stands in sight")
+	var map_view: Dictionary = presentation.map_snapshot(repo, state, realm)
+	assert_eq(map_view["map_units"].get(enemy, {}), {"action": "ATTACK"})
+	var before := map_view.duplicate(true)
+	state.foes[enemy]["order"] = "secret"
+	battle.get_or_add("actions", {})["att"] = {"kind": "attack"}
+	assert_eq(presentation.map_snapshot(repo, state, realm), before, "its clip never tells its order")
+	state.foes[enemy]["x_m"] = 90000000
+	assert_false(presentation.map_snapshot(repo, state, realm)["map_units"].has(enemy), "an unseen foe gets nothing")
+
 func test_remote_missing_reading_is_unknown_and_received_reading_is_frozen() -> void:
 	state.king_state = {"x_m": 10000000, "y_m": 10000000}
 	var code := String(state.battles[0].def[0])

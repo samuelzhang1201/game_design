@@ -235,7 +235,14 @@ static func effect_text(kind: String, row: Dictionary) -> String:
 static func map_snapshot(repo: DataRepository, state: GameState, realm: String) -> Dictionary:
 	var out := {"map_units": {}, "battle_signals": []}
 	if state == null or realm != repo.resolve_realm("player_realm"): return out
+	var seen := Sighting.seen_foes(repo, state)
 	for battle: Dictionary in state.battles:
+		# A foe the crown sees in a fought battle fights: one clip for all, so it never tells its order.
+		if int(battle.get("rounds", 0)) > 0:
+			for side: String in BattleSystem.SIDES:
+				for code: String in battle.get(side, []):
+					if state.foes.has(code) and (Intel.dev_all or code in seen):
+						out["map_units"][code] = {"action": "ATTACK"}
 		for side: String in BattleSystem.SIDES:
 			var own: Array[String] = []
 			for code: String in battle.get(side, []):
