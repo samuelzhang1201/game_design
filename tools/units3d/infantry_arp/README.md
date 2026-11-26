@@ -117,11 +117,25 @@ variable as JSON):
   `scripts/matmaps.py`; the olive paint and bare cold steel were the other two shown). Grey smooth
   texels anywhere else are mail, never plate. Each piece is one sheet of steel: it keeps only its fine
   detail (rivets, scratches) on its mean colour, since Tripo shaded every UV island on its own and
-  left darker rectangles on the dome; the brim's normal map is flat and plate's detail bump halved.
-  The brim's warped look was its custom split normals, kept from the high mesh and pleating the
-  decimated fan: `scripts/brim_normals.py` beside the source gives the brim's loops the
-  area-weighted normal of the brim faces round each vertex (the rim stays a hard edge; the glTF
-  splits 18 more vertices at the dome's foot). The tunic mask lost the brim's green patches with it.
+  left darker rectangles on the dome. The HELMET is plainer still: no UV-space mottle or scuff noise
+  (it breaks at every island seam and reads as square patches on the helmet's large texels), a flat
+  normal map, faint detail on the dome and none on the brim (the source paints a wavy rolled seam
+  round the dome's foot).
+  The brim's warped look had three causes, all fixed by `scripts/brim_normals.py` beside the source
+  (run on both variant files; it always starts from `*_before_2026-11-26.blend`): the brim is two
+  sheets hung from the dome's foot and the rim, and the top sheet sagged below the underside's
+  straight span, so on this double-sided material the underside cut up through it all round the
+  foot (a ragged band); the top sheet's own vertices are lifted until it lies just over the
+  underside (three vertices under the front of the brim that are no part of its skin are left).
+  The helmet's custom split normals, kept from the high mesh, pleated the decimated fan: every
+  helmet loop takes the area-weighted mean of the helmet faces round its vertex that face within
+  ~78 degrees of its own, so dome and brim top are one smooth skin and the rim stays a hard edge
+  between top and underside (their plain mean pointed sideways and drew a pale band round the rim).
+  The brim's faces are chosen by tilt (`uvmask_plate.py`), not by reach, so the set ends on one ring.
+  This changes the helmet's POSITION and NORMAL and the export's vertex count; the pivot pair is
+  re-baked from the committed solve (the pivot samples are joint tracks, not vertices) and
+  `test_infantry_pivot.gd`'s frozen fingerprint, which hashes every mesh attribute, is renewed.
+  The tunic mask lost the brim's green patches with it.
 
 A texture-only re-author needs no new pivot solve: export to a scratch ROOT, copy its three atlas
 files and the tunic mask in, and `pivot.bake(ROOT's <ARM>.glb, the fixture's canonical-samples.json,
