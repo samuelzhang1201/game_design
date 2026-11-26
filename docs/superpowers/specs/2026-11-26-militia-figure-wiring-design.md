@@ -56,8 +56,9 @@ frames to the owner rather than shipping it.
    Builder's findings (2026-11-26, `militia_parts_12_duel.blend`, script `scripts/p11_duel.py`): transfer twist
    2.0° as the first ten; `narrow_duel` (s 0.6 about the start's ankle midpoint, pelvis moved with the narrowed
    feet, raise weighted by the trunk's uprightness) ankle error 0 mm; skirt baked and `repair`ed: no leg through
-   the skirt in any frame of the seven; HIT_2's shield cleared by `solve_clear`; the sword still brushes the
-   spread skirt in the crouching BLOCK_3 (9 of 15 frames) and BLOCK_4 (17 of 21), at the hem beside the hand.
+   the skirt in any frame of the seven; HIT_2's shield cleared by `solve_clear`; the sword brushed the
+   spread skirt in the crouching BLOCK_3 / BLOCK_4; owner "先改剑擦裙摆": cleared with the skirt counted for the
+   sword hand only (`solve_sword_cloth`): 0 and 1 frame left, the wrist turned up to 44°.
 1b. **The falls** (DEATH, DEATH_2). The drape hangs columns round a VERTICAL axis, so on a body on the ground
    it fails: face down the skirt stands off the back like a sail; on the back the legs come through a bell
    (30–50 skirt faces crossed per lying frame, through the held final pose). Tried and rejected: blending the
