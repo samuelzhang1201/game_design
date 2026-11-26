@@ -212,13 +212,14 @@ func test_right_slot_is_empty_until_the_council_or_a_map_click_takes_it() -> voi
 	await wait_process_frames(2)
 	assert_true(c.detail_panel().visible, "a map click opens the card")
 	assert_true(c.dialogue_panel().visible, "and the council stays where it is")
-	assert_lt(c.detail_panel().get_global_rect().position.x,
-		c.map_panel().get_global_rect().position.x, "the card is in the left column")
+	assert_lt(c.detail_panel().get_global_rect().end.x,
+		c.map_panel().get_global_rect().get_center().x, "the card is in the left column, over the map")
 	assert_false(c.dashboard().visible, "which the card takes from the dashboard")
 	c.detail_panel().close_button().pressed.emit()
 	await wait_process_frames(2)
 	assert_false(c.detail_panel().visible, "CLOSE closes the card")
-	assert_true(c.dashboard().visible, "and the left column goes back to the realm")
+	assert_false(c.dashboard().visible, "and with nothing chosen the left column hides")
+	assert_false(c.minister_panel().visible, "leaving the map whole")
 	assert_true(c.dialogue_panel().visible, "the council never moved")
 	c.find_child("LeaveButton", true, false).pressed.emit()
 	await wait_process_frames(2)
@@ -397,8 +398,9 @@ func test_map_ask_fills_the_talk_box() -> void:
 	assert_true(c.council_open(), "Ask brings the council up to send from")
 	assert_eq(c.free_text_field().text, "What do we know of %s?" % String(capital["label"]))
 	assert_false(c.dialogue_text().contains("What do we know"), "nothing was sent")
-## The left column shows the realm dashboard by default and the dossier only
-## while a person speaks or is singled out (user ruling 2026-09-09).
+## The left column is hidden until something is chosen (owner 2026-11-26),
+## the Crown opens the realm's card, and the dossier stands only while a
+## person speaks or is singled out (user ruling 2026-09-09).
 func test_left_column_is_the_dashboard_unless_a_person_speaks() -> void:
 	Game.start_campaign(42)
 	var report := Game.next_tick()
@@ -408,7 +410,9 @@ func test_left_column_is_the_dashboard_unless_a_person_speaks() -> void:
 			"text": "hm", "suggestions": []},
 	], report)
 	await wait_process_frames(2)
-	assert_true(c.dashboard().visible, "the council beat shows the realm")
+	assert_false(c.dashboard().visible, "nothing chosen: the column is hidden")
+	SignalHub.realm_card_requested.emit()
+	assert_true(c.dashboard().visible, "the Crown shows the realm")
 	assert_false(c.dossier_up())
 	c.continue_button().pressed.emit()
 	await wait_process_frames(2)

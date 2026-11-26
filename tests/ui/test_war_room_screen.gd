@@ -550,6 +550,7 @@ func test_the_margin_keeps_its_buttons_while_the_list_stands_and_refills_on_reop
 
 func test_closing_the_room_hands_the_column_its_place_back() -> void:
 	var r: GameRoot = await _court()
+	SignalHub.realm_card_requested.emit()   # the column is hidden until something is chosen
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(2)
 	r.war_room_screen().close()
