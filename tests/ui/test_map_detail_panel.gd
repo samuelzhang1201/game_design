@@ -699,3 +699,35 @@ func test_an_idle_building_says_so_in_its_slot() -> void:
 			icon = n
 	assert_not_null(icon)
 	assert_almost_eq(icon.modulate.a, Game.data.bal("ui_slot_idle_alpha"), 0.001, "its art dimmed by the balance row")
+
+
+## AR-4 step 2 (owner 2026-11-26, CK3 as the reference): a province's facts
+## stand under ruled headings, each label at the top of its row and as wide
+## as the card's widest, the regiments one line each under a counted head.
+func test_a_province_card_reads_in_sections() -> void:
+	Game.start_campaign(42)
+	var p := _panel()
+	await wait_process_frames(1)
+	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
+	var capital := String(Game.data.burgs[String(realm["capital_burg"])]["province_code"])
+	p.show_province(capital)
+	await wait_process_frames(2)
+	assert_not_null(p.fields().get_node_or_null("Section_holding"), "the holding's heading")
+	assert_not_null(p.fields().get_node_or_null("Section_land"), "the land's heading")
+	var widths := {}
+	for row in p.fields().get_children():
+		if row is HBoxContainer:
+			var label := row.get_child(0) as Label
+			assert_eq(label.size_flags_vertical, Control.SIZE_SHRINK_BEGIN, "top-aligned: " + label.text)
+			widths[roundi(label.size.x)] = true
+	assert_eq(widths.size(), 1, "one label column: %s" % [widths.keys()])
+	var arms := p.fields().get_node_or_null("Section_military") as Label
+	if arms != null:
+		var items := p.fields().find_children("Item*", "Label", false, false).size()
+		assert_gt(items, 0, "the regiments one a line")
+		assert_string_contains(arms.text, "(%d)" % items, "the head counts them")
+	var pop := p.fields().get_node_or_null("Field_Population") as HBoxContainer
+	assert_not_null(pop)
+	if pop != null:
+		assert_false((pop.get_child(1) as Label).text.contains(")"), "no machine brackets")
+		assert_string_contains((pop.get_child(1) as Label).text, ",", "grouped thousands")

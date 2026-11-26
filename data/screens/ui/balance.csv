@@ -179,6 +179,6 @@ war_plan_heads_default,1000,"WAR ROOM plans §1.5: the Place form's heads at fir
 war_plan_contact_km,3,"WAR ROOM plans (ruling 10): a rake's tip this near a supposed piece reads it in the slip"
 supply_rate_default,1000,"WAR ROOM draw orders (ruling 13): the rate (per mille, one of SupplyLines.RATES) a supply point chosen on the march's confirm runs at when the regiment has no line yet"
 war_confirm_route_weight,1000,"WAR ROOM march confirm: the route box covered by the confirm costs this many times a blocked rect (the key slip, the tool roll, the docked folio) covered, so the march is never hidden while any spot avoids it; well below the 1e9 sentinel that bars the panel from the tip itself"
-ui_card_field_gap_px,10,"UI: the gap between a fact card's label column and its values (design px; AR-4 step 2, the labels as wide as the card's widest, the values the rest)"
+ui_card_field_gap_px,4,"UI: the gap between a fact card's label column and its values (design px; AR-4 step 2, the labels as wide as the card's widest, the values the rest)"
 ui_column_slide_seconds,0.18,"UI: the left column is laid down on the map: it slides in from the screen's left edge over this many seconds, eased out, and back out eased in when nothing is chosen (owner 2026-11-26, AR-4 step 2); 0 is a hard cut"
 ui_column_slide_clear_px,40,"UI: how far beyond the screen's left edge the sliding column starts and ends (design px), so its shadow is off the screen too"

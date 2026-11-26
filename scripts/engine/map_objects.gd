@@ -418,7 +418,7 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 	fields.append(["Controlled by", "the crown" if controller == MapManors.crown(state)
 		else ("House " + controller if controller != "" else "no one")])
 	if urban != null and rural != null:
-		fields.append(["Population", "%s, %s in towns" % [grouped(int(urban) + int(rural)), grouped(int(urban))]])
+		fields.append(["Population", "%s — %s in towns" % [grouped(int(urban) + int(rural)), grouped(int(urban))]])
 	else:
 		fields.append(["Population", String(prov.get("population", "—"))])
 	var scale := float(repo.map_info.get("distance_scale", "1"))
@@ -1105,7 +1105,8 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		# the base pace above is weather-free; the weather is its own line
 		# (spec 2026-09-27-courier-core §1)
 		var wx := Weather.at(repo, state, ArmySystem.position_of(repo, state, r), state.absolute_day())
-		stats.append(_stat("army_weather", CourierCard.weather_short(repo, wx),
+		# the word alone; its tooltip says what it does to the roads (no ×0.85 on the card)
+		stats.append(_stat("army_weather", Weather.label_of(repo, wx),
 			"Weather here — %s" % Weather.describe_kind(repo, wx)))
 	return {
 		"kind": "army", "code": code, "title": label,

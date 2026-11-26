@@ -359,8 +359,8 @@ func test_in_rain_the_card_the_days_out_and_the_ruler_agree() -> void:
 	assert_string_contains(tip, "clear weather")
 	assert_string_contains(tip, "over the ground and the weather on the way")
 	assert_true(tip.ends_with("clear weather"), "a whole sentence: " + tip)
-	assert_eq(String(weather.get("text", "")), "%s ×%.2f" % [Weather.label_of(repo, "rain"), float(rain) / 1000.0],
-		"the weather is its own line")
+	assert_eq(String(weather.get("text", "")), Weather.label_of(repo, "rain"), "the weather is its own line, in a word")
+	assert_string_contains(String(weather.get("tooltip", "")), Weather.describe_kind(repo, "rain"), "what it does, in its tooltip")
 	assert_true(repo.resource_icons.has("army_weather"), "with its icon row")
 	repo.weather_odds = saved
 	Weather.forget()

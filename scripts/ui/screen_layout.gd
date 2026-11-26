@@ -158,7 +158,7 @@ static func _place(c: Control, anchor_min: Vector2, anchor_max: Vector2,
 ## the other way is turned round where it is.
 static func slide_column(column: Control, open: bool, done := Callable()) -> void:
 	var secs := Game.data.bal("ui_column_slide_seconds")
-	var tw := column.get_meta("slide_tween", null) as Tween
+	var tw: Tween = column.get_meta("slide_tween") if column.has_meta("slide_tween") else null
 	var sliding := tw != null and tw.is_valid()
 	if sliding and bool(column.get_meta("slide_open")) == open:
 		return

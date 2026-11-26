@@ -217,9 +217,14 @@ func test_the_column_is_hidden_until_something_is_chosen() -> void:
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
 	click.pressed = true
+	var rest := column.position.x
 	crown.gui_input.emit(click)
 	assert_true(column.visible, "the Crown opens the column")
 	assert_true(screen.dashboard().visible, "on the realm's card")
+	# laid down on the map (AR-4 step 2): it slides in from the left edge
+	assert_lt(column.position.x, rest, "it starts off to the left, not cut in")
+	await wait_until(func() -> bool: return is_equal_approx(column.position.x, rest), 2.0)
+	assert_almost_eq(column.position.x, rest, 0.01, "and comes to rest where the scene puts it")
 	crown.gui_input.emit(click)
 	assert_true(column.visible, "it slides out, its card on it, rather than vanishing")
 	await wait_until(func() -> bool: return not column.visible, 2.0)

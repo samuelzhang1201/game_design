@@ -134,7 +134,7 @@ func _ready() -> void:
 	_lines = body.get_node("Rows")
 	_hint = body.get_node("Hint")
 	_preview = body.get_node("Preview")
-	_ask = $Col/Commands/DetailAsk
+	_ask = $Col/DetailAsk
 	_ask.pressed.connect(func() -> void: ask_requested.emit(_ask_text))
 	_close = $Col/Commands/DetailClose
 	_close.pressed.connect(func() -> void:
@@ -444,14 +444,19 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 					placed[i] = true
 		if mine.is_empty():
 			continue
-		_section_head(sec)
+		var head := _section_head(sec)
+		if sec["list"] and mine.size() == 1:
+			# how many, so a list longer than the card's fold says so (critic 2026-11-27)
+			head.text += " (%d)" % String(mine[0][1]).split(MapObjects.LIST_SEP, false).size()
 		for f: Array in mine:
 			if not sec["list"]:
 				_fields.add_child(_field_row(String(f[0]), _line(String(f[1]))))
 				continue
-			for item: String in String(f[1]).split(MapObjects.LIST_SEP, false):
+			var items := String(f[1]).split(MapObjects.LIST_SEP, false)
+			for n in items.size():
+				var item := items[n]
 				var l := _line(item)
-				l.name = "Item"
+				l.name = "Item_%d" % n
 				l.autowrap_mode = TextServer.AUTOWRAP_OFF
 				l.clip_text = true
 				l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -473,13 +478,14 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 			(row.get_meta("field_label") as Label).custom_minimum_size.x = widest
 
 
-func _section_head(sec: Dictionary) -> void:
+func _section_head(sec: Dictionary) -> Label:
 	var head := Label.new()
 	head.name = "Section_" + String(sec["section"])
 	head.text = String(sec["label"])
 	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.theme_type_variation = &"CardSection"
 	_fields.add_child(head)
+	return head
 
 
 ## One fact: its label top-aligned beside its value (critic 2026-11-26: a
