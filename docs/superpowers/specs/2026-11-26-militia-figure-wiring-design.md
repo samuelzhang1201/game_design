@@ -58,7 +58,8 @@ frames to the owner rather than shipping it.
    feet, raise weighted by the trunk's uprightness) ankle error 0 mm; skirt baked and `repair`ed: no leg through
    the skirt in any frame of the seven; HIT_2's shield cleared by `solve_clear`; the sword brushed the
    spread skirt in the crouching BLOCK_3 / BLOCK_4; owner "先改剑擦裙摆": cleared with the skirt counted for the
-   sword hand only (`solve_sword_cloth`): 0 and 1 frame left, the wrist turned up to 44°.
+   sword hand only (`solve_sword_cloth`, wrist turns made costly so the arm swings out at the shoulder, taste.md): 0 and 2
+   frames left (a 4-face brush), the shoulder turned up to 15°, the wrist's bend unchanged.
 1b. **The falls** (DEATH, DEATH_2). The drape hangs columns round a VERTICAL axis, so on a body on the ground
    it fails: face down the skirt stands off the back like a sail; on the back the legs come through a bell
    (30–50 skirt faces crossed per lying frame, through the held final pose). Tried and rejected: blending the

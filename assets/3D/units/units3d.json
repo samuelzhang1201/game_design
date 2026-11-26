@@ -339,6 +339,34 @@
    "SLASH_3": [
     0,
     41
+   ],
+   "BLOCK": [
+    0,
+    17
+   ],
+   "BLOCK_2": [
+    0,
+    15
+   ],
+   "BLOCK_3": [
+    0,
+    14
+   ],
+   "BLOCK_4": [
+    0,
+    20
+   ],
+   "HIT": [
+    0,
+    21
+   ],
+   "HIT_2": [
+    0,
+    29
+   ],
+   "HIT_3": [
+    0,
+    21
    ]
   },
   "bones": 100,
@@ -346,7 +374,7 @@
   "height_m": 1.705,
   "kind": "humanoid",
   "label": "Town militia",
-  "source": "The parts Tripo militiaman (tripo_inbox soldier/militia_parts.glb) with the infantry's short sword and round shield, rigged with Auto-Rig Pro and driven by the infantry's ten clips at a narrower stance: assets/3D/model_wip/blender_output/militia/militia_parts_11_hem.blend (git-ignored), tools/units3d/militia_arp/game_export.py. The militia arm's piece (army_models.tres militia), also worn by a raised town militia (its roster row's figure).",
+  "source": "The parts Tripo militiaman (tripo_inbox soldier/militia_parts.glb) with the infantry's short sword and round shield, rigged with Auto-Rig Pro and driven by the infantry's ten clips and its seven duel clips (BLOCK..BLOCK_4, HIT..HIT_3; no DEATH yet) at a narrower stance: assets/3D/model_wip/blender_output/militia/militia_parts_12_duel.blend (git-ignored), tools/units3d/militia_arp/game_export.py. The militia arm's piece (army_models.tres militia), also worn by a raised town militia (its roster row's figure).",
   "stride_m": 1.3597,
   "tris": 17437,
   "weights": "ARP skin limited to 4, the knee-length skirt on 10 chains of 3 bones whose keys are baked into every clip; sword and shield rigid on cc_weapon.r / cc_weapon.l"
