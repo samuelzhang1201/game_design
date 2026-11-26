@@ -999,6 +999,7 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(table_path(dir, "weather"), ["kind", "speed_permille", "icon", "label"],
 			func(r): weather_kinds[String(r["kind"])] = {"speed_permille": int(r["speed_permille"]),
 				"icon": String(r["icon"]), "label": String(r["label"]),
+				"road_words": String(r.get("road_words", "")),
 				"overcast": float(r.get("overcast", 0)), "wet": float(r.get("wet", 0)),
 				"mud": float(r.get("mud", 0)), "snow": float(r.get("snow", 0)),
 				"rainfall": float(r.get("rainfall", 0)), "snowfall": float(r.get("snowfall", 0)),

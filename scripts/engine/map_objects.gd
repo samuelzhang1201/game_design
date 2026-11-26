@@ -273,6 +273,10 @@ static func production_of(repo: DataRepository, burg_codes: Array) -> Array:
 			or (float(a["units"]) == float(b["units"]) and String(a["good"]) < String(b["good"])))
 	return out
 
+## A field whose value is a list joins its items with this; the card writes
+## each on its own line (data/screens/ui/fact_card_sections.csv `list`).
+const LIST_SEP := ", "
+
 static func burg_card(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	var b: Dictionary = repo.burgs.get(code, {})
 	if b.is_empty():
@@ -286,7 +290,7 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 		["Group", String(b.get("group", "")).replace("_", " ").capitalize()],
 		["Type", String(b.get("type", ""))],
 		["Culture", String(culture.get("label", b.get("culture_code", "")))],
-		["Population", String(b.get("population", "—"))],
+		["Population", grouped(int(float(b.get("population", 0))))],
 	]
 	var features: Array = []
 	if String(b.get("is_port", "0")) == "1":
@@ -329,9 +333,18 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 			return String((state.supply_lines[k] as Dictionary)["town"]) == code)
 		@warning_ignore("integer_division")
 		var markup := int(repo.bal("supply_buy_markup_permille")) / 10
-		fields.append(["Strategic stores", "%d — crown %d, lord %d, house stock %d (bought at +%d%%)" % [
-			int(held["crown"]) + int(held["lord"]) + int(held["house"]),
-			int(held["crown"]), int(held["lord"]), int(held["house"]), markup]])
+		# the whole, then only the purses that hold any (a "crown 0" said nothing)
+		var owners: Array[String] = []
+		var parts: Array[String] = []
+		for p: Array in [["crown", "the crown's"], ["lord", "the lord's"], ["house", "house stock"]]:
+			if int(held[p[0]]) > 0:
+				owners.append(String(p[1]))
+				parts.append("%s %s" % [String(p[1]), grouped(int(held[p[0]]))])
+		var whole := grouped(int(held["crown"]) + int(held["lord"]) + int(held["house"]))
+		var whose := "" if owners.is_empty() else (", all " + owners[0]) if owners.size() == 1 \
+			else " — " + ", ".join(parts)
+		fields.append(["In store", whole + whose])
+		fields.append(["Buys at", "%d%% over the market" % markup])
 		if not lines.is_empty():
 			fields.append(["Supply lines", "%d from here" % lines.size()])
 		var draw := 0
@@ -405,11 +418,11 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 	fields.append(["Controlled by", "the crown" if controller == MapManors.crown(state)
 		else ("House " + controller if controller != "" else "no one")])
 	if urban != null and rural != null:
-		fields.append(["Population", "%d (%d in towns)" % [int(urban) + int(rural), int(urban)]])
+		fields.append(["Population", "%s, %s in towns" % [grouped(int(urban) + int(rural)), grouped(int(urban))]])
 	else:
 		fields.append(["Population", String(prov.get("population", "—"))])
 	var scale := float(repo.map_info.get("distance_scale", "1"))
-	fields.append(["Area", "%d %s²" % [roundi(float(prov.get("area", 0)) * scale * scale),
+	fields.append(["Area", "%s %s²" % [grouped(roundi(float(prov.get("area", 0)) * scale * scale)),
 		String(repo.map_info.get("distance_unit", "px"))]])
 	var biome: Dictionary = repo.biomes.get(int(float(prov.get("biome_id", "0"))), {})
 	if not biome.is_empty():
@@ -423,7 +436,7 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 		if String(army[c].get("province_code", "")) == code:
 			regs.append(String(army[c]["label"]))
 	if not regs.is_empty():
-		fields.append(["Regiments", ", ".join(regs)])
+		fields.append(["Regiments", LIST_SEP.join(regs)])
 	if state != null:   # the hazards in play there that the crown knows (spec 2026-10-07-war-room-p2 ruling 7)
 		for id: String in Hazards.active_ids(state):
 			if Hazards.known(repo, state, id) and Hazards.touches_province(repo, state, id, code):
@@ -860,7 +873,12 @@ static func holdings_text(repo: DataRepository, state: GameState, province_code:
 	for h: String in houses:
 		total += int(counts[h])
 		parts.append("%s %d" % ["the crown" if h == MapManors.crown(state) else "House " + h, int(counts[h])])
-	return "%d — %s" % [total, ", ".join(parts)] if total > 0 else "none"
+	if total == 0:
+		return "none"
+	if parts.size() == 1:   # "12 — the crown 12" said the number twice
+		var who := "the crown" if houses[0] == MapManors.crown(state) else "House " + String(houses[0])
+		return "%d, all %s's" % [total, who]
+	return "%d — %s" % [total, ", ".join(parts)]
 
 ## --- Regiments (user request 2026-09-10) -------------------------------
 ## The military layer draws the realm's own regiments where the pack puts
