@@ -92,12 +92,13 @@ static func label_of(repo: DataRepository, kind: String) -> String:
 	return String((repo.weather_kinds.get(kind, {}) as Dictionary).get("label", kind.capitalize()))
 
 
-## "Clear", or "Rain (march and couriers ×0.85)".
+## "Clear", or "Rain — the roads run slow" (weather.csv `road_words`; the
+## card speaks in words, the pace stays in the march's own tooltips).
 static func describe_kind(repo: DataRepository, kind: String) -> String:
-	var permille := speed_permille(repo, kind)
-	if permille >= 1000:
+	var words := String((repo.weather_kinds.get(kind, {}) as Dictionary).get("road_words", ""))
+	if speed_permille(repo, kind) >= 1000 or words == "":
 		return label_of(repo, kind)
-	return "%s (march and couriers ×%.2f)" % [label_of(repo, kind), float(permille) / 1000.0]
+	return "%s — %s" % [label_of(repo, kind), words]
 
 
 ## Today's weather over a province, described.

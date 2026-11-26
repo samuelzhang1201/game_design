@@ -51,10 +51,12 @@ func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	# a bar, so the seam is a box of rows rather than a chart's data.
 	assert_eq(panel.neighbours_chart().get_child_count(), neighbours + 1, "each neighbour and the realm itself")
 	(panel.find_child("Close", true, false) as Button).pressed.emit()
+	var column := screen.get_node("%LogPanel") as Control
+	await wait_until(func() -> bool: return not column.visible, 2.0)   # it slides back off the map
 	await wait_process_frames(2)
 	assert_false(panel.visible)
 	assert_false(screen.dashboard().visible, "nothing chosen: the column is hidden again")
-	assert_false((screen.get_node("%LogPanel") as Control).visible)
+	assert_false(column.visible)
 	assert_true(screen.map3d_view().military(), "and the regiments stay on the map")
 
 ## The regiments are on every screen's map, with no tab to light.
