@@ -95,6 +95,9 @@ var _manor := ""
 ## tooltip (0 the first), so the shot shows the tooltip as the player sees it
 ## (owner 2026-10-01: a town card's icon tooltip read dark on dark).
 var _town := ""
+## --regiment CODE opens that regiment's card in the left column ("first":
+## the player's first land regiment), as a click on its piece does.
+var _regiment := ""
 var _hover_icon := -1
 var _hover_target: Control
 ## --build <building> begins that building on the shot's manor (with
@@ -413,6 +416,8 @@ func _ready() -> void:
 			_manor = args[i + 1]
 		elif args[i] == "--town":
 			_town = args[i + 1]
+		elif args[i] == "--regiment":
+			_regiment = args[i + 1]
 		elif args[i] == "--hover-icon":
 			_hover_icon = int(args[i + 1])
 		elif args[i] == "--build":
@@ -1160,6 +1165,14 @@ func _process(_delta: float) -> void:
 				v3.select_object({"kind": "burg", "code": _town})
 			_root.current_screen.detail_panel().show_entry(
 				{"title": String(burg.get("label", _town)), "obj": {"kind": "burg", "code": _town}})
+	if _root != null and _frames == 6 and _regiment != "" and _root.current_screen.has_method("detail_panel"):
+		var code := _regiment
+		if code == "first":
+			for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+				if String(r.get("is_naval", "0")) != "1":
+					code = String(r["regiment_code"])
+					break
+		_root.current_screen.detail_panel().show_entry({"title": code, "obj": {"kind": "army", "code": code}})
 	if _root != null and _hover_icon >= 0 and _frames == 40 and _root.current_screen.has_method("detail_panel"):
 		var found: Array[Control] = []
 		_tooltipped(_root.current_screen.detail_panel(), found)

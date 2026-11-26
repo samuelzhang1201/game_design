@@ -90,8 +90,7 @@ layout_mode = 2
 [node name="Fields" type="GridContainer" parent="Col/CardScroll/CardBody" unique_id=962294552]
 layout_mode = 2
 theme_override_constants/h_separation = 12
-theme_override_constants/v_separation = 2
-columns = 2
+theme_override_constants/v_separation = 3
 
 [node name="Stats" type="GridContainer" parent="Col/CardScroll/CardBody" unique_id=1345047933]
 layout_mode = 2
@@ -141,15 +140,23 @@ size_flags_vertical = 0
 mouse_filter = 2
 script = ExtResource("3_gxh7d")
 
-[node name="DetailAsk" type="Button" parent="Col" unique_id=303853499]
+[node name="Commands" type="HBoxContainer" parent="Col" unique_id=622455799]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 2
+
+[node name="DetailAsk" type="Button" parent="Col/Commands" unique_id=303853499]
 visible = false
 layout_mode = 2
+size_flags_horizontal = 3
 focus_mode = 0
 theme_type_variation = &"CardCommand"
 text = "Ask the Council"
 
-[node name="DetailClose" type="Button" parent="Col" unique_id=1308504493]
+[node name="DetailClose" type="Button" parent="Col/Commands" unique_id=1308504493]
+custom_minimum_size = Vector2(64, 0)
 layout_mode = 2
+size_flags_horizontal = 8
 focus_mode = 0
-theme_type_variation = &"CardCommand"
+theme_type_variation = &"CardCommandSmall"
 text = "Close"

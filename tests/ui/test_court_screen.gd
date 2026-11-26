@@ -157,7 +157,7 @@ func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 	assert_true(panel.visible, "the detail column opens")
 	assert_eq(panel.shown_province(), mine)
 	var texts: Array[String] = []
-	for l in panel.fields().get_children():
+	for l in panel.fields().find_children("*", "Label", true, false):
 		texts.append((l as Label).text)
 	assert_has(texts, "Population")
 	assert_has(texts, "Held by")
@@ -170,13 +170,14 @@ func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 	map.province_selected.emit(foreign)
 	await wait_process_frames(1)
 	texts.clear()
-	for l in panel.fields().get_children():
+	for l in panel.fields().find_children("*", "Label", true, false):
 		texts.append((l as Label).text)
 	assert_false(texts.has("Population"), "no details abroad")
 	assert_has(texts, "Held by")
 	assert_string_contains(panel.hint_label().text, "Little more is known")
 	map.province_selected.emit("")
-	await wait_process_frames(1)
+	var log_panel := screen.get_node("%LogPanel") as Control
+	await wait_until(func() -> bool: return not log_panel.visible, 2.0)   # it slides back off the map
 	assert_false(panel.visible, "clearing the selection closes the column")
 
 ## The court's council column (record, order box, suggestions) is
@@ -220,6 +221,8 @@ func test_the_column_is_hidden_until_something_is_chosen() -> void:
 	assert_true(column.visible, "the Crown opens the column")
 	assert_true(screen.dashboard().visible, "on the realm's card")
 	crown.gui_input.emit(click)
+	assert_true(column.visible, "it slides out, its card on it, rather than vanishing")
+	await wait_until(func() -> bool: return not column.visible, 2.0)
 	assert_false(column.visible, "and closes it again")
 	screen.detail_panel().show_province(String(Game.data.provinces.keys()[0]))
 	assert_true(column.visible, "a clicked place opens it with its card")

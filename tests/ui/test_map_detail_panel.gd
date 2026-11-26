@@ -12,7 +12,7 @@ func _panel() -> MapDetailPanel:
 
 func _grid_texts(p: MapDetailPanel) -> Array[String]:
 	var out: Array[String] = []
-	for l in p.fields().get_children():
+	for l in p.fields().find_children("*", "Label", true, false):
 		out.append((l as Label).text)
 	return out
 
@@ -420,10 +420,12 @@ func test_a_reported_fact_wears_a_small_tag_under_its_estimate() -> void:
 	MissiveLog.add(Game.data, Game.state, SpySystem.report(Game.data, Game.state, at, 900, 0))
 	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "manor", "cell": cell}})
 	await wait_process_frames(2)
-	var kids := p.fields().get_children()
-	var i := kids.find(kids.filter(func(n: Node) -> bool: return n is Label and (n as Label).text == "People")[0])
-	var label := kids[i] as Label
-	var cell_box := kids[i + 1] as VBoxContainer
+	var row := p.fields().get_node_or_null("Field_People") as HBoxContainer
+	assert_not_null(row, "the People row")
+	if row == null:
+		return
+	var label := row.get_child(0) as Label
+	var cell_box := row.get_child(1) as VBoxContainer
 	assert_not_null(cell_box, "the estimate and its tag stand in one cell")
 	if cell_box == null:
 		return
@@ -435,7 +437,7 @@ func test_a_reported_fact_wears_a_small_tag_under_its_estimate() -> void:
 	assert_eq(tag.get_theme_color("font_color"), MapPalette.named(Game.data, "intel_credible"))
 	assert_lt(label.size.x, cell_box.size.x, "the label column is only as wide as its words")
 	# one letter's facts name it once, under the first
-	var tags := kids.filter(func(n: Node) -> bool: return n is VBoxContainer).size()
+	var tags := p.fields().find_children("Estimate", "VBoxContainer", true, false).size()
 	assert_eq(tags, 1, "one tag for one letter's run of facts")
 
 
