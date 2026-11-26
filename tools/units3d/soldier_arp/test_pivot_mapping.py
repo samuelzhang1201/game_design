@@ -41,8 +41,8 @@ ARMS = {
         'hashes': {'baseline-native.json': '8bfd9acadf4e17c2cf417e889455fd36cb3040be0ba33abc809eb4919bbdf7d1',
                    'native-march.json': '2da85fa15bb11016597037050ae7a33563f545ccb548c2a961d377fdf1582475',
                    'canonical-samples.json': 'f71b54f6e5ba42e2e0101f08a7d3b9b6111d8550a9a6cb14d9e22d218927c58f'},
-        'glb_sha256': 'c69bb9e6dc20642590e471ffc03a0dff752f0c4e563bdf948a622e4c4c3087d3',
-        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6602724}},
+        'glb_sha256': 'ce021fd3199285c79aa53bb2348fbaea3994a89cf64c1a26d0f0ed783015dd2e',
+        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6548580}},
 }
 
 

@@ -214,4 +214,5 @@ fixture `tests/fixtures/axemen_pivot_mapping.json`. Scene `scenes/models/units/a
 `army_models.tres` / `realm_tint.tres` rows were made in the editor; provider
 `Map3DAxemenLocomotion`. The duel's `contact` shares were measured off the source: ATTACK 0.58 is
 the chop's impact (key 18 of 31, where the head stops), ATTACK_2 0.49, SLASH_2 0.53, SLASH_3 0.44;
-the rest are the infantry's (the same motions).
+the rest are the infantry's (the same motions). Its atlas carries the infantry's plate re-author
+(2026-11-26, the same source maps), installed the texture-only way above.
