@@ -47,6 +47,8 @@ var _dashboard: RealmDashboard
 var _military_view := false
 var _manor_master: ManorMasterPanel
 var _manor_view := false
+## Whether the Crown has asked for the realm's card (SignalHub.realm_card_requested).
+var _realm_view := false
 var _map3d: Map3DView
 var _map3d_theme := ""
 var _map3d_military := false
@@ -104,6 +106,7 @@ func _ready() -> void:
 		_detail.show_card({})
 		set_military_view(true))
 	_military.closed.connect(func() -> void: set_military_view(false))
+	SignalHub.realm_card_requested.connect(toggle_realm_card)
 	if UiPalette.war_table():
 		# the report writes in paper ink and is drawn only as tall as the
 		# realm's card (the compass is the map's own, at its top-left)
@@ -158,18 +161,27 @@ func _set_right(mode: String) -> void:
 
 ## Who holds the left column, highest claim first: the card of a clicked
 ## object, the country under the cursor, the host while the military layer
-## is on, then the realm dashboard. A deliberate click outranks a hover, so
-## moving the mouse never takes the card away.
+## is on, the Manor Master, then the realm's card the Crown asked for. With
+## none of them chosen the column is hidden and the map shows whole (owner
+## 2026-11-26); a hover alone never opens it. A deliberate click outranks a
+## hover, so moving the mouse never takes the card away.
 func _refresh_left() -> void:
 	if _detail == null:
 		return
 	var card := _detail.has_content()
-	var country := not card and _country_panel.has_content()
+	var open := card or _military_view or _manor_view or _realm_view
+	var country := open and not card and _country_panel.has_content()
 	_detail.visible = card
 	_country_panel.visible = country
 	_military.visible = _military_view and not card and not country
 	_manor_master.visible = _manor_view and not _military_view and not card and not country
-	_dashboard.visible = not (card or country or _military_view or _manor_view)
+	_dashboard.visible = _realm_view and not (card or country or _military_view or _manor_view)
+	%LogPanel.visible = open
+
+## The realm's card in the column, opened and closed by the top bar's Crown.
+func toggle_realm_card() -> void:
+	_realm_view = not _realm_view
+	_refresh_left()
 
 ## The host in the left column (owner 2026-09-27: opened from a regiment's
 ## card, closed by its own ×; the regiments are always on the map).
