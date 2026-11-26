@@ -45,14 +45,25 @@ frames to the owner rather than shipping it.
 
 ## Steps (one PR each)
 
-1. **Duel clips** — BLOCK, BLOCK_2, BLOCK_3, BLOCK_4, HIT, HIT_2, HIT_3, DEATH, DEATH_2 on the militia rig,
+1. **Duel clips** — BLOCK, BLOCK_2, BLOCK_3, BLOCK_4, HIT, HIT_2, HIT_3 on the militia rig,
    appended after the first ten (the first ten export unchanged), reinstalled GLB, `units3d.json` entry,
    `army_art.csv` `militia` `duel` (STRIKE ATTACK;SLASH;ATTACK_VAR1, the infantry's) and `contact` (measured
    off the new source clips; the infantry's where the motion is the same), the seven certificates re-issued
    (`army_art.csv` is a certified input), README and nested guides. Tests: `test_militia_model.gd` asserts the
    duel (`Map3DDuelDriver.can_duel`) instead of its absence. Visual review: `--battle-case militia_fight`
-   real-window shots of militia duelling and falling. Outcome: in a siege's assault the militia blocks, takes
-   hits and falls like the infantry.
+   real-window shots of militia duelling. Outcome: in a siege's assault the militia blocks and takes hits like
+   the infantry; a loss is still freed at once (no DEATH clip: `Map3DFall`'s own rule).
+   Builder's findings (2026-11-26, `militia_parts_12_duel.blend`, script `scripts/p11_duel.py`): transfer twist
+   2.0° as the first ten; `narrow_duel` (s 0.6 about the start's ankle midpoint, pelvis moved with the narrowed
+   feet, raise weighted by the trunk's uprightness) ankle error 0 mm; skirt baked and `repair`ed: no leg through
+   the skirt in any frame of the seven; HIT_2's shield cleared by `solve_clear`; the sword still brushes the
+   spread skirt in the crouching BLOCK_3 (9 of 15 frames) and BLOCK_4 (17 of 21), at the hem beside the hand.
+1b. **The falls** (DEATH, DEATH_2). The drape hangs columns round a VERTICAL axis, so on a body on the ground
+   it fails: face down the skirt stands off the back like a sail; on the back the legs come through a bell
+   (30–50 skirt faces crossed per lying frame, through the held final pose). Tried and rejected: blending the
+   chains to their rest under `root.x` (worse), draping with the rig stood up about its pelvis (the seated
+   topple's level thighs break it). Needs a lying-cloth rule (the chains laid along the thighs and onto the
+   ground) before these two clips ship.
 2. **Pivot pair and certificate** — the pivot pipeline (`tools/units3d/soldier_arp/`, `pivot_mapping.py --arm
    militia` with this body's MARCH phases and bounds; skirt keys solved for each pivot frame), plan
    `militia_pivot_plan.json`, fixture, provider `scripts/map3d/map3d_militia_locomotion.gd` (the infantry's
