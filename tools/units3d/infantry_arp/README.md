@@ -108,6 +108,20 @@ variable as JSON):
   against a 3 px box blur, the normal 12 % of its relief, roughness 30 % of its variation + 0.3
   (less made it read oily in close-ups).
 
+- plate pieces (owner 2026-11-26: the kettle hat's brim read as camouflage, and the helmet as painted
+  cloth): the helmet, pauldrons and knee cops are classed plate by GEOMETRY, not colour
+  (`scripts/uvmask_plate.py` beside the source, from `scripts/dump_mesh.py`'s mesh: the helmet is
+  grown from the dome over joined faces that are not skin, hair or mail), their off-colour texels
+  take the piece's mean plate colour with the old relief flattened, and plate is drawn 0.7 of the
+  way to bare steel, value x0.80 (x1.05 clipped the knee cops on the map), roughness 0.40 (`PLATE_STEEL` / `PLATE_VALUE` / `PLATE_ROUGH` in
+  `scripts/matmaps.py`; the olive paint and bare cold steel were the other two shown). Grey smooth
+  texels anywhere else are mail, never plate. The tunic mask lost the brim's green patches with it.
+
+A texture-only re-author installs without the pivot pipeline: export to a scratch ROOT, copy its
+three atlas files and the tunic mask in, then `python3 tools/units3d/infantry_arp/swap_images.py
+assets/3D/units/<ARM>/<ARM>.glb assets/3D/units/<ARM>` replaces the GLB's packed images and leaves
+every other byte (mesh, skin, clips, the appended pivot pair) as it was.
+
 The new clips' loop modes are the `.glb.import` settings (STANDBY / DEFEND loop). Then the pivot
 pair is regenerated (below) and appended to the GLB.
 
