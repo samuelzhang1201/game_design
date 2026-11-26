@@ -1,25 +1,25 @@
 [gd_scene format=3 uid="uid://cf06jck8071mf"]
 
-[ext_resource type="Script" uid="uid://bs20pdn3xowne" path="res://scripts/ui/bottom_bar.gd" id="1_be36t"]
-[ext_resource type="StyleBox" uid="uid://c4x6inr24cb5u" path="res://assets/2D/ui/war_table/styles/ribbons/lens_normal.tres" id="2_lttpb"]
-[ext_resource type="StyleBox" uid="uid://bamo1rkyshpsk" path="res://assets/2D/ui/war_table/styles/ribbons/lens_pressed.tres" id="3_7aqqm"]
-[ext_resource type="StyleBox" uid="uid://d3i3novogwlsd" path="res://assets/2D/ui/war_table/styles/ribbons/lens_hover.tres" id="4_d4n5a"]
-[ext_resource type="StyleBox" uid="uid://dyoyujv5jxmll" path="res://assets/2D/ui/war_table/styles/ribbons/lens_hover_pressed.tres" id="5_jdg6e"]
-[ext_resource type="StyleBox" uid="uid://ct5423dcl842d" path="res://assets/2D/ui/war_table/styles/ribbons/realm_normal.tres" id="7_dfk37"]
-[ext_resource type="StyleBox" uid="uid://b7o3tseivv8gq" path="res://assets/2D/ui/war_table/styles/ribbons/realm_pressed.tres" id="8_yrfqr"]
-[ext_resource type="StyleBox" uid="uid://dfvsggasobirj" path="res://assets/2D/ui/war_table/styles/ribbons/realm_hover.tres" id="9_lkry8"]
-[ext_resource type="StyleBox" uid="uid://bfns4vidk43qf" path="res://assets/2D/ui/war_table/styles/ribbons/realm_hover_pressed.tres" id="10_0koqx"]
-[ext_resource type="StyleBox" uid="uid://bvngr2hhjwcki" path="res://assets/2D/ui/war_table/styles/ribbons/people_normal.tres" id="11_t0hhh"]
-[ext_resource type="StyleBox" uid="uid://b884klsgwf0xs" path="res://assets/2D/ui/war_table/styles/ribbons/people_pressed.tres" id="12_vejap"]
-[ext_resource type="StyleBox" uid="uid://bswu831b6xysk" path="res://assets/2D/ui/war_table/styles/ribbons/people_hover.tres" id="13_xpix5"]
-[ext_resource type="StyleBox" uid="uid://dk4xtpo53agsm" path="res://assets/2D/ui/war_table/styles/ribbons/people_hover_pressed.tres" id="14_5feev"]
-[ext_resource type="StyleBox" uid="uid://cn5n5vhcrbk8m" path="res://assets/2D/ui/war_table/styles/ribbons/church_normal.tres" id="15_wwmwn"]
-[ext_resource type="StyleBox" uid="uid://c5jqvm1n3222n" path="res://assets/2D/ui/war_table/styles/ribbons/church_pressed.tres" id="16_38222"]
-[ext_resource type="StyleBox" uid="uid://c427ws6o1ihma" path="res://assets/2D/ui/war_table/styles/ribbons/church_hover.tres" id="17_6y1ml"]
-[ext_resource type="StyleBox" uid="uid://hhode8vfs3ps" path="res://assets/2D/ui/war_table/styles/ribbons/church_hover_pressed.tres" id="18_0283x"]
+[ext_resource type="Script" uid="uid://bs20pdn3xowne" path="res://scripts/ui/bottom_bar.gd" id="1_3y2d4"]
+[ext_resource type="StyleBox" uid="uid://c4x6inr24cb5u" path="res://assets/2D/ui/war_table/styles/ribbons/lens_normal.tres" id="2_vrcp1"]
+[ext_resource type="StyleBox" uid="uid://bamo1rkyshpsk" path="res://assets/2D/ui/war_table/styles/ribbons/lens_pressed.tres" id="3_w8xa7"]
+[ext_resource type="StyleBox" uid="uid://d3i3novogwlsd" path="res://assets/2D/ui/war_table/styles/ribbons/lens_hover.tres" id="4_urci7"]
+[ext_resource type="StyleBox" uid="uid://dyoyujv5jxmll" path="res://assets/2D/ui/war_table/styles/ribbons/lens_hover_pressed.tres" id="5_rlwht"]
+[ext_resource type="StyleBox" uid="uid://bvngr2hhjwcki" path="res://assets/2D/ui/war_table/styles/ribbons/people_normal.tres" id="6_ds4n4"]
+[ext_resource type="StyleBox" uid="uid://b884klsgwf0xs" path="res://assets/2D/ui/war_table/styles/ribbons/people_pressed.tres" id="7_gus8n"]
+[ext_resource type="StyleBox" uid="uid://bswu831b6xysk" path="res://assets/2D/ui/war_table/styles/ribbons/people_hover.tres" id="8_uq61d"]
+[ext_resource type="StyleBox" uid="uid://dk4xtpo53agsm" path="res://assets/2D/ui/war_table/styles/ribbons/people_hover_pressed.tres" id="9_roat6"]
+[ext_resource type="StyleBox" uid="uid://cn5n5vhcrbk8m" path="res://assets/2D/ui/war_table/styles/ribbons/church_normal.tres" id="10_wmmex"]
+[ext_resource type="StyleBox" uid="uid://c5jqvm1n3222n" path="res://assets/2D/ui/war_table/styles/ribbons/church_pressed.tres" id="11_o8v57"]
+[ext_resource type="StyleBox" uid="uid://c427ws6o1ihma" path="res://assets/2D/ui/war_table/styles/ribbons/church_hover.tres" id="12_knsv6"]
+[ext_resource type="StyleBox" uid="uid://hhode8vfs3ps" path="res://assets/2D/ui/war_table/styles/ribbons/church_hover_pressed.tres" id="13_c1bjh"]
+[ext_resource type="StyleBox" uid="uid://ct5423dcl842d" path="res://assets/2D/ui/war_table/styles/ribbons/realm_normal.tres" id="14_innfo"]
+[ext_resource type="StyleBox" uid="uid://b7o3tseivv8gq" path="res://assets/2D/ui/war_table/styles/ribbons/realm_pressed.tres" id="15_kcq40"]
+[ext_resource type="StyleBox" uid="uid://dfvsggasobirj" path="res://assets/2D/ui/war_table/styles/ribbons/realm_hover.tres" id="16_43k2w"]
+[ext_resource type="StyleBox" uid="uid://bfns4vidk43qf" path="res://assets/2D/ui/war_table/styles/ribbons/realm_hover_pressed.tres" id="17_dnwb0"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0nl1o"]
-content_margin_left = 286.0
+content_margin_left = 30.0
 content_margin_right = 30.0
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_ahnsp"]
@@ -36,109 +36,102 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_top = -56.0
-script = ExtResource("1_be36t")
-
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("1_3y2d4")
 
 [node name="Bar" type="PanelContainer" parent="." unique_id=913885446]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxEmpty_0nl1o")
-
 
 [node name="Row" type="HBoxContainer" parent="Bar" unique_id=1221483813]
 layout_mode = 2
 theme_override_constants/separation = 6
-
 
 [node name="Heights" type="Button" parent="Bar/Row" unique_id=1296594534]
 layout_mode = 2
 size_flags_vertical = 0
 focus_mode = 0
 theme_type_variation = &"Bookmark"
-theme_override_styles/normal = ExtResource("2_lttpb")
-theme_override_styles/pressed = ExtResource("3_7aqqm")
-theme_override_styles/hover = ExtResource("4_d4n5a")
-theme_override_styles/hover_pressed = ExtResource("5_jdg6e")
+theme_override_styles/normal = ExtResource("2_vrcp1")
+theme_override_styles/pressed = ExtResource("3_w8xa7")
+theme_override_styles/hover = ExtResource("4_urci7")
+theme_override_styles/hover_pressed = ExtResource("5_rlwht")
 toggle_mode = true
 text = "HEIGHTS"
-
 
 [node name="Manors" type="Button" parent="Bar/Row" unique_id=1969546531]
 layout_mode = 2
 size_flags_vertical = 0
 focus_mode = 0
 theme_type_variation = &"Bookmark"
-theme_override_styles/normal = ExtResource("2_lttpb")
-theme_override_styles/pressed = ExtResource("3_7aqqm")
-theme_override_styles/hover = ExtResource("4_d4n5a")
-theme_override_styles/hover_pressed = ExtResource("5_jdg6e")
+theme_override_styles/normal = ExtResource("2_vrcp1")
+theme_override_styles/pressed = ExtResource("3_w8xa7")
+theme_override_styles/hover = ExtResource("4_urci7")
+theme_override_styles/hover_pressed = ExtResource("5_rlwht")
 toggle_mode = true
 text = "MANORS"
-
 
 [node name="Gap" type="Control" parent="Bar/Row" unique_id=47448480]
 layout_mode = 2
 size_flags_horizontal = 3
-
 
 [node name="Rule" type="VSeparator" parent="Bar/Row" unique_id=1348900760]
 visible = false
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxLine_ahnsp")
 
-
 [node name="Gap2" type="Control" parent="Bar/Row" unique_id=1438149977]
 layout_mode = 2
 size_flags_horizontal = 3
-
 
 [node name="Families" type="Button" parent="Bar/Row" unique_id=2041910288]
 layout_mode = 2
 size_flags_vertical = 0
 focus_mode = 0
 theme_type_variation = &"Bookmark"
-theme_override_styles/normal = ExtResource("11_t0hhh")
-theme_override_styles/pressed = ExtResource("12_vejap")
-theme_override_styles/hover = ExtResource("13_xpix5")
-theme_override_styles/hover_pressed = ExtResource("14_5feev")
+theme_override_styles/normal = ExtResource("6_ds4n4")
+theme_override_styles/pressed = ExtResource("7_gus8n")
+theme_override_styles/hover = ExtResource("8_uq61d")
+theme_override_styles/hover_pressed = ExtResource("9_roat6")
 text = "FAMILIES"
-
 
 [node name="Laws" type="Button" parent="Bar/Row" unique_id=1987334369]
 layout_mode = 2
 size_flags_vertical = 0
 focus_mode = 0
 theme_type_variation = &"Bookmark"
-theme_override_styles/normal = ExtResource("11_t0hhh")
-theme_override_styles/pressed = ExtResource("12_vejap")
-theme_override_styles/hover = ExtResource("13_xpix5")
-theme_override_styles/hover_pressed = ExtResource("14_5feev")
+theme_override_styles/normal = ExtResource("6_ds4n4")
+theme_override_styles/pressed = ExtResource("7_gus8n")
+theme_override_styles/hover = ExtResource("8_uq61d")
+theme_override_styles/hover_pressed = ExtResource("9_roat6")
 text = "LAWS"
-
 
 [node name="Religion" type="Button" parent="Bar/Row" unique_id=1238922073]
 layout_mode = 2
 size_flags_vertical = 0
 focus_mode = 0
 theme_type_variation = &"Bookmark"
-theme_override_styles/normal = ExtResource("15_wwmwn")
-theme_override_styles/pressed = ExtResource("16_38222")
-theme_override_styles/hover = ExtResource("17_6y1ml")
-theme_override_styles/hover_pressed = ExtResource("18_0283x")
+theme_override_styles/normal = ExtResource("10_wmmex")
+theme_override_styles/pressed = ExtResource("11_o8v57")
+theme_override_styles/hover = ExtResource("12_knsv6")
+theme_override_styles/hover_pressed = ExtResource("13_c1bjh")
 text = "RELIGION"
-
 
 [node name="Missive" type="Button" parent="Bar/Row" unique_id=1141053688]
 layout_mode = 2
 size_flags_vertical = 0
 focus_mode = 0
 theme_type_variation = &"Bookmark"
-theme_override_styles/normal = ExtResource("15_wwmwn")
-theme_override_styles/pressed = ExtResource("16_38222")
-theme_override_styles/hover = ExtResource("17_6y1ml")
-theme_override_styles/hover_pressed = ExtResource("18_0283x")
+theme_override_styles/normal = ExtResource("10_wmmex")
+theme_override_styles/pressed = ExtResource("11_o8v57")
+theme_override_styles/hover = ExtResource("12_knsv6")
+theme_override_styles/hover_pressed = ExtResource("13_c1bjh")
 text = "MISSIVE"
 
 [node name="War Room" type="Button" parent="Bar/Row" unique_id=758746461]
@@ -146,21 +139,19 @@ layout_mode = 2
 size_flags_vertical = 0
 focus_mode = 0
 theme_type_variation = &"Bookmark"
-theme_override_styles/normal = ExtResource("7_dfk37")
-theme_override_styles/pressed = ExtResource("8_yrfqr")
-theme_override_styles/hover = ExtResource("9_lkry8")
-theme_override_styles/hover_pressed = ExtResource("10_0koqx")
+theme_override_styles/normal = ExtResource("14_innfo")
+theme_override_styles/pressed = ExtResource("15_kcq40")
+theme_override_styles/hover = ExtResource("16_43k2w")
+theme_override_styles/hover_pressed = ExtResource("17_dnwb0")
 text = "WAR ROOM"
-
 
 [node name="Ledger" type="Button" parent="Bar/Row" unique_id=1940816160]
 layout_mode = 2
 size_flags_vertical = 0
 focus_mode = 0
 theme_type_variation = &"Bookmark"
-theme_override_styles/normal = ExtResource("7_dfk37")
-theme_override_styles/pressed = ExtResource("8_yrfqr")
-theme_override_styles/hover = ExtResource("9_lkry8")
-theme_override_styles/hover_pressed = ExtResource("10_0koqx")
+theme_override_styles/normal = ExtResource("14_innfo")
+theme_override_styles/pressed = ExtResource("15_kcq40")
+theme_override_styles/hover = ExtResource("16_43k2w")
+theme_override_styles/hover_pressed = ExtResource("17_dnwb0")
 text = "LEDGER"
-

@@ -22,8 +22,8 @@ func _court() -> GameRoot:
 func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	var r: GameRoot = await _court()
 	var screen: CourtScreen = r.current_screen
-	assert_false(screen.military_panel().visible, "the column shows the realm to begin with")
-	assert_true(screen.dashboard().visible)
+	assert_false(screen.military_panel().visible, "nothing chosen: the column is hidden")
+	assert_false(screen.dashboard().visible)
 	var mine := Game.data.resolve_realm("player_realm")
 	var first: Dictionary = MapObjects.regiments_of(Game.data, mine, Game.state)[0]
 	var detail: MapDetailPanel = screen.find_child("DetailPanel", true, false)
@@ -37,9 +37,9 @@ func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	assert_true(panel.visible, "the host takes the left column")
 	assert_false(detail.visible, "in place of the card")
 	assert_false(screen.dashboard().visible, "and of the dashboard")
-	assert_lt(panel.get_global_rect().position.x,
-		screen.find_child("MapPanel", true, false).get_global_rect().position.x,
-		"the left column, not the right slot")
+	assert_lt(panel.get_global_rect().end.x,
+		(screen.find_child("MapPanel", true, false) as Control).get_global_rect().get_center().x,
+		"the left column (lying over the map), not the right slot")
 	var units: Array = Game.data.world_table("military", "unit_types").keys()
 	assert_eq(panel.arms_chart().rows.size(), units.size(), "one bar per arm")
 	for row in panel.arms_chart().rows:
@@ -53,7 +53,8 @@ func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	(panel.find_child("Close", true, false) as Button).pressed.emit()
 	await wait_process_frames(2)
 	assert_false(panel.visible)
-	assert_true(screen.dashboard().visible, "the dashboard has the column back")
+	assert_false(screen.dashboard().visible, "nothing chosen: the column is hidden again")
+	assert_false((screen.get_node("%LogPanel") as Control).visible)
 	assert_true(screen.map3d_view().military(), "and the regiments stay on the map")
 
 ## The regiments are on every screen's map, with no tab to light.

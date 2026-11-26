@@ -64,9 +64,10 @@ static func apply(top: float, left: Control, map: Control, right_panels: Array,
 		right_open: bool, right_width: float = RIGHT_WIDTH) -> void:
 	var bottom := bottom_inset()
 	var m := margin()
-	var g := gap()
 	var right_inset := m + (right_width + right_gap() if right_open else 0.0)
-	var middle_left := m + LEFT_WIDTH + g
+	# the map runs to the screen's margin: the facts column lies over it,
+	# shown only while something is chosen (owner 2026-11-26)
+	var middle_left := m
 	if left != null:
 		_place(left, Vector2(0, 0), Vector2(0, 1), m, top, m + LEFT_WIDTH, -bottom)
 	if map != null:
