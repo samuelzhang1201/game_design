@@ -117,10 +117,11 @@ variable as JSON):
   `scripts/matmaps.py`; the olive paint and bare cold steel were the other two shown). Grey smooth
   texels anywhere else are mail, never plate. The tunic mask lost the brim's green patches with it.
 
-A texture-only re-author installs without the pivot pipeline: export to a scratch ROOT, copy its
-three atlas files and the tunic mask in, then `python3 tools/units3d/infantry_arp/swap_images.py
-assets/3D/units/<ARM>/<ARM>.glb assets/3D/units/<ARM>` replaces the GLB's packed images and leaves
-every other byte (mesh, skin, clips, the appended pivot pair) as it was.
+A texture-only re-author needs no new pivot solve: export to a scratch ROOT, copy its three atlas
+files and the tunic mask in, and `pivot.bake(ROOT's <ARM>.glb, the fixture's canonical-samples.json,
+assets/3D/units/<ARM>/<ARM>.glb, 4.0)` re-appends the committed pair (every buffer view but the three
+images comes out as it was); then renew the arm's `glb_sha256` and `binary` in
+`tools/units3d/soldier_arp/test_pivot_mapping.py` (the export's SHA-256 and its binary chunk's length).
 
 The new clips' loop modes are the `.glb.import` settings (STANDBY / DEFEND loop). Then the pivot
 pair is regenerated (below) and appended to the GLB.
