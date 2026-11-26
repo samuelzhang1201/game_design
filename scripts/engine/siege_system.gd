@@ -752,9 +752,11 @@ static func _siege_day(repo: DataRepository, state: GameState, lead: String, id:
 	if progress >= 1000:
 		_fall(repo, state, lead, id, hosts, events)
 		return
-	# the blockade's day (spec §4.1): entries close, the stores move, and a
+	# the men's plan for today (spec §4, SiegeTactics), then the blockade's
+	# day (spec §4.1): entries close, the stores move, and a
 	# starving garrison may yield under the laws, handing the town over
 	var sid := id if crown else SiegeRecord.of_town(state, town)
+	SiegeTactics.day(repo, state, sid)
 	var blockade := SiegeBlockade.day(repo, state, sid)
 	if SiegeBlockade.yields(repo, state, sid) and not SiegeBlockade.hand_over(repo, state, sid).has("error"):
 		_fall(repo, state, lead, id, hosts, events, true)
