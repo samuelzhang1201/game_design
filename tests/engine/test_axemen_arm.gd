@@ -11,15 +11,17 @@ func before_each() -> void:
 
 
 func test_axe_base_is_its_matchup_mean() -> void:
-	# ((1300+1000)/2 + (1100+900)/2 + (900+700)/2 + (1200+900)/2 + (1000+1000)/2 + (1100+900)/2) / 6
-	# = (1150 + 1000 + 800 + 1050 + 1000 + 1000) / 6 = 1000
-	assert_eq(ArmySystem._arm_base(repo, "", "axemen", 0), 1000)
+	# ((1300+1000)/2 + (1100+900)/2 + (900+700)/2 + (1200+900)/2 + (1000+1000)/2 + (1100+900)/2
+	# + (1300+1100)/2) / 7
+	# = (1150 + 1000 + 800 + 1050 + 1000 + 1000 + 1200) / 7 = 7200 / 7 = 1028 (whole; the last term is its
+	# militia row, spec 2026-11-26-militia-arm-design)
+	assert_eq(ArmySystem._arm_base(repo, "", "axemen", 0), 1028)
 
 
 func test_infantry_base_counts_its_axe_row() -> void:
-	# (1000 + 950 + 1250 + 1000 + (1000+800)/2 + (900+900)/2) / 6 = 6000 / 6 = 1000
-	# (the last term is its heavy-infantry row, spec 2026-11-20-heavy-infantry-arm-design)
-	assert_eq(ArmySystem._arm_base(repo, "", "infantry", 0), 1000)
+	# (1000 + 950 + 1250 + 1000 + (1000+800)/2 + (900+900)/2 + (1200+1100)/2) / 7 = 7150 / 7 = 1021 (whole)
+	# (the last terms are its heavy-infantry row, spec 2026-11-20-heavy-infantry-arm-design, and its militia row)
+	assert_eq(ArmySystem._arm_base(repo, "", "infantry", 0), 1021)
 
 
 func test_axe_forest_and_jungle() -> void:

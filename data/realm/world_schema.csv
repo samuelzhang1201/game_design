@@ -39,6 +39,7 @@ political.diplomacy.*.stance,enum,,,Ally|Friendly|Neutral|Suspicion|Rival|Enemy|
 military.kingdoms.*.infantry,int,0,10000000,,1,500,,,Infantry,
 military.kingdoms.*.axemen,int,0,10000000,,1,500,,,Axemen,
 military.kingdoms.*.heavy_infantry,int,0,10000000,,1,500,,,Heavy infantry,
+military.kingdoms.*.militia,int,0,10000000,,1,500,,,Militia,
 military.kingdoms.*.archers,int,0,10000000,,1,500,,,Archers,
 military.kingdoms.*.cavalry,int,0,10000000,,1,300,,,Cavalry,
 military.kingdoms.*.artillery,int,0,10000000,,1,10,,,Artillery,

@@ -19,7 +19,7 @@ normal_texture = ExtResource("4_ll03n")
 metadata/_gltf_primary_texture_coord = 0
 
 [node name="militia2" unique_id=1033703745 instance=ExtResource("1_3djdr")]
-editor_description = "The town militiaman (kettle hat, tunic, short sword and round shield), one FIGURE of a raised town militia's piece (TownMilitia.FIGURE; Map3DFormation.figure_of). The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order. Its material is drawn two-sided (the skirt is open underneath); material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/screens/map3d/army_art.csv."
+editor_description = "The town militiaman (kettle hat, tunic, short sword and round shield), the militia arm's piece (data/army/game_arms.csv militia) and the FIGURE a raised town militia's unit wears whatever its arm (TownMilitia.FIGURE; Map3DFormation.figure_of). The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order. Its material is drawn two-sided (the skirt is open underneath); material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/screens/map3d/army_art.csv."
 
 [node name="militia" parent="mil_rig/Skeleton3D" parent_id_path=PackedInt32Array(840503844) index="0" unique_id=1314750794]
 surface_material_override/0 = SubResource("StandardMaterial3D_pdpqs")

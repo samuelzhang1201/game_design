@@ -1,8 +1,8 @@
-kingdom_code,infantry,archers,cavalry,artillery,fleet,axemen,heavy_infantry,regiments,strength,alert,expansionism
-irongate,24122,14732,9303,360,22,0,3600,26,66480,1.97,3.5
-corwyn,11777,9582,5902,213,10,0,3000,18,39219,0.82,1.4
-farhold,8358,6633,4052,139,10,0,2800,20,28063,0.3,2.9
-kelvarn,4262,4458,7205,75,7,0,2800,18,27180,0.55,3.2
-brackmoor,4303,2333,3293,71,0,0,1800,10,15874,0.24,1.2
-yorwald,4351,4501,1047,101,3,0,1800,12,14108,0.22,1.5
-valmoor,237,302,38,10,2,0,1650,5,2485,0.2,3.6
+kingdom_code,infantry,archers,cavalry,artillery,fleet,axemen,heavy_infantry,militia,regiments,strength,alert,expansionism
+irongate,24122,14732,9303,360,22,0,3600,0,26,66480,1.97,3.5
+corwyn,11777,9582,5902,213,10,0,3000,0,18,39219,0.82,1.4
+farhold,8358,6633,4052,139,10,0,2800,0,20,28063,0.3,2.9
+kelvarn,4262,4458,7205,75,7,0,2800,0,18,27180,0.55,3.2
+brackmoor,4303,2333,3293,71,0,0,1800,0,10,15874,0.24,1.2
+yorwald,4351,4501,1047,101,3,0,1800,0,12,14108,0.22,1.5
+valmoor,237,302,38,10,2,0,1650,0,5,2485,0.2,3.6

@@ -329,7 +329,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "9b17d104eff018a4000c161f885ccd4eb80919f5802e7b94d24a35dbcf4656f2",
+  "sha256": "5b56e2020f06f66e024a3767eaf59b5ea9a5be2e7fea627c4b6de26867e809b3",
   "uniform": 512
  },
  "config": {
@@ -410,8 +410,8 @@
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg.import": "c8dc15fa86145c123bff4e26fef8300d719dfc5d946d22be712cf4d478ce9067",
   "data/army/balance.csv": "d22c86e3f2a730b1fd05c2bc7616d2057a0ddbe06ead85eb42e4dd68b11c0db4",
-  "data/army/unit_footprints.csv": "81971028b03d63c2031c55f983f74df8d114414d13e461d61981ddce744aaf03",
-  "data/screens/map3d/army_art.csv": "6706ed176c90e4ecdd8877138fc21a45d077759b6a4743e001702629935a28b6",
+  "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
+  "data/screens/map3d/army_art.csv": "ee1a91005a647ee1fc6de18febc77afe9b0b7605d24ef3c5d7de4be7dd973939",
   "data/screens/map3d/balance.csv": "33dea7e472bfe0b9245734daaa8d631526fbb67eaf9f8eb20f819bfb26446f20",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "4245e17bf0ec85f220396a321db06d151827304f57b7d2be808115f7ff7c877b",
   "scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
@@ -427,11 +427,11 @@
    "MARCH"
   ],
   "contact_um": 28474,
-  "digest": "33268caf2e5e3ae46a39dc8d4e014778820cd6b204b6df80db6fe3d4c5a15047",
+  "digest": "a3a3df7ea2c648ed1e5b21a886a8f926ae0f4eb642546b0a3f02b3cc319290f0",
   "radius_m": 932,
   "turn_q": 400000
  },
- "payload_sha256": "33268caf2e5e3ae46a39dc8d4e014778820cd6b204b6df80db6fe3d4c5a15047",
+ "payload_sha256": "a3a3df7ea2c648ed1e5b21a886a8f926ae0f4eb642546b0a3f02b3cc319290f0",
  "report": {
   "bounds_um": {
    "contact": 28474,

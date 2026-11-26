@@ -12,23 +12,24 @@ func before_each() -> void:
 
 func test_heavy_base_is_its_matchup_mean() -> void:
 	# vs infantry (1100+1200)/2, archers (1000+1200)/2, cavalry (1100+1300)/2, artillery (1100+800)/2,
-	# axemen (1100+1000)/2, heavy (1000+1000)/2:
-	# (1150 + 1100 + 1200 + 950 + 1050 + 1000) / 6 = 6450 / 6 = 1075
-	assert_eq(ArmySystem._arm_base(repo, "", "heavy_infantry", 0), 1075)
+	# axemen (1100+1000)/2, heavy (1000+1000)/2, militia (1300+1300)/2:
+	# (1150 + 1100 + 1200 + 950 + 1050 + 1000 + 1300) / 7 = 7750 / 7 = 1107 (whole)
+	assert_eq(ArmySystem._arm_base(repo, "", "heavy_infantry", 0), 1107)
 
 
 func test_every_other_arm_counts_its_heavy_row() -> void:
-	# Each arm's row against heavy infantry joins its mean (ArmySystem._arm_base).
-	# infantry: (1000 + 950 + 1250 + 1000 + 900 + (900+900)/2) / 6 = 6000 / 6
-	assert_eq(ArmySystem._arm_base(repo, "", "infantry", 0), 1000)
-	# archers: (1000 + 1000 + 750 + 950 + 1000 + (900+800)/2) / 6 = 5550 / 6
-	assert_eq(ArmySystem._arm_base(repo, "", "archers", 0), 925)
-	# cavalry: (850 + 1250 + 1000 + 1200 + 1150 + (800+800)/2) / 6 = 6250 / 6 = 1041 (whole)
-	assert_eq(ArmySystem._arm_base(repo, "", "cavalry", 0), 1041)
-	# artillery: (900 + 850 + 700 + 1000 + 900 + (1200+700)/2) / 6 = 5300 / 6 = 883 (whole)
-	assert_eq(ArmySystem._arm_base(repo, "", "artillery", 0), 883)
-	# axemen: (1150 + 1000 + 800 + 1050 + 1000 + (1100+900)/2) / 6 = 6000 / 6
-	assert_eq(ArmySystem._arm_base(repo, "", "axemen", 0), 1000)
+	# Each arm's row against heavy infantry joins its mean (ArmySystem._arm_base); the last term of each
+	# sum is its militia row (spec 2026-11-26-militia-arm-design).
+	# infantry: (1000 + 950 + 1250 + 1000 + 900 + (900+900)/2 + 1150) / 7 = 7150 / 7 = 1021 (whole)
+	assert_eq(ArmySystem._arm_base(repo, "", "infantry", 0), 1021)
+	# archers: (1000 + 1000 + 750 + 950 + 1000 + (900+800)/2 + 1100) / 7 = 6650 / 7
+	assert_eq(ArmySystem._arm_base(repo, "", "archers", 0), 950)
+	# cavalry: (850 + 1250 + 1000 + 1200 + 1150 + (800+800)/2 + 1200) / 7 = 7450 / 7 = 1064 (whole)
+	assert_eq(ArmySystem._arm_base(repo, "", "cavalry", 0), 1064)
+	# artillery: (900 + 850 + 700 + 1000 + 900 + (1200+700)/2 + 900) / 7 = 6200 / 7 = 885 (whole)
+	assert_eq(ArmySystem._arm_base(repo, "", "artillery", 0), 885)
+	# axemen: (1150 + 1000 + 800 + 1050 + 1000 + (1100+900)/2 + 1200) / 7 = 7200 / 7 = 1028 (whole)
+	assert_eq(ArmySystem._arm_base(repo, "", "axemen", 0), 1028)
 
 
 func test_heavy_is_poor_in_rough_ground() -> void:
