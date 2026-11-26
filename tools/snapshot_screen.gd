@@ -33,7 +33,9 @@ const SCENES := {
 ## --battle-case militia_fight: the same, then the days run until the siege's
 ## assault is fought, so the militia stands in its battle (--speed plays it on).
 ## --battle-case field: the same contact, the notice then acknowledged through
-## Game, so the battle stands with no window over it (the WAR ROOM's task block).
+## Game, so the battle stands with no window over it (the WAR ROOM's task block);
+## every later contact notice too (a field battle's columns meet days on), each
+## starting the clock again under --battle-arm.
 ## --battle-arm ARM stages a FIELD battle of that arm (code suffix, e.g. foot): the
 ## first own unit with open dry ground 3 km off its camp leaves it for there, the
 ## first such foe 1 km beyond; with --zoom3d and no --at3d the 3D map frames it.
@@ -1000,7 +1002,7 @@ func _process(_delta: float) -> void:
 		_battle_frame = false  # the world is loaded: frame the staged battle
 		frame_camera(_root.current_screen.map3d_view())
 		print("battle framed at frame %d: %s" % [_frames, _at3d])
-	if _battle_case == "field" and _frames == 24 and not Game.pending_battle_decision().is_empty():
+	if _battle_case == "field" and _frames >= 24 and not Game.pending_battle_decision().is_empty():
 		Game.resolve_battle_decision(String(Game.pending_battle_decision()["token"]), "continue")
 		if _battle_arm != "" and _speed >= 0:
 			_start_clock()  # the encounter stopped the clock: play the battle on
