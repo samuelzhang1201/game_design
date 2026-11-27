@@ -217,6 +217,21 @@ func try_execute(req: ActionRequest) -> Dictionary:
 	return {"ok": true, "error": "", "outcome": outcome}
 
 
+## Armies as selection groups (spec 2026-11-27-army-groups-design): the crown's
+## bookkeeping of which regiments it commands together — not an order (no cost,
+## no courier). Game is their only writer. {ok, id} or {ok: false, error}.
+func form_army_group(codes: Array) -> Dictionary:
+	var out := ArmyGroups.form(data, state, codes, "formed by the crown")
+	if bool(out["ok"]):
+		SignalHub.state_changed.emit()
+	return out
+
+
+func disband_army_group(id: String) -> void:
+	if ArmyGroups.disband(data, state, id, "disbanded by the crown"):
+		SignalHub.state_changed.emit()
+
+
 ## The WAR ROOM's drafts (spec 2026-10-02-war-room-v2 §3): pencilled, not
 ## sent. Game is their only writer.
 func plant_draft(code: String, order: String, dest_px: Vector2, waypoints: Array = [], carry := -1,

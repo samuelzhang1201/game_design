@@ -85,10 +85,10 @@ func select(picked: Dictionary) -> void:
 			_show_ring("")
 			_set_province("")
 			army = code
-			armies = [code]
+			armies = group_with(code)
 			_refresh_hud()
 			object_selected.emit({"title": MapObjects.label_of(ctx.repo, picked),
-				"obj": {"kind": "army", "code": code}})
+				"obj": {"kind": "army", "code": code, "codes": armies.duplicate()}})
 		"manor":
 			var cell := int(picked["cell"])
 			army = ""
@@ -155,6 +155,25 @@ func select_box(r: Rect2) -> void:
 	_select_armies(codes)
 
 
+## A plain click on a member of an army selects the whole army, the clicked
+## one first (spec 2026-11-27-army-groups-design); else the unit alone.
+func group_with(code: String) -> Array:
+	var state := ctx.state()
+	var id := ArmyGroups.group_of(state, code) if state != null else ""
+	if id == "":
+		return [code]
+	var codes: Array = [code]
+	for c: String in state.army_groups[id]["members"]:
+		if c != code:
+			codes.append(c)
+	return codes
+
+
+## The selection becomes `codes` (an army's SELECT on its card).
+func select_armies(codes: Array) -> void:
+	_select_armies(codes.filter(func(c: String) -> bool: return _mine(c)))
+
+
 func _mine(code: String) -> bool:
 	return String(ArmySystem.regiment(ctx.repo, code, ctx.state()).get("kingdom_code", "")) \
 		== ctx.repo.resolve_realm("player_realm")
@@ -173,7 +192,7 @@ func _select_armies(codes: Array) -> void:
 	_refresh_hud()
 	if army != "":
 		object_selected.emit({"title": MapObjects.label_of(ctx.repo, {"kind": "army", "code": army}),
-			"obj": {"kind": "army", "code": army}})
+			"obj": {"kind": "army", "code": army, "codes": armies.duplicate()}})
 	elif had:
 		object_selected.emit({})
 

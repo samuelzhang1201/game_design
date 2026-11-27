@@ -42,6 +42,7 @@ army,army_clearance
 army,unit_footprints
 army,unit_locomotion
 army,army_carry_loads
+army,army_group_names
 army,army_formations
 army,army_ground_speed
 army,army_height_supply

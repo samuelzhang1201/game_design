@@ -20,6 +20,8 @@ signal closed
 signal host_requested
 ## A row of a LEDGER instance list was chosen (show_list).
 signal list_row_chosen(id: String)
+## An army's SELECT ARMY (spec 2026-11-27-army-groups-design): the map selects these units.
+signal armies_requested(codes: Array)
 
 ## Sized for the left column's content width (ScreenLayout.LEFT_WIDTH less
 ## the column panel's margins).
@@ -86,6 +88,10 @@ var _ask: Button
 var _close: Button
 var _ask_text := ""
 var _shown_province := ""
+## The shown regiment's map entry and the units selected with it (the army
+## block's FORM ARMY reads them; a group change draws the card again).
+var _army_entry: Dictionary = {}
+var _army_codes: Array = []
 ## Whether a card is open (distinct from `visible`, which the left column
 ## sets: a hovered country never closes the card, it only covers it).
 var _open := false
@@ -206,6 +212,8 @@ func show_entry(entry: Dictionary) -> void:
 		show_manor(int(obj.get("cell", -1)))
 		return
 	if String(obj.get("kind", "")) == "army":
+		_army_entry = entry
+		_army_codes = obj.get("codes", [String(obj["code"])])
 		show_card(MapObjects.army_card(Game.data, String(obj["code"]), Game.state))
 		return
 	if String(obj.get("kind", "")) == "courier":
@@ -329,6 +337,7 @@ func show_card(card: Dictionary) -> void:
 		host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		host.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		host.pressed.connect(func() -> void: host_requested.emit())
+		_fill_army_group(card)
 		_actions.add_child(host)
 	elif known == "courier":
 		pass  # a courier's card is his painting and his fields; no land sections
@@ -476,6 +485,59 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 	for row in _fields.get_children():
 		if row.has_meta("field_label"):
 			(row.get_meta("field_label") as Label).custom_minimum_size.x = widest
+
+
+## The regiment's army, a selection group (spec 2026-11-27-army-groups-design):
+## its name over its men, its slowest march (information only) and its
+## members, with SELECT ARMY and DISBAND; FORM ARMY while 2+ of the crown's
+## land units are selected that are not already exactly one army.
+func _fill_army_group(card: Dictionary) -> void:
+	var group: Dictionary = card.get("group", {})
+	if not group.is_empty():
+		var head := _section_head({"section": "army_group", "label": String(group["name"])})
+		head.text += " (%d)" % (group["codes"] as Array).size()
+		_fields.add_child(_field_row("Men", _line(UiPalette.format_int(int(group["men"])))))
+		_fields.add_child(_field_row("Slowest", _line("%.1f km/day" % float(group["slowest_km"]))))
+		for n in (group["labels"] as Array).size():
+			var l := _line(String(group["labels"][n]))
+			l.name = "Member_%d" % n
+			l.autowrap_mode = TextServer.AUTOWRAP_OFF
+			l.clip_text = true
+			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			_fields.add_child(l)
+		# its two commands side by side under it, not below the regiment's stats
+		var row := HBoxContainer.new()
+		row.name = "ArmyCommands"
+		_fields.add_child(row)
+		var codes: Array = group["codes"]
+		_army_button("SelectArmy", "Select", func() -> void: armies_requested.emit(codes), row)
+		var id := String(group["id"])
+		_army_button("DisbandArmy", "Disband", func() -> void:
+			Game.disband_army_group(id)
+			show_entry(_army_entry), row)
+	var mine := _army_codes.filter(func(c: String) -> bool: return ArmyGroups.eligible(Game.data, Game.state, c))
+	var same := not group.is_empty() and mine.size() == (group["codes"] as Array).size() \
+		and mine.all(func(c: String) -> bool: return (group["codes"] as Array).has(c))
+	if mine.size() >= int(Game.data.bal("army_group_min_members")) and not same:
+		_army_button("FormArmy", "Form army — %d regiments" % mine.size(), func() -> void:
+			var out := Game.form_army_group(mine)
+			if not bool(out["ok"]):
+				_hint.text = String(out["error"])
+				_hint.visible = true
+				return
+			show_entry(_army_entry), _fields)   # at the top, by the selection it acts on (critic 2026-11-27)
+
+
+func _army_button(node_name: String, text: String, on_press: Callable, into: Control = null) -> void:
+	var b := Button.new()
+	b.name = node_name
+	b.text = UiPalette.command_label(text)
+	b.focus_mode = Control.FOCUS_NONE
+	b.theme_type_variation = &"CardCommandSmall"
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	b.pressed.connect(on_press)
+	(into if into != null else _actions).add_child(b)
 
 
 func _section_head(sec: Dictionary) -> Label:
