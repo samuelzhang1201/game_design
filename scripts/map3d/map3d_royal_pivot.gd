@@ -198,8 +198,8 @@ static func rest_of(skeleton: Skeleton3D, skin: Skin, landmarks: Dictionary) -> 
 		var parent: int = skeleton.get_bone_parent(i)
 		var parent_name: String = "" if parent < 0 else skeleton.get_bone_name(parent)
 		var mark: Dictionary = landmarks[name]
-		var bind: Transform3D = binds[name] if parent < 0 else binds[parent_name].affine_inverse() * binds[name]
-		bones.append({"name": name, "parent": parent_name, "bind": bind, "bind_global": binds[name],
+		var bind_xf: Transform3D = binds[name] if parent < 0 else binds[parent_name].affine_inverse() * binds[name]
+		bones.append({"name": name, "parent": parent_name, "bind": bind_xf, "bind_global": binds[name],
 			"head": mark.head, "tail": mark.tail})
 	var bind_locals: Dictionary = {}
 	for bone: Dictionary in bones:
@@ -242,6 +242,7 @@ static func patches(mesh: MeshInstance3D, profile: Dictionary) -> Dictionary:
 			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 			var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
 			var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+			@warning_ignore("integer_division")
 			var width: int = bones.size() / vertices.size()
 			for v: int in vertices.size():
 				var share: float = 0.0
@@ -250,11 +251,11 @@ static func patches(mesh: MeshInstance3D, profile: Dictionary) -> Dictionary:
 					var w: float = weights[v * width + k]
 					if w == 0.0:
 						continue
-					var bind: int = bones[v * width + k]
-					share += w if names[bind] == hoof else 0.0
-					row.bones.append(names[bind])
+					var bind_xf: int = bones[v * width + k]
+					share += w if names[bind_xf] == hoof else 0.0
+					row.bones.append(names[bind_xf])
 					row.weights.append(w)
-					row.binds.append(binds[bind])
+					row.binds.append(binds[bind_xf])
 				if share > float(profile.patch_share):
 					rows.append(row)
 		var low: float = INF
@@ -278,16 +279,16 @@ static func lowest(globals: Dictionary, patch: Array) -> float:
 
 ## The stand with every hoof lowered (or raised) by IK until its patch touches the seated plane;
 ## {} when a hoof has no patch or the IK fails.
-static func seat(rest: Dictionary, stand: Dictionary, patches: Dictionary) -> Dictionary:
+static func seat(rest: Dictionary, stand: Dictionary, patch_map: Dictionary) -> Dictionary:
 	var locals: Dictionary = stand.duplicate()
 	for hoof: String in HOOVES:
 		var chain: Dictionary = rest.chains[hoof]
 		var parent: String = _Math._bone(rest.bones, chain.bones[0]).parent
-		if patches[hoof].is_empty():
+		if patch_map[hoof].is_empty():
 			return {}
 		for i: int in 3:  # the hoof moves rigidly; the cannon-weighted rim needs a second look
 			var globals: Dictionary = _Math._fk(rest.bones, locals)
-			var drop: float = lowest(globals, patches[hoof])
+			var drop: float = lowest(globals, patch_map[hoof])
 			if absf(drop) < 1e-6:
 				break
 			var target: Transform3D = Transform3D(Basis.IDENTITY, Vector3(0.0, -drop, 0.0)) * globals[hoof]

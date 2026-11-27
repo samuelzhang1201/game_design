@@ -175,9 +175,9 @@ static func figure_at(figure_rects: Dictionary, pos: Vector2) -> String:
 
 
 ## figure_at over the battle pieces among `rects` (near mode: the units layer's own boxes).
-static func _soldier_at(view: Map3DView, rects: Dictionary, pos: Vector2) -> String:
-	var units := view.component("units") as Map3DLayerUnits
-	if units == null or view.unit_symbol_mode:
+static func _soldier_at(map_view: Map3DView, rects: Dictionary, pos: Vector2) -> String:
+	var units := map_view.component("units") as Map3DLayerUnits
+	if units == null or map_view.unit_symbol_mode:
 		return ""
 	var figures: Dictionary = {}
 	for code: String in rects:

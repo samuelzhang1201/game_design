@@ -35,6 +35,7 @@ static func home_slots(repo: DataRepository, state: GameState, unit: String) -> 
 	for i: int in int(config.files) * int(config.ranks):
 		@warning_ignore("integer_division")
 		var rank: int = i / int(config.files)
+		@warning_ignore("integer_division")
 		out.append(Vector2i((2 * (i % int(config.files)) - int(config.files) + 1) * int(config.pitch_m) / 2,
 			(2 * rank - int(config.ranks) + 1) * int(config.pitch_m) / 2))
 	return out
@@ -304,20 +305,20 @@ static func transfer_candidate(source: GameState, unit: String, from_battle_id: 
 			return _failure("Incompatible transfer group sizes")
 		group_size = int(battle.group_size_men)
 	for code: String in index.codes:
-		var entry := _entry(source, code)
-		if entry.has("body_reconciliation"): return _failure("Pending reconciliation cannot transfer")
+		var body_entry := _entry(source, code)
+		if body_entry.has("body_reconciliation"): return _failure("Pending reconciliation cannot transfer")
 		if _naval(source, code): continue
 		var battle: Dictionary = index.owners.get(code, {})
 		if not _fit_valid(source, code, group_size * 10): return _failure("Invalid transfer fit personnel")
-		if not _counter_ok(entry, true): return _failure("Invalid transfer slot counter: " + code)
-		var saved: Variant = entry.get("body_groups") if battle.is_empty() else battle.get("groups", {}).get(code)
+		if not _counter_ok(body_entry, true): return _failure("Invalid transfer slot counter: " + code)
+		var saved: Variant = body_entry.get("body_groups") if battle.is_empty() else battle.get("groups", {}).get(code)
 		if not saved is Array: return _failure("Missing transfer bodies: " + code)
 		var slots := {}
 		var homes := {}
 		var total := 0
 		for row: Variant in saved:
 			if not row is Dictionary or not _row_error(row, 0, true).is_empty(): return _failure("Malformed transfer rows")
-			if slots.has(row.slot) or homes.has(row.home_slot) or int(row.slot) >= int(entry.group_next_slot):
+			if slots.has(row.slot) or homes.has(row.home_slot) or int(row.slot) >= int(body_entry.group_next_slot):
 				return _failure("Duplicate or reused transfer identities")
 			slots[row.slot] = true
 			homes[row.home_slot] = true
@@ -625,8 +626,8 @@ static func _battle_raw_error(source: GameState) -> String:
 		if not error.is_empty(): return error
 	if tx.has("body_battle"):
 		var control: Dictionary = tx.body_battle
-		var outer: Dictionary = source.military_migration.get("body_battle", {})
-		if tx.day != source.day or int(control.abs_day) != source.absolute_day() or int(control.sequence) != (0 if outer.is_empty() else int(outer.sequence) + 1):
+		var outer_row: Dictionary = source.military_migration.get("body_battle", {})
+		if tx.day != source.day or int(control.abs_day) != source.absolute_day() or int(control.sequence) != (0 if outer_row.is_empty() else int(outer_row.sequence) + 1):
 			return "Battle day disagrees with receipt/calendar"
 		for code: String in control.processed_units:
 			if _entry(source, code).is_empty() or _naval(source, code): return "Unknown processed battle unit"

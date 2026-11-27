@@ -50,8 +50,8 @@ static func sample(packet: Dictionary, op: Dictionary, u: Variant, side: String,
 		var a: float = float(op.a[axis])
 		var delta: float = float(int(op.b[axis])-int(op.a[axis]))
 		coordinates.append(a if u == 0.0 else (float(op.b[axis]) if u == 1.0 else a+delta*float(u)))
-		var position: Array = [coordinates[axis],coordinates[axis]] if u == 0.0 or u == 1.0 else Bounds._interval([a,a],Bounds._interval([delta,delta],[float(u),float(u)],"*",64),"+",64)
-		origin_box.append(Bounds._interval([float(p.origin[axis]),float(p.origin[axis])],Bounds._interval(position,alpha,"*",64),"+",64))
+		var pos_interval: Array = [coordinates[axis],coordinates[axis]] if u == 0.0 or u == 1.0 else Bounds._interval([a,a],Bounds._interval([delta,delta],[float(u),float(u)],"*",64),"+",64)
+		origin_box.append(Bounds._interval([float(p.origin[axis]),float(p.origin[axis])],Bounds._interval(pos_interval,alpha,"*",64),"+",64))
 		velocity_box.append(Bounds._interval(Bounds._interval([delta,delta],alpha,"*",64),ds,"/",64))
 		velocity.append(delta*float(p.alpha)/d)
 	var heading: float = float(op.yaw0_udeg)+float(op.turn_udeg)*float(u)
@@ -231,8 +231,8 @@ static func _branch(t: Dictionary, q: Vector2, v: Vector2, a: Vector2, side: int
 	var pixel := Bounds._pixel(t,index)
 	if not pixel.ok: return pixel
 	if (int(pixel.control)&4) != 0: return Bounds._reject("terrain_hole",{"fallback_sea":t.sea,"cell":index})
-	var snapped := Vector2(floor(q.x/step+.5)*step,floor(q.y/step+.5)*step)
-	var delta: Vector2 = q-snapped
+	var snapped_q := Vector2(floor(q.x/step+.5)*step,floor(q.y/step+.5)*step)
+	var delta: Vector2 = q-snapped_q
 	var radius: float = float(delta.x)*delta.x+float(delta.y)*delta.y
 	var shortcut: bool = radius < Bounds.SHORTCUT_SQUARED
 	if radius == Bounds.SHORTCUT_SQUARED and side != 0:
@@ -306,10 +306,10 @@ static func _valid(packet: Dictionary, identity: String) -> bool:
 
 
 static func _digest(value: Variant) -> String:
-	var hash := HashingContext.new()
-	hash.start(HashingContext.HASH_SHA256)
-	hash.update(var_to_bytes(_canonical(value)))
-	return hash.finish().hex_encode()
+	var hasher := HashingContext.new()
+	hasher.start(HashingContext.HASH_SHA256)
+	hasher.update(var_to_bytes(_canonical(value)))
+	return hasher.finish().hex_encode()
 
 
 static func _canonical(value: Variant) -> Variant:

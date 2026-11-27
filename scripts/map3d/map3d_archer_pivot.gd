@@ -33,13 +33,13 @@ static func sample(rest: Variant, authored_pose: Variant, operation: Variant, co
 		return _fail("malformed: expected dictionaries")
 	if not _dict(rest.get("locals")) or not _dict(rest.get("parents")) or not _dict(rest.get("legs")):
 		return _fail("rest: missing locals, parents or legs")
-	var reference: Dictionary = _globals(rest.locals, rest.parents)
+	var ref_pose: Dictionary = _globals(rest.locals, rest.parents)
 	var source: Dictionary = _globals(authored_pose, rest.parents)
-	if reference.is_empty() or source.is_empty():
+	if ref_pose.is_empty() or source.is_empty():
 		return _fail("pose: malformed transforms, missing parent or parent cycle")
 	if not _topology(rest.parents) or not _legs(rest.legs):
 		return _fail("rest: invalid flattened topology or joint/contact definitions")
-	if not _geometry(reference, reference):
+	if not _geometry(ref_pose, ref_pose):
 		return _fail("rest: invalid anatomical spans or split placement")
 	for field: String in ["yaw_rad", "turn_rad", "duration_s", "phase", "march_entry_phase", "march_exit_phase"]:
 		if not _float(operation.get(field)):
@@ -67,7 +67,7 @@ static func sample(rest: Variant, authored_pose: Variant, operation: Variant, co
 			var target: Dictionary = _target(contacts[side].track, float(i))
 			if target.is_empty() or not _same(target.sole, world * endpoints[i]["foot." + side] * rest.legs[side].sole_in_foot) or not _same(target.toe, world * endpoints[i]["toes_01." + side] * rest.legs[side].toe_in_toes):
 				return _fail("transition: raw MARCH foot/toe frame disagrees with contact endpoint")
-		var endpoint: Dictionary = _solve(rest, reference, endpoints[i], expected, operation, contacts, float(i))
+		var endpoint: Dictionary = _solve(rest, ref_pose, endpoints[i], expected, operation, contacts, float(i))
 		if not endpoint.ok:
 			return _fail("transition: " + str(endpoint.diagnostics[0]))
 		if operation.phase == float(i):
@@ -75,7 +75,7 @@ static func sample(rest: Variant, authored_pose: Variant, operation: Variant, co
 				if not _same(authored_pose[name], expected[name]):
 					return _fail("transition: sampled raw reference disagrees with MARCH endpoint " + name)
 
-	return _solve(rest, reference, source, authored_pose, operation, contacts, operation.phase)
+	return _solve(rest, ref_pose, source, authored_pose, operation, contacts, operation.phase)
 
 
 static func _fail(reason: String) -> Dictionary:
@@ -277,7 +277,7 @@ static func _frame(direction: Vector3, normal: Vector3) -> Basis:
 	return Basis(x, y, x.cross(y))
 
 
-static func _solve(rest: Dictionary, reference: Dictionary, source: Dictionary, authored: Dictionary, operation: Dictionary, contacts: Dictionary, phase: float) -> Dictionary:
+static func _solve(rest: Dictionary, ref_pose: Dictionary, source: Dictionary, authored: Dictionary, operation: Dictionary, contacts: Dictionary, phase: float) -> Dictionary:
 	var solved: Dictionary = source.duplicate(true)
 	var yaw: float = operation.yaw_rad - operation.turn_rad * phase
 	if not is_finite(yaw):
@@ -295,8 +295,8 @@ static func _solve(rest: Dictionary, reference: Dictionary, source: Dictionary, 
 		var hip: Vector3 = source["thigh_twist." + side].origin
 		var old_knee: Vector3 = source["leg_stretch." + side].origin
 		var old_ankle: Vector3 = source["foot." + side].origin
-		var upper: float = reference["thigh_twist." + side].origin.distance_to(reference["leg_stretch." + side].origin)
-		var lower: float = reference["leg_stretch." + side].origin.distance_to(reference["foot." + side].origin)
+		var upper: float = ref_pose["thigh_twist." + side].origin.distance_to(ref_pose["leg_stretch." + side].origin)
+		var lower: float = ref_pose["leg_stretch." + side].origin.distance_to(ref_pose["foot." + side].origin)
 		var delta: Vector3 = foot.origin - hip
 		var distance: float = delta.length()
 		if not is_finite(distance) or distance <= EPS or distance > upper + lower or distance < absf(upper - lower):
@@ -319,8 +319,8 @@ static func _solve(rest: Dictionary, reference: Dictionary, source: Dictionary, 
 		var old_lower: Vector3 = old_ankle - old_knee
 		if not old_upper.is_finite() or not old_lower.is_finite() or not is_finite(old_upper.length()) or not is_finite(old_lower.length()) or old_upper.length() <= EPS or old_lower.length() <= EPS:
 			return _fail("pose: undefined raw anatomical direction " + side)
-		var rest_normal: Vector3 = (reference["leg_stretch." + side].origin - reference["thigh_twist." + side].origin).cross(reference["foot." + side].origin - reference["leg_stretch." + side].origin)
-		var body_rotation: Basis = source["root.x"].basis.orthonormalized() * reference["root.x"].basis.orthonormalized().transposed()
+		var rest_normal: Vector3 = (ref_pose["leg_stretch." + side].origin - ref_pose["thigh_twist." + side].origin).cross(ref_pose["foot." + side].origin - ref_pose["leg_stretch." + side].origin)
+		var body_rotation: Basis = source["root.x"].basis.orthonormalized() * ref_pose["root.x"].basis.orthonormalized().transposed()
 		var old_normal: Vector3 = body_rotation * rest_normal
 		if not old_normal.is_finite() or not is_finite(old_normal.length_squared()) or old_normal.length() <= EPS * EPS:
 			return _fail("knee_plane: undefined physical rest reference " + side)
@@ -336,16 +336,16 @@ static func _solve(rest: Dictionary, reference: Dictionary, source: Dictionary, 
 		var lower_rotation: Basis = to_lower * from_lower.transposed()
 		for part: String in ["thigh_twist", "thigh_stretch"]:
 			var old: Transform3D = source[part + "." + side]
-			var fraction: float = 0.0 if part == "thigh_twist" else reference["thigh_twist." + side].origin.distance_to(reference["thigh_stretch." + side].origin) / upper
+			var fraction: float = 0.0 if part == "thigh_twist" else ref_pose["thigh_twist." + side].origin.distance_to(ref_pose["thigh_stretch." + side].origin) / upper
 			solved[part + "." + side] = Transform3D(upper_rotation * old.basis, hip.lerp(knee, fraction))
 		for part: String in ["leg_stretch", "leg_twist"]:
 			var old: Transform3D = source[part + "." + side]
-			var fraction: float = 0.0 if part == "leg_stretch" else reference["leg_stretch." + side].origin.distance_to(reference["leg_twist." + side].origin) / lower
+			var fraction: float = 0.0 if part == "leg_stretch" else ref_pose["leg_stretch." + side].origin.distance_to(ref_pose["leg_twist." + side].origin) / lower
 			solved[part + "." + side] = Transform3D(lower_rotation * old.basis, knee.lerp(foot.origin, fraction))
 
 		solved["foot." + side] = foot
 		solved["toes_01." + side] = toe
-	if not _geometry(solved, reference):
+	if not _geometry(solved, ref_pose):
 		return _fail("contact: incompatible foot/toe or split geometry")
 	var locals: Dictionary = authored.duplicate(true)
 	var rebuilt: Dictionary = {}
@@ -384,7 +384,7 @@ static func _solve(rest: Dictionary, reference: Dictionary, source: Dictionary, 
 			advanced = true
 		if not advanced:
 			return _fail("pose: inconsistent reconstructed parents")
-	if not _geometry(rebuilt, reference):
+	if not _geometry(rebuilt, ref_pose):
 		return _fail("pose: reconstructed physical geometry disagrees with rest")
 	return {"ok": true, "locals": locals, "diagnostics": []}
 
@@ -406,14 +406,14 @@ static func measure_boundary(rest: Variant, raw: Variant, candidate: Variant, me
 		return _fail("boundary: malformed model/ground frame")
 	if not ground.origin.is_finite() or not ground.normal.is_finite() or absf(ground.normal.length() - 1.0) > EPS:
 		return _fail("boundary: ground normal must be unit length")
-	var reference: Dictionary = _globals(rest.locals, rest.parents)
+	var ref_pose: Dictionary = _globals(rest.locals, rest.parents)
 	var poses: Array[Dictionary] = [_globals(raw, rest.parents), _globals(candidate, rest.parents)]
-	if reference.is_empty() or poses[0].is_empty() or poses[1].is_empty() or rest.parents.has(""):
+	if ref_pose.is_empty() or poses[0].is_empty() or poses[1].is_empty() or rest.parents.has(""):
 		return _fail("boundary: invalid complete pose or parent graph")
 	var out: Dictionary = {"ok": true, "physical_error_status": "unknown", "diagnostics": ["finite samples only; no contact or full-domain certificate"],
 		"body_displacement_m": 0.0, "sole_displacement_m": 0.0, "sole_normal_displacement_m": 0.0, "sole_tangent_displacement_m": 0.0,
 		"meshes": {}, "bones": {}, "segments": []}
-	var skeleton: Dictionary = Map3DArcherBoundarySkeleton.measure(rest, reference, poses, raw, candidate, model_from_native, EPS)
+	var skeleton: Dictionary = Map3DArcherBoundarySkeleton.measure(rest, ref_pose, poses, raw, candidate, model_from_native, EPS)
 	if not skeleton.ok:
 		return skeleton
 	out.bones = skeleton.bones
@@ -431,7 +431,7 @@ static func measure_boundary(rest: Variant, raw: Variant, candidate: Variant, me
 		var bind_names: Dictionary = {}
 		var transforms: Array = [[], []]
 		for bind: Variant in mesh.binds:
-			if not _dict(bind) or not reference.has(bind.get("bone")) or bind_names.has(bind.bone) or not _transform(bind.get("pose")):
+			if not _dict(bind) or not ref_pose.has(bind.get("bone")) or bind_names.has(bind.bone) or not _transform(bind.get("pose")):
 				return _fail("boundary: invalid named Skin bind")
 			bind_names[bind.bone] = true
 			for i: int in range(2):

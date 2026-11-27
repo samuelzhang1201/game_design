@@ -148,9 +148,9 @@ static func coordinate(t: Variant, n: Variant, length: Variant, day: Variant, su
 		return _reject("frozen_time_or_length")
 	if not _natural(n) or n < 1 or not _natural(day) or not _natural(substep) or substep >= n or not _natural(time_q, Q) or not _natural(h):
 		return _reject("cursor_or_seed_range")
-	var tr: Array[Natural] = _binary64(float(t))
+	var t_bits: Array[Natural] = _binary64(float(t))
 	var lr: Array[Natural] = _binary64(float(length))
-	var rate: Array[Natural] = _ratio(tr[0].multiply(lr[1]), tr[1].multiply(lr[0]).multiply(Natural.of(int(n))))
+	var rate: Array[Natural] = _ratio(t_bits[0].multiply(lr[1]), t_bits[1].multiply(lr[0]).multiply(Natural.of(int(n))))
 	var sq: Natural = Natural.of(int(n)).multiply(Natural.of(int(day))).add(Natural.of(int(substep))).multiply(Natural.of(Q)).add(Natural.of(int(time_q)))
 	var denominator: Natural = rate[1].multiply(Natural.of(Q)).shift(53)
 	var numerator: Natural = sq.multiply(rate[0]).shift(53).add(rate[1].multiply(Natural.of(Q)).multiply(Natural.of(int(h))))

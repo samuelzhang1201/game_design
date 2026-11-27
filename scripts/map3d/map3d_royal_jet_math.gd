@@ -161,9 +161,9 @@ static func _trig_point(x: float, cosine: bool) -> Array[float]:
 	var sum: Array[float] = term.duplicate()
 	var square: Array[float] = [_down(x * x), _up(x * x)]
 	for k: int in range(1, 11):
-		var denominator: float = float((2 * k - 1) * (2 * k) if cosine else (2 * k) * (2 * k + 1))
+		var term_den: float = float((2 * k - 1) * (2 * k) if cosine else (2 * k) * (2 * k + 1))
 		term = _product(term[0], term[1], -square[1], -square[0])
-		term = [_down(term[0] / denominator), _up(term[1] / denominator)]
+		term = [_down(term[0] / term_den), _up(term[1] / term_den)]
 		sum = [_down(sum[0] + term[0]), _up(sum[1] + term[1])]
 	# The next term bounds the entire alternating tail, with outward arithmetic.
 	var denominator: float = 22.0 * 21.0 if cosine else 22.0 * 23.0

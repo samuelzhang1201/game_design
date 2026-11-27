@@ -185,9 +185,6 @@ static func morale_support(repo: DataRepository, state: GameState, code: String)
 static func safe_departure(repo: DataRepository, state: GameState, battle_id: int) -> Dictionary:
 	if not present(repo, state, battle_id):
 		return {"status": "error", "error": "The king is not present at this battle."}
-	var battle := BattleSystem.battle_by_id(state, battle_id)
-	var battle_position := Vector2i(int(battle.get("place_x_m", position(state).x)),
-		int(battle.get("place_y_m", position(state).y)))
 	var candidates: Array = []
 	var march_grid := MarchPath.of_pack(repo)
 	var realm := repo.resolve_realm("player_realm")

@@ -317,14 +317,14 @@ static func settle(repo: DataRepository, state: GameState, code: String, near_m 
 		if bound != "" and holds(repo, state, kingdom, bound) \
 				and MarchClearance.dist2(here, town_point_m(repo, bound)) <= reach * reach:
 			var point := town_point_m(repo, bound)
-			var taken := held_taken(repo, state, code)
-			var slot := free_slot(repo, point, arm, taken, bound, false, near_m, 0, reach)
-			if slot == NONE:
-				slot = free_slot(repo, point, arm, taken, bound, true, near_m, 0, reach)
-			if slot != NONE:
+			var held_now := held_taken(repo, state, code)
+			var open_slot := free_slot(repo, point, arm, held_now, bound, false, near_m, 0, reach)
+			if open_slot == NONE:
+				open_slot = free_slot(repo, point, arm, held_now, bound, true, near_m, 0, reach)
+			if open_slot != NONE:
 				entry["camp_town"] = bound
 				LawSystem.on_settle(repo, state, code)
-				_put(entry, slot)
+				_put(entry, open_slot)
 				return
 	entry["camp_town"] = town
 	# it takes the newer of its own laws and the camp's (laws spec §2.4)
@@ -657,6 +657,7 @@ static func _placement_fill(repo: DataRepository, candidate: GameState, requests
 	var rings: Variant = repo.bal("army_slot_max_rings")
 	if not BodyMotion._natural(spacing) or int(spacing) <= 0 or not BodyMotion._natural(rings): return _placement_result("error", "Invalid placement lattice configuration")
 	# Existing lattice vectors are int32 local offsets, never world coordinates.
+	@warning_ignore("integer_division")
 	if int(rings) > 2147483647 or (int(rings) > 0 and int(spacing) > 2147483647 / int(rings)):
 		return _placement_result("error", "Placement lattice overflow")
 	var owners := UnitBodies._owners(candidate)
@@ -792,9 +793,9 @@ static func _placement_metadata(repo: DataRepository, state: GameState, request:
 	if op == "refill": return _placement_refill(repo, state, request.unit, true)
 	if op == "reconcile":
 		for town: String in state.town_seat.keys():
-			var code := String(state.town_seat[town])
-			var reg := ArmySystem.regiment(repo, code, state)
-			if reg.is_empty() or not holds(repo, state, String(reg.kingdom_code), town) or not _placement_at_town(repo, state, code, town): state.town_seat.erase(town)
+			var seat_code := String(state.town_seat[town])
+			var seat_reg := ArmySystem.regiment(repo, seat_code, state)
+			if seat_reg.is_empty() or not holds(repo, state, String(seat_reg.kingdom_code), town) or not _placement_at_town(repo, state, seat_code, town): state.town_seat.erase(town)
 		var towns := repo.burgs.keys()
 		towns.sort()
 		for town: String in towns: _placement_refill(repo, state, town, false)

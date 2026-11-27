@@ -68,8 +68,8 @@ static func _reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 		if equipment <= 0: return {"status": "error", "error": "Saved new assembly has no paid equipment."}
 		for id: String in state.military_rosters[code].cohort_ids:
 			var cohort: Dictionary = state.military_cohorts[id]
-			var error := Roster.cohort_error(repo, cohort)
-			if error != "" or (cohort.has("person_id") and int(cohort.initial) != 1):
+			var cohort_err := Roster.cohort_error(repo, cohort)
+			if cohort_err != "" or (cohort.has("person_id") and int(cohort.initial) != 1):
 				return {"status": "error", "error": "Invalid reserved new personnel: " + id}
 		var living := Roster.assigned_living(state, code)
 		if living <= cap: continue

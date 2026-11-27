@@ -89,22 +89,22 @@ func _chosen(id: int) -> void:
 	elif row.has("action"):
 		_confirm(row, _at)
 	else:
-		var mode := String(row.get("mode", ""))
-		if mode == "cancel":
+		var row_mode := String(row.get("mode", ""))
+		if row_mode == "cancel":
 			cancel()
-		elif mode == "observe":
+		elif row_mode == "observe":
 			# Observation is presentation only; paid inspiration belongs to P4.
 			_map.call("observe_king")
 		elif Game.clock_speed == 0:
-			_mode = mode
+			_mode = row_mode
 			_map.aiming = true
 
 func _ground(pack_px: Vector2, screen_px: Vector2) -> void:
 	if _mode == "" or Game.clock_speed > 0: return
-	var mode := _mode
+	var cur_mode := _mode
 	_mode = ""
 	_map.aiming = false
-	if mode == "orders":
+	if cur_mode == "orders":
 		var picked: Dictionary = _map.pick_at(screen_px)
 		var code := String(picked.get("code", ""))
 		if String(picked.get("kind", "")) == "army" and Game.state.regiments.has(code) and _army != null:
