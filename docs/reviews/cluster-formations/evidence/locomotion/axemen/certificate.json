@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "d704cef291499e13eb10ff102bb938e618a0f4b9ea00b574cbfb29e0eb6b29a1",
+  "sha256": "b34af4cf9e964bc80b5a3c94642ea68280287ab44ab5058331206c91df9a2178",
   "uniform": 512
  },
  "config": {
@@ -424,10 +424,10 @@
   "assets/3D/units/axemen/axemen_axemen_atlas_n.jpg.import": "837d4a5606836554a50ce1003814c8512a9af5751208ca3e5cc9d6bc8c6ebca6",
   "assets/3D/units/axemen/axemen_pivot_plan.json": "b953c2e3a4b5c49404f979e8d5ea1a5987cf4e507058c0629bebc3972fb761c9",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
-  "data/army/balance.csv": "d22c86e3f2a730b1fd05c2bc7616d2057a0ddbe06ead85eb42e4dd68b11c0db4",
+  "data/army/balance.csv": "5cb55b622c52967d18e85aca3070f4fa91885f66b125b962c1e2909a0f3d5ef9",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "ee1a91005a647ee1fc6de18febc77afe9b0b7605d24ef3c5d7de4be7dd973939",
-  "data/screens/map3d/balance.csv": "e81186839ca6f05b399224f1c7c9543957d503e2ccd2bdc3259724178e18cc0d",
+  "data/screens/map3d/army_art.csv": "8b4f821077d4a47c06b0e07578b633efda07659365a1c38b74cefbb456302d8d",
+  "data/screens/map3d/balance.csv": "31acf897722aac166845e413adf611651ca56f1b271f6071f4ceb85c86d5a7f9",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "b386caab4a9deffba584a802e747e6f16a37f920ad0a706b683a5ab3a7eb6bd3",
   "scenes/models/units/axemen.tscn": "bddf8c926838e8576b5d54ff4370984b521d47d3977297b48c25663df3e15adc",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 23217,
-  "digest": "d3e222a239cd1abaab5097cf87a30af3971af12dbb31c258b2e633b8997a16da",
+  "digest": "2d25655b0c06f9d8a3e36ff1ffb0c3c04bc031f8e0b68c37cd7fdcce7f77b76e",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "d3e222a239cd1abaab5097cf87a30af3971af12dbb31c258b2e633b8997a16da",
+ "payload_sha256": "2d25655b0c06f9d8a3e36ff1ffb0c3c04bc031f8e0b68c37cd7fdcce7f77b76e",
  "report": {
   "bounds_um": {
    "contact": 23217,
