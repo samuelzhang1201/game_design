@@ -329,7 +329,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "4c59564265c693f84ae439c5e4dabaa169ae57268b9be4f3958a2c5b249f2845",
+  "sha256": "6802ac9d463c174724d9bc6bb971ff8717ce59227bded653221de109da0d7fa8",
   "uniform": 512
  },
  "config": {
@@ -409,7 +409,7 @@
   "assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg.import": "3d1b0b7a807b6798161b3ad06e9b4fc9d38f151661dcfd68ad84fa847080348f",
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
   "assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg.import": "c8dc15fa86145c123bff4e26fef8300d719dfc5d946d22be712cf4d478ce9067",
-  "data/army/balance.csv": "ceafddedc73a2bc3b98a4855ec6b95e1f36df8fde1f22f9993427eaa08f7bfce",
+  "data/army/balance.csv": "e7789ba5f28e4cd555ed8922c3d6597c6dd0027d2208c2891b1c264270136443",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
   "data/screens/map3d/army_art.csv": "a5bf9b79375f3bf980304ec666e2f5baca9a5c45952fe9d89b47a9e530571563",
   "data/screens/map3d/balance.csv": "e81186839ca6f05b399224f1c7c9543957d503e2ccd2bdc3259724178e18cc0d",
@@ -427,11 +427,11 @@
    "MARCH"
   ],
   "contact_um": 28474,
-  "digest": "a5385bed70544af59f4afb1a74abcfef942c30c4fc245bf829b3acb46f38d6b0",
+  "digest": "d74311d5507d10b876c0af14d2fd3ecf5af119f865fdbe2dfa85f72d9bb7a421",
   "radius_m": 932,
   "turn_q": 400000
  },
- "payload_sha256": "a5385bed70544af59f4afb1a74abcfef942c30c4fc245bf829b3acb46f38d6b0",
+ "payload_sha256": "d74311d5507d10b876c0af14d2fd3ecf5af119f865fdbe2dfa85f72d9bb7a421",
  "report": {
   "bounds_um": {
    "contact": 28474,
