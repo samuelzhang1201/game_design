@@ -167,7 +167,7 @@ func zoom_at(pos: Vector2, new_distance: float) -> void:
 	apply()
 
 
-## A right-drag turn of `dx_px` screen px; it cancels a north ease.
+## A middle-drag turn of `dx_px` screen px; it cancels a north ease.
 func turn_by(dx_px: float) -> void:
 	_north_t = -1.0
 	ctx.yaw -= dx_px * ctx.repo.bal("map3d_rotate_deg_per_px")

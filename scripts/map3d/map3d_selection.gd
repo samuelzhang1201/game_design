@@ -141,10 +141,11 @@ func toggle_pick(picked: Dictionary) -> void:
 	_select_armies(codes)
 
 
-## A Shift-drag box (design px): every LAND unit of the player's whose piece
-## it touches (spec §5.6; a piece is drawn at every zoom), sorted.
-func select_box(r: Rect2) -> void:
-	var codes: Array = []
+## A drag box (design px): every LAND unit of the player's whose piece it
+## touches (spec §5.6; a piece is drawn at every zoom), sorted; `add` (a Shift
+## drag) keeps the units already selected.
+func select_box(r: Rect2, add := false) -> void:
+	var codes: Array = armies.duplicate() if add else []
 	var rects: Dictionary = view.unit_rects()
 	for code: String in rects:
 		if (rects[code] as Rect2).intersects(r) and not codes.has(code):
