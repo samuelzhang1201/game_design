@@ -488,33 +488,13 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 
 
 ## The regiment's army, a selection group (spec 2026-11-27-army-groups-design):
-## its name over its men, its slowest march (information only) and its
-## members, with SELECT ARMY and DISBAND; FORM ARMY while 2+ of the crown's
-## land units are selected that are not already exactly one army.
+## its men, its slowest march (information only) and its members, with SELECT
+## and DISBAND; FORM ARMY while 2+ of the crown's land units are selected that
+## are not already exactly one army. With the army itself selected the card is
+## the ARMY's (owner 2026-11-27: 选中军团时把军团名做成卡片标题): its name is the
+## title and the regiment shown is named over its own stats below.
 func _fill_army_group(card: Dictionary) -> void:
 	var group: Dictionary = card.get("group", {})
-	if not group.is_empty():
-		var head := _section_head({"section": "army_group", "label": String(group["name"])})
-		head.text += " (%d)" % (group["codes"] as Array).size()
-		_fields.add_child(_field_row("Men", _line(UiPalette.format_int(int(group["men"])))))
-		_fields.add_child(_field_row("Slowest", _line("%.1f km/day" % float(group["slowest_km"]))))
-		for n in (group["labels"] as Array).size():
-			var l := _line(String(group["labels"][n]))
-			l.name = "Member_%d" % n
-			l.autowrap_mode = TextServer.AUTOWRAP_OFF
-			l.clip_text = true
-			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			_fields.add_child(l)
-		# its two commands side by side under it, not below the regiment's stats
-		var row := HBoxContainer.new()
-		row.name = "ArmyCommands"
-		_fields.add_child(row)
-		var codes: Array = group["codes"]
-		_army_button("SelectArmy", "Select", func() -> void: armies_requested.emit(codes), row)
-		var id := String(group["id"])
-		_army_button("DisbandArmy", "Disband", func() -> void:
-			Game.disband_army_group(id)
-			_redraw_army(String(card["code"])), row)
 	# the selection only belongs to the card the map just showed (a card shown otherwise has none)
 	var picked: Array = _army_codes if String((_army_entry.get("obj", {}) as Dictionary).get("code", "")) \
 		== String(card.get("code", "")) else []
@@ -529,6 +509,46 @@ func _fill_army_group(card: Dictionary) -> void:
 				_hint.visible = true
 				return
 			_redraw_army(String(card["code"])), _fields)   # at the top, by the selection it acts on (critic 2026-11-27)
+	if group.is_empty():
+		return
+	if same:
+		_title.text = String(group["name"])
+		_subtitle.text = "Army of %s" % String((Game.data.kingdoms.get(String(card.get("kingdom_code", "")), {})
+			as Dictionary).get("label", ""))
+		_subtitle.visible = true
+	var head := _section_head({"section": "army_group", "label": "Regiments" if same else String(group["name"])})
+	head.text += " (%d)" % (group["codes"] as Array).size()
+	_fields.add_child(_field_row("Men", _line(UiPalette.format_int(int(group["men"])))))
+	_fields.add_child(_field_row("Slowest", _line("%.1f km/day" % float(group["slowest_km"]))))
+	for n in (group["labels"] as Array).size():
+		var l := _line(String(group["labels"][n]))
+		l.name = "Member_%d" % n
+		l.autowrap_mode = TextServer.AUTOWRAP_OFF
+		l.clip_text = true
+		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		_fields.add_child(l)
+	# its two commands side by side under it, not below the regiment's stats,
+	# set apart from the list above and the regiment's block below (critic 2026-11-27)
+	_army_gap()
+	var row := HBoxContainer.new()
+	row.name = "ArmyCommands"
+	_fields.add_child(row)
+	var codes: Array = group["codes"]
+	_army_button("SelectArmy", "Select", func() -> void: armies_requested.emit(codes), row)
+	var id := String(group["id"])
+	_army_button("DisbandArmy", "Disband", func() -> void:
+		Game.disband_army_group(id)
+		_redraw_army(String(card["code"])), row)
+	if same:
+		# the stats below are the clicked regiment's: named, now the title is the army's
+		_army_gap()
+		_section_head({"section": "army_regiment", "label": String(card.get("title", ""))})
+
+
+func _army_gap() -> void:
+	var gap := Control.new()
+	gap.custom_minimum_size.y = float(Game.data.bal("ui_card_army_gap_px"))
+	_fields.add_child(gap)
 
 
 ## The regiment's card again after its army changed: with the map's selection

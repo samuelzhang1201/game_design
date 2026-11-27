@@ -108,13 +108,23 @@ func test_form_reselect_and_disband() -> void:
 	assert_eq(Game.state.army_groups[id]["name"], Game.data.army_group_names[0])
 	await wait_process_frames(1)
 	assert_null(_button(card, "FormArmy"), "the selection is the army now")
-	assert_not_null(card.find_child("Section_army_group", true, false), "the card names the army")
+	assert_not_null(card.find_child("Section_army_group", true, false), "the card lists the army")
+	# the army selected: its name is the card's title, the regiment named over its own stats
+	var army_name := String(Game.state.army_groups[id]["name"])
+	assert_eq(card.title_label().text, army_name, "the army is the card's title")
+	assert_string_starts_with(card.subtitle_label().text, "Army of ")
+	assert_eq((card.find_child("Section_army_regiment", true, false) as Label).text,
+		MapObjects.label_of(Game.data, {"kind": "army", "code": a}), "the stats are named for their regiment")
 	# a plain click on one member selects the whole army, it first
 	_click(v, _point_of(v, b))
 	assert_eq(v.selected_armies(), [b, a])
 	# SELECT ARMY from a lone member's card
 	_click(v, _point_of(v, a), true)   # Shift takes a out: b alone
 	assert_eq(v.selected_armies(), [b])
+	await wait_process_frames(1)
+	assert_eq(card.title_label().text, MapObjects.label_of(Game.data, {"kind": "army", "code": b}),
+		"a lone member's card is the regiment's")
+	assert_null(card.find_child("Section_army_regiment", true, false))
 	_button(card, "SelectArmy").pressed.emit()
 	assert_eq(v.selected_armies(), [a, b], "the army's entry selects it")
 	await wait_process_frames(1)
