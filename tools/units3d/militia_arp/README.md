@@ -15,9 +15,9 @@ duel clips, on the infantry's names, but NOT the infantry's motion: see Clips.
 
 ## Source (git-ignored)
 
-`assets/3D/model_wip/blender_output/militia/militia_parts_12_duel.blend` (its first ten clips are
-`militia_parts_11_hem.blend`'s): rig `rig` (Auto-Rig Pro), body `Militia_body`, the infantry's `Weapon` /
-`Shield` on `cc_weapon.r / .l`, the ten clips and the seven duel clips. The build's steps,
+`assets/3D/model_wip/blender_output/militia/militia_parts_13_falls.blend` (its first ten clips are
+`militia_parts_11_hem.blend`'s, its duel clips `_12_duel`'s): rig `rig` (Auto-Rig Pro), body `Militia_body`, the infantry's `Weapon` /
+`Shield` on `cc_weapon.r / .l`, the ten clips, the seven duel clips and the two falls. The build's steps,
 gates and the owner's rulings are in that folder's `PLAN_parts_rebuild.md`; its scripts in `scripts/`
 (`p1`..`p10`).
 
@@ -64,9 +64,27 @@ travel, the raise weighted by how upright the trunk is), the skirt baked and `re
 counted for the sword hand only). Their `contact` shares in `army_art.csv` are the infantry's: the transfer keeps
 the timing. The exporter takes BLOCK..BLOCK_3's steps out, as the infantry's.
 
-No DEATH clips yet (step 1b): the skirt's drape hangs columns round a vertical axis and cannot follow a body on
-the ground (face down it stands off the back, on the back the legs come through it), so a loss is freed at once
-with no fall. No pivots or locomotion certificate (step 2): a raised town militia never marches; a regiment of
+Then the falls DEATH and DEATH_2 (step 1b, `militia_parts_13_falls.blend`, script `scripts/p12_falls.py`),
+narrowed as the duel's. The drape hangs columns round a VERTICAL axis, which a body on the ground breaks (face
+down the skirt stood off the back like a sail, on the back the legs came through a bell). The lying-cloth rule:
+- `lie_axis`: `bake` and `repair` run with the rig object stood up about its pelvis so the THIGHS' mean
+  direction points down, by how far the thighs have left pointing down (`_thigh_w`; the trunk's tilt was the
+  first measure, and DEATH sits down before it tips back, so the cloth spread behind like a cape). The drape then
+  hangs along the legs and its hull clears both thighs. `bake` measures the chains' rest after `simulate`, which
+  leaves the last (turned) frame on: it is set back to the first frame, or every frame is keyed against a turned
+  rest.
+- `floor`: the real ground. A chain end under the frame's threshold turns about its head onto it; the
+  threshold rises (`GROUNDS`, 1.5 to 6 cm) only on a frame whose skin is still under the ground, never to one
+  that puts a leg through the cloth.
+- `settle`: gravity. Lying, each chain facing up curls its lower two bones toward the ground as far as no leg
+  crosses the skirt (`SETTLE_MAX`), eroded over two frames and held to `SETTLE_RATE` degrees a frame.
+  Rejected: holding the upper columns in inside the drape (`LEAN`, it stood the cloth up as a sail), turning the
+  chains with the thighs about the belt (`lie`, into the thighs).
+Gates: no leg through the skirt in any frame, no skin more than 1 cm under the ground; the sword out of the
+kneeling DEATH_2's skirt by `solve_sword_cloth`, the shield out of the body by `solve_clear`. The shield's rim
+dips into the ground at the moment of impact (2 / 8 cm), as in the infantry's own clips. Close up the lying skirt
+is a stiff panel more than cloth (critic 2026-11-27: right at the game's 60 to 150 m, box-like folds nearer).
+No pivots or locomotion certificate (step 2): a raised town militia never marches; a regiment of
 the `militia` arm does, and with no `unit_locomotion.csv` row the candidate locomotion path refuses the arm
 until a pivot pair and a certificate are made for this body (the infantry's pipeline,
 `tools/units3d/soldier_arp/README.md`, with the skirt's keys to solve for a pivot).
