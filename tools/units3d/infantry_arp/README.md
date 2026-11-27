@@ -108,6 +108,44 @@ variable as JSON):
   against a 3 px box blur, the normal 12 % of its relief, roughness 30 % of its variation + 0.3
   (less made it read oily in close-ups).
 
+- plate pieces (owner 2026-11-26: the kettle hat's brim read as camouflage, and the helmet as painted
+  cloth): the helmet, pauldrons and knee cops are classed plate by GEOMETRY, not colour
+  (`scripts/uvmask_plate.py` beside the source, from `scripts/dump_mesh.py`'s mesh: the helmet is
+  grown from the dome over joined faces that are not skin, hair or mail), their off-colour texels
+  take the piece's mean plate colour with the old relief flattened, and plate is drawn 0.7 of the
+  way to bare steel, value x0.80 (x1.05 clipped the knee cops on the map), roughness 0.40 (`PLATE_STEEL` / `PLATE_VALUE` / `PLATE_ROUGH` in
+  `scripts/matmaps.py`; the olive paint and bare cold steel were the other two shown). Grey smooth
+  texels anywhere else are mail, never plate. Each piece is one sheet of steel: it keeps only its fine
+  detail (rivets, scratches) on its mean colour, since Tripo shaded every UV island on its own and
+  left darker rectangles on the dome. The HELMET is plainer still: no UV-space mottle or scuff noise
+  (it breaks at every island seam and reads as square patches on the helmet's large texels), a flat
+  normal map, faint detail on the dome and none on the brim (the source paints a wavy rolled seam
+  round the dome's foot).
+  The brim's warped look had three causes, all fixed by `scripts/brim_normals.py` beside the source
+  (run on both variant files; it always starts from `*_before_2026-11-26.blend`): the brim is two
+  sheets hung from the dome's foot and the rim, and the top sheet sagged below the underside's
+  straight span, so on this double-sided material the underside cut up through it all round the
+  foot (a ragged band); the top sheet's own vertices are lifted until it lies just over the
+  underside (three vertices under the front of the brim that are no part of its skin are left).
+  The helmet's custom split normals, kept from the high mesh, pleated the decimated fan: every
+  helmet loop takes the area-weighted mean of the helmet faces round its vertex that face within
+  ~78 degrees of its own, so dome and brim top are one smooth skin and the rim stays a hard edge
+  between top and underside (their plain mean pointed sideways and drew a pale band round the rim).
+  The brim's faces are chosen by tilt (`uvmask_plate.py`), not by reach, so the set ends on one ring.
+  This changes the helmet's POSITION and NORMAL and the export's vertex count; the pivot pair is
+  re-baked from the committed solve (the pivot samples are joint tracks, not vertices) and
+  `test_infantry_pivot.gd`'s frozen fingerprint, which hashes every mesh attribute, is renewed.
+  The tunic mask lost the brim's green patches with it.
+
+A texture-only re-author needs no new pivot solve: export to a scratch ROOT, copy its three atlas
+files and the tunic mask in, and `pivot.bake(ROOT's <ARM>.glb, the fixture's canonical-samples.json,
+assets/3D/units/<ARM>/<ARM>.glb, 4.0)` re-appends the committed pair (every buffer view but the three
+images comes out as it was); then renew the arm's `glb_sha256` and `binary` in
+`tools/units3d/soldier_arp/test_pivot_mapping.py` (the export's SHA-256 and its binary chunk's length).
+The locomotion certificates and `cf01/measurements.json` bind the GLB's and the atlas's hashes, so
+any re-install ends with the re-measure (`cf01/export.gd.txt`) and a re-issue of every certificate,
+their digests written to `data/army/unit_locomotion.csv`.
+
 The new clips' loop modes are the `.glb.import` settings (STANDBY / DEFEND loop). Then the pivot
 pair is regenerated (below) and appended to the GLB.
 

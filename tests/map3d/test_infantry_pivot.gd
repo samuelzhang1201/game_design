@@ -747,7 +747,7 @@ func _native_asset() -> Dictionary:
 				if phase < 1.0 and not _native_cache.keys.has(phase):
 					_native_cache.keys.append(phase)
 	_native_cache.keys.sort()
-	assert_eq(_native_fingerprint(), "7fee76d000edaefaf898d5eef08c768b195e80ba0b3b3f47cde4773b4cbd945b", "frozen original rest/mesh/skin/MARCH; additional clips do not change this input")
+	assert_eq(_native_fingerprint(), "04625652ae8b32437ac27df92ab40426599b897c79a9f95605805d7d845e07ab", "frozen original rest/mesh/skin/MARCH (helmet re-authored 2026-11-26: brim top lifted clear of its underside, helmet normals rebuilt; rest, skin and MARCH unchanged); additional clips do not change this input")
 	return _native_cache
 
 func _native_order(index: int, parent: String) -> void:
