@@ -72,8 +72,9 @@ func _lines(path: String) -> int:
 ## The independent king adds snapshot dispatch, selection/menu forwarding and one layer step.
 ## Its geometry, interpolation, animation and card prose remain in Map3DKing.
 ## Armies (spec 2026-11-27-army-groups) add select_armies and its card wiring: two forwarding lines.
+## The held drag box's preview (spec 2026-11-27-map3d-rts-drag-bindings) adds box_add and lit_armies: two lines.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 638)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 640)
 
 
 func test_every_other_script_is_small() -> void:

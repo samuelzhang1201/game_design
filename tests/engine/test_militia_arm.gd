@@ -85,13 +85,14 @@ func test_militia_has_every_land_arm_row() -> void:
 	assert_eq(WarFolio.kit_of(repo, arm).size(), 4, "kettle hat, tunic, round shield, short sword")
 
 
-func test_the_pack_opens_with_no_militia() -> void:
-	# The pack's column is the importer's 0 for a game arm; the opening regiments are the spec's step 2.
+func test_the_pack_carries_a_militia_column() -> void:
+	# A whole number in every row; the opening regiments that fill it are the spec's step 2
+	# (data/army/game_arm_starts.csv, checked in test_army_starts.gd).
 	for table: String in ["regiments", "kingdoms"]:
-		var rows: Dictionary = repo.world_table("military", table)
+		var rows: Dictionary = SuiteData.repo().world_table("military", table)
 		assert_gt(rows.size(), 0, table)
 		for code: String in rows:
-			assert_eq(String(rows[code].get("militia", "")), "0", "%s %s" % [table, code])
+			assert_true(String(rows[code].get("militia", "")).is_valid_int(), "%s %s" % [table, code])
 
 
 func test_militia_draws_the_militiaman_and_borrows_the_rest() -> void:

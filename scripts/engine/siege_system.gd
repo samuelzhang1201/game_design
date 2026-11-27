@@ -897,7 +897,7 @@ static func _lifted(repo: DataRepository, state: GameState, h: String, why: Stri
 
 ## The crown's siege `id` ends without the town (lost to it, its units gone):
 ## the record closes, told once as siege_ours_lifted {why}.
-static func _crown_lifted(repo: DataRepository, state: GameState, id: String, why: String, events: Array) -> void:
+static func _crown_lifted(_repo: DataRepository, state: GameState, id: String, why: String, events: Array) -> void:
 	var town := String(state.sieges[id]["town"])
 	state.sieges.erase(id)
 	events.append({"kind": OURS + "lifted", "host": "", "town": town, "day": state.absolute_day(),

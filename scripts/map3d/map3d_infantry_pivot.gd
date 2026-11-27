@@ -65,7 +65,7 @@ static func sample_transition(rest: Dictionary, authored_pose: Dictionary,
 		return _failure("invalid transition schema")
 	# Solve the actual endpoints too: a phase-zero bypass would hide a C0 jump.
 	for endpoint: int in [0, 1]:
-		var reference: Dictionary = transition.entry_pose if endpoint == 0 else transition.exit_pose
+		var ref_pose: Dictionary = transition.entry_pose if endpoint == 0 else transition.exit_pose
 		var op: Dictionary = operation.duplicate(true)
 		if not _keys(op, ["duration_q", "phase", "yaw0_udeg", "turn_udeg", "current_yaw_udeg",
 				"march_entry_phase", "march_exit_phase"]) \
@@ -73,19 +73,19 @@ static func sample_transition(rest: Dictionary, authored_pose: Dictionary,
 			return _failure("invalid operation schema/type")
 		op.phase = float(endpoint)
 		op.current_yaw_udeg = fposmod(float(op.yaw0_udeg) + float(op.turn_udeg) * endpoint, float(REV))
-		var result: Dictionary = _solve(rest, reference, op, contacts, true)
-		if not result.ok:
-			return result
-		for name: String in reference:
-			if not _near(result.pose[name], reference[name]):
+		var solve_out: Dictionary = _solve(rest, ref_pose, op, contacts, true)
+		if not solve_out.ok:
+			return solve_out
+		for name: String in ref_pose:
+			if not _near(solve_out.pose[name], ref_pose[name]):
 				return _failure("incompatible native endpoint: " + name)
 	var result: Dictionary = _solve(rest, authored_pose, operation, contacts, true)
 	if not result.ok:
 		return result
 	if operation.phase == 0.0 or operation.phase == 1.0:
-		var reference: Dictionary = transition.entry_pose if operation.phase == 0.0 else transition.exit_pose
-		for name: String in reference:
-			if not _near(authored_pose[name], reference[name]):
+		var ref_pose: Dictionary = transition.entry_pose if operation.phase == 0.0 else transition.exit_pose
+		for name: String in ref_pose:
+			if not _near(authored_pose[name], ref_pose[name]):
 				return _failure("current reference disagrees with native endpoint: " + name)
 	return result
 
@@ -449,14 +449,14 @@ static func _knee_plane(rest_axis: Vector3, direction: Vector3, pole: Vector3) -
 	var rest_length: float = rest_axis.length()
 	if not is_finite(rest_length) or rest_length <= 0.0:
 		return Vector3.ZERO
-	var reference: Vector3 = rest_axis / rest_length
+	var ref_axis: Vector3 = rest_axis / rest_length
 	var pole_unit: Vector3 = pole.normalized()
-	var bend: Vector3 = pole_unit - reference * pole_unit.dot(reference)
-	var cosine: float = reference.dot(direction)
+	var bend: Vector3 = pole_unit - ref_axis * pole_unit.dot(ref_axis)
+	var cosine: float = ref_axis.dot(direction)
 	if bend.length_squared() <= EPS * EPS or 1.0 + cosine <= EPS:
 		return Vector3.ZERO
 	# Transport the bind bend; projecting against the moving axis would flip its sign.
-	var cross: Vector3 = reference.cross(direction)
+	var cross: Vector3 = ref_axis.cross(direction)
 	var rotation: Basis = Basis(Quaternion(cross.x, cross.y, cross.z, 1.0 + cosine).normalized())
 	var plane: Vector3 = rotation * bend.normalized()
 	plane -= direction * plane.dot(direction)

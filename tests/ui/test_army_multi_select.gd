@@ -209,11 +209,24 @@ func _box_of_two(v: Map3DView) -> Array:
 	return []
 
 
-func _box_drag(v: Map3DView, box: Rect2, shift: bool) -> void:
+func _box_drag(v: Map3DView, box: Rect2, shift: bool, lit: Array = []) -> void:
+	var before := v.selected_armies().duplicate()
 	_mouse(v, MOUSE_BUTTON_LEFT, box.position, true, shift)
 	_drag_motion(v, box.position, box.position + box.size * 0.5, shift)
 	assert_true(v.box_rect.has_area(), "the box is drawn while dragging")
 	_drag_motion(v, box.position + box.size * 0.5, box.end, shift)
+	if not lit.is_empty():
+		assert_eq(v.lit_armies(), lit, "the held box lights what its release will select")
+		assert_eq(v.selected_armies(), before, "and selects nothing until release")
+		var lit_glows := 0
+		for c: String in lit:
+			var host := v._units.built_piece(c).get("node") as Node3D
+			var glow := host.get_node_or_null(Map3DUnitGlow.NAME) as GeometryInstance3D if host != null else null
+			if glow != null and glow.visible:
+				lit_glows += 1
+				assert_eq(float(glow.get_instance_shader_parameter("dim")), 1.0 if before.has(c)
+					else v._repo.bal("map3d_unit_glow_preview"), "the ones it would add glow fainter: " + c)
+		assert_gt(lit_glows, 0, "the preview glows under the pieces")
 	_mouse(v, MOUSE_BUTTON_LEFT, box.end, false, shift)
 	assert_false(v.box_rect.has_area(), "the box goes on release")
 
@@ -234,7 +247,7 @@ func test_a_plain_left_drag_boxes_the_units_inside_replacing_the_selection() -> 
 	var target := v.target()
 	if other != "":
 		v.select_armies([other])
-	_box_drag(v, found[0], false)
+	_box_drag(v, found[0], false, pair)
 	assert_eq(v.selected_armies(), pair, "exactly the units inside, sorted, the old one gone")
 	assert_eq(v.target(), target, "the camera did not pan")
 
@@ -255,9 +268,9 @@ func test_shift_drag_adds_the_units_inside_to_the_selection() -> void:
 	assert_ne(other, "", "a third unit to keep")
 	v.select_armies([other])
 	var target := v.target()
-	_box_drag(v, found[0], true)
 	var want := pair + [other]
 	want.sort()
+	_box_drag(v, found[0], true, want)
 	assert_eq(v.selected_armies(), want, "the box's units join the one already chosen")
 	assert_eq(v.target(), target, "the camera did not pan")
 

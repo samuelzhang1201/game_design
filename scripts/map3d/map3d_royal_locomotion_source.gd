@@ -364,10 +364,10 @@ static func _source_digest(source: Dictionary) -> String:
 static func _digest(value: Variant) -> String:
 	if not _finite(value):
 		return ""
-	var hash: HashingContext = HashingContext.new()
-	hash.start(HashingContext.HASH_SHA256)
-	hash.update(var_to_bytes(_canonical(value)))
-	return hash.finish().hex_encode()
+	var hasher: HashingContext = HashingContext.new()
+	hasher.start(HashingContext.HASH_SHA256)
+	hasher.update(var_to_bytes(_canonical(value)))
+	return hasher.finish().hex_encode()
 
 
 static func _canonical(value: Variant) -> Variant:

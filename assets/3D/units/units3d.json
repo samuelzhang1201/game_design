@@ -375,5 +375,38 @@
   "stride_m": 1.5042,
   "tris": 17437,
   "weights": "ARP skin limited to 4, the knee-length skirt on 10 chains of 3 bones whose keys are baked into every clip; sword and shield rigid on cc_weapon.r / cc_weapon.l"
+ },
+ "commander": {
+  "actions": {
+   "MARCH": [
+    0,
+    13
+   ],
+   "MARCH_WALK": [
+    0,
+    29
+   ],
+   "STANDBY": [
+    0,
+    80
+   ],
+   "COMMAND": [
+    0,
+    160
+   ]
+  },
+  "bones": 124,
+  "fps": 30,
+  "height_m": 4.642,
+  "kind": "mounted",
+  "label": "Commander",
+  "source": "Tripo 3D (owner, paid plan) parts commander rigged with Auto-Rig Pro on the heavy cavalry's ARP armoured horse, carrying a banner whose cloth takes a realm's flag; clips authored in assets/3D/model_wip/blender_output/units/commander/cmd_rider_clips.blend (decimated there by the blender-decimate-quality skill), installed by tools/units3d/commander_arp/game_export.py",
+  "stride_m": 2.4224,
+  "tris": 24526,
+  "weights": {
+   "horse": "ARP horse bind (the horse pipeline's weights.sh)",
+   "rider": "ARP bind, right arm mirrored from the left, head parts rigid",
+   "banner": "staff rigid on cc_weapon.r, cloth on flag_1..6"
+  }
  }
 }

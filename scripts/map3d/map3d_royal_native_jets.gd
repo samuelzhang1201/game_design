@@ -422,6 +422,7 @@ static func _find(times: Array[float], time: float) -> int:
 	var high: int = times.size() - 1
 	var middle: int = 0
 	while low <= high:
+		@warning_ignore("integer_division")
 		middle = (low + high) / 2
 		if absf(time - times[middle]) < Math.EPS or time == times[middle]:
 			return middle
@@ -459,6 +460,7 @@ func _cell_at(time: float, side: String) -> int:
 	var low: int = 0
 	var high: int = _cells.size() - 1
 	while low < high:
+		@warning_ignore("integer_division")
 		var middle: int = (low + high) / 2
 		if time < _cells[middle].end or (side == "left" and time == _cells[middle].end): high = middle
 		else: low = middle + 1

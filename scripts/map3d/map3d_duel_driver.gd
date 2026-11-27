@@ -123,7 +123,7 @@ func fall(child: Dictionary, art: Dictionary, _tune: Dictionary) -> void:
 ## under the scrum (`map3d_melee_scrum`) both ranks, else the front.
 static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 	var by_id: Dictionary = {}
-	var scrum := ctx.repo.bal("map3d_melee_scrum") > 0.0
+	var scrum_on := ctx.repo.bal("map3d_melee_scrum") > 0.0
 	for code: String in pieces:
 		var piece: Dictionary = pieces[code]
 		if piece.get("layout", "") != "physical_groups" or code.begins_with(Sighting.GHOST_CODE):
@@ -133,7 +133,7 @@ static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 			continue
 		var id := int(battle.get("id", 0))  # a hand-built battle may carry none
 		if not by_id.has(id):
-			by_id[id] = {"id": id, "rounds": int(battle["rounds"]), "across": Vector2.ZERO, "across_code": "", "a": [], "b": [], "scrum": scrum}
+			by_id[id] = {"id": id, "rounds": int(battle["rounds"]), "across": Vector2.ZERO, "across_code": "", "a": [], "b": [], "scrum": scrum_on}
 		if code in battle["att"] and (by_id[id]["across_code"] == "" or code < by_id[id]["across_code"]):
 			var heading := WarFront.facing_vector(int(piece.get("facing_deg", 0)))  # the attackers' front, whatever the pieces' order
 			by_id[id]["across"] = Vector2(-heading.y, heading.x)
@@ -141,7 +141,7 @@ static func gather(ctx: Map3DContext, pieces: Dictionary) -> Array:
 		var art: Dictionary = ctx.repo.army_art.get(String(piece.get("model", "")), {})
 		for group: Dictionary in piece["groups"]:
 			var child: Dictionary = group["piece"]
-			if (not scrum and String(group["role"]) != "front") or (child["anims"] as Array).is_empty() \
+			if (not scrum_on and String(group["role"]) != "front") or (child["anims"] as Array).is_empty() \
 					or not can_duel(child, art, child["anims"][0]):
 				continue
 			by_id[id]["a" if code in battle["att"] else "b"].append({"key": "%s:%d" % [code, int(group["slot"])],
@@ -172,7 +172,7 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 		var taken: Dictionary = {}
 		if battle.get("scrum", false):
 			scrum.pair(battle, figs, _pairs, wanted, taken, tune, h)
-		for key: String in ([] if battle.get("scrum", false) else _pairs):  # a pair whose two figures still stand within reach keeps its exchange
+		for key: String in ({} if battle.get("scrum", false) else _pairs):  # a pair whose two figures still stand within reach keeps its exchange
 			var ka := String(_pairs[key]["figs"][0]["key"])
 			var kb := String(_pairs[key]["figs"][1]["key"])
 			if figs.has(ka) and figs.has(kb) and not taken.has(ka) and not taken.has(kb) \
@@ -383,14 +383,14 @@ static func _aim(figs: Array, tune: Dictionary) -> bool:
 	var d: Vector2 = (figs[1]["xz"] as Vector2) - (figs[0]["xz"] as Vector2)
 	var h := maxf(float(figs[0]["h"]), float(figs[1]["h"]))
 	var gap := d.length()
-	var step := clampf((gap - float(tune["close_h"]) * h) / 2.0, 0.0, float(tune["step_max_h"]) * h)
+	var step_h := clampf((gap - float(tune["close_h"]) * h) / 2.0, 0.0, float(tune["step_max_h"]) * h)
 	var dir := d / gap if gap > 0.0 else Vector2.ZERO
 	var changed := false
 	for i in 2:
 		var child: Dictionary = figs[i]["child"]
-		var sign := 1.0 if i == 0 else -1.0
-		var offset := dir * step * sign
-		var yaw := Map3DUnits.facing_yaw(d * sign, float(child.get("stand_deg", 0.0)))
+		var side_sign := 1.0 if i == 0 else -1.0
+		var offset := dir * step_h * side_sign
+		var yaw := Map3DUnits.facing_yaw(d * side_sign, float(child.get("stand_deg", 0.0)))
 		if not child.has("duel_offset") or not (child["duel_offset"] as Vector2).is_equal_approx(offset) \
 				or not is_equal_approx(float(child["duel_yaw"]), yaw):
 			child["duel_offset"] = offset
