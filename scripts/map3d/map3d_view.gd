@@ -125,6 +125,7 @@ static func attach(panel: Control, detail: MapDetailPanel = null, country: Count
 	if detail != null:
 		detail.follow(view)
 		detail.closed.connect(view.clear_selection)
+		detail.armies_requested.connect(view.select_armies)
 	if country != null:
 		country.follow(view)
 	if orders != null:
@@ -495,6 +496,7 @@ var box_rect := Rect2():  # the box being drawn, design px
 	set(v): box_rect = v; if _loaded: _hud.refresh()
 func toggle_at(pos: Vector2) -> void: if _loaded: _selection.toggle_pick(pick_at(pos))
 func select_box(r: Rect2) -> void: if _loaded: _selection.select_box(r)
+func select_armies(codes: Array) -> void: if _loaded: _selection.select_armies(codes)  # an army's card
 
 # --- picking (Map3DPicker, Map3DSelection) --------------------------------------------
 func ground_at(pos: Vector2) -> Variant: return _ctx.ground_at(pos) if _ctx != null else null

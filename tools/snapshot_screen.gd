@@ -1172,7 +1172,17 @@ func _process(_delta: float) -> void:
 				if String(r.get("is_naval", "0")) != "1":
 					code = String(r["regiment_code"])
 					break
-		_root.current_screen.detail_panel().show_entry({"title": code, "obj": {"kind": "army", "code": code}})
+		# select:N — the first N land units selected (FORM ARMY offered); army:N — formed too
+		var codes: Array = [code]
+		if code.begins_with("select:") or code.begins_with("army:"):
+			codes = []
+			for c: String in Game.state.regiments.keys():
+				if ArmyGroups.eligible(Game.data, Game.state, c) and codes.size() < int(code.get_slice(":", 1)):
+					codes.append(c)
+			if code.begins_with("army:"):
+				Game.form_army_group(codes)
+			code = String(codes[0])
+		_root.current_screen.detail_panel().show_entry({"title": code, "obj": {"kind": "army", "code": code, "codes": codes}})
 	if _root != null and _hover_icon >= 0 and _frames == 40 and _root.current_screen.has_method("detail_panel"):
 		var found: Array[Control] = []
 		_tooltipped(_root.current_screen.detail_panel(), found)
