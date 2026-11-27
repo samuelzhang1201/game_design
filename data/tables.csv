@@ -42,6 +42,7 @@ army,army_clearance
 army,unit_footprints
 army,unit_locomotion
 army,army_carry_loads
+army,army_group_names
 army,army_formations
 army,army_ground_speed
 army,army_height_supply
@@ -101,6 +102,7 @@ screens/ui,political_palette
 screens/ui,terrain_palette
 screens/ui,goods_palette
 screens/ui,manor_card_sections
+screens/ui,fact_card_sections
 screens/ui,graphics_quality
 screens/map3d,map3d_bake
 screens/map3d,map3d_farm_zones

@@ -315,15 +315,61 @@ func test_the_wheel_zooms_within_the_clamp() -> void:
 	assert_almost_eq(v.distance(), Game.data.bal("map3d_zoom_min_m"), 0.01, "clamped")
 
 
-func test_a_left_drag_pans_and_a_right_drag_turns() -> void:
+func test_a_right_drag_pans_and_a_middle_drag_turns() -> void:
+	var v := _view()
+	v.activate()
+	var t0 := v.target()
+	var yaw0 := v.yaw()
+	_drag(v, MOUSE_BUTTON_RIGHT, Vector2(40, 0))
+	assert_lt(v.target().x, t0.x, "the ground follows the mouse right, the target goes left")
+	assert_eq(v.yaw(), yaw0, "a right drag never turns")
+	_drag(v, MOUSE_BUTTON_MIDDLE, Vector2(40, 0))
+	assert_almost_eq(v.yaw(), yaw0 - 40.0 * Game.data.bal("map3d_rotate_deg_per_px"), 0.001)
+
+
+func test_a_left_drag_never_pans() -> void:
 	var v := _view()
 	v.activate()
 	var t0 := v.target()
 	_drag(v, MOUSE_BUTTON_LEFT, Vector2(40, 0))
-	assert_lt(v.target().x, t0.x, "the ground follows the mouse right, the target goes left")
-	var yaw0 := v.yaw()
-	_drag(v, MOUSE_BUTTON_RIGHT, Vector2(40, 0))
-	assert_almost_eq(v.yaw(), yaw0 - 40.0 * Game.data.bal("map3d_rotate_deg_per_px"), 0.001)
+	assert_eq(v.target(), t0, "a left drag draws the box, the camera stays")
+	assert_false(v.box_rect.has_area(), "and the box goes on release")
+
+
+func test_a_right_press_within_the_slop_does_not_pan() -> void:
+	var v := _view()
+	v.activate()
+	var t0 := v.target()
+	_drag(v, MOUSE_BUTTON_RIGHT, Vector2(Map3DInput.CLICK_SLOP * 0.5, 0))
+	assert_eq(v.target(), t0, "a right click that wobbles is still a click")
+
+
+func test_wasd_pans_but_not_while_a_text_box_has_focus() -> void:
+	var v := _view()
+	v.activate()
+	v.mouse_entered.emit()
+	var t0 := v.target()
+	_key(KEY_D, true)
+	v._process(0.1)
+	_key(KEY_D, false)
+	assert_gt(v.target().x, t0.x, "D moves the view right")
+	var box := LineEdit.new()
+	add_child_autofree(box)
+	box.grab_focus()
+	var t1 := v.target()
+	_key(KEY_W, true)
+	v._process(0.1)
+	_key(KEY_W, false)
+	assert_eq(v.target(), t1, "typing W into a text box never pans")
+
+
+func _key(code: Key, down: bool) -> void:
+	var e := InputEventKey.new()
+	e.keycode = code
+	e.physical_keycode = code
+	e.pressed = down
+	Input.parse_input_event(e)
+	Input.flush_buffered_events()
 
 
 func test_hiding_the_view_stops_its_rendering() -> void:
@@ -360,7 +406,8 @@ func _drag(v: Map3DView, button: MouseButton, by: Vector2) -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = by
 	motion.relative = by
-	motion.button_mask = MOUSE_BUTTON_MASK_LEFT if button == MOUSE_BUTTON_LEFT else MOUSE_BUTTON_MASK_RIGHT
+	motion.button_mask = {MOUSE_BUTTON_LEFT: MOUSE_BUTTON_MASK_LEFT, MOUSE_BUTTON_RIGHT: MOUSE_BUTTON_MASK_RIGHT,
+		MOUSE_BUTTON_MIDDLE: MOUSE_BUTTON_MASK_MIDDLE}[button]
 	v._gui_input(motion)
 	var up := InputEventMouseButton.new()
 	up.button_index = button
@@ -602,7 +649,7 @@ func test_the_hud_is_over_the_view_and_the_compass_turns_it_north() -> void:
 	var m := Game.data.bal("map_compass_margin_px")
 	assert_eq(hud.compass_rect(), Rect2(Vector2(m, m), Vector2.ONE * Game.data.bal("map_compass_size_px_table")))
 	assert_eq(Game.data.bal("map_compass_size_px_table"), 125.0)
-	_drag(v, MOUSE_BUTTON_RIGHT, Vector2(80, 0))
+	_drag(v, MOUSE_BUTTON_MIDDLE, Vector2(80, 0))
 	assert_ne(v.yaw(), 0.0)
 	var press := InputEventMouseButton.new()
 	press.button_index = MOUSE_BUTTON_LEFT

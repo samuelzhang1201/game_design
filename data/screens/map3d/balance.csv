@@ -67,7 +67,7 @@ map3d_pitch_far_deg,-55,"3D MAP: the tilt at the farthest zoom — nearly straig
 map3d_camera_clear_m,60,"3D MAP camera: the least it stands over the ground at its end of the sight line to the target (ramped from 0 at the target); where the oblique pitch would put it lower — inside a ridge behind the target, which then vanished from within and left a trail over it as a black streak across the view (2026-09-29) — the pitch steepens (Map3DGeometry.clear_pitch)"
 map3d_camera_clear_step_deg,1,"3D MAP camera: the steps the pitch steepens by to clear the ground (a finer step jumps less as the view pans over a ridge)"
 map3d_camera_clear_samples,16,"3D MAP camera: points tested along the sight line from the target to the camera for ground clearance"
-map3d_rotate_deg_per_px,0.25,3D MAP: right-drag turns the view by this many degrees per screen px
+map3d_rotate_deg_per_px,0.25,3D MAP: middle-drag turns the view by this many degrees per screen px
 map3d_key_pan_screens_per_s,0.7,3D MAP: WASD / arrow keys pan this many view-heights a second
 map3d_near_m,20.0,3D MAP: the camera's near clip plane
 map3d_far_m,400000.0,3D MAP: the camera's far clip plane — past the sea plane's edge

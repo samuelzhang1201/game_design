@@ -88,4 +88,5 @@ func test_speeds_and_words() -> void:
 	assert_eq(Weather.speed_permille(repo, "rain"), rain)
 	assert_eq(Weather.speed_permille(repo, "no_such"), 1000, "unknown weather does not slow anyone")
 	assert_eq(Weather.describe_kind(repo, "clear"), Weather.label_of(repo, "clear"), "clear slows nobody")
-	assert_eq(Weather.describe_kind(repo, "rain"), "%s (march and couriers ×%.2f)" % [Weather.label_of(repo, "rain"), rain / 1000.0])
+	assert_eq(Weather.describe_kind(repo, "rain"), "%s — %s" % [Weather.label_of(repo, "rain"),
+		String(repo.weather_kinds["rain"]["road_words"])])

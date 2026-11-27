@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "cc92e580b31a1defff0d5a3e42fd80afa14d8c4af94134e06797f5c80f0ebddc",
+  "sha256": "d704cef291499e13eb10ff102bb938e618a0f4b9ea00b574cbfb29e0eb6b29a1",
   "uniform": 512
  },
  "config": {
@@ -414,21 +414,21 @@
  },
  "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
  "input_sha256": {
-  "assets/3D/units/axemen/axemen.glb": "ebaf4eb91c286703ac43563c8042d36f797841b81f16b586270675aef60f6728",
+  "assets/3D/units/axemen/axemen.glb": "32a4b382240a19364a355fa90acce2a4387d6a6eacd281eeeda93803688c3a61",
   "assets/3D/units/axemen/axemen.glb.import": "8c4d3ea770adee5f42cf5f04bd6f12653b75f55d77a039d349283332264389bf",
-  "assets/3D/units/axemen/axemen_axemen_atlas.jpg": "a42e81dbf6fe606d4d85364ac1f4d7395b8b7e6bfe2ea960d7eea9154a4d46d6",
+  "assets/3D/units/axemen/axemen_axemen_atlas.jpg": "559cc88cba98f985aaa086bfc4cf1ff6dca3125e2d285b22ebabaeee1c8ad93d",
   "assets/3D/units/axemen/axemen_axemen_atlas.jpg.import": "e2725d93924a341b656b521c78bd4469ac86bfa7b3bebccf5c5551f684d922a0",
-  "assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg": "8a253b7d231c93e85a04e0a9b0817dc96961b705649c1a6805fb222d7ff6a26f",
+  "assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg": "05df6128430af00d598b3840ac008b5df002b03882196bdb65f9fa57e809c886",
   "assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg.import": "6c562853e71ae3b84e43210d42fb0ccc580734db83bf53706f82f486a509be89",
-  "assets/3D/units/axemen/axemen_axemen_atlas_n.jpg": "5ef0e8c3d09acb87488ca7da474c7dd5a691629e924cfe4b3f8bd5b37c3e50cf",
+  "assets/3D/units/axemen/axemen_axemen_atlas_n.jpg": "dc1149255706f7d488936c18f6b316a6f66339661dd3b3debba2f1e78ca334d5",
   "assets/3D/units/axemen/axemen_axemen_atlas_n.jpg.import": "837d4a5606836554a50ce1003814c8512a9af5751208ca3e5cc9d6bc8c6ebca6",
   "assets/3D/units/axemen/axemen_pivot_plan.json": "b953c2e3a4b5c49404f979e8d5ea1a5987cf4e507058c0629bebc3972fb761c9",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
   "data/army/balance.csv": "d22c86e3f2a730b1fd05c2bc7616d2057a0ddbe06ead85eb42e4dd68b11c0db4",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "8b4f821077d4a47c06b0e07578b633efda07659365a1c38b74cefbb456302d8d",
+  "data/screens/map3d/army_art.csv": "ee1a91005a647ee1fc6de18febc77afe9b0b7605d24ef3c5d7de4be7dd973939",
   "data/screens/map3d/balance.csv": "e81186839ca6f05b399224f1c7c9543957d503e2ccd2bdc3259724178e18cc0d",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "4245e17bf0ec85f220396a321db06d151827304f57b7d2be808115f7ff7c877b",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "b386caab4a9deffba584a802e747e6f16a37f920ad0a706b683a5ab3a7eb6bd3",
   "scenes/models/units/axemen.tscn": "bddf8c926838e8576b5d54ff4370984b521d47d3977297b48c25663df3e15adc",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
   "scripts/map3d/map3d_axemen_locomotion.gd": "1eb52b16841519df2cda6ee0fe0eff2392d2ad611d2ed6b139163455a015b16f",
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 23217,
-  "digest": "23d0258784f23d62689f03610afd26222a8d658839e23a558a29db7e305301b7",
+  "digest": "d3e222a239cd1abaab5097cf87a30af3971af12dbb31c258b2e633b8997a16da",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "23d0258784f23d62689f03610afd26222a8d658839e23a558a29db7e305301b7",
+ "payload_sha256": "d3e222a239cd1abaab5097cf87a30af3971af12dbb31c258b2e633b8997a16da",
  "report": {
   "bounds_um": {
    "contact": 23217,
@@ -467,7 +467,7 @@
     "phase": 0.303030305493305,
     "surface": 0,
     "turn_udeg": null,
-    "vertex": 4932
+    "vertex": 4936
    }
   },
   "hover": {
@@ -548,7 +548,7 @@
     "phase": 0.0,
     "surface": 0,
     "turn_udeg": -1,
-    "vertex": 7188
+    "vertex": 7192
    }
   },
   "planting_band": {
@@ -608,7 +608,7 @@
        0.0
       ],
       "turn_udeg": -1,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -629,7 +629,7 @@
        0.0
       ],
       "turn_udeg": -2000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -650,7 +650,7 @@
        0.0
       ],
       "turn_udeg": -45000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -671,7 +671,7 @@
        0.0
       ],
       "turn_udeg": -90000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -692,7 +692,7 @@
        0.0
       ],
       "turn_udeg": -135000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -713,7 +713,7 @@
        0.0
       ],
       "turn_udeg": -179999999,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -734,7 +734,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -1,
-      "vertex": 7741
+      "vertex": 7740
      }
     },
     {
@@ -755,7 +755,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -2000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -776,7 +776,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -45000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -797,7 +797,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -90000000,
-      "vertex": 7741
+      "vertex": 7740
      }
     },
     {
@@ -818,7 +818,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -135000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -839,7 +839,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -179999999,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -860,7 +860,7 @@
        0.0
       ],
       "turn_udeg": 1,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -881,7 +881,7 @@
        0.0
       ],
       "turn_udeg": 2000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -902,7 +902,7 @@
        0.0
       ],
       "turn_udeg": 45000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -923,7 +923,7 @@
        0.0
       ],
       "turn_udeg": 90000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -944,7 +944,7 @@
        0.0
       ],
       "turn_udeg": 135000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -965,7 +965,7 @@
        0.0
       ],
       "turn_udeg": 179999999,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -986,7 +986,7 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -1007,7 +1007,7 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -1049,7 +1049,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 2000000,
-      "vertex": 7304
+      "vertex": 7308
      }
     },
     {
@@ -1112,7 +1112,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 135000000,
-      "vertex": 3713
+      "vertex": 3717
      }
     },
     {
@@ -1133,7 +1133,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 179999999,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -1154,7 +1154,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 180000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -1175,7 +1175,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 180000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     }
    ],
@@ -1195,7 +1195,7 @@
      0.01904761904761905
     ],
     "turn_udeg": 180000000,
-    "vertex": 7642
+    "vertex": 7641
    }
   },
   "skin": {
@@ -1225,7 +1225,7 @@
       "surface": 0,
       "touchdown_phase": 0.208984375,
       "turn_udeg": null,
-      "vertex": 7699
+      "vertex": 7698
      }
     },
     "PIVOT_LEFT": {
@@ -1241,7 +1241,7 @@
       "surface": 0,
       "touchdown_phase": 0.224999994039536,
       "turn_udeg": -1,
-      "vertex": 7188
+      "vertex": 7192
      }
     },
     "PIVOT_RIGHT": {
@@ -1257,7 +1257,7 @@
       "surface": 0,
       "touchdown_phase": 0.224999994039536,
       "turn_udeg": 1,
-      "vertex": 7188
+      "vertex": 7192
      }
     }
    },
@@ -1272,7 +1272,7 @@
     "surface": 0,
     "touchdown_phase": 0.208984375,
     "turn_udeg": null,
-    "vertex": 7699
+    "vertex": 7698
    }
   },
   "stance": {

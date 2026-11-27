@@ -49,6 +49,8 @@ var _manor_master: ManorMasterPanel
 var _manor_view := false
 ## Whether the Crown has asked for the realm's card (SignalHub.realm_card_requested).
 var _realm_view := false
+## What the left column showed last, kept on it while it slides out.
+var _left_shown: Control
 var _map3d: Map3DView
 var _map3d_theme := ""
 var _map3d_military := false
@@ -120,6 +122,7 @@ func _ready() -> void:
 	free_text.text_submitted.connect(_on_free_text_submitted)
 	_map_right = %MapPanel.offset_right
 	_set_right("")
+	%LogPanel.visible = false   # nothing is chosen yet: no slide out at the start
 	_refresh_left()
 
 ## The leather chrome (balance ui_war_table 0): no table, no seal;
@@ -170,13 +173,23 @@ func _refresh_left() -> void:
 		return
 	var card := _detail.has_content()
 	var open := card or _military_view or _manor_view or _realm_view
+	if not open and %LogPanel.visible:
+		# laid back off the map: what it showed stays on it until it is out
+		if _left_shown != null and is_instance_valid(_left_shown):
+			_left_shown.visible = true
+		ScreenLayout.slide_column(%LogPanel, false, _refresh_left)
+		return
 	var country := open and not card and _country_panel.has_content()
 	_detail.visible = card
 	_country_panel.visible = country
 	_military.visible = _military_view and not card and not country
 	_manor_master.visible = _manor_view and not _military_view and not card and not country
 	_dashboard.visible = _realm_view and not (card or country or _military_view or _manor_view)
-	%LogPanel.visible = open
+	_left_shown = null
+	for c: Control in [_detail, _country_panel, _military, _dashboard, _manor_master]:
+		if c.visible:
+			_left_shown = c
+	ScreenLayout.slide_column(%LogPanel, open)
 
 ## The realm's card in the column, opened and closed by the top bar's Crown.
 func toggle_realm_card() -> void:

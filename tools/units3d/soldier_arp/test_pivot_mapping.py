@@ -29,8 +29,8 @@ ARMS = {
         'hashes': {'baseline-native.json': '62922f40c2bb48668a86ac11cb13cdb9fde791623685de1176c613ae777b24cc',
                    'native-march.json': '9ddf149a2627a7fa4a0e75abc8b9134ca004b9c97e1d1876c8d9652310d2b370',
                    'canonical-samples.json': 'a28adcaa27a5195c37a09848b7c6766e4bf2825ea8fc0631b2a96692e2960176'},
-        'glb_sha256': '3916b9c6fac405d3d1d4ff48713c229c63bcacee8dd0f2b2ee143c035d8f4d0e',
-        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6616856}},
+        'glb_sha256': 'cde6b05ecd06ec9cd3cfa4989dd0100a431b47d6923b94c8a52f28c6eec46ef3',
+        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6525568}},
     'heavy_infantry': {
         'hashes': {'baseline-native.json': '2455c300d486217ac0882a42506ed152c8829298b6465bd0717c706a85dc433e',
                    'native-march.json': '4f4d4d4c68c1f7cd4225d867e763a8350a7bba2bf72377161876e5dd86742a35',
@@ -41,8 +41,8 @@ ARMS = {
         'hashes': {'baseline-native.json': '8bfd9acadf4e17c2cf417e889455fd36cb3040be0ba33abc809eb4919bbdf7d1',
                    'native-march.json': '2da85fa15bb11016597037050ae7a33563f545ccb548c2a961d377fdf1582475',
                    'canonical-samples.json': 'f71b54f6e5ba42e2e0101f08a7d3b9b6111d8550a9a6cb14d9e22d218927c58f'},
-        'glb_sha256': 'c69bb9e6dc20642590e471ffc03a0dff752f0c4e563bdf948a622e4c4c3087d3',
-        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6602724}},
+        'glb_sha256': 'ec83f87b4ccbd80bc1928663d77d45cd907914d7313e62b246cf227e95270cd2',
+        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6511372}},
 }
 
 

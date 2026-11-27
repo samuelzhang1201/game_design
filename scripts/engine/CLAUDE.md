@@ -6,15 +6,16 @@ The root `CLAUDE.md`'s invariants rule here first: deterministic, `RefCounted`, 
 
 Topic rules live in `guide/` and are not loaded automatically. Read the relevant guide BEFORE editing its classes:
 
-- `scripts/engine/guide/area_tasks.md` — received search travel (`ArmyTasks`, `TaskCoverage`, `MarchPath`)
-- `scripts/engine/guide/regiments.md` — regiments and their march (`ArmySystem`)
+- `guide/area_tasks.md` — received search travel (`ArmyTasks`, `TaskCoverage`, `MarchPath`)
+- `guide/regiments.md` — regiments and their march (`ArmySystem`)
+- `guide/army_groups.md` — armies as selection groups (`ArmyGroups`)
 - `scripts/engine/guide/battle_deployment.md` — tactics (`BattleFormation`, `BattleRules`, `BattleTaskSystem`, `UnitGait`, `BattleOrders`, `BattleStrength`)
-- `scripts/engine/guide/cluster_formations.md` — `UnitBodies`, `BodyMotion`.
-- `scripts/engine/guide/battle_groups.md` — groups (`BattleGroups`, `MilitaryReorganization`).
+- `guide/cluster_formations.md` — `UnitBodies`, `BodyMotion`.
+- `guide/battle_groups.md` — groups (`BattleGroups`, `MilitaryReorganization`).
 - `guide/battle_ranged.md` — direct fire (`BattleRanged`).
-- `scripts/engine/guide/battle_charge.md` — actual mounted run-up, impact, disengagement and saved regrouping (`BattleCharge`, `BattleGroups`, `BattleSystem`)
+- `guide/battle_charge.md` — actual mounted run-up, impact, disengagement and saved regrouping (`BattleCharge`, `BattleGroups`, `BattleSystem`)
 - `scripts/engine/guide/prisoners_and_reports.md` — negotiated release, consent, immutable reports and informed custody (`PrisonerDisposition`, `PrisonerCommunications`, `FamilyLosses`, `BattleReport`, `BattlePresentation`, `MissiveWriter`)
-- `scripts/engine/guide/battle_events.md` — authored battlefield decisions, actual reserves/abandoned food, frozen choices and delivered report receipts (`BattleEvents`)
+- `guide/battle_events.md` — authored battlefield decisions, actual reserves/abandoned food, frozen choices and delivered report receipts (`BattleEvents`)
 - `scripts/engine/guide/battle_and_ai.md` — battles, stances and the enemy (`BattleSystem`, `BattleMerge`, the foes, `ARMY_STANCE`, `EnemyAi`: the hosts' minds; the invasion's day order, rumour, scout facts and host news)
 - `scripts/engine/guide/battle_merge.md` — battles merging on actual group contact: the survivor, aliases, migrated records, the unified commander, in-flight warrants (`BattleMerge`)
 - `scripts/engine/guide/sight_and_ghosts.md` — the crown's sight of the enemy and its ghosts (`Sighting`: `player_sight_km`, `GameState.sightings` seen / spy / rumour, forgetting, the estimate, the cards)

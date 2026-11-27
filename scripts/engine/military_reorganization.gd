@@ -6,6 +6,8 @@ const REASON := "Saved military units partitioned by assigned living personnel"
 const COUNTS := ["fit", "wounded", "captured_current", "dead", "released"]
 
 static func reconcile(repo: DataRepository, state: GameState) -> Dictionary:
+	# a destroyed or lost regiment leaves its army (spec 2026-11-27-army-groups)
+	ArmyGroups.reconcile(repo, state)
 	var living_complete := int(state.military_migration.get("living_cap_version", 0)) == 2 \
 		and not bool(state.military_migration.get("organization_pending", false))
 	var group_pending := false
@@ -31,7 +33,8 @@ static func reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 		if geometry.status == "error": return geometry
 		if geometry.status == "deferred": result.status = "deferred"
 	for field: String in ["army_roster", "military_rosters", "military_cohorts", "military_migration",
-			"regiments", "foes", "supply_lines", "recruitment_projects", "battles", "ai_hosts", "war_plans", "unit_prize_gold"]:
+			"regiments", "foes", "supply_lines", "recruitment_projects", "battles", "ai_hosts", "war_plans", "unit_prize_gold",
+			"army_groups", "army_group_log"]:
 		state.set(field, candidate.get(field))
 	LawSystem.commit_scopes(state, candidate)
 	return result
@@ -101,6 +104,7 @@ static func _reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 		var error := _split(repo, state, code, targets, paths, validation.parts, mapping, cohorts)
 		if error != "":
 			return {"status": "error", "error": error}
+		ArmyGroups.leave(repo, state, code, "split by the living-personnel cap")
 		changed = true
 	if changed:
 		state.military_migration.living_unit_mapping = mapping

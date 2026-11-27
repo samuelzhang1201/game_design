@@ -54,6 +54,10 @@ var title_entrance: Array = []
 ## each {section, label, keys (Array), rates (bool), per_month (bool),
 ## drop_if_rates (Array)}.
 var manor_card_sections: Array = []
+## data/screens/ui/fact_card_sections.csv: a province's and a town's card
+## fields under named headings, in order, each {section, label, fields
+## (Array of field labels), list (bool), cards (Array of card kinds)}.
+var fact_card_sections: Array = []
 ## data/screens/ui/resource_icons.csv: key -> {label, icon, tooltip} for every resource
 ## and unit the UI shows as a glyph with a floating tooltip.
 var resource_icons: Dictionary = {}
@@ -132,6 +136,9 @@ var army_route_orders: Dictionary = {}
 ## data/army/army_carry_loads.csv: [{days, pace_permille, label}], days ascending
 ## (spec 2026-10-07-army-supply-lines §3.6).
 var army_carry_loads: Array = []
+## data/army/army_group_names.csv: the armies' default names in order of use
+## ("1st Army", …; ArmyGroups.form takes the first not in use).
+var army_group_names: Array = []
 ## data/army/army_supply_orders.csv: key -> {label, hint} — the supply rows of the
 ## regiment's right-click menu (spec 2026-10-07-army-supply-lines §5.1).
 var army_supply_orders: Dictionary = {}
@@ -813,6 +820,11 @@ func _load(dir: String) -> bool:
 				"per_month": int(float(r.get("per_month", "0"))) == 1,
 				"drop_if_rates": String(r.get("drop_if_rates", "")).split("|", false)})):
 		return false
+	if not _load_if_present(table_path(dir, "fact_card_sections"), ["section", "label", "fields", "list", "cards"],
+			func(r): fact_card_sections.append({"section": String(r["section"]),
+				"label": String(r["label"]), "fields": String(r["fields"]).split("|", false),
+				"list": int(float(r["list"])) == 1, "cards": String(r["cards"]).split("|", false)})):
+		return false
 	if not _load_if_present(table_path("res://data", "goods_palette"), ["tag", "color"],
 			func(r): goods_palette[String(r["tag"])] = String(r["color"])):
 		return false
@@ -999,6 +1011,7 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(table_path(dir, "weather"), ["kind", "speed_permille", "icon", "label"],
 			func(r): weather_kinds[String(r["kind"])] = {"speed_permille": int(r["speed_permille"]),
 				"icon": String(r["icon"]), "label": String(r["label"]),
+				"road_words": String(r.get("road_words", "")),
 				"overcast": float(r.get("overcast", 0)), "wet": float(r.get("wet", 0)),
 				"mud": float(r.get("mud", 0)), "snow": float(r.get("snow", 0)),
 				"rainfall": float(r.get("rainfall", 0)), "snowfall": float(r.get("snowfall", 0)),
@@ -1029,6 +1042,9 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(table_path(dir, "army_carry_loads"), ["days", "pace_permille", "label"],
 			func(r): army_carry_loads.append({"days": int(r["days"]),
 				"pace_permille": int(r["pace_permille"]), "label": String(r["label"])})):
+		return false
+	if not _load_if_present(table_path(dir, "army_group_names"), ["name"],
+			func(r): army_group_names.append(String(r["name"]))):
 		return false
 	army_carry_loads.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["days"]) < int(b["days"]))
 	if not _load_if_present(table_path(dir, "army_supply_orders"), ["key", "label", "hint"],

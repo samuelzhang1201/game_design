@@ -1,0 +1,8 @@
+section,label,fields,list,cards,notes
+holding,The Holding,Held by|Controlled by|Seat|Manors,0,province|burg,"owner 2026-11-26 (AR-4 step 2, CK3 as the reference): a province's or town's fields under short ruled headings instead of one long grid; fields are matched by their label, in this order; a field no row names falls under no heading at the end"
+town,The Town,Group|Type|Culture,0,burg,what kind of place a town is
+people,The People,Population|Towns,0,province|burg,
+land,The Land,Terrain|Area|Weather|Hazard|Changed hands,0,province|burg,
+stores,War Stores,In store|Buys at|Supply lines|Stores last,0,burg,a realm town's strategic stores
+military,Under Arms,Regiments,1,province,"list 1: the value is a list (MapObjects.LIST_SEP), one line an item, no label (critic 2026-11-26: a regiment list wrapped ten lines beside its label and was cut off)"
+intel,What We Know,,0,province|burg|manor,"the letters' rows (Intel): this heading stands over them when a card has any"

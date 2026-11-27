@@ -420,7 +420,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "498f1549431eaed6d028b68c548917b979a4a93b00d612a485590825eccd66ba",
+  "sha256": "923c5d54e59485f2c5ae334cefbe862da58d217117d58aecd6e286bb62668de0",
   "uniform": 512
  },
  "config": {
@@ -505,9 +505,9 @@
   "assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
   "data/army/balance.csv": "d22c86e3f2a730b1fd05c2bc7616d2057a0ddbe06ead85eb42e4dd68b11c0db4",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "8b4f821077d4a47c06b0e07578b633efda07659365a1c38b74cefbb456302d8d",
+  "data/screens/map3d/army_art.csv": "ee1a91005a647ee1fc6de18febc77afe9b0b7605d24ef3c5d7de4be7dd973939",
   "data/screens/map3d/balance.csv": "e81186839ca6f05b399224f1c7c9543957d503e2ccd2bdc3259724178e18cc0d",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "4245e17bf0ec85f220396a321db06d151827304f57b7d2be808115f7ff7c877b",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "b386caab4a9deffba584a802e747e6f16a37f920ad0a706b683a5ab3a7eb6bd3",
   "scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
   "scripts/map3d/map3d_cavalry_locomotion.gd": "f903643b66d24f3ea2979c6c288c41d7f880b47597a50ad99c9bce8c3473d420",
@@ -526,11 +526,11 @@
    "MARCH"
   ],
   "contact_um": 32990,
-  "digest": "1f75f49e27ce04844298d976251abcf399b18b65fccbe5b7c143d05fbd2417d1",
+  "digest": "33e18387269d12cccefd8c771f456b39f184121c3d86c629e76968e3f5a98dee",
   "radius_m": 804,
   "turn_q": 400000
  },
- "payload_sha256": "1f75f49e27ce04844298d976251abcf399b18b65fccbe5b7c143d05fbd2417d1",
+ "payload_sha256": "33e18387269d12cccefd8c771f456b39f184121c3d86c629e76968e3f5a98dee",
  "report": {
   "bounds_um": {
    "contact": 32990,
