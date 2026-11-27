@@ -15,11 +15,13 @@ Then check what was written: check_glb.py (leg through skirt in the installed fi
 """
 import importlib.util
 import json
+import math
 import sys
 from pathlib import Path
 
 import bpy
 import numpy as np
+from mathutils import Matrix, Vector
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("infantry_game_export", HERE.parent / "infantry_arp/game_export.py")
@@ -34,6 +36,37 @@ inf.BODY = "Militia_body"
 inf.BODY_CLASSES = False
 DUEL = ("BLOCK", "BLOCK_2", "BLOCK_3", "BLOCK_4", "HIT", "HIT_2", "HIT_3")
 inf.GAME = {k: inf.GAME[k] for k in FIRST_TEN + DUEL}
+
+
+# The skirt's keys are baked in the source for the legs it has there; the export's MARCH lock then moves the
+# legs. Where the installed file still shows a leg through the cloth (check_glb.py names the frame, counted from
+# 0, and the chains), those chains' _b and _c bones swing further out here, as the source's `nudge` does: the
+# degrees on the frame, half on the frames either side, a quarter one further.
+SKIRT_NUDGE = {"WALK": ((22, (8, 9), 5.0), (24, (8, 9), 4.0), (25, (3, 4), 5.0), (27, (3, 4), 3.0))}
+_poses = inf._poses
+
+
+def _nudged_poses(src, keep, clip):
+    poses = _poses(src, keep, clip)
+    n = len(poses) - 1                       # the last pose is the first again
+    for frame, chains, deg in SKIRT_NUDGE.get(clip, ()):
+        for df, w in ((0, 1.0), (-1, 0.5), (1, 0.5), (-2, 0.25), (2, 0.25)):
+            pose = poses[(frame + df) % n]
+            for k in chains:
+                b, c = "skirt_%02d_b" % k, "skirt_%02d_c" % k
+                for pivot, moved in ((b, (b, c)), (c, (c,))):
+                    h = pose[pivot].translation.copy()
+                    out = Vector((h.x - pose["root.x"].translation.x, h.y - pose["root.x"].translation.y, 0.0)).normalized()
+                    turn = Matrix.Translation(h) @ Matrix.Rotation(math.radians(deg * w), 4, Vector((0, 0, -1)).cross(out)) \
+                        @ Matrix.Translation(-h)
+                    for name in moved:
+                        pose[name] = turn @ pose[name]
+    for name in poses[0]:
+        poses[-1][name] = poses[0][name].copy()
+    return poses
+
+
+inf._poses = _nudged_poses
 
 
 # The source body's faces carry their part in the mesh attribute `part_id` (the build's order); the realm's

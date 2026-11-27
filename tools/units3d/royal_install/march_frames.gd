@@ -1,6 +1,6 @@
 extends SceneTree
-## Real-window frames of the royal MARCH over ground (visual review of LOCO-ROY-MARCH; NEVER --headless).
-##   Godot --path . -s res://tools/units3d/royal_install/march_frames.gd -- --out DIR [--frames N]
+## Real-window frames of an arm's MARCH over ground (--arm, default royal) (visual review of LOCO-ROY-MARCH; NEVER --headless).
+##   Godot --path . -s res://tools/units3d/royal_install/march_frames.gd -- --out DIR [--arm ARM] [--frames N]
 ##       [--stride M] [--yaw DEG] [--near 1]
 ## The royal figure plays MARCH from phase 0 over one loop and travels `stride` model metres (default
 ## army_art.csv's) along its forward axis, as the map carries it, over a plane at the seat (the seated
@@ -15,7 +15,7 @@ func _initialize() -> void:
 
 
 func run() -> void:
-	var args: Dictionary = {"out": "", "frames": "16", "stride": "", "yaw": "90", "near": "0"}
+	var args: Dictionary = {"out": "", "frames": "16", "stride": "", "yaw": "90", "near": "0", "arm": "royal"}
 	var user: PackedStringArray = OS.get_cmdline_user_args()
 	for i: int in range(0, user.size() - 1, 2):
 		args[user[i].trim_prefix("--")] = user[i + 1]
@@ -23,7 +23,7 @@ func run() -> void:
 		push_error("usage: -- --out DIR")
 		quit(2)
 		return
-	var stride: float = float(args.stride) if args.stride != "" else _stride()
+	var stride: float = float(args.stride) if args.stride != "" else _stride(args.arm)
 	root.size = Vector2i(1600, 900)
 	var world := Node3D.new()
 	root.add_child(world)
@@ -55,7 +55,7 @@ func run() -> void:
 	env.environment.ambient_light_color = Color(0.6, 0.6, 0.6)
 	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	world.add_child(env)
-	var model: Node3D = load("res://scenes/models/units/royal.tscn").instantiate()
+	var model: Node3D = load("res://scenes/models/units/%s.tscn" % args.arm).instantiate()
 	world.add_child(model)
 	var camera := Camera3D.new()
 	world.add_child(camera)
@@ -83,9 +83,9 @@ func run() -> void:
 	quit(0)
 
 
-func _stride() -> float:
+func _stride(arm: String) -> float:
 	var text: String = FileAccess.get_file_as_string("res://data/screens/map3d/army_art.csv")
 	for line: String in text.split("\n"):
-		if line.begins_with("royal,"):
+		if line.begins_with(arm + ","):
 			return float(line.split(",")[3])
 	return 0.0

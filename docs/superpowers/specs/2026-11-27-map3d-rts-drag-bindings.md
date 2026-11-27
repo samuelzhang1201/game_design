@@ -22,11 +22,15 @@ pointer distance), for the left and the right button alike. A right drag
 starts panning once past the slop, catching up the whole offset so the
 ground stays under the pointer.
 
+## Owner rulings
+
+- **R1 — turning is on the middle drag** (owner 2026-11-27, "Keep middle
+  drag"). The right drag used to turn the view; the middle drag (which used to
+  pan) now turns. There was no keyboard turn to keep. The compass press still
+  eases back to north.
+
 ## Implementer defaults (for the owner to confirm)
 
-- **D1 — turning moves to the middle drag.** The right drag used to turn the
-  view; the middle drag (which used to pan) now turns. There was no keyboard
-  turn to keep. The compass press still eases back to north.
 - **D2 — no box while an order aims.** During a MARCH aim a left drag draws
   nothing and selects nothing; its click is still the destination.
 - **D3 — the war room keeps its own drag rules** (`scripts/war_room/`, its own

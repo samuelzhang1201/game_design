@@ -30,6 +30,10 @@ regiments it commands together.
   and Shift-drag are unchanged.
 - The regiment card (`MapObjects.army_card` `group`) shows its group: name, total men under arms,
   members, the slowest member's march (information only), SELECT ARMY and DISBAND.
+- **The army as the card's title** (owner 2026-11-27: 选中军团时把军团名做成卡片标题): while the
+  selection is exactly one army, the card's title is the army's name ("1st Army"), its subtitle
+  "Army of <kingdom>", the army block headed "Regiments (N)", and the clicked regiment's label
+  heads its own stats below. A lone member's card keeps the regiment's title.
 - With 2+ of the player's land regiments selected that are not already exactly one group, the
   card offers FORM ARMY.
 - Ctrl+1..9 recall is not built (not needed for the ruling; a later step).

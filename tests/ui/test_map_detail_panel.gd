@@ -30,8 +30,21 @@ func test_a_town_gets_a_card() -> void:
 	var texts := _grid_texts(p)
 	assert_has(texts, "Population")
 	assert_has(texts, "Culture")
-	assert_gt(p.features_row().get_child_count(), 1, "feature glyphs after their label")
-	assert_gt(p.production_box().get_child_count(), 1, "goods rows after their label")
+	# AR-4 follow-up 3: features, goods and purses are rows under their
+	# sections, not loose boxes below the card
+	assert_false(p.features_row().visible, "no loose feature row")
+	assert_false(p.production_box().visible, "no loose goods box")
+	var features: HBoxContainer = p.fields().find_child("Field_Features", false, false)
+	assert_not_null(features, "a Features row")
+	assert_ne((features.get_child(1) as Label).text, "", "its features named beside its label")
+	var trade := p.fields().get_node_or_null("Section_trade")
+	assert_not_null(trade, "a Trade heading")
+	var goods: HBoxContainer = p.fields().find_child("Field_Production", false, false)
+	assert_not_null(goods, "a Production row")
+	assert_gt(goods.get_index(), trade.get_index(), "under the Trade heading")
+	assert_gt((goods.get_child(1) as Control).get_child_count(), 0, "a line a good")
+	assert_has(texts, "Wealth")
+	assert_has(texts, "Treasury")
 	assert_true(p.preview().visible, "a window onto the map")
 	assert_not_null(p.preview().mesh, "drawn from the terrain mesh, not a picture")
 	assert_true(p.ask_button().visible)
@@ -103,15 +116,24 @@ func test_a_regiment_opens_its_painted_card() -> void:
 	await wait_process_frames(1)
 	assert_true(p.visible)
 	assert_eq(p.title_label().text, String(r["label"]))
-	assert_gt(p.stats_grid().get_child_count(), 0, "its facts read as icons")
 	assert_eq(p.rows().get_child_count(), 0, "no plain lines")
 	assert_false(p.preview().visible, "no window onto the map")
 	assert_same(p.shield().texture, HouseArms.texture_of_kingdom(Game.data, mine))
-	# Regiment review (owner 2026-09-17): its values ("4564 (0 wounded)",
-	# "Hills (fortified)") are too wide for the default 4-column (2-pair)
-	# grid in the fixed left column, so its card asks for 2 — one
-	# icon+value pair a row.
-	assert_eq(p.stats_grid().columns, 2, "one icon+value pair a row so its wide values fit")
+	# AR-4 follow-up: its facts are named rows under the sections, as a
+	# province's are, with no bare icon grid; each keeps its tooltip.
+	assert_false(p.stats_grid().visible, "no icon grid")
+	for sec in ["ranks", "ground", "supply"]:
+		assert_not_null(p.fields().get_node_or_null("Section_" + sec), sec)
+	var morale: HBoxContainer = p.fields().find_child("Field_Morale", false, false)
+	assert_not_null(morale, "a Morale row")
+	var label: Label = morale.get_meta("field_label")
+	assert_eq(label.text, "Morale")
+	assert_eq(label.theme_type_variation, &"CardStatName")
+	assert_string_ends_with(p.stat_text("army_morale"), " of 100")
+	assert_string_starts_with(p.stat_tooltip("army_morale"), "Morale — ")
+	for key in ["army_height", "army_supply", "army_supply_line"]:
+		assert_false("×" in p.stat_text(key), key + " shows no multiplier")
+		assert_false("≈" in p.stat_text(key), key + " shows no estimate mark")
 
 ## A broken supply line (owner 2026-10-11): the card's Line row is written in
 ## CardWarn, the paper's rubric red; a flowing line in the card's own ink.
@@ -131,14 +153,14 @@ func test_a_broken_supply_line_is_written_in_the_warning_ink() -> void:
 	Game.state.supply_lines[code] = rec
 	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "army", "code": code}})
 	await wait_process_frames(1)
-	var cell: Label = p.stats_grid().find_child("Stat_army_supply_line", true, false)
+	var cell: Label = p.fields().find_child("Stat_army_supply_line", true, false)
 	assert_not_null(cell)
 	assert_eq(cell.theme_type_variation, &"CardWarn")
 	rec["state"] = SupplyLines.FLOWING
 	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "army", "code": code}})
 	await wait_process_frames(1)
-	cell = p.stats_grid().find_child("Stat_army_supply_line", true, false)
-	assert_eq(cell.theme_type_variation, &"CardValue", "a flowing line in the card's own ink")
+	cell = p.fields().find_child("Stat_army_supply_line", true, false)
+	assert_eq(cell.theme_type_variation, &"CardFigure", "a flowing line in the card's own ink")
 
 
 ## A courier's card flies his kingdom's arms, as his regiment's does (b0848aa;

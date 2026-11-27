@@ -315,7 +315,12 @@ func show_card(card: Dictionary) -> void:
 	_stats.columns = int(card.get("stat_columns", DEFAULT_STAT_COLUMNS))
 	_stats.add_theme_constant_override("v_separation", 4)
 	var stats: Array = card.get("stats", [])
-	if stats.is_empty():
+	# A regiment's facts are named rows under the sections like a province's
+	# (AR-4: an icon and a bare figure did not read), below its army.
+	var army := String(card.get("kind", "")) == "army"
+	if army:
+		_fill_army_group(card)
+	elif stats.is_empty():
 		pass   # the fields below are its facts
 	elif _as_rows(card):
 		_fill_stat_rows(stats, card.get("rates", []))
@@ -323,9 +328,16 @@ func show_card(card: Dictionary) -> void:
 		_fill_stats(stats)
 		_fill_rates(card.get("rates", []))
 	_show_painting(String(card.get("painting", "")))
-	_fill_fields(card, card.get("fields", []) if stats.is_empty() else [])
 	var known := String(card.get("known", "full"))
 	var basic := known in ["basic", "general"]
+	var facts: Array = _stat_fields(stats) if army else card.get("fields", []) if stats.is_empty() else []
+	# a town's and a province's features, goods and purses are fields under
+	# their sections like the rest (AR-4: they sat loose below the card); the
+	# manor card keeps its own boxes
+	var trade := not basic and known != "courier" and not army and String(card.get("kind", "")) != "manor"
+	if trade:
+		facts = facts + _trade_fields(card)
+	_fill_fields(card, facts)
 	if known == "army":
 		# an army card is its painting and its icons (owner 2026-09-15), and
 		# the way to the whole host (owner 2026-09-27)
@@ -337,39 +349,12 @@ func show_card(card: Dictionary) -> void:
 		host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		host.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		host.pressed.connect(func() -> void: host_requested.emit())
-		_fill_army_group(card)
 		_actions.add_child(host)
 	elif known == "courier":
 		pass  # a courier's card is his painting and his fields; no land sections
 	elif not basic:
-		var features: Array = card.get("features", [])
-		if not features.is_empty():
-			_features.add_child(_line("Features", &"CardLabel"))
-			for key in features:
-				_features.add_child(ResourceIcon.create(String(key)))
-		var production: Array = card.get("production", [])
-		if not production.is_empty():
-			_production.add_child(_line("Production", &"CardLabel"))
-			for i in mini(production.size(), int(Game.data.bal("province_card_max_goods"))):
-				var p: Dictionary = production[i]
-				var row := HBoxContainer.new()
-				row.add_theme_constant_override("separation", 8)
-				if String(p.get("tag", "")) != "":
-					row.add_child(ResourceIcon.create(String(p["tag"])))
-				row.add_child(_line("%s %s" % [String(p["label"]), _num(float(p["units"]))]))
-				_production.add_child(row)
-		# One row per sum, never two labels squeezed into one line (user report
-		# 2026-09-09: they wrapped letter by letter).
-		for spec in [["wealth", "wealth"], ["town_treasury", "treasury"]]:
-			var cell := HBoxContainer.new()
-			cell.add_theme_constant_override("separation", 6)
-			cell.add_child(ResourceIcon.create(String(spec[0])))
-			var text := _line("%s %s" % [
-				String((Game.data.resource_icons.get(String(spec[0]), {}) as Dictionary).get("label", spec[1])),
-				UiPalette.format_int(roundi(float(card.get(String(spec[1]), 0.0))))])
-			text.autowrap_mode = TextServer.AUTOWRAP_OFF
-			cell.add_child(text)
-			_money.add_child(cell)
+		if not trade:
+			_fill_boxes(card)
 		# A manor's painting is its picture (owner 2026-09-14); the map window
 		# is for cards without one.
 		if String(card.get("painting", "")) == "" or UiPalette.load_art(String(card["painting"])) == null:
@@ -380,6 +365,76 @@ func show_card(card: Dictionary) -> void:
 		# to report; only a card with nothing at all still says so.
 		_hint.text = "Little more is known of foreign land."
 		_hint.visible = (card.get("intel", []) as Array).is_empty()
+	_fill_orders(card, known)
+
+
+## The manor card's features, goods and purses in their own boxes below its rows.
+func _fill_boxes(card: Dictionary) -> void:
+	var features: Array = card.get("features", [])
+	if not features.is_empty():
+		_features.add_child(_line("Features", &"CardLabel"))
+		for key in features:
+			_features.add_child(ResourceIcon.create(String(key)))
+	var production: Array = card.get("production", [])
+	if not production.is_empty():
+		_production.add_child(_line("Production", &"CardLabel"))
+		for i in mini(production.size(), int(Game.data.bal("province_card_max_goods"))):
+			var p: Dictionary = production[i]
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 8)
+			if String(p.get("tag", "")) != "":
+				row.add_child(ResourceIcon.create(String(p["tag"])))
+			row.add_child(_line("%s %s" % [String(p["label"]), _num(float(p["units"]))]))
+			_production.add_child(row)
+	# One row per sum, never two labels squeezed into one line (user report
+	# 2026-09-09: they wrapped letter by letter).
+	for spec in [["wealth", "wealth"], ["town_treasury", "treasury"]]:
+		var cell := HBoxContainer.new()
+		cell.add_theme_constant_override("separation", 6)
+		cell.add_child(ResourceIcon.create(String(spec[0])))
+		var text := _line("%s %s" % [
+			String((Game.data.resource_icons.get(String(spec[0]), {}) as Dictionary).get("label", spec[1])),
+			UiPalette.format_int(roundi(float(card.get(String(spec[1]), 0.0))))])
+		text.autowrap_mode = TextServer.AUTOWRAP_OFF
+		cell.add_child(text)
+		_money.add_child(cell)
+
+
+## A town's or province's features (named), goods (art, name and units)
+## and purses as fields, for the rows of fact_card_sections.csv that name them.
+func _trade_fields(card: Dictionary) -> Array:
+	var out: Array = []
+	var features: Array = card.get("features", [])
+	if not features.is_empty():
+		# named, not bare glyphs (critic 2026-11-27: never make the player hover)
+		var names: Array[String] = []
+		for key in features:
+			names.append(String((Game.data.resource_icons.get(String(key), {}) as Dictionary).get("label", key)))
+		out.append(["Features", ", ".join(names)])
+	var production: Array = card.get("production", [])
+	if not production.is_empty():
+		var goods := VBoxContainer.new()
+		goods.add_theme_constant_override("separation", 2)
+		for i in mini(production.size(), int(Game.data.bal("province_card_max_goods"))):
+			var p: Dictionary = production[i]
+			var row := HBoxContainer.new()
+			row.name = "Good_" + String(p["good"])
+			row.add_theme_constant_override("separation", 6)
+			if String(p.get("tag", "")) != "":
+				var icon := ResourceIcon.create(String(p["tag"]))
+				icon.custom_minimum_size = Vector2(STAT_ICON_PX - 2.0, STAT_ICON_PX - 2.0)
+				row.add_child(icon)
+			row.add_child(_line("%s %s" % [String(p["label"]), _num(float(p["units"]))]))
+			goods.add_child(row)
+		out.append(["Production", "", goods])
+	for spec in [["wealth", "wealth"], ["town_treasury", "treasury"]]:
+		out.append([String((Game.data.resource_icons.get(String(spec[0]), {}) as Dictionary).get("label", spec[1])),
+			UiPalette.format_int(roundi(float(card.get(String(spec[1]), 0.0))))])
+	return out
+
+
+## The orders the card offers, a button each (the buildings one dropdown).
+func _fill_orders(card: Dictionary, known: String) -> void:
 	# The orders the card offers stand outside the full/basic split: a foreign
 	# manor on the border offers its BUY (owner 2026-09-14). The buildings
 	# are one dropdown, not a button apiece (owner 2026-09-14).
@@ -459,7 +514,7 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 			head.text += " (%d)" % String(mine[0][1]).split(MapObjects.LIST_SEP, false).size()
 		for f: Array in mine:
 			if not sec["list"]:
-				_fields.add_child(_field_row(String(f[0]), _line(String(f[1]))))
+				_fields.add_child(_fact_row(f))
 				continue
 			var items := String(f[1]).split(MapObjects.LIST_SEP, false)
 			for n in items.size():
@@ -474,7 +529,7 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 				_fields.add_child(l)
 	for i in fields.size():
 		if not placed.has(i):
-			_fields.add_child(_field_row(String(fields[i][0]), _line(String(fields[i][1]))))
+			_fields.add_child(_fact_row(fields[i]))
 	if not intel_done:
 		_fill_intel(intel)
 	# one label column for the whole card: as wide as its widest label
@@ -487,34 +542,49 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 			(row.get_meta("field_label") as Label).custom_minimum_size.x = widest
 
 
+## A card's stats as fields: [label, text, stat], the label the stat's own or
+## its resource_icons.csv row's.
+func _stat_fields(stats: Array) -> Array:
+	var out: Array = []
+	for st: Dictionary in stats:
+		var key := String(st["key"])
+		out.append([String(st.get("label", (Game.data.resource_icons.get(key, {}) as Dictionary).get("label", key))),
+			String(st["text"]), st])
+	return out
+
+
+## One field's row; a stat's (a third element) keeps its tooltip on label and
+## value and writes a warning in CardWarn.
+func _fact_row(f: Array) -> HBoxContainer:
+	if f.size() < 3:
+		return _field_row(String(f[0]), _line(String(f[1])))
+	if f[2] is Control:
+		return _field_row(String(f[0]), f[2])
+	var st: Dictionary = f[2]
+	var key := String(st["key"])
+	var tip := String(st["tooltip"])
+	# figures right-aligned in the manor card's face (critic 2026-11-27: the sibling cards are one set)
+	var value := _line(String(f[1]), &"CardWarn" if String(st.get("tone", "")) == "warn" else &"CardFigure")
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value.name = "Stat_" + key
+	value.tooltip_text = tip
+	value.mouse_filter = Control.MOUSE_FILTER_PASS
+	_stat_cells[key] = value
+	var row := _field_row(String(f[0]), value)
+	var l: Label = row.get_meta("field_label")
+	l.tooltip_text = tip
+	l.mouse_filter = Control.MOUSE_FILTER_PASS
+	return row
+
+
 ## The regiment's army, a selection group (spec 2026-11-27-army-groups-design):
-## its name over its men, its slowest march (information only) and its
-## members, with SELECT ARMY and DISBAND; FORM ARMY while 2+ of the crown's
-## land units are selected that are not already exactly one army.
+## its men, its slowest march (information only) and its members, with SELECT
+## and DISBAND; FORM ARMY while 2+ of the crown's land units are selected that
+## are not already exactly one army. With the army itself selected the card is
+## the ARMY's (owner 2026-11-27: 选中军团时把军团名做成卡片标题): its name is the
+## title and the regiment shown is named over its own stats below.
 func _fill_army_group(card: Dictionary) -> void:
 	var group: Dictionary = card.get("group", {})
-	if not group.is_empty():
-		var head := _section_head({"section": "army_group", "label": String(group["name"])})
-		head.text += " (%d)" % (group["codes"] as Array).size()
-		_fields.add_child(_field_row("Men", _line(UiPalette.format_int(int(group["men"])))))
-		_fields.add_child(_field_row("Slowest", _line("%.1f km/day" % float(group["slowest_km"]))))
-		for n in (group["labels"] as Array).size():
-			var l := _line(String(group["labels"][n]))
-			l.name = "Member_%d" % n
-			l.autowrap_mode = TextServer.AUTOWRAP_OFF
-			l.clip_text = true
-			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			_fields.add_child(l)
-		# its two commands side by side under it, not below the regiment's stats
-		var row := HBoxContainer.new()
-		row.name = "ArmyCommands"
-		_fields.add_child(row)
-		var codes: Array = group["codes"]
-		_army_button("SelectArmy", "Select", func() -> void: armies_requested.emit(codes), row)
-		var id := String(group["id"])
-		_army_button("DisbandArmy", "Disband", func() -> void:
-			Game.disband_army_group(id)
-			_redraw_army(String(card["code"])), row)
 	# the selection only belongs to the card the map just showed (a card shown otherwise has none)
 	var picked: Array = _army_codes if String((_army_entry.get("obj", {}) as Dictionary).get("code", "")) \
 		== String(card.get("code", "")) else []
@@ -529,6 +599,46 @@ func _fill_army_group(card: Dictionary) -> void:
 				_hint.visible = true
 				return
 			_redraw_army(String(card["code"])), _fields)   # at the top, by the selection it acts on (critic 2026-11-27)
+	if group.is_empty():
+		return
+	if same:
+		_title.text = String(group["name"])
+		_subtitle.text = "Army of %s" % String((Game.data.kingdoms.get(String(card.get("kingdom_code", "")), {})
+			as Dictionary).get("label", ""))
+		_subtitle.visible = true
+	var head := _section_head({"section": "army_group", "label": "Regiments" if same else String(group["name"])})
+	head.text += " (%d)" % (group["codes"] as Array).size()
+	_fields.add_child(_field_row("Men", _line(UiPalette.format_int(int(group["men"])))))
+	_fields.add_child(_field_row("Slowest", _line("%d km a day" % roundi(float(group["slowest_km"])))))
+	for n in (group["labels"] as Array).size():
+		var l := _line(String(group["labels"][n]))
+		l.name = "Member_%d" % n
+		l.autowrap_mode = TextServer.AUTOWRAP_OFF
+		l.clip_text = true
+		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		_fields.add_child(l)
+	# its two commands side by side under it, not below the regiment's stats,
+	# set apart from the list above and the regiment's block below (critic 2026-11-27)
+	_army_gap()
+	var row := HBoxContainer.new()
+	row.name = "ArmyCommands"
+	_fields.add_child(row)
+	var codes: Array = group["codes"]
+	_army_button("SelectArmy", "Select", func() -> void: armies_requested.emit(codes), row)
+	var id := String(group["id"])
+	_army_button("DisbandArmy", "Disband", func() -> void:
+		Game.disband_army_group(id)
+		_redraw_army(String(card["code"])), row)
+	if same:
+		# the stats below are the clicked regiment's: named, now the title is the army's
+		_army_gap()
+		_section_head({"section": "army_regiment", "label": String(card.get("title", ""))})
+
+
+func _army_gap() -> void:
+	var gap := Control.new()
+	gap.custom_minimum_size.y = float(Game.data.bal("ui_card_army_gap_px"))
+	_fields.add_child(gap)
 
 
 ## The regiment's card again after its army changed: with the map's selection
