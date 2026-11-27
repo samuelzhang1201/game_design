@@ -111,7 +111,7 @@ func test_a_garrison_reads_in_garrison_at_its_town() -> void:
 	var p := _arrive_at_home(code, true)
 	var town := String(data.burgs[String(p["capital_burg"])]["label"])
 	assert_true(SupplySystem.line_of(data, s, code)["garrison"])
-	assert_eq(String(_card_stat(code, "army_supply_line")["text"]), "none", "no line ordered")
+	assert_eq(String(_card_stat(code, "army_supply_line")["text"]), "Own stores", "no line ordered")
 	assert_string_contains(String(_card_stat(code, "army_supply_line")["tooltip"]).to_lower(),
 		(town + " tops it up").to_lower())
 

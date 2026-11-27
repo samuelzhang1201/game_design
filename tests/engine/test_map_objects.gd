@@ -184,12 +184,18 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 		var keys: Dictionary = {}
 		for st: Dictionary in card["stats"]:
 			keys[String(st["key"])] = String(st["text"])
+		var arms := 0
+		for unit: String in Game.data.world_table("military", "unit_types"):
+			if int(float(r.get(unit, 0))) > 0:
+				arms += 1
 		for unit: String in Game.data.world_table("military", "unit_types"):
 			var n := int(float(r.get(unit, 0)))
-			assert_eq(keys.has(unit), n > 0, "%s: %s shown only when mustered" % [code, unit])
-			if n > 0:
-				assert_eq(keys[unit], str(n))
-		assert_eq(keys["army"], "%d (%d wounded)" % [ArmySystem.living_count(Game.data, Game.state, code), ArmySystem.wounded_count(Game.data, Game.state, code)], "the host under arms")
+			assert_eq(keys.has(unit), n > 0 and arms > 1, "%s: %s shown only when mustered beside another arm" % [code, unit])
+			if keys.has(unit):
+				assert_eq(keys[unit], MapObjects.grouped(n))
+		var hurt := ArmySystem.wounded_count(Game.data, Game.state, code)
+		var men := MapObjects.grouped(ArmySystem.living_count(Game.data, Game.state, code))
+		assert_eq(keys["army"], men if hurt == 0 else "%s (%s wounded)" % [men, MapObjects.grouped(hurt)], "the host under arms")
 		checked += 1
 	assert_gt(checked, 0)
 	assert_true(MapObjects.army_card(Game.data, "no_such_regiment").is_empty())
@@ -248,14 +254,15 @@ func test_a_regiment_card_shows_its_state() -> void:
 		assert_true(text.has(key), key)
 	assert_true(text.has("army_height"))
 	assert_true(order.find("army_terrain") < order.find("army_strength"), "the state reads in order")
-	assert_eq(text["army"], "%d (120 wounded)" % heads)
-	assert_eq(text["army_morale"], str(int(s.regiments[code]["morale"])))
-	assert_eq(text["army_wounded"], "+%d / mo" % ArmySystem.wound_recovery(Game.data, 120))
+	assert_eq(text["army"], "%s (120 wounded)" % MapObjects.grouped(heads))
+	assert_eq(text["army_morale"], "%d of 100" % int(s.regiments[code]["morale"]))
+	assert_eq(text["army_wounded"], "%d a month" % ArmySystem.wound_recovery(Game.data, 120))
 	var use := ArmySystem.supply_use(Game.data, r, s)
 	var held := ArmySystem.days_in_hand(int(s.regiments[code]["supplies"]), use)
 	var in_hand := mini(held, 999)
-	assert_eq(text["army_supply"], "%s (≈ %d day%s)" % [MapObjects.grouped(int(s.regiments[code]["supplies"])),
-		in_hand, "" if in_hand == 1 else "s"], "the stores as a number, the days as the estimate")
+	assert_eq(text["army_supply"], "%d day%s in hand" % [in_hand, "" if in_hand == 1 else "s"],
+		"the days the stores last, in words (AR-4: no multiplier, no ≈)")
+	assert_eq(text["army_height"], "%s m" % MapObjects.grouped(ArmySystem.elevation_of(Game.data, r, s)), "the metres alone")
 	var supply_tip := ""
 	for st: Dictionary in card["stats"]:
 		if String(st["key"]) == "army_supply":
