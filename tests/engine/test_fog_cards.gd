@@ -122,7 +122,7 @@ func test_a_foes_army_card_shows_words_not_figures() -> void:
 	for st: Dictionary in seen["stats"]:
 		if String(st["key"]) == "army":
 			exact = String(st["text"])
-	assert_eq(exact, "%d (321 wounded)" % (total - 123), "dev mode still sees it all")
+	assert_eq(exact, "%s (321 wounded)" % MapObjects.grouped(total - 123), "dev mode still sees it all")
 
 
 func test_a_report_shows_up_on_the_card_with_its_tag() -> void:

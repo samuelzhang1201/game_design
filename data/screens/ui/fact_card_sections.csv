@@ -5,4 +5,7 @@ people,The People,Population|Towns,0,province|burg,
 land,The Land,Terrain|Area|Weather|Hazard|Changed hands,0,province|burg,
 stores,War Stores,In store|Buys at|Supply lines|Stores last,0,burg,a realm town's strategic stores
 military,Under Arms,Regiments,1,province,"list 1: the value is a list (MapObjects.LIST_SEP), one line an item, no label (critic 2026-11-26: a regiment list wrapped ten lines beside its label and was cut off)"
+ranks,The Ranks,Headcount|Under arms|Infantry|Heavy infantry|Axemen|Militia|Archers|Cavalry|Artillery|Fleet|Training|Strength|Morale|Wound recovery,0,army,"AR-4 follow-up 2026-11-27: a regiment's stats as named rows like a province's (critic 2026-11-26: an icon and a bare figure did not read); matched by the stat's label"
+ground,The Ground,Quartered in|Terrain|Height|Weather|March,0,army,where the regiment stands and how fast it goes from there
+supply,Supply,Supply line|Supplies,0,army,
 intel,What We Know,,0,province|burg|manor,"the letters' rows (Intel): this heading stands over them when a card has any"

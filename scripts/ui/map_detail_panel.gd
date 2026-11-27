@@ -315,7 +315,12 @@ func show_card(card: Dictionary) -> void:
 	_stats.columns = int(card.get("stat_columns", DEFAULT_STAT_COLUMNS))
 	_stats.add_theme_constant_override("v_separation", 4)
 	var stats: Array = card.get("stats", [])
-	if stats.is_empty():
+	# A regiment's facts are named rows under the sections like a province's
+	# (AR-4: an icon and a bare figure did not read), below its army.
+	var army := String(card.get("kind", "")) == "army"
+	if army:
+		_fill_army_group(card)
+	elif stats.is_empty():
 		pass   # the fields below are its facts
 	elif _as_rows(card):
 		_fill_stat_rows(stats, card.get("rates", []))
@@ -323,7 +328,7 @@ func show_card(card: Dictionary) -> void:
 		_fill_stats(stats)
 		_fill_rates(card.get("rates", []))
 	_show_painting(String(card.get("painting", "")))
-	_fill_fields(card, card.get("fields", []) if stats.is_empty() else [])
+	_fill_fields(card, _stat_fields(stats) if army else card.get("fields", []) if stats.is_empty() else [])
 	var known := String(card.get("known", "full"))
 	var basic := known in ["basic", "general"]
 	if known == "army":
@@ -337,7 +342,6 @@ func show_card(card: Dictionary) -> void:
 		host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		host.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		host.pressed.connect(func() -> void: host_requested.emit())
-		_fill_army_group(card)
 		_actions.add_child(host)
 	elif known == "courier":
 		pass  # a courier's card is his painting and his fields; no land sections
@@ -459,7 +463,7 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 			head.text += " (%d)" % String(mine[0][1]).split(MapObjects.LIST_SEP, false).size()
 		for f: Array in mine:
 			if not sec["list"]:
-				_fields.add_child(_field_row(String(f[0]), _line(String(f[1]))))
+				_fields.add_child(_fact_row(f))
 				continue
 			var items := String(f[1]).split(MapObjects.LIST_SEP, false)
 			for n in items.size():
@@ -474,7 +478,7 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 				_fields.add_child(l)
 	for i in fields.size():
 		if not placed.has(i):
-			_fields.add_child(_field_row(String(fields[i][0]), _line(String(fields[i][1]))))
+			_fields.add_child(_fact_row(fields[i]))
 	if not intel_done:
 		_fill_intel(intel)
 	# one label column for the whole card: as wide as its widest label
@@ -485,6 +489,39 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 	for row in _fields.get_children():
 		if row.has_meta("field_label"):
 			(row.get_meta("field_label") as Label).custom_minimum_size.x = widest
+
+
+## A card's stats as fields: [label, text, stat], the label the stat's own or
+## its resource_icons.csv row's.
+func _stat_fields(stats: Array) -> Array:
+	var out: Array = []
+	for st: Dictionary in stats:
+		var key := String(st["key"])
+		out.append([String(st.get("label", (Game.data.resource_icons.get(key, {}) as Dictionary).get("label", key))),
+			String(st["text"]), st])
+	return out
+
+
+## One field's row; a stat's (a third element) keeps its tooltip on label and
+## value and writes a warning in CardWarn.
+func _fact_row(f: Array) -> HBoxContainer:
+	if f.size() < 3:
+		return _field_row(String(f[0]), _line(String(f[1])))
+	var st: Dictionary = f[2]
+	var key := String(st["key"])
+	var tip := String(st["tooltip"])
+	# figures right-aligned in the manor card's face (critic 2026-11-27: the sibling cards are one set)
+	var value := _line(String(f[1]), &"CardWarn" if String(st.get("tone", "")) == "warn" else &"CardFigure")
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value.name = "Stat_" + key
+	value.tooltip_text = tip
+	value.mouse_filter = Control.MOUSE_FILTER_PASS
+	_stat_cells[key] = value
+	var row := _field_row(String(f[0]), value)
+	var l: Label = row.get_meta("field_label")
+	l.tooltip_text = tip
+	l.mouse_filter = Control.MOUSE_FILTER_PASS
+	return row
 
 
 ## The regiment's army, a selection group (spec 2026-11-27-army-groups-design):
@@ -519,7 +556,7 @@ func _fill_army_group(card: Dictionary) -> void:
 	var head := _section_head({"section": "army_group", "label": "Regiments" if same else String(group["name"])})
 	head.text += " (%d)" % (group["codes"] as Array).size()
 	_fields.add_child(_field_row("Men", _line(UiPalette.format_int(int(group["men"])))))
-	_fields.add_child(_field_row("Slowest", _line("%.1f km/day" % float(group["slowest_km"]))))
+	_fields.add_child(_field_row("Slowest", _line("%d km a day" % roundi(float(group["slowest_km"])))))
 	for n in (group["labels"] as Array).size():
 		var l := _line(String(group["labels"][n]))
 		l.name = "Member_%d" % n

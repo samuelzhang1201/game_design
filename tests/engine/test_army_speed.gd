@@ -102,7 +102,7 @@ func test_the_regiments_detail_card_carries_its_march() -> void:
 		if String(s["key"]) == "army_march":
 			march = s
 	assert_false(march.is_empty(), "the card's icons include the march")
-	assert_eq(String(march["text"]), "%.1f km/day" % ArmySystem.speed_km_per_day(Game.data, Game.state, code))
+	assert_eq(String(march["text"]), "%d km a day" % roundi(ArmySystem.speed_km_per_day(Game.data, Game.state, code)))
 	assert_true(Game.data.resource_icons.has("army_march"), "with its icon row")
 
 
