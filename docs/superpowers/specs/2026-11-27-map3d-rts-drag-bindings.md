@@ -8,7 +8,7 @@ drag boxed, a plain drag panned).
 
 | Input | Does |
 |---|---|
-| left drag on open map | draws the selection box; on release the player's LAND units it touches become the selection (replacing it) |
+| left drag on open map | draws the selection box; while held, the units it would select glow (owner 2026-11-27: yes to a preview); on release the player's LAND units it touches become the selection (replacing it) |
 | Shift + left drag | the same box, ADDING its units to the selection |
 | left click | as before: selects; Shift toggles a unit; an aimed order takes its destination (no box while an order aims); a press on the planned route bends it; a press on the compass eases north |
 | right drag | pans the map |

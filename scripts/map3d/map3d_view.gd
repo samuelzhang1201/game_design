@@ -424,7 +424,7 @@ func _process(delta: float) -> void:
 func request_hover(pos: Vector2) -> void: _picker.request(pos)
 
 func refresh_hud() -> void:  # the selection changed: the HUD and the pieces' glow follow it
-	if _loaded: _units.set_selected(_selection.armies); _hud.refresh()
+	if _loaded: _selection.light(_units); _hud.refresh()
 func _sync_unit_mode(force: bool = false) -> void:
 	if _ctx == null: return
 	var enter := Map3DGeometry.distance_for_bar(_repo, _meta, _repo.bal("map3d_unit_symbol_enter_scale"), _ctx.view_size.y)
@@ -492,8 +492,10 @@ func dev_mode() -> bool: return _dev
 func selected_army() -> String: return _selection.army
 func selected_armies() -> Array: return _selection.armies if _loaded else []
 ## Shift + left click toggles a unit, a left drag boxes several, Shift adding them (spec 2026-11-27-map3d-rts-drag-bindings).
+var box_add := false  # the held box is a Shift drag: its preview keeps the selection
 var box_rect := Rect2():  # the box being drawn, design px
-	set(v): box_rect = v; if _loaded: _hud.refresh()
+	set(v): box_rect = v; if _loaded: _selection.box_lit = _selection.box_codes(v, box_add) if v.has_area() else []; refresh_hud()
+func lit_armies() -> Array: return _selection.lit() if _loaded else []  # what glows: a held box's preview, else the selection
 func toggle_at(pos: Vector2) -> void: if _loaded: _selection.toggle_pick(pick_at(pos))
 func select_box(r: Rect2, add := false) -> void: if _loaded: _selection.select_box(r, add)
 func select_armies(codes: Array) -> void: if _loaded: _selection.select_armies(codes)  # an army's card
