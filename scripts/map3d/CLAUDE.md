@@ -16,7 +16,7 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 
 - `scripts/map3d/guide/picking.md` — what a click or hover picks, the selection rings (`Map3DPicker`, `Map3DSelection`, `Map3DPicker.ray_depth`, `Map3DView.kingdom_of_pick`)
 - `scripts/map3d/guide/battle_duels.md` — duels, mixed fight, desync (`Map3DDuel*`, `Map3DImpact*`, `Map3DScrum`, `rest_rate`)
-- `scripts/map3d/guide/national_flags.md` — realm textures, city roof standards, no unit standard bearer (pinned leftover classes), realm-tinted tunics (`Map3DNationalFlag`, `Map3DCityFlags`, `Map3DUnitStandard`, `Map3DStandardBearer`, `Map3DUnitDress`)
+- `scripts/map3d/guide/national_flags.md` — realm textures, city roof standards, no soldier's standard (pinned leftovers), tunic tints, the commander's banner (`Map3DNationalFlag`, `Map3DCityFlags`, `Map3DUnitStandard`, `Map3DStandardBearer`, `Map3DUnitDress`, `Map3DCommanderFigure`)
 
 ## Shape and ownership
 

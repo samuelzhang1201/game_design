@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://bvbrnhl08urea"]
+
+[ext_resource type="PackedScene" uid="uid://ctowfqjcr88md" path="res://assets/3D/units/commander/commander.glb" id="1_glb"]
+[ext_resource type="Texture2D" uid="uid://ccskxtt7v6enr" path="res://assets/3D/units/commander/commander_commander_atlas.jpg" id="2_4c26v"]
+[ext_resource type="Texture2D" uid="uid://c7rapxwg7s7gt" path="res://assets/3D/units/commander/commander_commander_atlas_mr.jpg" id="3_gsr20"]
+[ext_resource type="Texture2D" uid="uid://bmdpb4k4vhxab" path="res://assets/3D/units/commander/commander_commander_atlas_n.jpg" id="4_hwf5b"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4c26v"]
+resource_name = "commander_atlas"
+cull_mode = 2
+albedo_texture = ExtResource("2_4c26v")
+metallic = 1.0
+metallic_texture = ExtResource("3_gsr20")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("3_gsr20")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("4_hwf5b")
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gsr20"]
+resource_name = "banner_cloth"
+cull_mode = 2
+albedo_color = Color(0.78, 0.74, 0.64, 1)
+roughness = 0.85
+backlight_enabled = true
+backlight = Color(0.45, 0.45, 0.45, 1)
+
+[node name="Commander" unique_id=1984228116 instance=ExtResource("1_glb")]
+editor_description = "A unit's COMMANDER on the armoured horse, carrying his realm's banner (spec 2026-11-27-commander-figure-design): one figure, no men. Surface 0 is the body, horse and staff on the atlas; surface 1 is the banner's cloth, plain here: the game sets the realm's flag on it (Map3DCommanderFigure.set_flag). Clips MARCH (the gallop), MARCH_WALK, STANDBY, COMMAND; their loops are the .glb's import settings. Its materials, shadow and look are edited HERE."
+
+[node name="commander" parent="commander_rig/Skeleton3D" parent_id_path=PackedInt32Array(1002444523) index="0" unique_id=1872058774]
+surface_material_override/0 = SubResource("StandardMaterial3D_4c26v")
+surface_material_override/1 = SubResource("StandardMaterial3D_gsr20")
