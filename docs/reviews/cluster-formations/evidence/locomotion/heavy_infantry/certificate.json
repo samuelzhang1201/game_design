@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "b664bf10ce8969cc6b6bf0346e1ad28cfae0a4ae3fe45d20de84f7bbd6d1d966",
+  "sha256": "5f3cc37193c5bd87192dc32c5600c1be6ffc11029c286c47d9bdfb1f751779c8",
   "uniform": 512
  },
  "config": {
@@ -427,7 +427,7 @@
   "data/army/balance.csv": "e7789ba5f28e4cd555ed8922c3d6597c6dd0027d2208c2891b1c264270136443",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
   "data/screens/map3d/army_art.csv": "a5bf9b79375f3bf980304ec666e2f5baca9a5c45952fe9d89b47a9e530571563",
-  "data/screens/map3d/balance.csv": "e81186839ca6f05b399224f1c7c9543957d503e2ccd2bdc3259724178e18cc0d",
+  "data/screens/map3d/balance.csv": "31acf897722aac166845e413adf611651ca56f1b271f6071f4ceb85c86d5a7f9",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "33ca5ca575e4eda37deeb57504abd9a3af4ea6681c9d58aaf079724246c4f59f",
   "scenes/models/units/heavy_infantry.tscn": "3efc8e2c93ee9c5b3ac833e09b61a174a3e2190637d9f5ad5219dba362d662a4",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 22699,
-  "digest": "3885eeebda69ef5bdf4931133c87d6b45c9e9c18950172531750da67aae4db4c",
+  "digest": "3f3a17ba9eb0cebbd085cd015534bce25455386bd46f365c12ced7cd5f95d408",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "3885eeebda69ef5bdf4931133c87d6b45c9e9c18950172531750da67aae4db4c",
+ "payload_sha256": "3f3a17ba9eb0cebbd085cd015534bce25455386bd46f365c12ced7cd5f95d408",
  "report": {
   "bounds_um": {
    "contact": 22699,

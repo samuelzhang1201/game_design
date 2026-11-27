@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "c9020ab43f10604a85aa363fbecd1daf7b1844ea9af462d3fb50418b921f52d5",
+  "sha256": "1682db74f06f9e5fac1a86e1c98b740704804f516fe9411aac6bf6e2b393e31b",
   "uniform": 512
  },
  "config": {
@@ -427,7 +427,7 @@
   "data/army/balance.csv": "e7789ba5f28e4cd555ed8922c3d6597c6dd0027d2208c2891b1c264270136443",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
   "data/screens/map3d/army_art.csv": "a5bf9b79375f3bf980304ec666e2f5baca9a5c45952fe9d89b47a9e530571563",
-  "data/screens/map3d/balance.csv": "e81186839ca6f05b399224f1c7c9543957d503e2ccd2bdc3259724178e18cc0d",
+  "data/screens/map3d/balance.csv": "31acf897722aac166845e413adf611651ca56f1b271f6071f4ceb85c86d5a7f9",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "33ca5ca575e4eda37deeb57504abd9a3af4ea6681c9d58aaf079724246c4f59f",
   "scenes/models/units/axemen.tscn": "bddf8c926838e8576b5d54ff4370984b521d47d3977297b48c25663df3e15adc",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 23217,
-  "digest": "2e77bd4759fc58d724007999730e6bbe6147aacdfca707c387c2a481d4ed3805",
+  "digest": "f7bce2e4dd91a4909ea6e0f2c0ecb6ce40861d8c2692c5835dc778ea7bd54902",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "2e77bd4759fc58d724007999730e6bbe6147aacdfca707c387c2a481d4ed3805",
+ "payload_sha256": "f7bce2e4dd91a4909ea6e0f2c0ecb6ce40861d8c2692c5835dc778ea7bd54902",
  "report": {
   "bounds_um": {
    "contact": 23217,

@@ -329,7 +329,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "6802ac9d463c174724d9bc6bb971ff8717ce59227bded653221de109da0d7fa8",
+  "sha256": "03873bab4f81c6c90670045387fbab60513d523fc8e6797029ffad4380c471ce",
   "uniform": 512
  },
  "config": {
@@ -412,7 +412,7 @@
   "data/army/balance.csv": "e7789ba5f28e4cd555ed8922c3d6597c6dd0027d2208c2891b1c264270136443",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
   "data/screens/map3d/army_art.csv": "a5bf9b79375f3bf980304ec666e2f5baca9a5c45952fe9d89b47a9e530571563",
-  "data/screens/map3d/balance.csv": "e81186839ca6f05b399224f1c7c9543957d503e2ccd2bdc3259724178e18cc0d",
+  "data/screens/map3d/balance.csv": "31acf897722aac166845e413adf611651ca56f1b271f6071f4ceb85c86d5a7f9",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "33ca5ca575e4eda37deeb57504abd9a3af4ea6681c9d58aaf079724246c4f59f",
   "scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
   "scripts/map3d/map3d_archer_locomotion.gd": "747cb3f67d51d7f82f34b6888948022f307022f72060c561dd245d4572182fea",
@@ -427,11 +427,11 @@
    "MARCH"
   ],
   "contact_um": 28474,
-  "digest": "d74311d5507d10b876c0af14d2fd3ecf5af119f865fdbe2dfa85f72d9bb7a421",
+  "digest": "03e44da5acab852f102038931e01bc5ff4cf937532b95abb5ba1732d84767196",
   "radius_m": 932,
   "turn_q": 400000
  },
- "payload_sha256": "d74311d5507d10b876c0af14d2fd3ecf5af119f865fdbe2dfa85f72d9bb7a421",
+ "payload_sha256": "03e44da5acab852f102038931e01bc5ff4cf937532b95abb5ba1732d84767196",
  "report": {
   "bounds_um": {
    "contact": 28474,
