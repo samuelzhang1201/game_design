@@ -15,7 +15,7 @@ extends Map3DHudPiece
 ## The dashed road a marching regiment still has ahead, design px wide (in
 ## the realm's own colour); its end ring is four times it.
 @export var route_px := 2.0
-## The Shift-drag selection box's line (spec 2026-10-07-army-split-and-ground
+## The drag selection box's line (spec 2026-10-07-army-split-and-ground
 ## §5.6), design px; edited on the node.
 @export var box_color := Color(1.0, 0.92, 0.6, 0.9)
 @export var box_width_px := 1.5
