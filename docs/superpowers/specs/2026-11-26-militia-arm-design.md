@@ -77,7 +77,7 @@ both new columns 0 and its regiments stay byte-identical.
 | `total_min` | 500 | **new**: the least that total may be (the smallest regiment the export writes) |
 | `men_min`, `men_max`, `men_step` | 250, 1000, 50 | one regiment |
 | `avg_strongest`, `avg_weakest` | 0, 0 | unread when `share_permille` > 0 |
-| `place`, `offset_km`, `bearings` | `largest_towns`, 2, the heavy infantry's list | |
+| `place`, `offset_km`, `bearings` | `largest_towns`, 1, the heavy infantry's list | 1 km, not the heavy infantry's 2: at 2 km a second ring (4 km) is outside a capital's reach and a first ring can cross a province border, and every land regiment must open in a held town in its own province (owner 2026-10-06, `test_army_towns.gd`) |
 | `code_word`, `label_word` | `militia`, `Militia` | `<kingdom>_<ordinal>_militia_<town>`, `1st (<Town>) Militia` |
 
 The share rule, whole numbers, fixed order:
