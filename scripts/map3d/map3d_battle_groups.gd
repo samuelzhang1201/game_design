@@ -87,22 +87,25 @@ static func build(repo: DataRepository, reg: Dictionary, sampled: Dictionary, st
 ## turned to walk never overlap nose to tail, and none step off as clones.
 static func lanes(starts: Array, targets: Array, across: Vector2) -> Array:
 	var along := func(rows: Array) -> Array:
-		var order := range(rows.size())
-		order.sort_custom(func(a: int, b: int) -> bool: return (rows[a]["xz"] as Vector2).dot(across) < (rows[b]["xz"] as Vector2).dot(across))
-		return order
+		var row_order := range(rows.size())
+		row_order.sort_custom(func(a: int, b: int) -> bool: return (rows[a]["xz"] as Vector2).dot(across) < (rows[b]["xz"] as Vector2).dot(across))
+		return row_order
 	var from: Array = along.call(starts)
 	var to: Array = along.call(targets)
 	var out: Array = []
 	out.resize(targets.size())
 	var way := Vector2.ZERO   # the unit's mean way, start to target
 	for k in to.size():
+		@warning_ignore("integer_division")
 		way += (targets[to[k]]["xz"] as Vector2) - (starts[from[k * starts.size() / maxi(to.size(), 1)]]["xz"] as Vector2)
 	var order := range(to.size())   # lanes, the one furthest along the way first
+	@warning_ignore("integer_division")
 	var lead := func(k: int) -> float: return (starts[from[k * starts.size() / maxi(to.size(), 1)]]["xz"] as Vector2).dot(way) \
 		+ (targets[to[k]]["xz"] as Vector2).dot(way) * 0.001
 	order.sort_custom(func(a: int, b: int) -> bool: return lead.call(a) > lead.call(b))
 	for rank in order.size():
 		var k: int = order[rank]
+		@warning_ignore("integer_division")
 		var start: Dictionary = (starts[from[k * starts.size() / maxi(to.size(), 1)]] as Dictionary).duplicate()
 		start["delay"] = FILE_OUT * rank / maxf(order.size() - 1, 1.0)
 		out[to[k]] = start
@@ -263,13 +266,13 @@ static func sync(repo: DataRepository, reg: Dictionary, piece: Dictionary, sampl
 	for child: Dictionary in previous.values():
 		(child["node"] as Node3D).queue_free()
 	if not piece.has("reference_height_m"):
-		var reference: Dictionary = groups[0]["piece"] if not groups.is_empty() else Map3DFormation.of_regiment(
+		var ref_piece: Dictionary = groups[0]["piece"] if not groups.is_empty() else Map3DFormation.of_regiment(
 			repo, reg, {"figures": 1, "slots": [Vector2.ZERO]}, 1.0)
-		piece["reference_height_m"] = reference.get("reference_height_m", reference.get("height_m", 0.0))
-		piece["reference_size"] = reference.get("size", 1.0)
-		piece["chains"] = reference.get("chains", {}).duplicate(true)
-		if groups.is_empty() and reference.has("node"):
-			(reference["node"] as Node3D).free()
+		piece["reference_height_m"] = ref_piece.get("reference_height_m", ref_piece.get("height_m", 0.0))
+		piece["reference_size"] = ref_piece.get("size", 1.0)
+		piece["chains"] = ref_piece.get("chains", {}).duplicate(true)
+		if groups.is_empty() and ref_piece.has("node"):
+			(ref_piece["node"] as Node3D).free()
 	piece["groups"] = groups
 	piece["anims"] = anims
 	piece["figures"] = groups.size()
@@ -311,8 +314,8 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 	var root: Node3D = piece["node"]
 	root.global_transform = Transform3D(Basis.IDENTITY, Vector3(anchor.x, ctx.height_at(anchor), anchor.y))
 	var repo := ctx.repo
-	var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
-	piece["camp_scale"] = Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
+	var ref_piece := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
+	piece["camp_scale"] = Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_piece,
 		piece["reference_height_m"], piece["reference_size"])
 	if piece.has("gap") and not piece.get("candidate_bodies", false):
 		piece["close"] = close_of(ctx, piece, float(piece["gap"]))
@@ -332,7 +335,7 @@ static func place(ctx: Map3DContext, piece: Dictionary, anchor: Vector2, _gap: f
 	for group: Dictionary in piece["groups"]:
 		var child: Dictionary = group["piece"]
 		var node: Node3D = child["node"]
-		var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference,
+		var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_piece,
 			child["reference_height_m"], child["size"])
 		var saved := _target(ctx, piece, group)
 		var xz: Vector2 = saved["xz"]

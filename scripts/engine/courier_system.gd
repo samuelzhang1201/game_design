@@ -731,17 +731,17 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 	# Town warrants are one physical arrival, with independent newest-order checks.
 	if c.has("delivery_targets") and String(first_order(c).get("to_town", "")) != "":
 		var deliveries: Array = []
-		var rolling: Array = []
+		var rolled: Array = []
 		for target: String in c["delivery_targets"]:
 			var recipient := c.duplicate(true)
 			recipient.erase("delivery_targets")
 			recipient["target"] = target
 			var event := _deliver(repo, state, recipient)
 			deliveries.append(event["type"])
-			rolling.append_array(event.get("supply", []))
+			rolled.append_array(event.get("supply", []))
 		var result := _event("delivered" if "delivered" in deliveries else "stale", c)
-		if not rolling.is_empty():
-			result["supply"] = rolling
+		if not rolled.is_empty():
+			result["supply"] = rolled
 		return result
 	# a decree writes its place's law and touches no order of the column
 	if String(first_order(c).get("action_code", "")) == LawSystem.ACTION:
@@ -781,7 +781,7 @@ static func _invalidate_battle_orders(repo: DataRepository, state: GameState, c:
 		if order.has("battle_order_id"):
 			BattleOrders.invalidate(repo, state, String(order["battle_order_id"]), reason)
 
-static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary, local := false, sequence := 0) -> Dictionary:
+static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary, local := false, _sequence := 0) -> Dictionary:
 	var code := String(c["target"])
 	var action := String(order.get("action_code", ""))
 	if action == "BATTLE_TASK":

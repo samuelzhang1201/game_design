@@ -486,7 +486,7 @@ func _fill_orders(card: Dictionary, known: String) -> void:
 ## `intel` heading; a field no row names last, headed by nothing. Each row is
 ## its label (top-aligned, as wide as the card's widest label) and its value,
 ## which takes the rest of the fixed column and wraps.
-func _fill_fields(card: Dictionary, fields: Array) -> void:
+func _fill_fields(card: Dictionary, field_rows: Array) -> void:
 	var kind := String(card.get("kind", ""))
 	var intel: Array = card.get("intel", [])
 	var placed := {}
@@ -502,9 +502,9 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 			continue
 		var mine: Array = []
 		for want: String in sec["fields"]:
-			for i in fields.size():
-				if not placed.has(i) and String(fields[i][0]) == want:
-					mine.append(fields[i])
+			for i in field_rows.size():
+				if not placed.has(i) and String(field_rows[i][0]) == want:
+					mine.append(field_rows[i])
 					placed[i] = true
 		if mine.is_empty():
 			continue
@@ -527,9 +527,9 @@ func _fill_fields(card: Dictionary, fields: Array) -> void:
 				l.tooltip_text = item
 				l.mouse_filter = Control.MOUSE_FILTER_PASS
 				_fields.add_child(l)
-	for i in fields.size():
+	for i in field_rows.size():
 		if not placed.has(i):
-			_fields.add_child(_fact_row(fields[i]))
+			_fields.add_child(_fact_row(field_rows[i]))
 	if not intel_done:
 		_fill_intel(intel)
 	# one label column for the whole card: as wide as its widest label

@@ -132,6 +132,7 @@ func _motion(mm: InputEventMouseMotion) -> bool:
 		if not _dragging and _press_pos.distance_to(mm.position) > CLICK_SLOP:
 			_dragging = true
 		if _dragging and _boxing:
+			view.box_add = mm.shift_pressed
 			view.box_rect = Rect2(_press_pos, Vector2.ZERO).expand(mm.position)
 		return true
 	if mm.button_mask & MOUSE_BUTTON_MASK_RIGHT:

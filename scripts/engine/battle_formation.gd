@@ -106,5 +106,6 @@ static func slots(formation: String, figures: int, frontage_permille := 1000) ->
 					var ring := float(ceili(float(i) / 4.0))
 					out.append([Vector2(0, -ring), Vector2(ring, 0), Vector2(0, ring), Vector2(-ring, 0)][(i - 1) % 4])
 			_:
+				@warning_ignore("integer_division")
 				out.append(Vector2(float(i / 2) - float(ceili(float(figures) / 2.0) - 1) / 2.0, i % 2))
 	return out

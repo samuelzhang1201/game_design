@@ -206,9 +206,9 @@ func _place(code: String, piece: Dictionary) -> void:
 				_rects.erase(code)
 				return
 		piece.merge({"gap": formation_gap, "centre": _target_xz(ArmySystem.regiment(ctx.repo, code, ctx.state()))}, true)  # the block's spacing (stand_xz)
-		var box := BattleGroupsView.place(ctx, piece, _shown_xz[code], figure_footprint_gap, _selected.has(code))
+		var piece_box := BattleGroupsView.place(ctx, piece, _shown_xz[code], figure_footprint_gap, _selected.has(code))
 		_rects.erase(code)
-		if box.has_area(): _rects[code] = box
+		if piece_box.has_area(): _rects[code] = piece_box
 		_yaw[code] = Map3DUnits.facing_yaw(WarFront.facing_vector(piece["facing_deg"]))
 		if piece.get("candidate_bodies", false): _sync_candidate_action(code)
 		return

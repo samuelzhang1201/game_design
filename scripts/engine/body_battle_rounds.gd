@@ -31,13 +31,13 @@ static func plan_candidate(repo: DataRepository, source: GameState, battle_id: i
 	if battle.body_round.basis != BodyBattle._round_basis(repo, source):
 		return _result("error", "Readiness basis changed before planning")
 	if battle.has("body_round_plan") or battle.has("pending_round"):
-		var saved_error := _saved_error(battle)
-		if not saved_error.is_empty(): return _result("error", saved_error)
-		var plan: Dictionary = battle.body_round_plan.plan
-		var outer: Dictionary = source.military_migration.get("body_battle", {})
-		if outer.get("sequence") != plan.boundary.get("sequence") or outer.get("receipt") != BodyMotion._hash(_outer(plan, battle.body_round_plan.receipt, battle.body_round)):
+		var stored_error := _saved_error(battle)
+		if not stored_error.is_empty(): return _result("error", stored_error)
+		var round_plan: Dictionary = battle.body_round_plan.plan
+		var outer_row: Dictionary = source.military_migration.get("body_battle", {})
+		if outer_row.get("sequence") != round_plan.boundary.get("sequence") or outer_row.get("receipt") != BodyMotion._hash(_outer(round_plan, battle.body_round_plan.receipt, battle.body_round)):
 			return _result("error", "The frozen round's outer round_pending receipt does not match")
-		return _result("complete", "Already planned frozen round", UnitBodies._copy(source), plan.duplicate(true))
+		return _result("complete", "Already planned frozen round", UnitBodies._copy(source), round_plan.duplicate(true))
 	var closed: Dictionary = source.military_migration.get("body_battle", {}).get("closed_motion", {})
 	if closed.get("receipt") != battle.body_round.motion_receipt: return _result("error", "Readiness names another closed motion")
 	# Physical queries need an unfrozen admission: a private probe without the envelope, resealed.
@@ -98,10 +98,10 @@ static func plan_candidate(repo: DataRepository, source: GameState, battle_id: i
 			if not contexts.has(side): contexts[side] = {"kind": context.kind, "loss_permille": int(context.loss_permille), "reason": String(context.reason)}
 		if not contexts.has(side): contexts[side] = {"kind": "melee", "loss_permille": 0, "reason": "No participant on this side"}
 		tier[key] = BattleStrength.loss_rate(base, int(contexts[side].loss_permille))
-	var round := int(battle.body_round.round)
+	var round_no := int(battle.body_round.round)
 	var reason := "%s at %s, battle day %d; attacker %s, defender %s" % [String(tier.get("tier", "")).replace("_", " "),
-		BattleSystem.place_label(repo, source, battle), round, contexts.att.kind, contexts.def.kind]
-	var pending := {"day": source.absolute_day(), "round": round, "att": battle.att.duplicate(), "def": battle.def.duplicate(),
+		BattleSystem.place_label(repo, source, battle), round_no, contexts.att.kind, contexts.def.kind]
+	var pending := {"day": source.absolute_day(), "round": round_no, "att": battle.att.duplicate(), "def": battle.def.duplicate(),
 		"tier": tier, "att_power": int(powers.att), "def_power": int(powers.def), "odds": odds, "roll": roll, "eff": eff,
 		"contexts": contexts, "reason": reason, "costs": costs, "unit_actions": actions.duplicate(true),
 		"body_round_receipt": BodyMotion._hash(battle.body_round)}

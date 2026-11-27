@@ -11,6 +11,7 @@ static func _cell_m(repo: DataRepository) -> int:
 
 
 static func _floor_div(a: int, b: int) -> int:
+	@warning_ignore("integer_division")
 	return a / b - (1 if a % b < 0 else 0)
 
 
@@ -30,7 +31,9 @@ static func cells_in_circle(repo: DataRepository, center_m: Vector2i, radius_m: 
 	var r2: int = radius_m * radius_m
 	for cy in range(lo.y, hi.y + 1):
 		for cx in range(lo.x, hi.x + 1):
+			@warning_ignore("integer_division")
 			var dx: int = cx * c + c / 2 - center_m.x
+			@warning_ignore("integer_division")
 			var dy: int = cy * c + c / 2 - center_m.y
 			if dx * dx + dy * dy <= r2:
 				out.append(Vector2i(cx, cy))

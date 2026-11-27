@@ -253,11 +253,11 @@ func _fill(book: Dictionary, type: String, codes: Array, houses: Dictionary,
 		var key := type + "|" + code
 		var created := not book.has(key)
 		if created:
-			var node := Map3DHouseMaterials.multimesh_instance(type + "__" + code + ("__far" if not shadows else ""), _meshes[type], shadows)
-			node.set_meta("house_type", type)
-			node.set_meta("burg_code", code)
-			add_child(node)
-			book[key] = node
+			var mm_node := Map3DHouseMaterials.multimesh_instance(type + "__" + code + ("__far" if not shadows else ""), _meshes[type], shadows)
+			mm_node.set_meta("house_type", type)
+			mm_node.set_meta("burg_code", code)
+			add_child(mm_node)
+			book[key] = mm_node
 		var node: MultiMeshInstance3D = book[key]
 		if created or code == "":
 			node.multimesh.instance_count = transforms.size()

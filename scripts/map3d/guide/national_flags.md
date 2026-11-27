@@ -20,6 +20,15 @@ the royal carrier's source gate pins `map3d_unit_standard.gd` (its test still
 proves a decorated figure rejects as `unproved_source_script`). Re-adding a unit
 standard needs a new owner ruling and a better carrier model.
 
+## The commander's banner
+
+The mounted COMMANDER carries his realm's banner (owner ruling 2026-11-27, for the commander only; it
+does not reopen the soldiers' standard above; spec `2026-11-27-commander-figure-design.md`). The cloth
+is the second surface of `scenes/models/units/commander.tscn` (`banner_cloth`), bare linen in the
+scene; `Map3DCommanderFigure.set_flag` puts a realm's texture (`Map3DNationalFlag.texture_for`) on a
+copy of that material shared by the realm's commanders, and null leaves the linen. The cloth's motion
+is baked into the clips. Nothing draws him on the map yet.
+
 ## Realm colours on the figures
 
 `Map3DUnitDress.sync` (called by the Units layer after sight admission) dresses
