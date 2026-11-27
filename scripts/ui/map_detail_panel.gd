@@ -514,7 +514,7 @@ func _fill_army_group(card: Dictionary) -> void:
 		var id := String(group["id"])
 		_army_button("DisbandArmy", "Disband", func() -> void:
 			Game.disband_army_group(id)
-			show_entry(_army_entry), row)
+			_redraw_army(String(card["code"])), row)
 	# the selection only belongs to the card the map just showed (a card shown otherwise has none)
 	var picked: Array = _army_codes if String((_army_entry.get("obj", {}) as Dictionary).get("code", "")) \
 		== String(card.get("code", "")) else []
@@ -528,7 +528,16 @@ func _fill_army_group(card: Dictionary) -> void:
 				_hint.text = String(out["error"])
 				_hint.visible = true
 				return
-			show_entry(_army_entry), _fields)   # at the top, by the selection it acts on (critic 2026-11-27)
+			_redraw_army(String(card["code"])), _fields)   # at the top, by the selection it acts on (critic 2026-11-27)
+
+
+## The regiment's card again after its army changed: with the map's selection
+## when the map showed it, else alone.
+func _redraw_army(code: String) -> void:
+	if String((_army_entry.get("obj", {}) as Dictionary).get("code", "")) == code:
+		show_entry(_army_entry)
+	else:
+		show_card(MapObjects.army_card(Game.data, code, Game.state))
 
 
 func _army_button(node_name: String, text: String, on_press: Callable, into: Control = null) -> void:

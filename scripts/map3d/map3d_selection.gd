@@ -164,7 +164,7 @@ func group_with(code: String) -> Array:
 		return [code]
 	var codes: Array = [code]
 	for c: String in state.army_groups[id]["members"]:
-		if c != code:
+		if c != code and ArmyGroups.eligible(ctx.repo, state, c):   # one fallen today is gone already
 			codes.append(c)
 	return codes
 
