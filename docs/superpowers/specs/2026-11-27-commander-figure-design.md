@@ -31,7 +31,8 @@ The banner is a new ruling for the commander only: `scripts/map3d/guide/national
   noble place, never an additional person", `military_roster.gd`). This spec changes nothing there.
 - **Which units get the figure**: a unit that has a 3D piece (`Map3DLayerUnits.has_piece`: land arms, not a
   fleet) and a non-empty `commander_id`. No commander, no figure — a unit whose commander fell is seen
-  to be leaderless until a new appointment. The royal piece (`is_royal`): open question Q2.
+  to be leaderless until a new appointment. The royal piece (`is_royal`) gets none: the king himself is
+  that rider (R2).
 
 ## Presentation only (不占用任何人数)
 
@@ -48,10 +49,10 @@ right, z to the rear, front is −z), `figure_extent`, and for a battle unit `gr
 
 | The unit is | How the view knows | Commander | Clip |
 |---|---|---|---|
-| marching | `action == "MARCH"` | alone, centred, ahead of the first rank: local (0, −(`extent.y` + a gap)) | `MARCH` or `MARCH_WALK` (Q1) |
+| marching | `action == "MARCH"` | alone, centred, ahead of the first rank: local (0, −(`extent.y` + a gap)) | `MARCH_WALK` ahead of foot, `MARCH` ahead of cavalry (R1) |
 | in a stand-off | a battle unit (`layout == "physical_groups"`) whose action is not a fighting one — the battle has had no round yet (`BattlePresentation.map_snapshot`: `rounds == 0` → `GARRISON`) | the same place, in the frame of the unit's saved facing | `STANDBY` |
 | fighting | a battle unit whose action is `ATTACK` or `DEFEND` (`rounds > 0`) | the unit's left rear seen facing the enemy: outside the left file, level with the rear rank — local (−(`extent.x` + a gap), +`extent.y`) in the facing's frame | `COMMAND` |
-| standing outside a battle (standby, garrison, holding a front) | any other action | not ruled — Q3; default: ahead of the first rank | `STANDBY` |
+| standing outside a battle (standby, garrison, holding a front) | any other action | ahead of the first rank, as in a stand-off (R3) | `STANDBY` |
 
 - For a battle unit the extents are the bounding box of its groups' drawn points in the frame of
   `facing_deg`; for an ordinary formation, `extent`.
@@ -108,26 +109,27 @@ owner first, renews the SHA and runs `map3d`.
    check), `assets/3D/units/commander/`, `scenes/models/units/commander.tscn`, the import settings,
    `Map3DCommanderFigure.set_flag`, `tests/map3d/test_commander_model.gd`. Nothing draws him.
 2. **Ahead of the first rank**: the node on every admitted commanded unit, the flag, scale, planting,
-   `MARCH` / `STANDBY` by the unit's action, sight, the bench. The walk's stride is measured off
+   `MARCH` / `MARCH_WALK` / `STANDBY` by the unit's action and arm, sight, the bench. The walk's stride is measured off
    `MARCH_WALK` first (the gallop's is the cavalry's 2.4224 m). Visual review on the real map.
 3. **The battle**: the stand-off place, the ride to the left rear, `COMMAND`, the ride back. Visual
    review through `snapshot_screen --battle-case encounter`.
 
-## Open questions for the owner
+## Rulings on the five questions (2026-11-28)
 
-- **Q1 — the march clip.** `MARCH` is the gallop (the cavalry's march); `MARCH_WALK` is the same carriage
-  at the walk. Proposal: he walks ahead of foot (infantry, heavy infantry, axemen, archers, militia,
-  artillery) and gallops ahead of cavalry.
-- **Q2 — the king's own unit.** The royal piece is the king himself on horseback. Proposal: no commander
-  figure there.
-- **Q3 — standing still outside a battle** (standby, garrison, holding a front line). Proposal: ahead of
-  the first rank on `STANDBY`, as in a stand-off.
-- **Q4 — "不占用任何人数" in the engine.** Today the commander is one of the unit's noble personnel (he
-  can be wounded or captured, which empties the appointment). Proposal: leave the engine as it is; the
-  ruling is met by the figure taking no formation place and changing no number. Taking him out of the
-  unit's personnel would be an engine change with its own spec.
-- **Q5 — enemy commanders.** Proposal: a seen enemy unit shows its commander under its own realm's
-  banner; a ghost never does.
+Each was put to the owner with a proposal; he took all five as proposed (都按建议).
+
+- **R1 — the march clip.** `MARCH` is the gallop (the cavalry's march); `MARCH_WALK` is the same carriage
+  at the walk. He walks ahead of foot (infantry, heavy infantry, axemen, archers, militia, artillery) and
+  gallops ahead of cavalry.
+- **R2 — the king's own unit.** The royal piece is the king himself on horseback: no commander figure
+  there.
+- **R3 — standing still outside a battle** (standby, garrison, holding a front line): ahead of the first
+  rank on `STANDBY`, as in a stand-off.
+- **R4 — "不占用任何人数" in the engine.** The engine stays as it is: the commander remains one of the
+  unit's noble personnel (he can be wounded or captured, which empties the appointment). The ruling is met
+  by the figure taking no formation place and changing no number.
+- **R5 — enemy commanders.** A seen enemy unit shows its commander under its own realm's banner; a ghost
+  never does.
 
 ## Defaults chosen without a ruling
 
