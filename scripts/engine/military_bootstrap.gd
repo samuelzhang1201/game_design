@@ -537,8 +537,8 @@ static func _main_receipt(id: String, receipt: Variant) -> Dictionary:
 	if not receipt is Dictionary:
 		return {"error": "Military receipt must be a record: " + id}
 	if receipt.has("request") or receipt.has("result"):
-		var error := _receipt_error(receipt)
-		return {"error": error + ": " + id} if error != "" else receipt.duplicate(true)
+		var receipt_err := _receipt_error(receipt)
+		return {"error": receipt_err + ": " + id} if receipt_err != "" else receipt.duplicate(true)
 	if not receipt.get("kind", null) is String or not receipt.get("reason", null) is String:
 		return {"error": "Military receipt needs a kind and reason: " + id}
 	var kind := String(receipt.get("kind", ""))

@@ -60,27 +60,27 @@ static func forget() -> void:
 ## `water_open` is the courier's and the supply wagon's grid (owner 2026-10-11:
 ## crossing water is fine; only a scarp turns them): water cells are open.
 ## Armies keep the land grid.
-static func of_pack(repo: DataRepository, water_open := false) -> MarchPath:
+static func of_pack(repo: DataRepository, open_water := false) -> MarchPath:
 	if int(repo.bal("army_march_grid_px")) <= 0:
 		return null
-	var key := _key(repo, water_open)
+	var key := _key(repo, open_water)
 	if not _cached.has(key):
-		_cached[key] = load_pack(repo, water_open)
+		_cached[key] = load_pack(repo, open_water)
 	return _cached[key]
 
 
 ## Stand `grid` in for the pack's (tests: a grid built by hand). The courier
 ## road graph cached on the old grid is forgotten with it.
-static func use(repo: DataRepository, grid: MarchPath, water_open := false) -> void:
-	_cached[_key(repo, water_open)] = grid
+static func use(repo: DataRepository, grid: MarchPath, open_water := false) -> void:
+	_cached[_key(repo, open_water)] = grid
 	RoadGraph.forget()
 
 
-static func _key(repo: DataRepository, water_open: bool) -> String:
-	return "%s:%d:%s" % [repo.map_id, int(repo.bal("army_max_slope")), "open" if water_open else "land"]
+static func _key(repo: DataRepository, open_water: bool) -> String:
+	return "%s:%d:%s" % [repo.map_id, int(repo.bal("army_max_slope")), "open" if open_water else "land"]
 
 
-static func load_pack(repo: DataRepository, water_open := false) -> MarchPath:
+static func load_pack(repo: DataRepository, open_water := false) -> MarchPath:
 	var dir := String((repo.maps.get(repo.map_id, {}) as Dictionary).get("data_dir", ""))
 	var path := dir + "/geography/march_grid.png"
 	if dir == "" or not FileAccess.file_exists(path):
@@ -96,7 +96,7 @@ static func load_pack(repo: DataRepository, water_open := false) -> MarchPath:
 		push_warning("MarchPath: %s is %dx%d, the pack wants %dx%d — rerun bake_march_grid.py"
 			% [path, img.get_width(), img.get_height(), w, h])
 		return null
-	return build(repo, w, h, px * ArmySystem.metres_per_pack_px(repo), img.get_data(), water_open)
+	return build(repo, w, h, px * ArmySystem.metres_per_pack_px(repo), img.get_data(), open_water)
 
 
 ## A grid of `cols` x `rows` cells of `cell_m` metres from its bytes (the

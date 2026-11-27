@@ -72,12 +72,12 @@ static func personnel_by_arm(repo: DataRepository, state: GameState, realm: Stri
 	var counts: Dictionary = {}
 	for arm: String in arms:
 		counts[arm] = 0
-	for regiment: Dictionary in MapObjects.regiments_of(repo, realm, state):
-		var code := String(regiment["regiment_code"])
+	for reg_row: Dictionary in MapObjects.regiments_of(repo, realm, state):
+		var code := String(reg_row["regiment_code"])
 		var people := living_count(repo, state, code)
 		var weights: Array = []
 		for arm: String in arms:
-			weights.append(int(float(regiment.get(arm, 0))) * int(repo.world_row("military", "unit_types", arm).get("crew", 0)))
+			weights.append(int(float(reg_row.get(arm, 0))) * int(repo.world_row("military", "unit_types", arm).get("crew", 0)))
 		var shares := BattleSystem.apportion(weights, people)
 		for i in arms.size():
 			counts[arms[i]] += int(shares[i])
@@ -1944,7 +1944,7 @@ static func _walk_one(repo: DataRepository, state: GameState, code: String, entr
 			var left_p := MarchRoute.length_from(here, path)
 			var days_p := int(ceil(left_p / float(full)))
 			var walk_p: int = mini(full, int(ceil(left_p / float(maxi(days_p, 1))))) \
-				if daily_budget < 0 else mini(left_p, full)
+				if daily_budget < 0 else mini(int(left_p), full)
 			var verdict := _clearance(repo, state, code, entry, here, path, walk_p, blockers, seed_names)
 			var kind := String(verdict["kind"])
 			if kind == "free":
@@ -2588,13 +2588,13 @@ static func _body_stage(repo: DataRepository, source: GameState) -> Dictionary:
 		for move: Dictionary in motion.moves:
 			if move.unit != code: continue
 			row.used_m = maxi(int(row.used_m), int(move.used_m))
-			var reference: Array = path
+			var ref_path: Array = path
 			if int(boundary.version) == 2:
-				reference = []
+				ref_path = []
 				for point: Array in body_requests[BodyMotion._id(move)]:
-					reference.append([int(path[0][0]) + int(point[0]) - int(move.start[0]),
+					ref_path.append([int(path[0][0]) + int(point[0]) - int(move.start[0]),
 						int(path[0][1]) + int(point[1]) - int(move.start[1])])
-			var prefix := _body_route_prefix(reference, move.path_m if int(boundary.version) == 1 else BodyMotion._loco_path(move), int(boundary.version) == 2)
+			var prefix := _body_route_prefix(ref_path, move.path_m if int(boundary.version) == 1 else BodyMotion._loco_path(move), int(boundary.version) == 2)
 			var length := BodyMotion._length(prefix)
 			if length < minimum:
 				minimum = length
@@ -2804,9 +2804,9 @@ static func _body_rect_distance(a: Array, b: Array, x: int, y: int, size: int) -
 	if intersects and lo <= hi: return 0.0
 	var best := INF
 	for point: Array in [a, b]:
-		var dx := maxf(maxf(x - float(point[0]), 0.0), float(point[0]) - x - size)
-		var dy := maxf(maxf(y - float(point[1]), 0.0), float(point[1]) - y - size)
-		best = minf(best, dx * dx + dy * dy)
+		var gap_x := maxf(maxf(x - float(point[0]), 0.0), float(point[0]) - x - size)
+		var gap_y := maxf(maxf(y - float(point[1]), 0.0), float(point[1]) - y - size)
+		best = minf(best, gap_x * gap_x + gap_y * gap_y)
 	var dx := float(int(b[0]) - int(a[0]))
 	var dy := float(int(b[1]) - int(a[1]))
 	var squared := dx * dx + dy * dy

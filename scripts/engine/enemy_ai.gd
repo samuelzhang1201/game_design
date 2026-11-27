@@ -1042,7 +1042,7 @@ static func ensure_deployments(repo: DataRepository, state: GameState, events: A
 	SiegeRecord.migrate(repo, state)
 
 
-static func _start_deployment(repo: DataRepository, state: GameState, host: String) -> void:
+static func _start_deployment(_repo: DataRepository, state: GameState, host: String) -> void:
 	var mind: Dictionary = state.ai_hosts[host]
 	mind["deployment"] = {"town": String(mind["target_id"]), "started_day": state.absolute_day(),
 		"complete": false}

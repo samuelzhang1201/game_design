@@ -141,14 +141,14 @@ static func _start(repo: DataRepository, source: GameState, player: String, enem
 		town = stormed
 	var at_town := BattleSystem._battle_at(staged, town) if not town.is_empty() else {}
 	if not at_town.is_empty():
-		var contacts: Array = []
+		var round_contacts: Array = []
 		for unit: String in [enemy, player]:
 			var joined := _join(repo, staged, unit, int(at_town.id), BattleSystem._side_for(staged, at_town, unit), boundary)
 			if joined.status != "complete": return joined
 			staged = joined.candidate
 			at_town = UnitBodies._battle(staged, int(at_town.id))
-			contacts.append_array(joined.plan.contacts)
-		return _result("complete", "Joined the existing town battle", staged, {"contacts": contacts})
+			round_contacts.append_array(joined.plan.contacts)
+		return _result("complete", "Joined the existing town battle", staged, {"contacts": round_contacts})
 	var skeleton := BattleSystem.contact_skeleton_candidate(repo, staged, player, enemy, town, storms)
 	if town.is_empty():
 		var defender := UnitBodies._entry(staged, skeleton.def[0])
@@ -449,9 +449,9 @@ static func _ready(repo: DataRepository, source: GameState, request: Dictionary,
 			contacts.append_array(query.pairs)
 	contacts.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return UnitBodies._battle_pair_less([a.unit, a.slot, a.target_unit, a.target_slot], [b.unit, b.slot, b.target_unit, b.target_slot]))
-	var round := int(battle.get("rounds", 0)) + 1
-	UnitBodies._battle(candidate, id).body_round = {"version": "1", "token": "bodyround:%d:%s:%d" % [id, tx.body_battle.abs_day, round],
-		"abs_day": tx.body_battle.abs_day, "round": str(round), "motion_receipt": closed.receipt,
+	var round_no := int(battle.get("rounds", 0)) + 1
+	UnitBodies._battle(candidate, id).body_round = {"version": "1", "token": "bodyround:%d:%s:%d" % [id, tx.body_battle.abs_day, round_no],
+		"abs_day": tx.body_battle.abs_day, "round": str(round_no), "motion_receipt": closed.receipt,
 		"contact_digest": BodyMotion._hash(contacts), "basis": _round_basis(repo, candidate),
 		"contacts": contacts, "unit_actions": actions}
 	return _result("complete", "Round ready for its settlement consumer", candidate, {"contacts": contacts, "blocked": true})

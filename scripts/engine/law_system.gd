@@ -707,9 +707,9 @@ static func _riders(state: GameState, law: String) -> Array:
 	var id := _decree_id(state, law)
 	var out: Array = []
 	for c: Dictionary in state.couriers:
-		var recipients: Array = [{"target": c.get("target", ""), "orders": CourierSystem.orders_of(c)}]
-		recipients.append_array(c.get("recipient_queue", []))
-		for recipient: Dictionary in recipients:
+		var sent_to: Array = [{"target": c.get("target", ""), "orders": CourierSystem.orders_of(c)}]
+		sent_to.append_array(c.get("recipient_queue", []))
+		for recipient: Dictionary in sent_to:
 			var orders: Array = recipient.get("orders", [])
 			if orders.is_empty():
 				continue

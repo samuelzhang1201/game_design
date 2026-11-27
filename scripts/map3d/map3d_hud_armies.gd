@@ -196,12 +196,12 @@ func _sync_symbol_nodes(list: Array) -> void:
 		var code := String(marker["code"])
 		keep[code] = true
 		if not _symbol_nodes.has(code):
-			var ink := Node2D.new()
-			add_child(ink)
-			ink.draw.connect(func() -> void:
-				var key: Array = ink.get_meta("look")
-				symbols.draw_symbol(ink, Rect2(-symbols.marker_size * 0.5, symbols.marker_size), key[0], key[1], key[2], key[3]))
-			_symbol_nodes[code] = ink
+			var ink_node := Node2D.new()
+			add_child(ink_node)
+			ink_node.draw.connect(func() -> void:
+				var look_key: Array = ink_node.get_meta("look")
+				symbols.draw_symbol(ink_node, Rect2(-symbols.marker_size * 0.5, symbols.marker_size), look_key[0], look_key[1], look_key[2], look_key[3]))
+			_symbol_nodes[code] = ink_node
 		var ink: Node2D = _symbol_nodes[code]
 		ink.position = (marker["symbol_rect"] as Rect2).get_center()
 		if ink.get_index() != order: move_child(ink, order)

@@ -16,11 +16,11 @@ func _ready() -> void:
 	for index: int in %Choices.get_child_count():
 		get_node("%%Choice%d" % (index + 1)).pressed.connect(_choose.bind(index))
 
-func show_view(view: Dictionary, battle_id := -1) -> void:
+func show_view(view: Dictionary, for_battle := -1) -> void:
 	_view = view
 	_decision = view.get("decision", {})
 	var event := String(_decision.get("kind", "")) == "battle_event"
-	_battle_id = int(_decision.get("battle_id", battle_id)) if event else battle_id
+	_battle_id = int(_decision.get("battle_id", for_battle)) if event else for_battle
 	%Battle.clear()
 	var chosen: Dictionary = {}
 	for battle: Dictionary in view.get("battles", []):

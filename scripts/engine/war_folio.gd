@@ -176,10 +176,8 @@ static func _tier_word(n: int) -> String:
 	return "remnants"
 
 
-static func _composition(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
-	var st := _state_of(repo, state, code, reg)
+static func _composition(repo: DataRepository, state: GameState, code: String, _reg: Dictionary) -> Array:
 	# the dead and the deserted are no longer under arms
-	var heads := ArmySystem.headcount(repo, reg)
 	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.living_count(repo, state, code)))]
 	for a: Dictionary in arms_of(repo, code):
 		rows.append(_row(_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))))

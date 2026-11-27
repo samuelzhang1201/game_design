@@ -28,7 +28,7 @@ static func pose(player: AnimationPlayer, skeleton: Skeleton3D, request: Diction
 ## Solves one phase of a `turn_udeg` pivot on `clip` (the clip whose sign matches the turn).
 static func solve(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, turn_udeg: int,
 		phase: float) -> Dictionary:
-	var sign := -1.0 if clip == "PIVOT_RIGHT" else 1.0  # native world yaw = sign x pi x phase
+	var turn_sign := -1.0 if clip == "PIVOT_RIGHT" else 1.0  # native world yaw = sign x pi x phase
 	if (turn_udeg > 0) != (clip == "PIVOT_RIGHT") or absi(turn_udeg) > 180000000:
 		return {"ok": false, "reason": "turn %d does not belong to %s" % [turn_udeg, clip], "pose": {}}
 	var length := player.get_animation(clip).length
@@ -57,7 +57,7 @@ static func solve(player: AnimationPlayer, skeleton: Skeleton3D, clip: String, t
 	for side: String in SIDES:
 		var foot := skeleton.find_bone("foot." + side)
 		var heading: float = _sample(table[side], phase)
-		var native_world := _yaw(sign * PI * phase) * to_model * (native[foot] as Transform3D)
+		var native_world := _yaw(turn_sign * PI * phase) * to_model * (native[foot] as Transform3D)
 		var world := _yaw((share - 1.0) * heading) * native_world
 		var target := to_model.affine_inverse() * _yaw(turn * phase) * world  # back to skeleton space
 		var failure := _reach(skeleton, out, side, target)
@@ -118,7 +118,7 @@ static func _heading_table(player: AnimationPlayer, skeleton: Skeleton3D, clip: 
 	var key := player.get_animation(clip).get_instance_id()  # one table per clip resource
 	if _headings.has(key):
 		return _headings[key]
-	var sign := -1.0 if clip == "PIVOT_RIGHT" else 1.0
+	var turn_sign := -1.0 if clip == "PIVOT_RIGHT" else 1.0
 	var length := player.get_animation(clip).length
 	var table := {"l": PackedFloat64Array(), "r": PackedFloat64Array()}
 	var previous := {}
@@ -126,7 +126,7 @@ static func _heading_table(player: AnimationPlayer, skeleton: Skeleton3D, clip: 
 		var phase := float(i) / HEADING_SAMPLES
 		var g := _globals(player, skeleton, clip, phase * length)
 		for side: String in SIDES:
-			var world := _yaw(sign * PI * phase) * to_model
+			var world := _yaw(turn_sign * PI * phase) * to_model
 			var ankle: Vector3 = world * (g[skeleton.find_bone("foot." + side)] as Transform3D).origin
 			var toe: Vector3 = world * (g[skeleton.find_bone("toes_01." + side)] as Transform3D).origin
 			var angle := atan2(toe.x - ankle.x, toe.z - ankle.z)

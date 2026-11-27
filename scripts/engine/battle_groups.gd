@@ -34,8 +34,8 @@ static func saved_size(repo: DataRepository, battle: Dictionary) -> int:
 static func layout(repo: DataRepository, count: int, anchor: Vector2i,
 		facing_deg: int, pitch_m := 0) -> Array[Vector2i]:
 	var face := WarFront.facing_vector(facing_deg)
-	var across := Vector2(-face.y, face.x) * float(pitch_m if pitch_m > 0 else repo.bal("battle_group_spacing_m"))
-	var back := -face * float(pitch_m if pitch_m > 0 else repo.bal("battle_group_depth_m"))
+	var across := Vector2(-face.y, face.x) * (float(pitch_m) if pitch_m > 0 else float(repo.bal("battle_group_spacing_m")))
+	var back := -face * (float(pitch_m) if pitch_m > 0 else float(repo.bal("battle_group_depth_m")))
 	var out: Array[Vector2i] = []
 	for slot: Vector2 in BattleFormation.slots(BattleFormation.DEFAULT, count):
 		out.append(anchor + Vector2i((across * slot.x + back * slot.y).round()))
@@ -879,7 +879,7 @@ static func _body_deployment(repo: DataRepository, state: GameState, battle: Dic
 	if not BodyMotion._loco_integer(gap) or gap < 0 or gap > BodyMotion.LOCAL_LIMIT: return {}
 	var out := {}
 	for side: String in BattleSystem.SIDES:
-		var sign := -1 if side == "att" else 1
+		var side_sign := -1 if side == "att" else 1
 		var codes: Array = battle[side].duplicate()
 		codes.sort()
 		var bounds := {}
@@ -897,7 +897,7 @@ static func _body_deployment(repo: DataRepository, state: GameState, battle: Dic
 				if absf(x) > BodyMotion.LOCAL_LIMIT or absf(y) > BodyMotion.LOCAL_LIMIT: return {}
 				low = minf(low, -ay * x + ax * y)
 				high = maxf(high, -ay * x + ax * y)
-				front = maxf(front, sign * (ax * x + ay * y) + footprint.radius_m)
+				front = maxf(front, side_sign * (ax * x + ay * y) + footprint.radius_m)
 			var width: float = high - low + 2.0 * footprint.radius_m if not is_inf(low) else 0.0
 			bounds[code] = {"low": low - footprint.radius_m if width > 0 else 0.0, "width": width}
 			total += width + gap
@@ -915,13 +915,13 @@ static func _body_deployment(repo: DataRepository, state: GameState, battle: Dic
 				var x := BodyMotion._difference(row.x_m, place[0])
 				var y := BodyMotion._difference(row.y_m, place[1])
 				if absf(x) > BodyMotion.LOCAL_LIMIT or absf(y) > BodyMotion.LOCAL_LIMIT: return {}
-				back = maxf(back, front + footprint.radius_m + gap - sign * (ax * x + ay * y))
+				back = maxf(back, front + footprint.radius_m + gap - side_sign * (ax * x + ay * y))
 		var cursor: float = -(total - gap) / 2.0
 		for code: String in codes:
 			var entry := UnitBodies._entry(state, code)
 			var lateral: float = cursor - bounds[code].low
-			var point: Array = [int(place[0]) + int(round(-sign * ax * back - ay * lateral)),
-				int(place[1]) + int(round(-sign * ay * back + ax * lateral))]
+			var point: Array = [int(place[0]) + int(round(-side_sign * ax * back - ay * lateral)),
+				int(place[1]) + int(round(-side_sign * ay * back + ax * lateral))]
 			if not BodyMotion._loco_point(point): return {}
 			for axis: int in 2:
 				if absf(BodyMotion._difference(point[axis], entry.x_m if axis == 0 else entry.y_m)) > BodyMotion.LOCAL_LIMIT: return {}
@@ -968,8 +968,8 @@ static func deployment_intent_candidate(repo: DataRepository, source: GameState,
 	if contact.engaged > 0:
 		result.reason = "Already in lawful physical contact"
 		return result
-	var layout := _body_deployment(repo, source, battle)
-	var targets: Dictionary = layout.get("targets", {})
+	var deployed := _body_deployment(repo, source, battle)
+	var targets: Dictionary = deployed.get("targets", {})
 	if not targets.has(unit):
 		return {"status": "error", "reason": "Invalid candidate deployment geometry", "error": "Invalid candidate deployment geometry", "unit": unit, "path_m": []}
 	var target: Array = targets[unit]
@@ -985,8 +985,8 @@ static func deployment_intent_candidate(repo: DataRepository, source: GameState,
 	else:
 		var task := BattleTaskSystem.current(source, unit)
 		var close_line: bool = task.is_empty() or (task.get("request", {}).get("task") == "advance" and action.kind == "attack")
-		var sign := -1 if side == "att" else 1
-		if close_line and not action.has("pursuit_target") and sign * (BodyMotion._difference(here[0], target[0]) * layout.axis[0] + BodyMotion._difference(here[1], target[1]) * layout.axis[1]) >= 0:
+		var side_sign := -1 if side == "att" else 1
+		if close_line and not action.has("pursuit_target") and side_sign * (BodyMotion._difference(here[0], target[0]) * deployed.axis[0] + BodyMotion._difference(here[1], target[1]) * deployed.axis[1]) >= 0:
 			var approach := _body_close_front(repo, source, battle, unit, targets)
 			if not approach.is_empty(): target = [int(here[0]) + int(approach[0]), int(here[1]) + int(approach[1])]
 	var path := BodyMotion._clip([here, target], budget_m)

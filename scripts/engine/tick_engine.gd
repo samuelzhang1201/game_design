@@ -63,9 +63,9 @@ func resolve_day(state: GameState, close_month := false) -> Dictionary:
 	if not state.day_resolution.is_empty() and not state.day_resolution.has("protocol_version"):
 		return _resolve_legacy_day(state, close_month)
 	if state.day_resolution.is_empty():
-		var organization := MilitaryReorganization.reconcile(data, state)
-		if organization.get("status", "error") == "error":
-			return {"status": "error", "error": organization.get("error", "Cannot reconcile military organization.")}
+		var reorg := MilitaryReorganization.reconcile(data, state)
+		if reorg.get("status", "error") == "error":
+			return {"status": "error", "error": reorg.get("error", "Cannot reconcile military organization.")}
 		state.day_resolution = DayResolution.begin(state.day,
 			close_month or state.day >= Calendar.DAYS_PER_TICK, state.absolute_day(), int(data.bal("battle_substeps")))
 	var tx := state.day_resolution
@@ -128,11 +128,11 @@ func _restore_day_outputs(tx: Dictionary) -> void:
 			day_ai.append_array(record.get("events", []))
 
 
-func _save_host_events(journal: Dictionary, events: Array) -> void:
+func _save_host_events(journal: Dictionary, saved_events: Array) -> void:
 	var reports: Array = journal.get("reports", [])
 	reports = reports.filter(func(record: Dictionary) -> bool:
 		return String(record.get("kind", "")) != "host_events")
-	reports.append({"kind": "host_events", "events": events.duplicate(true)})
+	reports.append({"kind": "host_events", "events": saved_events.duplicate(true)})
 	journal["reports"] = reports
 
 
@@ -307,14 +307,14 @@ func _resolve_battles(state: GameState, tx: Dictionary) -> Dictionary:
 	return {"blocked": false}
 
 
-func _append_substep_battle_events(journal: Dictionary, events: Array, substep_index: int) -> void:
-	for event: Dictionary in events:
+func _append_substep_battle_events(journal: Dictionary, battle_events: Array, substep_index: int) -> void:
+	for event: Dictionary in battle_events:
 		var recorded := event.duplicate(true)
 		recorded["substep_index"] = substep_index
 		(journal["battles"] as Array).append(recorded)
 
 
-func _resolve_legacy_day(state: GameState, close_month := false) -> Dictionary:
+func _resolve_legacy_day(state: GameState, _close_month := false) -> Dictionary:
 	var tx := state.day_resolution
 	var journal: Dictionary = tx["journal"]
 	if not journal.has("missive_start"):
@@ -527,23 +527,23 @@ func _route_battle_reports(state: GameState, fights: Array) -> void:
 	var ids := grouped.keys()
 	ids.sort()
 	for id: int in ids:
-		var events: Array = grouped[id]
+		var grouped_events: Array = grouped[id]
 		var place: Dictionary = {}
-		for event: Dictionary in events:
+		for event: Dictionary in grouped_events:
 			if event.has("place_x_m"):
 				place = event.duplicate(true)
 				break
-		var report := MissiveWriter.king_report_payload(data, state, events)
+		var report := MissiveWriter.king_report_payload(data, state, grouped_events)
 		report["battle_id"] = id
 		report["day"] = state.absolute_day()
 		report["event_tokens"] = []
-		for event: Dictionary in events:
+		for event: Dictionary in grouped_events:
 			if event.kind == "battle_event":
 				report.event_tokens.append(event.token)
 		var at := Vector2i(int(place.get("place_x_m", 0)), int(place.get("place_y_m", 0)))
 		var local := BattleSystem._within(KingSystem.position(state), at, int(data.bal("king_command_radius_m")))
 		if local:
-			MissiveLog.add(data, state, MissiveLog.battle_payload(MissiveWriter.battle_report(data, state, events), report))
+			MissiveLog.add(data, state, MissiveLog.battle_payload(MissiveWriter.battle_report(data, state, grouped_events), report))
 			BattleEvents.receive_report(state, report)
 		else:
 			place["report"] = report
@@ -864,8 +864,8 @@ func _begin_body_march_candidate(source: GameState, version: int) -> Dictionary:
 		if source.day_resolution.has("body_march"):
 			var control: Variant = source.day_resolution.body_march
 			var saved_version := 2 if control is Dictionary and control.get("version") == "2" else 1
-			var error := ArmySystem._body_source_error(data, source, saved_version)
-			if not error.is_empty(): return ArmySystem._body_result("error", error)
+			var source_err := ArmySystem._body_source_error(data, source, saved_version)
+			if not source_err.is_empty(): return ArmySystem._body_result("error", source_err)
 		return ArmySystem._body_result("deferred", "Resume the existing day through step")
 	if not source.military_migration.has("body_version"): return ArmySystem._body_result("error", "Explicit current body initialization required")
 	var validated := UnitBodies.migrate_candidate(data, source)

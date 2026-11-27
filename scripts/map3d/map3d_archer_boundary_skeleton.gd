@@ -4,10 +4,10 @@ extends RefCounted
 ## Lengths are native skeleton metres; origin displacement is in model metres.
 
 
-static func measure(rest: Dictionary, reference: Dictionary, poses: Array[Dictionary], raw: Dictionary, candidate: Dictionary, model_from_native: Transform3D, arithmetic_epsilon: float) -> Dictionary:
+static func measure(rest: Dictionary, ref_pose: Dictionary, poses: Array[Dictionary], raw: Dictionary, candidate: Dictionary, model_from_native: Transform3D, arithmetic_epsilon: float) -> Dictionary:
 	var bones: Dictionary = {}
 	var segments: Array = []
-	for name: String in reference:
+	for name: String in ref_pose:
 		var gram_raw: Basis = raw[name].basis.transposed() * raw[name].basis
 		var gram_candidate: Basis = candidate[name].basis.transposed() * candidate[name].basis
 		var gram_rest: Basis = rest.locals[name].basis.transposed() * rest.locals[name].basis
@@ -21,7 +21,7 @@ static func measure(rest: Dictionary, reference: Dictionary, poses: Array[Dictio
 		var row: Dictionary = {"origin_displacement_m": (model_from_native * poses[0][name].origin).distance_to(model_from_native * poses[1][name].origin), "local_gram_residual": affine_residual, "raw_rest_gram_residual": raw_rest_residual, "candidate_rest_gram_residual": candidate_rest_residual}
 		var parent: String = rest.parents[name]
 		if not parent.is_empty():
-			var length: float = reference[name].origin.distance_to(reference[parent].origin)
+			var length: float = ref_pose[name].origin.distance_to(ref_pose[parent].origin)
 			row.raw_length_residual_native_m = poses[0][name].origin.distance_to(poses[0][parent].origin) - length
 			row.candidate_length_residual_native_m = poses[1][name].origin.distance_to(poses[1][parent].origin) - length
 		for field: String in row:
@@ -29,19 +29,19 @@ static func measure(rest: Dictionary, reference: Dictionary, poses: Array[Dictio
 				return _failure("boundary: overflowing bone metric")
 		bones[name] = row
 	for segment: Variant in rest.segments:
-		if not segment is Dictionary or not reference.has(segment.get("a")) or not reference.has(segment.get("b")):
+		if not segment is Dictionary or not ref_pose.has(segment.get("a")) or not ref_pose.has(segment.get("b")):
 			return _failure("boundary: invalid anatomical segment")
 		var a: String = segment.a
 		var b: String = segment.b
-		var span: Vector3 = reference[b].origin - reference[a].origin
+		var span: Vector3 = ref_pose[b].origin - ref_pose[a].origin
 		if span.length() <= arithmetic_epsilon:
 			return _failure("boundary: degenerate anatomical segment")
 		var row: Dictionary = {"a": a, "b": b, "raw_length_residual_native_m": poses[0][a].origin.distance_to(poses[0][b].origin) - span.length(),
 			"candidate_length_residual_native_m": poses[1][a].origin.distance_to(poses[1][b].origin) - span.length()}
 		if segment.has("split"):
-			if not reference.has(segment.split):
+			if not ref_pose.has(segment.split):
 				return _failure("boundary: unknown split bone")
-			var fraction: float = (reference[segment.split].origin - reference[a].origin).dot(span) / span.length_squared()
+			var fraction: float = (ref_pose[segment.split].origin - ref_pose[a].origin).dot(span) / span.length_squared()
 			row.split = segment.split
 			row.rest_fraction = fraction
 			row.raw_split_residual_native_m = poses[0][segment.split].origin.distance_to(poses[0][a].origin.lerp(poses[0][b].origin, fraction))

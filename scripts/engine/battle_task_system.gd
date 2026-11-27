@@ -302,7 +302,7 @@ static func deliver_task(repo: DataRepository, state: GameState, order_id: Strin
 		var was: Dictionary = previous["request"]
 		var same := BattleSystem.canonical(state, int(was["battle_id"])) == BattleSystem.canonical(state, int(order["battle_id"]))
 		for key: String in ["task", "target_unit", "max_route_m", "region"]:
-			same = same and was.get(key, 0 if key in ["max_route_m"] else "") == order[key]
+			same = same and (was.get(key, 0) if key == "max_route_m" else was.get(key, "")) == order[key]
 		if same:
 			kept = (previous["pursuit"] as Dictionary).duplicate()
 			if previous["status"] == "bounded":

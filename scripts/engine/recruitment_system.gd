@@ -53,23 +53,23 @@ static func pending_new_units(repo: DataRepository, state: GameState) -> Diction
 				or not ids is Array or ids.is_empty() or not project.get("quote", null) is Dictionary \
 				or not project.get("result", null) is Dictionary or not project.get("equipment", null) is Dictionary:
 			return {"error": "Saved new assembly needs its original unit, cohorts and paid receipt."}
-		var quote: Dictionary = project.quote
+		var quoted: Dictionary = project.quote
 		var result: Dictionary = project.result
 		var last_day: Variant = project.get("last_processed_day")
 		var types := repo.world_table("military", "unit_types")
 		var arm := String(request.arm)
 		if not project.get("status", "") in ["assembling", "paused"] or not types.has(arm) \
 				or not ArmySplit.is_whole_count(types[arm].get("crew", 0)) or int(types[arm].get("crew", 0)) <= 0 \
-				or quote.get("arm", "") != arm or quote.get("unit_code", "") != root \
-				or quote.get("needs_commander", false) != true or project.get("commander_id", "") != request.commander_id \
-				or String(request.commander_id) == "" or not quote.get("equipment", null) is Dictionary \
-				or project.equipment != quote.equipment or project.equipment.size() != 1 \
+				or quoted.get("arm", "") != arm or quoted.get("unit_code", "") != root \
+				or quoted.get("needs_commander", false) != true or project.get("commander_id", "") != request.commander_id \
+				or String(request.commander_id) == "" or not quoted.get("equipment", null) is Dictionary \
+				or project.equipment != quoted.equipment or project.equipment.size() != 1 \
 				or not ArmySplit.is_whole_count(project.equipment.get(arm, -1)) or int(project.equipment.get(arm, 0)) <= 0 \
-				or not ArmySplit.is_whole_count(quote.get("gold", -1)) or int(quote.get("gold", 0)) <= 0 \
-				or result.get("gold", -1) != quote.gold or result.get("unit_code", "") != root \
+				or not ArmySplit.is_whole_count(quoted.get("gold", -1)) or int(quoted.get("gold", 0)) <= 0 \
+				or result.get("gold", -1) != quoted.gold or result.get("unit_code", "") != root \
 				or result.get("request_id", "") != id or result.get("status", "") != "assembling" \
 				or not ArmySplit.is_whole_count(project.get("build_days", -1)) or int(project.get("build_days", 0)) <= 0 \
-				or project.get("build_days", -1) != quote.get("build_days", -2) \
+				or project.get("build_days", -1) != quoted.get("build_days", -2) \
 				or not ArmySplit.is_whole_count(project.get("worked_days", -1)) \
 				or not (last_day is int or last_day is float) or not is_finite(float(last_day)) or float(last_day) != floor(float(last_day)):
 			return {"error": "Saved new assembly needs its complete original paid contract."}

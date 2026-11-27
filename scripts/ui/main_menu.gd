@@ -218,10 +218,10 @@ func _fill_living_title() -> void:
 	($Caption/When as Label).text = "%s, the first year of the reign" % cap["season"]
 	# black until the title enters (the scene keeps it off so the editor shows the title)
 	$Curtain.visible = true
-	for row: Dictionary in Game.data.title_entrance:
-		var node := get_node_or_null(NodePath(String(row["node"]))) as CanvasItem
-		if node != null and String(row["kind"]) != "curtain":
-			for item: CanvasItem in _entrance_items(node, String(row["kind"])):
+	for entry_row: Dictionary in Game.data.title_entrance:
+		var node := get_node_or_null(NodePath(String(entry_row["node"]))) as CanvasItem
+		if node != null and String(entry_row["kind"]) != "curtain":
+			for item: CanvasItem in _entrance_items(node, String(entry_row["kind"])):
 				item.modulate.a = 0.0
 
 ## The living map, made once the boot's loads are in and the black has been
@@ -262,9 +262,9 @@ func _show_realm() -> void:
 	t.finished.connect(func() -> void: page.visible = false)
 
 func _curtain_s() -> float:
-	for row: Dictionary in Game.data.title_entrance:
-		if String(row["kind"]) == "curtain":
-			return float(row["duration_ms"]) / 1000.0
+	for entry_row: Dictionary in Game.data.title_entrance:
+		if String(entry_row["kind"]) == "curtain":
+			return float(entry_row["duration_ms"]) / 1000.0
 	return 0.0
 
 ## The entrance (data/screens/ui/title_entrance.csv, after the owner's web hero): the
@@ -275,15 +275,15 @@ func _curtain_s() -> float:
 func _enter() -> void:
 	_entered = true
 	_entrance = create_tween().set_parallel(true)
-	for row: Dictionary in Game.data.title_entrance:
-		var node := get_node_or_null(NodePath(String(row["node"]))) as CanvasItem
+	for entry_row: Dictionary in Game.data.title_entrance:
+		var node := get_node_or_null(NodePath(String(entry_row["node"]))) as CanvasItem
 		if node == null:
 			continue
-		var kind := String(row["kind"])
-		var delay := float(row["delay_ms"]) / 1000.0
-		var dur := float(row["duration_ms"]) / 1000.0
-		var lift := float(row["lift_px"])
-		var trans := Tween.TRANS_QUART if String(row["ease"]) == "quart" else Tween.TRANS_EXPO
+		var kind := String(entry_row["kind"])
+		var delay := float(entry_row["delay_ms"]) / 1000.0
+		var dur := float(entry_row["duration_ms"]) / 1000.0
+		var lift := float(entry_row["lift_px"])
+		var trans := Tween.TRANS_QUART if String(entry_row["ease"]) == "quart" else Tween.TRANS_EXPO
 		if kind == "curtain":
 			_entrance.tween_property(node, "modulate:a", 0.0, dur).set_delay(delay) \
 				.set_trans(trans).set_ease(Tween.EASE_OUT)
@@ -291,7 +291,7 @@ func _enter() -> void:
 			continue
 		var i := 0
 		for item: CanvasItem in _entrance_items(node, kind):
-			var at := delay + float(row["step_ms"]) / 1000.0 * i
+			var at := delay + float(entry_row["step_ms"]) / 1000.0 * i
 			i += 1
 			_entrance.tween_property(item, "modulate:a", 1.0, dur * (0.15 if kind == "rise" else 0.6)) \
 				.set_delay(at).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)

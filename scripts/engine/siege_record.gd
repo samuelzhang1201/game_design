@@ -144,10 +144,10 @@ static func migrate(repo: DataRepository, state: GameState) -> void:
 		var mind: Dictionary = state.ai_hosts[h]
 		if mind.has("occupied") or mind.has("occupied_house"):
 			var cells: Dictionary = mind.get("occupied", {})
-			var town := String(mind.get("target_id", ""))
-			if not cells.is_empty() and town != "" and not state.occupations.has(town):
+			var target_town := String(mind.get("target_id", ""))
+			if not cells.is_empty() and target_town != "" and not state.occupations.has(target_town):
 				var by := SiegeSystem.host_label(repo, h)
-				state.occupations[town] = {"town": town, "occupier": SiegeSystem._kingdom_of(repo, state, h),
+				state.occupations[target_town] = {"town": target_town, "occupier": SiegeSystem._kingdom_of(repo, state, h),
 					"from": repo.resolve_realm("player_realm"), "house": String(mind.get("occupied_house", "")),
 					"host": h, "by": by, "day": state.absolute_day(), "cells": cells.duplicate()}
 				occupied += 1
