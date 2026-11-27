@@ -63,6 +63,7 @@ RIG = 'inf_rig'  # the armature node above the joints
 NUDGE_LEAD = .03  # the swing-out leads and trails the step by this share of the pivot
 NUDGE = ()  # (leg index, bones under ROOT, degrees): swung out while that leg steps
 HELD = None  # name prefix of bones that hold their NEUTRAL_PHASE keys with the legs (the militia's skirt)
+PLACE_NATIVE = False  # a held foot stands where the coupled frame's own sole is, not under its hip
 # Another body on the same rig contract (`inf_rig`, the same pack walk) overrides what its own MARCH
 # and scale give; `use(arm)` binds the module to it. The heavy infantry's plate soldier
 # (2026-11-20): on a 420-phase scan of its MARCH the infantry's phases sit on the same events
@@ -89,13 +90,27 @@ HELD = None  # name prefix of bones that hold their NEUTRAL_PHASE keys with the 
 ARMS = {'infantry': {}, 'heavy_infantry': {'CONTACT_UM': 22699, 'SEAM_UM': 1892}, 'axemen': {},
         'militia': {'RIG': 'mil_rig', 'HELD': 'skirt_', 'CONTACT_UM': 24202, 'SEAM_UM': 2017,
                     'NUDGE': ((0, ('skirt_00_a', 'skirt_01_a'), 15.), (0, ('skirt_02_a', 'skirt_09_a'), 7.5),
-                              (1, ('skirt_08_a', 'skirt_09_a'), 15.), (1, ('skirt_07_a', 'skirt_00_a'), 7.5))}}
+                              (1, ('skirt_08_a', 'skirt_09_a'), 15.), (1, ('skirt_07_a', 'skirt_00_a'), 7.5))},
+        # The longbowman (2026-11-27): the infantry's rig contract (`inf_rig`) walking his own retargeted
+        # MARCH (36 frames), so its own events on a 420-phase scan: the thighs most nearly parallel at 400/420
+        # (4.1 deg, right sole planted, the left passing 23 mm up) are both the held frame and the entry/exit
+        # (the lift of a pivot's step scales with the turn, its travel does not: an entry in mid-stride, as
+        # 359/420, slid the right sole 197 mm along the ground at a 1 microdegree turn), the held feet where that
+        # frame's soles stand (PLACE_NATIVE: under the hips they stood 7 cm apart against his walk's 26, so the
+        # right sole still slid 118 mm at a 1 microdegree turn), each foot's flattest
+        # planted patch at 160/420 (left, 9.3 mm) and the
+        # right's own at the entry, 400/420 (4.9 mm: held where it stood, it does not slide); bounds at k 25.7242 (rest height 1.6433 m at size 0.62).
+        'archers': {'CANONICAL_PHASE': 400 / 420, 'NEUTRAL_PHASE': 400 / 420, 'PLACE_NATIVE': True, 'FOOT_PHASES': (160 / 420, 400 / 420),
+                    'CONTACT_UM': 23325, 'SEAM_UM': 1944}}
+
+DEFAULTS = {k: globals()[k] for k in {k for a in ARMS.values() for k in a}}
 
 
 def use(arm):
     """Bind the module's parameters and GLB to `arm`."""
     global GLB
-    globals().update(ARMS[arm])
+    # the infantry's values first: an arm overrides only what it names, never what the last bound arm set
+    globals().update({k: DEFAULTS[k] for k in {k for a in ARMS.values() for k in a}}, **ARMS[arm])
     COUPLED.update(neutral=(NEUTRAL_PHASE, NEUTRAL_PHASE), foot=FOOT_PHASES)
     GLB = Path(__file__).resolve().parents[3] / f'assets/3D/units/{arm}/{arm}.glb'
 SOLE_PATCH_M = .005
@@ -402,7 +417,9 @@ def build_case(model, template, op, phases, neutral, last_step, foot, plane):
             sm, tm = mid[leg['ankle']] @ sb, mid[leg['toe']] @ tb
             gs, gt = (sx, tx) if last else (sm, tm)
             place = gs[:3, 3].copy()
-            if not last:  # under the coupled frame's hip, flat on its own midstance sole
+            if not last and PLACE_NATIVE:  # where the coupled frame's own sole stands (its own stance width)
+                place[[0, 2]] = (pose[li][leg['ankle']] @ sb)[:3, 3][[0, 2]]
+            elif not last:  # under the coupled frame's hip, flat on its own midstance sole
                 offset = mid[leg['ankle']][:3, :3] @ sb[:3, 3]
                 place[[0, 2]] = pose[li][leg['hip']][:3, 3][[0, 2]] + offset[[0, 2]]
             place[1] = sx[1, 3] if last else ground + sm[1, 3] - low[li]

@@ -651,7 +651,9 @@ def _poses(src, keep, clip):
         # frames: these clips already end on their first pose (WALK 0.8 mm, IDLE 0.7 deg apart), so
         # lerping whole frames toward frame 1 would drag a planted foot across its touchdown.
         n = len(poses)
-        fix = {b: poses[0][b] @ poses[-1][b].inverted() for b in poses[0]}
+        # a bone scaled to 0 (the archer's arrow while not drawn) has no seam to spread
+        fix = {b: poses[0][b] @ poses[-1][b].inverted() if abs(poses[-1][b].determinant()) > 1e-12
+               else Matrix.Identity(4) for b in poses[0]}
         for k in range(SEAM_FRAMES):
             i = n - SEAM_FRAMES + k
             w = (k + 1) / SEAM_FRAMES

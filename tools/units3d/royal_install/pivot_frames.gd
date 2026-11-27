@@ -1,8 +1,8 @@
 extends SceneTree
 ## Real-window frames of a pivot (visual review of Map3DRoyalPivot, with --arm cavalry of
-## Map3DCavalryLocomotion, with --arm militia of Map3DMilitiaLocomotion; NEVER --headless).
+## Map3DCavalryLocomotion, with --arm militia / archers of Map3DMilitiaLocomotion / Map3DArcherLocomotion; NEVER --headless).
 ##   Godot --path . -s res://tools/units3d/royal_install/pivot_frames.gd -- --out DIR
-##       [--arm royal|cavalry|militia] [--dist M] [--turn UDEG] [--frames N] [--mode provider|native] [--plan key=value ...] [--yaw DEG]
+##       [--arm royal|cavalry|militia|archers] [--dist M] [--turn UDEG] [--frames N] [--mode provider|native] [--plan key=value ...] [--yaw DEG]
 ## provider: the pivot posed by the arm's provider `solve`. native: the installed PIVOT clip seeked
 ## (the bake-only playback the provider replaces). Either way the node yaws as BodyMotion does
 ## (positive turn = RIGHT, decreasing yaw), on a plane at the seat (the seated plane), lit by
@@ -10,7 +10,8 @@ extends SceneTree
 
 const PROVIDERS: Dictionary = {"royal": "res://scripts/map3d/map3d_royal_pivot.gd",
 	"cavalry": "res://scripts/map3d/map3d_cavalry_locomotion.gd",
-	"militia": "res://scripts/map3d/map3d_militia_locomotion.gd"}
+	"militia": "res://scripts/map3d/map3d_militia_locomotion.gd",
+	"archers": "res://scripts/map3d/map3d_archer_locomotion.gd"}
 const Shell = preload("res://scripts/map3d/map3d_pivot_provider.gd")
 
 
