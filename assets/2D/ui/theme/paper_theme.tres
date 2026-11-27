@@ -108,6 +108,10 @@ grow_begin = 0.0
 grow_end = 0.0
 
 [resource]
+CardCommand/base_type = &"Button"
+CardCommand/colors/font_disabled_color = Color(0.49019608, 0.41568628, 0.32156864, 1)
+CardCommandSmall/base_type = &"Button"
+CardCommandSmall/colors/font_disabled_color = Color(0.49019608, 0.41568628, 0.32156864, 1)
 CardFigure/base_type = &"Label"
 CardFigure/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 CardFigure/font_sizes/font_size = 13
