@@ -1,8 +1,9 @@
 section,label,fields,list,cards,notes
 holding,The Holding,Held by|Controlled by|Seat|Manors,0,province|burg,"owner 2026-11-26 (AR-4 step 2, CK3 as the reference): a province's or town's fields under short ruled headings instead of one long grid; fields are matched by their label, in this order; a field no row names falls under no heading at the end"
-town,The Town,Group|Type|Culture,0,burg,what kind of place a town is
+town,The Town,Group|Type|Culture|Features,0,burg,"what kind of place a town is; Features its glyphs (port, walls, market …), a field since AR-4 follow-up 3"
 people,The People,Population|Towns,0,province|burg,
 land,The Land,Terrain|Area|Weather|Hazard|Changed hands,0,province|burg,
+trade,Trade,Production|Wealth|Treasury,0,province|burg,"what the place makes (its chief goods, art + name + units) and its purses; loose below the card until AR-4 follow-up 3 (critic 2026-11-26)"
 stores,War Stores,In store|Buys at|Supply lines|Stores last,0,burg,a realm town's strategic stores
 military,Under Arms,Regiments,1,province,"list 1: the value is a list (MapObjects.LIST_SEP), one line an item, no label (critic 2026-11-26: a regiment list wrapped ten lines beside its label and was cut off)"
 ranks,The Ranks,Headcount|Under arms|Infantry|Heavy infantry|Axemen|Militia|Archers|Cavalry|Artillery|Fleet|Training|Strength|Morale|Wound recovery,0,army,"AR-4 follow-up 2026-11-27: a regiment's stats as named rows like a province's (critic 2026-11-26: an icon and a bare figure did not read); matched by the stat's label"
