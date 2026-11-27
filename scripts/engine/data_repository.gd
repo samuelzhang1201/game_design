@@ -136,6 +136,9 @@ var army_route_orders: Dictionary = {}
 ## data/army/army_carry_loads.csv: [{days, pace_permille, label}], days ascending
 ## (spec 2026-10-07-army-supply-lines §3.6).
 var army_carry_loads: Array = []
+## data/army/army_group_names.csv: the armies' default names in order of use
+## ("1st Army", …; ArmyGroups.form takes the first not in use).
+var army_group_names: Array = []
 ## data/army/army_supply_orders.csv: key -> {label, hint} — the supply rows of the
 ## regiment's right-click menu (spec 2026-10-07-army-supply-lines §5.1).
 var army_supply_orders: Dictionary = {}
@@ -1039,6 +1042,9 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(table_path(dir, "army_carry_loads"), ["days", "pace_permille", "label"],
 			func(r): army_carry_loads.append({"days": int(r["days"]),
 				"pace_permille": int(r["pace_permille"]), "label": String(r["label"])})):
+		return false
+	if not _load_if_present(table_path(dir, "army_group_names"), ["name"],
+			func(r): army_group_names.append(String(r["name"]))):
 		return false
 	army_carry_loads.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["days"]) < int(b["days"]))
 	if not _load_if_present(table_path(dir, "army_supply_orders"), ["key", "label", "hint"],

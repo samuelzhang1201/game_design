@@ -1120,4 +1120,6 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		# wide for the default 4-column (2-pair) grid in the 120px left column
 		# (owner 2026-09-17 review); one icon+value pair per row instead.
 		"stat_columns": 2,
+		# its army, a selection group (spec 2026-11-27-army-groups): {} for none
+		"group": ArmyGroups.summary(repo, state, ArmyGroups.group_of(state, code)) if state != null else {},
 	}

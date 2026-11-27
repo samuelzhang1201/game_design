@@ -147,7 +147,7 @@ func test_a_click_on_a_far_piece_opens_the_regiment() -> void:
 	watch_signals(v)
 	_click(v, box.get_center())
 	assert_signal_emitted_with_parameters(v, "object_selected",
-		[{"title": String(r["label"]), "obj": {"kind": "army", "code": code}}])
+		[{"title": String(r["label"]), "obj": {"kind": "army", "code": code, "codes": [code]}}])
 	assert_eq(v.selected_army(), code)
 	v.clear_selection()
 	assert_eq(v.selected_army(), "")
