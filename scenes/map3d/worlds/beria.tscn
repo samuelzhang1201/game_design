@@ -50,7 +50,7 @@ _shader_parameters = {
 world_background = 0
 dual_scaling = true
 
-[node name="Terrain_beria" type="Node3D" unique_id=1623191885]
+[node name="Terrain_beria" type="Node3D" unique_id=1252258900]
 metadata/map3d_world = {
 "format_version": 2,
 "m_per_px": 50.0,
@@ -59,7 +59,7 @@ metadata/map3d_world = {
 "sea_y": 5.0
 }
 
-[node name="Terrain3D" type="Terrain3D" parent="." unique_id=1406413203]
+[node name="Terrain3D" type="Terrain3D" parent="." unique_id=203062727]
 data_directory = "res://assets/3D/terrain/beria/terrain"
 material = SubResource("Terrain3DMaterial_bj4bi")
 assets = ExtResource("1_bijye")
