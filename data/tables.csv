@@ -101,6 +101,7 @@ screens/ui,political_palette
 screens/ui,terrain_palette
 screens/ui,goods_palette
 screens/ui,manor_card_sections
+screens/ui,fact_card_sections
 screens/ui,graphics_quality
 screens/map3d,map3d_bake
 screens/map3d,map3d_farm_zones

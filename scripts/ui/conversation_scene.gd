@@ -71,6 +71,8 @@ var _military: MilitaryPanel
 var _military_view := false
 ## Whether the Crown has asked for the realm's card (SignalHub.realm_card_requested).
 var _realm_view := false
+## What the left column showed last, kept on it while it slides out.
+var _left_shown: Control
 var _continue_btn: Button
 var _panel: PanelContainer
 var _scroll: ScrollContainer
@@ -180,6 +182,7 @@ func _ready() -> void:
 	_refresh_location()
 	_map_right = %MapPanel.offset_right
 	_set_right("")
+	%MinisterPanel.visible = false   # nothing is chosen yet: no slide out at the start
 	_refresh_left()
 
 ## The leather chrome (balance ui_war_table 0): no table, no seal;
@@ -231,12 +234,22 @@ func _refresh_left() -> void:
 		return
 	var card := _detail.has_content()
 	var open := card or _military_view or _realm_view
+	if not open and %MinisterPanel.visible:
+		# laid back off the map: what it showed stays on it until it is out
+		if _left_shown != null and is_instance_valid(_left_shown):
+			_left_shown.visible = true
+		ScreenLayout.slide_column(%MinisterPanel, false, _refresh_left)
+		return
 	var country := open and not card and _country_panel.has_content()
 	_detail.visible = card
 	_country_panel.visible = country
 	_military.visible = _military_view and not card and not country
 	_dashboard.visible = _realm_view and not (card or country or _military_view)
-	%MinisterPanel.visible = open
+	_left_shown = null
+	for c: Control in [_detail, _country_panel, _military, _dashboard]:
+		if c.visible:
+			_left_shown = c
+	ScreenLayout.slide_column(%MinisterPanel, open)
 
 ## The realm's card in the column, opened and closed by the top bar's Crown.
 func toggle_realm_card() -> void:

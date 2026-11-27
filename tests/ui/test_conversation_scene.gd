@@ -216,6 +216,7 @@ func test_right_slot_is_empty_until_the_council_or_a_map_click_takes_it() -> voi
 		c.map_panel().get_global_rect().get_center().x, "the card is in the left column, over the map")
 	assert_false(c.dashboard().visible, "which the card takes from the dashboard")
 	c.detail_panel().close_button().pressed.emit()
+	await wait_until(func() -> bool: return not c.minister_panel().visible, 2.0)   # it slides back off the map
 	await wait_process_frames(2)
 	assert_false(c.detail_panel().visible, "CLOSE closes the card")
 	assert_false(c.dashboard().visible, "and with nothing chosen the left column hides")

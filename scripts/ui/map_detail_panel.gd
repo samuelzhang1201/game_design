@@ -136,7 +136,7 @@ func _ready() -> void:
 	_preview = body.get_node("Preview")
 	_ask = $Col/DetailAsk
 	_ask.pressed.connect(func() -> void: ask_requested.emit(_ask_text))
-	_close = $Col/DetailClose
+	_close = $Col/Commands/DetailClose
 	_close.pressed.connect(func() -> void:
 		_close_panel()
 		closed.emit())
@@ -308,49 +308,14 @@ func show_card(card: Dictionary) -> void:
 	_stats.add_theme_constant_override("v_separation", 4)
 	var stats: Array = card.get("stats", [])
 	if stats.is_empty():
-		for f in card.get("fields", []):
-			_fields.add_child(_line(String(f[0]), &"CardLabel"))
-			_fields.add_child(_line(String(f[1]), &"CardText"))
+		pass   # the fields below are its facts
 	elif _as_rows(card):
 		_fill_stat_rows(stats, card.get("rates", []))
 	else:
 		_fill_stats(stats)
 		_fill_rates(card.get("rates", []))
 	_show_painting(String(card.get("painting", "")))
-	# What is known through the missive board (spec 2026-09-28 §1): each row
-	# is a label, its text, and — when it came from a letter rather than
-	# common knowledge — a tag naming the source and the day, coloured by
-	# the column it stands in.
-	# The label column is only as wide as its words and a tag stands small
-	# under its estimate (Task 10's look check): in the fixed column the
-	# estimate and its tag on one line wrapped over four.
-	# A run of facts from one letter names it once, under the first: the same
-	# tag under every row carried nothing new (the colour still marks each).
-	var last_tag := ""
-	for row: Dictionary in card.get("intel", []):
-		var label := _line(String(row["label"]), &"CardLabel")
-		label.autowrap_mode = TextServer.AUTOWRAP_OFF
-		label.size_flags_horizontal = Control.SIZE_FILL
-		_fields.add_child(label)
-		var value := _line(String(row["text"]), &"CardText")
-		if String(row["tag"]) == "":
-			_fields.add_child(value)
-			last_tag = ""
-			continue
-		var colour := MapPalette.named(Game.data, "intel_" + String(row["column"]))
-		value.add_theme_color_override("font_color", colour)  # the report's column, data
-		if String(row["tag"]) == last_tag:
-			_fields.add_child(value)
-			continue
-		last_tag = String(row["tag"])
-		var tag := _line(last_tag, &"CardTag")
-		tag.add_theme_color_override("font_color", colour)  # the report's column, data
-		var cell := VBoxContainer.new()
-		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		cell.add_theme_constant_override("separation", 0)
-		cell.add_child(value)
-		cell.add_child(tag)
-		_fields.add_child(cell)
+	_fill_fields(card, card.get("fields", []) if stats.is_empty() else [])
 	var known := String(card.get("known", "full"))
 	var basic := known in ["basic", "general"]
 	if known == "army":
@@ -392,7 +357,7 @@ func show_card(card: Dictionary) -> void:
 			cell.add_child(ResourceIcon.create(String(spec[0])))
 			var text := _line("%s %s" % [
 				String((Game.data.resource_icons.get(String(spec[0]), {}) as Dictionary).get("label", spec[1])),
-				_num(float(card.get(String(spec[1]), 0.0)))])
+				UiPalette.format_int(roundi(float(card.get(String(spec[1]), 0.0))))])
 			text.autowrap_mode = TextServer.AUTOWRAP_OFF
 			cell.add_child(text)
 			_money.add_child(cell)
@@ -447,6 +412,127 @@ func show_card(card: Dictionary) -> void:
 		_add_build_menu(builds)
 	_set_ask(String(card.get("ask", "")))
 	_open_panel()
+
+
+## The card's facts as rows under short ruled headings (owner 2026-11-26,
+## AR-4 step 2: CK3 as the reference, not one long grid): the rows of
+## data/screens/ui/fact_card_sections.csv that name this card's kind, each a
+## CardSection heading over its fields in the table's order; a `list` field's
+## items one line each with no label; the letters' rows (`intel`) under the
+## `intel` heading; a field no row names last, headed by nothing. Each row is
+## its label (top-aligned, as wide as the card's widest label) and its value,
+## which takes the rest of the fixed column and wraps.
+func _fill_fields(card: Dictionary, fields: Array) -> void:
+	var kind := String(card.get("kind", ""))
+	var intel: Array = card.get("intel", [])
+	var placed := {}
+	var intel_done := false
+	for sec: Dictionary in Game.data.fact_card_sections:
+		if not (sec["cards"] as Array).has(kind):
+			continue
+		if String(sec["section"]) == "intel":
+			if not intel.is_empty():
+				_section_head(sec)
+				_fill_intel(intel)
+			intel_done = true
+			continue
+		var mine: Array = []
+		for want: String in sec["fields"]:
+			for i in fields.size():
+				if not placed.has(i) and String(fields[i][0]) == want:
+					mine.append(fields[i])
+					placed[i] = true
+		if mine.is_empty():
+			continue
+		var head := _section_head(sec)
+		if sec["list"] and mine.size() == 1:
+			# how many, so a list longer than the card's fold says so (critic 2026-11-27)
+			head.text += " (%d)" % String(mine[0][1]).split(MapObjects.LIST_SEP, false).size()
+		for f: Array in mine:
+			if not sec["list"]:
+				_fields.add_child(_field_row(String(f[0]), _line(String(f[1]))))
+				continue
+			var items := String(f[1]).split(MapObjects.LIST_SEP, false)
+			for n in items.size():
+				var item := items[n]
+				var l := _line(item)
+				l.name = "Item_%d" % n
+				l.autowrap_mode = TextServer.AUTOWRAP_OFF
+				l.clip_text = true
+				l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+				l.tooltip_text = item
+				l.mouse_filter = Control.MOUSE_FILTER_PASS
+				_fields.add_child(l)
+	for i in fields.size():
+		if not placed.has(i):
+			_fields.add_child(_field_row(String(fields[i][0]), _line(String(fields[i][1]))))
+	if not intel_done:
+		_fill_intel(intel)
+	# one label column for the whole card: as wide as its widest label
+	var widest := 0.0
+	for row in _fields.get_children():
+		if row.has_meta("field_label"):
+			widest = maxf(widest, (row.get_meta("field_label") as Label).get_minimum_size().x)
+	for row in _fields.get_children():
+		if row.has_meta("field_label"):
+			(row.get_meta("field_label") as Label).custom_minimum_size.x = widest
+
+
+func _section_head(sec: Dictionary) -> Label:
+	var head := Label.new()
+	head.name = "Section_" + String(sec["section"])
+	head.text = String(sec["label"])
+	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.theme_type_variation = &"CardSection"
+	_fields.add_child(head)
+	return head
+
+
+## One fact: its label top-aligned beside its value (critic 2026-11-26: a
+## label centred against a value of ten lines sat far below where it began).
+func _field_row(label: String, value: Control) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.name = "Field_" + label.validate_node_name()
+	row.add_theme_constant_override("separation", int(Game.data.bal("ui_card_field_gap_px")))
+	var l := _line(label, &"CardStatName")
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.size_flags_horizontal = Control.SIZE_FILL
+	l.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	row.add_child(l)
+	value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	value.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	row.add_child(value)
+	row.set_meta("field_label", l)
+	return row
+
+
+## What is known through the missive board (spec 2026-09-28 §1): each row
+## its label and its text, and — when it came from a letter rather than
+## common knowledge — a tag naming the source and the day under the
+## estimate, coloured by the column it stands in. A run of facts from one
+## letter names it once, under the first (the colour still marks each).
+func _fill_intel(intel: Array) -> void:
+	var last_tag := ""
+	for row: Dictionary in intel:
+		var value := _line(String(row["text"]), &"CardText")
+		if String(row["tag"]) == "":
+			_fields.add_child(_field_row(String(row["label"]), value))
+			last_tag = ""
+			continue
+		var colour := MapPalette.named(Game.data, "intel_" + String(row["column"]))
+		value.add_theme_color_override("font_color", colour)  # the report's column, data
+		if String(row["tag"]) == last_tag:
+			_fields.add_child(_field_row(String(row["label"]), value))
+			continue
+		last_tag = String(row["tag"])
+		var tag := _line(last_tag, &"CardTag")
+		tag.add_theme_color_override("font_color", colour)  # the report's column, data
+		var cell := VBoxContainer.new()
+		cell.name = "Estimate"
+		cell.add_theme_constant_override("separation", 0)
+		cell.add_child(value)
+		cell.add_child(tag)
+		_fields.add_child(_field_row(String(row["label"]), cell))
 
 
 ## A window onto the world map around a place, PREVIEW_SPAN native px

@@ -345,7 +345,10 @@ func test_military_stays_on_the_3d_map() -> void:
 	r.set_army_view(true)
 	assert_true(r.current_screen.military_panel().visible, "the host in the left column")
 	r.set_army_view(false)
-	assert_false(r.current_screen.military_panel().visible)
+	# the column slides back off the map with the host on it, then hides it
+	var column := r.current_screen.get_node("%LogPanel") as Control
+	await wait_until(func() -> bool: return not column.visible, 2.0)
+	assert_false(r.current_screen.military_panel().visible, "no host left behind once the column is out")
 	assert_true(r.current_screen.map3d_view().military(), "the host closing leaves them on the map")
 	Game.data.balance["map3d_default"] = 0.0
 
