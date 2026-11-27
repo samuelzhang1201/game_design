@@ -515,7 +515,10 @@ func _fill_army_group(card: Dictionary) -> void:
 		_army_button("DisbandArmy", "Disband", func() -> void:
 			Game.disband_army_group(id)
 			show_entry(_army_entry), row)
-	var mine := _army_codes.filter(func(c: String) -> bool: return ArmyGroups.eligible(Game.data, Game.state, c))
+	# the selection only belongs to the card the map just showed (a card shown otherwise has none)
+	var picked: Array = _army_codes if String((_army_entry.get("obj", {}) as Dictionary).get("code", "")) \
+		== String(card.get("code", "")) else []
+	var mine := picked.filter(func(c: String) -> bool: return ArmyGroups.eligible(Game.data, Game.state, c))
 	var same := not group.is_empty() and mine.size() == (group["codes"] as Array).size() \
 		and mine.all(func(c: String) -> bool: return (group["codes"] as Array).has(c))
 	if mine.size() >= int(Game.data.bal("army_group_min_members")) and not same:
