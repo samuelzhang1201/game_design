@@ -4,7 +4,7 @@
 1. The uncoupled parameters rebuild the frozen (knight) feasibility references exactly (the port is faithful).
 2. The canonical pair rebuilt from the committed captures of the installed infantry passes the R-B skin
    and R-A contact audit.
-3. Baking the committed solve onto the installed GLB's own export prefix (nineteen clips; the militia's seventeen)
+3. Baking the committed solve onto the installed GLB's own export prefix (nineteen clips; the militia's too)
    reproduces it byte for byte.
 4. The committed runtime plan (infantry_pivot_plan.json) is what the mapping generates.
 2-4 hold for every arm of ARMS (the infantry, the heavy infantry, the axemen and the militia).
@@ -44,13 +44,13 @@ ARMS = {
                    'canonical-samples.json': 'f71b54f6e5ba42e2e0101f08a7d3b9b6111d8550a9a6cb14d9e22d218927c58f'},
         'glb_sha256': 'ec83f87b4ccbd80bc1928663d77d45cd907914d7313e62b246cf227e95270cd2',
         'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6511372}},
-    # the militiaman: its own skeleton (mil_rig, 100 bones) and a seventeen-clip export (the ten and the duel's seven)
+    # the militiaman: its own skeleton (mil_rig, 100 bones) and a nineteen-clip export (the ten, the duel's seven and the two falls)
     'militia': {
         'hashes': {'baseline-native.json': '0dcc5bd4fea742a2d40365e4df2ea159eb07f16933be1fd93f41a25e7a73a30a',
                    'native-march.json': 'fecc3855c3d8f2c31ec2f5ddd52829b8ebe1cf8f55b53121affd86648eb8604a',
                    'canonical-samples.json': 'e0d8eb9873b349f10695c36f1d47619ba810e98f21e7e3e32fe54a36ab058810'},
-        'glb_sha256': '6a3fb41e5fbf5a87aa429964d8d9cb536e1c4caff96f9b8d3f304fd6f961d2a7',
-        'old': {'animations': 17, 'accessors': 5123, 'bufferViews': 5126, 'binary': 6496048}},
+        'glb_sha256': 'b007b1598280da875c3e7434f75dfa18a2d11fb6009d636b17cd070a89515ad8',
+        'old': {'animations': 19, 'accessors': 5725, 'bufferViews': 5728, 'binary': 7248800}},
 }
 
 

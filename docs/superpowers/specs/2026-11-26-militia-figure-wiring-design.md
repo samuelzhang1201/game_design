@@ -66,6 +66,12 @@ frames to the owner rather than shipping it.
    chains to their rest under `root.x` (worse), draping with the rig stood up about its pelvis (the seated
    topple's level thighs break it). Needs a lying-cloth rule (the chains laid along the thighs and onto the
    ground) before these two clips ship.
+   Built 2026-11-27 (owner "继续做1b倒地动作"; `militia_parts_13_falls.blend`, `scripts/p12_falls.py`): the drape
+   baked with the rig stood up so the THIGHS point down (weighted by how far they have left pointing down), then
+   the real ground (`floor`) and gravity on the upper side (`settle`); the method and the rejected variants are in
+   `tools/units3d/militia_arp/README.md`. Gates: no leg through the skirt in any frame (.blend and installed GLB),
+   skin no more than 1 cm under the ground, gear out of the body and the sword out of the skirt. Outcome: in a
+   fought assault a militiaman's loss falls and lies as the infantry's does.
 2. **Pivot pair and certificate** — the pivot pipeline (`tools/units3d/soldier_arp/`, `pivot_mapping.py --arm
    militia` with this body's MARCH phases and bounds; skirt keys solved for each pivot frame), plan
    `militia_pivot_plan.json`, fixture, provider `scripts/map3d/map3d_militia_locomotion.gd` (the infantry's
