@@ -2,7 +2,8 @@ extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 const ArmyStarts := preload("res://tools/army_starts.gd")
 ## The opening regiments of the game's own arms (data/army/game_arm_starts.csv, tools/army_starts.gd;
-## spec 2026-11-20-heavy-infantry-arm-design, "Opening regiments"): the rule on a hand-made world,
+## specs 2026-11-20-heavy-infantry-arm-design and 2026-11-26-militia-arm-design, "Opening
+## regiments"): the rule on a hand-made world, the share rule by hand,
 ## the default pack's rows against the rule re-derived here from the pack's own tables, a new
 ## campaign raising them and an old save gaining none.
 
@@ -55,6 +56,49 @@ func test_sizes_round_half_up_and_clamp() -> void:
 	assert_eq(ArmyStarts.size_of(RULE, 7, 7, 7, 0, 1), 300, "one kingdom is the strongest")
 
 
+const SHARE := {"arm": "militia", "units_min": 2, "units_max": 3, "men_min": 250, "men_max": 1000,
+	"men_step": 50, "avg_strongest": 0, "avg_weakest": 0, "share_permille": 50, "total_min": 500,
+	"place": "largest_towns", "offset_km": 2.0, "bearings": [0.0, 90.0], "code_word": "mil", "label_word": "Militia"}
+
+
+func test_the_share_rule_by_hand() -> void:
+	# army 20,500: 20,500 x 50 / 1000 = 1,025 -> 20.5 steps, half up -> T 1,050.
+	# n 3: 350 -> 400 / 350 / 300. n 2: 525 -> 10.5 steps -> 550 -> 600 / 500.
+	var got: Array = []
+	for i in 3:
+		got.append(ArmyStarts.share_size_of(SHARE, 20500, i, 3))
+	assert_eq(got, [400, 350, 300])
+	assert_eq([ArmyStarts.share_size_of(SHARE, 20500, 0, 2), ArmyStarts.share_size_of(SHARE, 20500, 1, 2)], [600, 500])
+	# army 20,400: 1,020 -> 20.4 steps -> T 1,000. n 3: 333.3 -> 6.67 steps -> 350 -> 400 / 350 / 300.
+	assert_eq(ArmyStarts.share_size_of(SHARE, 20400, 1, 3), 350)
+	# army 2,000: 100 men is under total_min, T 500. n 2: 250 -> 300, and 200 clamped to men_min 250.
+	assert_eq([ArmyStarts.share_size_of(SHARE, 2000, 0, 2), ArmyStarts.share_size_of(SHARE, 2000, 1, 2)], [300, 250])
+	# army 100,000: T 5,000. n 3: 1,666.7 -> 1,650; 1,700 / 1,650 / 1,600 all clamped to men_max.
+	assert_eq(ArmyStarts.share_size_of(SHARE, 100000, 2, 3), 1000)
+	assert_eq(ArmyStarts.share_size_of(SHARE, 20500, 0, 1), 1000, "one regiment is the base: 1,050 clamped")
+
+
+func test_a_share_rule_counts_the_rows_of_the_rules_before_it() -> void:
+	# One kingdom (the strongest: units_max of each rule), army 9,000, one town at (10, 10).
+	# RULE first: 2 heavy regiments, 350 + 250 = 600 men, so the militia's army is 9,600.
+	# Share 500 permille, men_max 2,000: T 4,800; n 3: 1,600 -> 1,650 / 1,600 / 1,550
+	# (9,000 alone would give T 4,500 and 1,550 / 1,500 / 1,450).
+	var wide := SHARE.duplicate()
+	wide["share_permille"] = 500
+	wide["men_max"] = 2000
+	var kingdoms := [{"code": "a", "strength": 10.0, "army": 9000}]
+	var burgs := [_burg("at", "AT", "a", 500, 10.0, 10.0)]
+	var plan := ArmyStarts.plan([RULE, wide], kingdoms, burgs, [], 1000, {})
+	assert_false(plan.has("error"), str(plan))
+	var got: Array = []
+	for row: Dictionary in plan["rows"]:
+		got.append([row["regiment_code"], row["x"], row["y"], row["men"]])
+	# Places: the town, then ring 1 along 0 and 90, then ring 2 along 0 and 90 (2 px a ring).
+	assert_eq(got, [
+		["a_1st_hv_at", 10.0, 10.0, 350], ["a_2nd_hv_at", 12.0, 10.0, 250],
+		["a_1st_mil_at", 10.0, 12.0, 1650], ["a_2nd_mil_at", 14.0, 10.0, 1600], ["a_3rd_mil_at", 10.0, 14.0, 1550]])
+
+
 func test_ordinals() -> void:
 	var got: Array = []
 	for n: int in [1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111]:
@@ -72,6 +116,18 @@ func test_the_default_pack_carries_the_rule() -> void:
 	for arm: String in repo.world_table("military", "unit_types"):
 		power[arm] = float(repo.world_table("military", "unit_types")[arm]["power"])
 	var gap := 0.0
+	var ruled_arms: Array = ruled["rules"].map(func(r: Dictionary) -> String: return String(r["arm"]))
+	# A share rule's army: the men of the kingdom's non-naval regiments written before its rows
+	# (the export's, then each earlier rule's as the loop passes it).
+	var army := {}
+	for code: String in regs:
+		var row: Dictionary = regs[code]
+		var is_ruled := false
+		for a: String in ruled_arms:
+			is_ruled = is_ruled or int(row[a]) > 0
+		if int(row["is_naval"]) == 0 and not is_ruled:
+			for col: String in power:
+				army[String(row["kingdom_code"])] = int(army.get(String(row["kingdom_code"]), 0)) + int(row[col])
 	for rule: Dictionary in ruled["rules"]:
 		var arm := String(rule["arm"])
 		gap = float(rule["offset_km"]) * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
@@ -82,12 +138,12 @@ func test_the_default_pack_carries_the_rule() -> void:
 				if not mine.has(k):
 					mine[k] = []
 				mine[k].append(regs[code])
-		# Strength before these rows, ranked (ties by code).
+		# Strength before every ruled arm's rows, ranked (ties by code).
 		var before := {}
 		for k: String in kings:
 			var s := float(kings[k]["strength"])
-			for row: Dictionary in mine.get(k, []):
-				s -= int(row[arm]) * float(power[arm])
+			for a: String in ruled_arms:
+				s -= int(kings[k][a]) * float(power[a])
 			before[k] = s
 		var ranked: Array = kings.keys()
 		ranked.sort_custom(func(a: String, z: String) -> bool:
@@ -111,6 +167,12 @@ func test_the_default_pack_carries_the_rule() -> void:
 			var average: float = float(rule["avg_weakest"]) + float(int(rule["avg_strongest"]) - int(rule["avg_weakest"])) \
 				* (before[k] - bottom) / (top - bottom)
 			var step := float(rule["men_step"])
+			var share := int(rule["share_permille"]) > 0
+			if share:  # the base: the kingdom's total over its regiments, both rounded half up to a step
+				var whole := maxf(float(int(army.get(k, 0)) * int(rule["share_permille"])) / 1000.0, float(rule["total_min"]))
+				whole = floor(whole / step + 0.5) * step
+				average = floor(whole / float(n) / step + 0.5) * step
+				assert_between(rows.size(), int(rule["units_min"]), int(rule["units_max"]), k + " count")
 			var total := 0
 			for i in rows.size():
 				var off := step if i == 0 else (-step if i == n - 1 else 0.0)
@@ -130,36 +192,45 @@ func test_the_default_pack_carries_the_rule() -> void:
 					if col != arm:
 						assert_eq(int(rows[i][col]), 0, "%s holds only %s" % [rows[i]["regiment_code"], arm])
 			assert_eq(int(kings[k][arm]), total, k + " total")
+			if share:
+				assert_gte(total, mini(int(rule["total_min"]), n * int(rule["men_min"])), k + " never under the floor")
 			var count := 0
 			for code: String in regs:
 				count += 1 if String(regs[code]["kingdom_code"]) == k else 0
 			assert_eq(int(kings[k]["regiments"]), count, k + " regiment count")
+		for k: String in mine:
+			for row: Dictionary in mine[k]:
+				army[k] = int(army.get(k, 0)) + int(row[arm])
 
 
 func test_a_new_campaign_raises_them() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 42)
 	var realm := repo.resolve_realm("player_realm")
-	var pack := 0
 	var regs := repo.world_table("military", "regiments")
-	for code: String in regs:
-		if String(regs[code]["kingdom_code"]) == realm:
-			pack += int(regs[code]["heavy_infantry"])
-	assert_gt(pack, 0, "the player's kingdom opens with heavy infantry")
-	var units := 0
-	for reg: Dictionary in MapObjects.regiments_of(repo, realm, state):
-		if MapObjects.regiment_arm(repo, reg) == "heavy_infantry":
-			units += 1
-	assert_gt(units, 0, "and its roster has heavy units")
+	for rule: Dictionary in ArmyStarts.rules("res://data")["rules"]:
+		var arm := String(rule["arm"])
+		var pack := 0
+		for code: String in regs:
+			if String(regs[code]["kingdom_code"]) == realm and int(regs[code][arm]) > 0:
+				pack += 1
+		assert_between(pack, int(rule["units_min"]), int(rule["units_max"]), "the player's kingdom opens with " + arm)
+		var units := 0
+		for reg: Dictionary in MapObjects.regiments_of(repo, realm, state):
+			if MapObjects.regiment_arm(repo, reg) == arm:
+				units += 1
+		assert_gt(units, 0, "and its roster has %s units" % arm)
 
 
 func test_an_old_save_gains_none() -> void:
 	# A campaign begun on the pack before these rows: loaded with them, it keeps its own army.
+	var arms: Array = ArmyStarts.rules("res://data")["rules"].map(func(r: Dictionary) -> String: return String(r["arm"]))
 	var old := SuiteData.repo()
 	var regs := old.world_table("military", "regiments")
 	for code: String in regs.keys():
-		if int(regs[code]["heavy_infantry"]) > 0:
-			regs.erase(code)
+		for arm: String in arms:
+			if regs.has(code) and int(regs[code][arm]) > 0:
+				regs.erase(code)
 	var data: Dictionary = JSON.parse_string(JSON.stringify(SuiteData.campaign(old, 42).to_dict()))
 	var repo := SuiteData.repo()
 	var loaded := GameState.from_dict(data, false)
@@ -169,4 +240,4 @@ func test_an_old_save_gains_none() -> void:
 	assert_ne(organization.get("status", "error"), "error", str(organization))
 	ArmySystem.ensure(repo, loaded)
 	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), loaded):
-		assert_ne(MapObjects.regiment_arm(repo, reg), "heavy_infantry", String(reg.get("regiment_code", "")))
+		assert_false(arms.has(MapObjects.regiment_arm(repo, reg)), String(reg.get("regiment_code", "")))

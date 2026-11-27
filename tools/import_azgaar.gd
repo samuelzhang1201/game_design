@@ -449,10 +449,18 @@ func _write_starts(out_data: String, metres_per_px: int) -> int:
 		var k := String(r["kingdom_code"])
 		var g: Dictionary = gone.get(k, {"count": 0, "strength": 0.0})
 		gone[k] = {"count": int(g["count"]) + 1, "strength": float(g["strength"]) + men}
+	var land := {}  # kingdom -> the men of its non-naval regiments kept (a share rule's army)
+	for r: Dictionary in kept:
+		if int(r.get("is_naval", 0)) == 0:
+			var men := 0
+			for arm: String in power:
+				men += int(r.get(arm, 0))
+			land[String(r["kingdom_code"])] = int(land.get(String(r["kingdom_code"]), 0)) + men
 	var kingdoms: Array = []
 	for k: Dictionary in kings:
 		var code := String(k["kingdom_code"])
-		kingdoms.append({"code": code, "strength": float(k["strength"]) - float(gone.get(code, {}).get("strength", 0.0))})
+		kingdoms.append({"code": code, "army": int(land.get(code, 0)),
+			"strength": float(k["strength"]) - float(gone.get(code, {}).get("strength", 0.0))})
 	var taken: Array = []
 	var codes := {}
 	for r: Dictionary in kept:
