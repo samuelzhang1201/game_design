@@ -48,6 +48,9 @@ static func solve_plan(plan: Dictionary, player: AnimationPlayer, skeleton: Skel
 				legs[name] = true
 			for name: String in leg.followers:
 				legs[name] = true
+		# Cloth keyed over the held legs (the militia's skirt, the plan's `held`) stays with them.
+		for name: String in plan.get("held", []):
+			legs[name] = true
 		# The bones carrying the hips (root.x) keep the clip's own bob too: the held feet were
 		# placed for it, and eased toward the entry pose the hips can rise out of reach.
 		var parents := {}

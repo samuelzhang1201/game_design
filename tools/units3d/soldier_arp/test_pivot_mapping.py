@@ -4,9 +4,10 @@
 1. The uncoupled parameters rebuild the frozen (knight) feasibility references exactly (the port is faithful).
 2. The canonical pair rebuilt from the committed captures of the installed infantry passes the R-B skin
    and R-A contact audit.
-3. Baking the committed solve onto the installed GLB's own nineteen-clip prefix reproduces it byte for byte.
+3. Baking the committed solve onto the installed GLB's own export prefix (nineteen clips; the militia's ten)
+   reproduces it byte for byte.
 4. The committed runtime plan (infantry_pivot_plan.json) is what the mapping generates.
-2-4 hold for every arm on the rig contract (ARMS: the infantry, the heavy infantry and the axemen).
+2-4 hold for every arm of ARMS (the infantry, the heavy infantry, the axemen and the militia).
 """
 import base64
 import hashlib
@@ -43,6 +44,13 @@ ARMS = {
                    'canonical-samples.json': 'f71b54f6e5ba42e2e0101f08a7d3b9b6111d8550a9a6cb14d9e22d218927c58f'},
         'glb_sha256': 'ec83f87b4ccbd80bc1928663d77d45cd907914d7313e62b246cf227e95270cd2',
         'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6511372}},
+    # the militiaman: its own skeleton (mil_rig, 100 bones) and a ten-clip export
+    'militia': {
+        'hashes': {'baseline-native.json': '0dcc5bd4fea742a2d40365e4df2ea159eb07f16933be1fd93f41a25e7a73a30a',
+                   'native-march.json': 'fecc3855c3d8f2c31ec2f5ddd52829b8ebe1cf8f55b53121affd86648eb8604a',
+                   'canonical-samples.json': 'e0d8eb9873b349f10695c36f1d47619ba810e98f21e7e3e32fe54a36ab058810'},
+        'glb_sha256': '4eaf1ad6938aeeb7fd1b5465b596b9f4febb3c5beec5ee40128c99690a92622e',
+        'old': {'animations': 10, 'accessors': 3017, 'bufferViews': 3020, 'binary': 5919560}},
 }
 
 
@@ -112,7 +120,7 @@ def check(arm):
         bare_source(GLB, tmp / 'source.glb')
         assert hashlib.sha256((tmp / 'source.glb').read_bytes()).hexdigest() == MAIN_GLB_SHA256, 'old nineteen changed'
         (tmp / 'samples.json').write_text(json.dumps(data['canonical-samples.json']))
-        pivot.bake(tmp / 'source.glb', tmp / 'samples.json', tmp / 'out.glb', 4.0)
+        pivot.bake(tmp / 'source.glb', tmp / 'samples.json', tmp / 'out.glb', 4.0, rig=pm.RIG)
         mine, theirs = (tmp / 'out.glb').read_bytes(), GLB.read_bytes()
         if mine != theirs:  # another BLAS may round a float32 key differently: compare values
             (a, ab), (b, bb) = pivot._read(tmp / 'out.glb'), pivot._read(GLB)

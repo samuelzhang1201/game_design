@@ -97,7 +97,7 @@ func test_a_militia_wears_its_own_figure_and_no_other_unit_of_its_arm_does() -> 
 	assert_eq(String(built["model"]), "militia")
 	assert_eq(String(built["footprint"]), "infantry", "the battle rows close up by the engine bodies' footprint")
 	assert_not_null((built["figs"][0] as Node).get_node_or_null("mil_rig"), "the militia scene stands")
-	assert_almost_eq(float(built["stride_m"]), 1.3597, 1e-9, "its own MARCH's stride (the infantry's slides its feet)")
+	assert_almost_eq(float(built["stride_m"]), 1.5042, 1e-9, "its own MARCH's stride (the lock's planted-sole speed x 33 frames)")
 	var other := Map3DFormation.of_regiment(repo, rows.plain, tier, 1.6)
 	autofree(other["node"])
 	assert_null((other["figs"][0] as Node).get_node_or_null("mil_rig"), "the infantry keeps its figure")
@@ -107,7 +107,7 @@ func test_a_militia_wears_its_own_figure_and_no_other_unit_of_its_arm_does() -> 
 	assert_almost_eq(float(built["height_m"]), 1.7051, 0.001)
 
 
-## What the figure has not got (reported, never faked): no duel, no fall, no pivots.
+## What the figure has not got (reported, never faked): no duel and no fall. It has its pivot pair.
 func test_the_militia_strikes_its_chain_and_never_duels() -> void:
 	var repo: DataRepository = SuiteData.repo()
 	var art: Dictionary = repo.army_art["militia"]
@@ -119,8 +119,10 @@ func test_the_militia_strikes_its_chain_and_never_duels() -> void:
 		assert_ne(Map3DUnits.clip_named(player, clip), "", clip)
 	assert_false(Map3DDuel.duels(art, player), "no BLOCK / HIT clips: it is never gathered into a duel")
 	assert_eq(Map3DClipChain.of_column(art, "duel"), {}, "and no DEATH: a loss is freed at once")
-	for clip: String in ["PIVOT_LEFT", "PIVOT_RIGHT", "BLOCK", "HIT", "DEATH"]:
+	for clip: String in ["BLOCK", "HIT", "DEATH"]:
 		assert_eq(Map3DUnits.clip_named(player, clip), "", clip + " is not installed")
+	for clip: String in ["PIVOT_LEFT", "PIVOT_RIGHT"]:
+		assert_ne(Map3DUnits.clip_named(player, clip), "", clip + ": the arm's locomotion pivots")
 	var tint := GameArt.table(GameArt.UNIT_REALM_TINT).of("militia") as ShaderMaterial
 	assert_not_null(tint, "its tunic and skirt wear the realm's colour")
 	assert_eq((tint.get_shader_parameter("tunic_mask") as Texture2D).resource_path,

@@ -38,12 +38,13 @@ def _quaternion(m):
     return q if q[3] >= 0 else -q
 
 
-def bake(source, samples, destination, seconds):
+def bake(source, samples, destination, seconds, rig="inf_rig"):
     """Append the two canonical 90-degree references; reject lossy TRS or incomplete samples.
 
     Read source and samples before replacing destination atomically. Existing animations,
     mesh/skin/gear/material/image data and binary bytes are preserved, including native binds.
     Engine duration/phase select playback; ``seconds`` only authors the reference clip length.
+    ``rig`` names the armature node above the joints (the militiaman's is ``mil_rig``).
     """
     assert type(seconds) in (int, float) and math.isfinite(seconds) and seconds > 0
     data, binary = _read(source)
@@ -54,7 +55,7 @@ def bake(source, samples, destination, seconds):
     assert all(a["name"] not in ("PIVOT_LEFT", "PIVOT_RIGHT") for a in data["animations"])
     names = {n.get("name"): i for i, n in enumerate(data["nodes"])}
     assert len(data["skins"]) == 1 and len(data["buffers"]) == 1
-    root = data["nodes"][names["inf_rig"]]
+    root = data["nodes"][names[rig]]
     x, y, z, w = root.get("rotation", (0, 0, 0, 1))
     root_local = np.eye(4)
     root_local[:3, :3] = np.array([
@@ -94,8 +95,8 @@ def bake(source, samples, destination, seconds):
         times = np.asarray(phases, dtype=np.float64) * seconds
         assert (np.diff(times.astype(np.float32)) > 0).all(), "clip times collapse in glTF float32"
         for frame in frames:
-            assert set(frame["pose"]) == set(joints) | {"inf_rig"}
-            assert np.max(np.abs(np.asarray(frame["pose"]["inf_rig"]) - root_local)) < 1e-5, "body root changed"
+            assert set(frame["pose"]) == set(joints) | {rig}
+            assert np.max(np.abs(np.asarray(frame["pose"][rig]) - root_local)) < 1e-5, "body root changed"
         time = add([[t] for t in times], "SCALAR")
         animation = {"name": label, "channels": [], "samplers": []}
         for name in joints:
