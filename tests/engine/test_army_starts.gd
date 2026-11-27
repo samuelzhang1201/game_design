@@ -99,6 +99,19 @@ func test_a_share_rule_counts_the_rows_of_the_rules_before_it() -> void:
 		["a_1st_mil_at", 10.0, 12.0, 1650], ["a_2nd_mil_at", 14.0, 10.0, 1600], ["a_3rd_mil_at", 10.0, 14.0, 1550]])
 
 
+func test_ring_from_skips_the_inner_rings() -> void:
+	# An empty field, 1,000 m a px, offset 2 km: ring_from 0 is the town's point; ring_from 2 is
+	# 4 px out along the first bearing (0: east); with that spot taken, the next bearing (90: south).
+	var rule := RULE.duplicate()
+	assert_eq(ArmyStarts.spot(Vector2(10, 10), [], rule, 1000), Vector2(10, 10))
+	rule["ring_from"] = 2
+	assert_eq(ArmyStarts.spot(Vector2(10, 10), [], rule, 1000), Vector2(14, 10))
+	assert_eq(ArmyStarts.spot(Vector2(10, 10), [Vector2(14, 10)], rule, 1000), Vector2(10, 14))
+	# A spot the province refuses is passed over: east of x 12 is another province, so (10, 14).
+	var west := func(p: Vector2) -> bool: return p.x < 12.0
+	assert_eq(ArmyStarts.spot(Vector2(10, 10), [], rule, 1000, west), Vector2(10, 14))
+
+
 func test_ordinals() -> void:
 	var got: Array = []
 	for n: int in [1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111]:
@@ -183,9 +196,15 @@ func test_the_default_pack_carries_the_rule() -> void:
 				assert_eq(String(rows[i]["province_code"]), String(town["province_code"]), "%s %d stands in its town's province" % [k, i + 1])
 				assert_true(String(rows[i]["regiment_code"]).ends_with("_%s_%s" % [rule["code_word"], town["burg_code"]]))
 				var at := Vector2(float(rows[i]["x"]), float(rows[i]["y"]))
-				assert_lt(at.distance_to(Vector2(float(town["x"]), float(town["y"]))), gap * 4.0, "near its town")
+				var out := at.distance_to(Vector2(float(town["x"]), float(town["y"])))
+				assert_lt(out, gap * (4.0 + float(rule["ring_from"])), "near its town")
+				assert_gte(out, gap * float(rule["ring_from"]) - 0.01, "no nearer than its first ring")
 				for other: String in regs:
-					if other != String(rows[i]["regiment_code"]):
+					# the rows of the rules after this one keep their own (maybe smaller) distance
+					var later := false
+					for a: String in ruled_arms.slice(ruled_arms.find(arm) + 1):
+						later = later or int(regs[other][a]) > 0
+					if other != String(rows[i]["regiment_code"]) and not later:
 						var there := Vector2(float(regs[other]["x"]), float(regs[other]["y"]))
 						assert_true(at.distance_to(there) >= gap - 0.01, "%s clear of %s" % [rows[i]["regiment_code"], other])
 				for col: String in power:

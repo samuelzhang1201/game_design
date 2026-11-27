@@ -788,6 +788,7 @@ func test_a_supply_line_is_drawn_short_and_is_no_hub() -> void:
 ## Task 11 fix round 2 (R3): no drawn name lies on ANOTHER star's disc — the
 ## court with the player selected and his web framed (court+you).
 func test_ordinary_names_avoid_stars_and_the_selected_name_stays_nearby() -> void:
+	_one_unit_a_regiment()  # the density the names are tuned for; the opening regiments crowd them out
 	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
 	_settle_by_frames()
 	view.focus_cluster("court")

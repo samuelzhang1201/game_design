@@ -8,7 +8,7 @@ extends RefCounted
 ## table's notes.
 
 const COLUMNS: Array[String] = ["arm", "units_min", "units_max", "men_min", "men_max", "men_step",
-	"avg_strongest", "avg_weakest", "share_permille", "total_min", "place", "offset_km", "bearings", "code_word", "label_word"]
+	"avg_strongest", "avg_weakest", "share_permille", "total_min", "place", "ring_from", "in_province", "offset_km", "bearings", "code_word", "label_word"]
 ## How many rings of `offset_km` a regiment may move out before the rule gives up.
 const MAX_RINGS := 64
 
@@ -26,13 +26,14 @@ static func rules(data: String) -> Dictionary:
 			"code_word": String(row["code_word"]), "label_word": String(row["label_word"]),
 			"offset_km": float(row["offset_km"]), "bearings": []}
 		for key: String in ["units_min", "units_max", "men_min", "men_max", "men_step", "avg_strongest", "avg_weakest",
-				"share_permille", "total_min"]:
+				"share_permille", "total_min", "ring_from", "in_province"]:
 			rule[key] = int(row[key])
 		for b: String in String(row["bearings"]).split(";", false):
 			rule["bearings"].append(float(b))
 		if rule["place"] != "largest_towns" or int(rule["men_step"]) <= 0 or rule["bearings"].is_empty() \
 				or int(rule["units_min"]) > int(rule["units_max"]) or int(rule["men_min"]) > int(rule["men_max"]) \
-				or int(rule["share_permille"]) < 0 or int(rule["total_min"]) < 0:
+				or int(rule["share_permille"]) < 0 or int(rule["total_min"]) < 0 \
+				or int(rule["ring_from"]) < 0 or int(rule["ring_from"]) > MAX_RINGS:
 			return {"error": "%s: malformed rule for %s" % [path, rule["arm"]]}
 		out.append(rule)
 	return {"rules": out}
@@ -44,8 +45,11 @@ static func rules(data: String) -> Dictionary:
 ## population, x, y}]; `taken`: the positions (pack px) of the regiments already written;
 ## `codes`: the regiment codes already used. Returns {"rows": [{regiment_code, kingdom_code,
 ## province_code, label, x, y, arm, men}], "skipped": [kingdom codes with no town]} or {"error"}.
+## `inside`, when given, is func(point: Vector2, province_code: String) -> bool: a regiment of a
+## rule with in_province 1 only stands where it answers true for its town's province (the importer
+## reads the province index).
 static func plan(rules: Array, kingdoms: Array, burgs: Array, taken: Array, metres_per_px: int,
-		codes: Dictionary) -> Dictionary:
+		codes: Dictionary, inside: Callable = Callable()) -> Dictionary:
 	var placed: Array = taken.duplicate()
 	var rows: Array = []
 	var skipped: Array = []
@@ -87,7 +91,9 @@ static func plan(rules: Array, kingdoms: Array, burgs: Array, taken: Array, metr
 				var men := share_size_of(rule, int(army[k]), i, n) if share \
 					else size_of(rule, int(hundredths[k]), top, bottom, i, n)
 				raised[k] = int(raised.get(k, 0)) + men
-				var at := spot(Vector2(float(town["x"]), float(town["y"])), placed, rule, metres_per_px)
+				var at := spot(Vector2(float(town["x"]), float(town["y"])), placed, rule, metres_per_px,
+					inside.bind(String(town["province_code"])) if inside.is_valid() \
+						and int(rule.get("in_province", 0)) == 1 else Callable())
 				if at.x < 0.0:
 					return {"error": "no clear place near %s for %s" % [town["burg_code"], k]}
 				var ordinal := ordinal_of(i + 1)
@@ -147,17 +153,20 @@ static func share_size_of(rule: Dictionary, army: int, i: int, n: int) -> int:
 
 
 ## The first place, from `town` outward, no nearer than offset_km to any of `placed`: ring k = 0
-## (the town itself), then k = 1, 2, ... at k x offset_km along each bearing in order; coordinates
-## rounded to hundredths, as the pack writes them. (-1, -1) when MAX_RINGS are full.
-static func spot(town: Vector2, placed: Array, rule: Dictionary, metres_per_px: int) -> Vector2:
+## (the town itself), then k = 1, 2, ... at k x offset_km along each bearing in order, starting at
+## ring `ring_from`; coordinates rounded to hundredths, as the pack writes them. (-1, -1) when
+## MAX_RINGS are full. `inside`, when given, is func(point) -> bool: a point it refuses (off the
+## town's province) is passed over, the town's own point excepted.
+static func spot(town: Vector2, placed: Array, rule: Dictionary, metres_per_px: int,
+		inside: Callable = Callable()) -> Vector2:
 	var gap := float(rule["offset_km"]) * 1000.0 / float(maxi(1, metres_per_px))
-	for k in MAX_RINGS + 1:
+	for k in range(int(rule.get("ring_from", 0)), MAX_RINGS + 1):
 		var bearings: Array = [0.0] if k == 0 else rule["bearings"]
 		for deg: float in bearings:
 			var a := deg_to_rad(deg)
 			var p := town + Vector2(cos(a), sin(a)) * gap * k
 			p = Vector2(roundf(p.x * 100.0) / 100.0, roundf(p.y * 100.0) / 100.0)
-			var clear := true
+			var clear: bool = k == 0 or not inside.is_valid() or inside.call(p)
 			for q: Vector2 in placed:
 				if p.distance_to(q) < gap:
 					clear = false

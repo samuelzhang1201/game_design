@@ -416,8 +416,21 @@ func _metres_per_px(info: Dictionary) -> int:
 ## military/regiments.csv and kingdoms.csv as they stand: the rows an earlier run wrote (any row
 ## with men of a ruled arm: the export has none) are dropped first, so it re-derives them; each
 ## kingdom's rows follow its own, and its ruled-arm totals, regiment count and strength include them.
-func _write_starts(out_data: String, metres_per_px: int) -> int:
+func _write_starts(out_data: String, metres_per_px: int, province_img: Image) -> int:
 	var ruled := ArmyStarts.rules(DATA)
+	if province_img == null or province_img.is_empty():
+		push_error("import_azgaar: no province index for the opening regiments")
+		return 1
+	var province_of_id := {}
+	for pr: Dictionary in DataRepository.parse_csv(out_data + "/political/provinces.csv", ["province_code", "province_id"]):
+		province_of_id[int(pr["province_id"])] = String(pr["province_code"])
+	# A regiment stands in its town's province (world_province_index.png: R | G << 8 the id).
+	var inside := func(p: Vector2, province: String) -> bool:
+		var px := Vector2i(int(floor(p.x)), int(floor(p.y)))
+		if px.x < 0 or px.y < 0 or px.x >= province_img.get_width() or px.y >= province_img.get_height():
+			return false
+		var c := province_img.get_pixel(px.x, px.y)
+		return String(province_of_id.get(c.r8 | (c.g8 << 8), "")) == province
 	if ruled.has("error"):
 		push_error("import_azgaar: " + String(ruled["error"]))
 		return 1
@@ -471,7 +484,7 @@ func _write_starts(out_data: String, metres_per_px: int) -> int:
 		burgs.append({"burg_code": String(b["burg_code"]), "label": String(b["label"]),
 			"province_code": String(b["province_code"]), "kingdom_code": String(b["kingdom_code"]),
 			"population": int(b["population"]), "x": float(b["x"]), "y": float(b["y"])})
-	var plan := ArmyStarts.plan(ruled["rules"], kingdoms, burgs, taken, metres_per_px, codes)
+	var plan := ArmyStarts.plan(ruled["rules"], kingdoms, burgs, taken, metres_per_px, codes, inside)
 	if plan.has("error"):
 		push_error("import_azgaar: " + String(plan["error"]))
 		return 1
@@ -623,7 +636,8 @@ func _run() -> int:
 		var pack_info := {}
 		for r: Dictionary in info_rows:
 			pack_info[String(r["key"])] = String(r["value"])
-		return _write_starts(out_data, _metres_per_px(pack_info))
+		return _write_starts(out_data, _metres_per_px(pack_info), Image.load_from_file(
+			ProjectSettings.globalize_path(MAPS + "/" + map_id + "/world_province_index.png")))
 	var out_art := MAPS + "/" + map_id
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_data))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_art))
@@ -1038,9 +1052,6 @@ func _run() -> int:
 		return 1
 	if not _write_text(out_data + "/military/kingdoms.csv", military):
 		return 1
-	if _write_starts(out_data, _metres_per_px({"distance_unit": String(settings.get("distanceUnit", "km")),
-			"distance_scale": _num2(float(settings.get("distanceScale", 1)))})) != 0:
-		return 1
 
 	# --- society/* --------------------------------------------------------
 	out = _csv_line(["culture_code", "culture_id", "label", "type", "expansionism", "color"])
@@ -1334,6 +1345,10 @@ func _run() -> int:
 		var pid := int(c.get("province", 0))
 		return pid if prov_code.has(pid) else -1)
 	if not _save_png(province_img, out_art + "/world_province_index.png"):
+		return 1
+	# the opening regiments need the province index: a regiment stands in its town's province
+	if _write_starts(out_data, _metres_per_px({"distance_unit": String(settings.get("distanceUnit", "km")),
+			"distance_scale": _num2(float(settings.get("distanceScale", 1)))}), province_img) != 0:
 		return 1
 	var biome_img := _rasterize(cells, vertices, width, height, func(c: Dictionary) -> int:
 		var bid := int(c.get("biome", 0))
