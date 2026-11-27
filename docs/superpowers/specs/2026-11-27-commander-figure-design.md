@@ -151,3 +151,38 @@ the source file, each needing Blender work on the owner's approved motions:
 - The feather is white from his right and dark from his left.
 - The right fist sits beside the staff more than round it; the staff passes close to the horse's ears at
   the sweep's lowest point; the finial reads cream, not brass.
+
+## Step 2 as built (2026-11-28)
+
+`Map3DCommanderRider` (the rule as it stands: `scripts/map3d/guide/national_flags.md`). What the build
+settled beyond the plan above:
+
+- **The first rank is the formation's foremost SLOT**, not its half `extent`: a block's ranks stand at
+  z 0 and +1 pitch, so `extent.y` overshoots the front by a rank and the first real-window shot stood him
+  two horse-lengths clear instead of one.
+- **`MARCH_WALK`'s stride is 1.359 m**, measured off the installed clip (the hind hooves' median planted
+  speed, 1.4067 m/s, times the clip's 0.96667 s); the same measure reads `MARCH` at 2.4238 m against the
+  lock's 2.4224 m.
+- **His size key is 1.2382**: the cavalry's 1.075 times his 4.6419 m box (banner tip) over the cavalry's
+  4.0300 m.
+- **The stand-off is drawn in this step, with a rule the owner has not ruled on.** At one horse-length
+  ahead of each first rank the two sides' commanders met nose to nose between lines four lengths apart,
+  so in a battle block he stands `map3d_commander_standoff_share` of the clear ground between his first
+  rank and the nearest drawn enemy figure, never past his ordinary lead. Where that would back his tail
+  into his own rank (two cavalry lines commonly stand closer than that) he is NOT drawn. Step 3 owns the
+  final stand-off place.
+- **The fight**: he is not drawn once a round is fought (`BattleSystem.battle_of(...).rounds`, read for a
+  seen foe as for the crown: the duel driver reads it the same way). Step 3 rides him to the left rear.
+- **A click on him picks his unit** with no code of his own: the picker's ray test walks every mesh
+  under the piece's node. Joining his screen box to the unit's was tried and dropped (the union claimed
+  the empty ground between him and a unit standing diagonally on screen).
+  The ray tests his horse and body only (his mesh box cut at his head's height): the whole box, banner
+  tip included, took clicks meant for the men standing behind its air.
+- **A new rider is unseen until his piece is seated** (his first frame): hung on an unseated piece he
+  was sized and placed against a scale of 1, eighteen times too big, and a click in that frame met him.
+- **Entering a battle** he is hidden while the figures walk to their points and shown once they stand:
+  the room between the lines is not settled until then.
+- **Bench** (`bench.tscn`, still camera, every commander drawn, the GPU shared with other sessions' Godot
+  runs): low 6.27 ms of 8.5, medium 6.27 of 8.5, high 11.19 of 12, ultra 12.24 of 12.5 — every tier inside
+  its budget, so no draw distance was added.
+- Split-off units (`…:living:v2:N`) have no `commander_id`, so they ride without a figure.
