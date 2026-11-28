@@ -91,20 +91,34 @@ static func _bucket(taken: Dictionary, p_m: Vector2i) -> Vector2i:
 	return Vector2i(floori(float(p_m.x) / cell), floori(float(p_m.y) / cell))
 
 
-## Ground a unit of clearance `radius` may camp on: DRY land by the pixel mask
-## the 3D shore is drawn from (MapEconomy.is_dry, never cell_at's nearest
-## land), not a blocked terrain, and no unit held within the sum of the two
-## radii (`is_clear`). `any_terrain` waives the blocked terrains, for a
+## Ground a unit of clearance `radius` may camp on: its whole piece on DRY
+## land (`is_dry_disc`: the drawn shore, never cell_at's nearest land), not a
+## blocked terrain, and no unit held within the sum of the two radii
+## (`is_clear`). `any_terrain` waives the blocked terrains, for a
 ## town that stands among them (a mountain hold): its camps lie on the
 ## mountain, the one ground it has.
 static func is_free(repo: DataRepository, taken: Dictionary, p_m: Vector2i,
 		any_terrain := false, radius := 0) -> bool:
 	var px := ArmySystem.metres_to_pack(repo, p_m)
-	if not MapEconomy.is_dry(repo, px):
+	if not is_dry_disc(repo, p_m, radius):
 		return false
 	if not any_terrain and repo.army_camp_blocked.has(ArmySystem.terrain_at(repo, px)):
 		return false
 	return is_clear(repo, taken, p_m, radius)
+
+
+## The piece a unit of clearance `radius` draws round `p_m` (the radius is
+## its drawn half extent, army_clearance.csv) stands on dry land: the centre
+## and eight points round it at the radius (MapEconomy.is_dry).
+static func is_dry_disc(repo: DataRepository, p_m: Vector2i, radius := 0) -> bool:
+	if not MapEconomy.is_dry(repo, ArmySystem.metres_to_pack(repo, p_m)):
+		return false
+	for i in 8 if radius > 0 else 0:
+		var a := TAU * float(i) / 8.0
+		var at := p_m + Vector2i(roundi(radius * cos(a)), roundi(radius * sin(a)))
+		if not MapEconomy.is_dry(repo, ArmySystem.metres_to_pack(repo, at)):
+			return false
+	return true
 
 
 ## No unit held within the sum of the two radii of `p_m` (half a pitch with

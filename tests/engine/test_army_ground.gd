@@ -55,14 +55,12 @@ func test_a_taken_point_blocks_the_sum_of_the_two_radii_round_it() -> void:
 	var foot := ArmyGround.arm_radius(repo, "infantry")
 	var horse := ArmyGround.arm_radius(repo, "cavalry")
 	assert_eq([foot, horse], [1140, 2200])
-	assert_true(ArmyGround.is_free(repo, taken, p, false, foot))
+	assert_true(ArmyGround.is_clear(repo, taken, p, foot))
 	ArmyGround.take(taken, p, foot)
 	var c := foot + horse
-	assert_false(ArmyGround.is_free(repo, taken, p + Vector2i(c - 1, 0), false, horse))
-	assert_false(ArmyGround.is_free(repo, taken, p + Vector2i(0, c - 1), false, horse))
-	assert_true(ArmyGround.is_free(repo, taken, p + Vector2i(c, 0), false, horse) \
-		or not ArmyGround.is_free(repo, ArmyGround.new_taken(repo), p + Vector2i(c, 0), false, horse),
-		"free unless that ground is itself water or blocked")
+	assert_false(ArmyGround.is_clear(repo, taken, p + Vector2i(c - 1, 0), horse))
+	assert_false(ArmyGround.is_clear(repo, taken, p + Vector2i(0, c - 1), horse))
+	assert_true(ArmyGround.is_clear(repo, taken, p + Vector2i(c, 0), horse), "the metre at the sum is clear")
 	assert_gte(int(repo.bal("army_slot_spacing_m")), 2 * horse, "the camp pitch holds two of the widest units")
 
 
@@ -119,7 +117,9 @@ func test_the_first_camp_round_the_capital_is_outside_its_reach() -> void:
 
 
 func test_the_field_centre_goes_to_the_first() -> void:
-	var c := _land_m()
+	# a field point a cavalry piece fits on whole: its first camp round the capital (a port,
+	# whose own point a horse's piece would reach the water from)
+	var c := ArmyGround.free_slot(repo, _land_m(), "cavalry", ArmyGround.new_taken(repo), _cap())
 	var taken := ArmyGround.new_taken(repo)
 	assert_eq(ArmyGround.free_slot(repo, c, "cavalry", taken, ""), c, "an empty field: the centre")
 	ArmyGround.take(taken, c)
@@ -503,7 +503,8 @@ func test_a_harbour_slot_at_sea_is_not_free() -> void:
 
 
 func test_no_land_unit_starts_on_the_water() -> void:
-	# Every land unit of every realm at the campaign's start stands inside the drawn shore.
+	# Every land unit of every realm at the campaign's start stands inside the drawn shore, its
+	# camped piece whole (the harbour archers' centre was ashore, their spread figures not).
 	var state: GameState = SuiteData.campaign(repo, 42)
 	var checked := 0
 	for code: String in ArmySystem.roster(repo, state):
@@ -512,5 +513,16 @@ func test_no_land_unit_starts_on_the_water() -> void:
 			continue
 		var p := ArmySystem.position_of(repo, state, reg)
 		checked += 1
-		assert_true(MapEconomy.is_dry(repo, p), "%s starts on the water at %s" % [code, p])
+		if ArmyGround.seated_in(repo, state, code) != "":
+			# a seat is its town's own point: that point, at least, is ashore
+			assert_true(MapEconomy.is_dry(repo, p), "%s's seat is on the water at %s" % [code, p])
+			continue
+		# a camp's whole drawn piece: the centre and eight points at its arm's radius
+		var m := ArmySystem.pack_to_metres(repo, p)
+		var r := ArmyGround.unit_radius(repo, reg)
+		for i in 9:
+			var a := TAU * float(i) / 8.0
+			var at := m + (Vector2i(roundi(r * cos(a)), roundi(r * sin(a))) if i < 8 else Vector2i.ZERO)
+			assert_true(MapEconomy.is_dry(repo, ArmySystem.metres_to_pack(repo, at)),
+				"%s's piece reaches the water at %s" % [code, ArmySystem.metres_to_pack(repo, at)])
 	assert_gt(checked, 20)

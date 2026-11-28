@@ -338,6 +338,9 @@ func test_a_column_on_a_road_marches_faster_than_one_off_it() -> void:
 ## march short enough that its stores, which also set its pace, stay full).
 func test_the_days_out_are_the_days_it_takes() -> void:
 	var s := SuiteData.campaign(repo, 7)
+	# the forecast is "if the road is clear" (guide/regiments.md, Clearance): no unit stands in the way
+	var clearance: Variant = repo.balance["army_clearance_on"]
+	SuiteData.no_clearance(repo)
 	var engine := TickEngine.new(repo)
 	var code := _player_land(s)
 	var reg := ArmySystem.regiment(repo, code)
@@ -361,6 +364,7 @@ func test_the_days_out_are_the_days_it_takes() -> void:
 			assert_eq(engine.day_arrivals, [], "still on the road at the end of day %d" % (day + 1))
 			assert_eq(ArmySystem.days_out(repo, s, code), n - day - 1, "one day fewer each day")
 	assert_eq(engine.day_arrivals, [code], "it arrives as day %d ends" % n)
+	repo.balance["army_clearance_on"] = clearance
 
 # --- the pack's quarters ------------------------------------------------------
 
