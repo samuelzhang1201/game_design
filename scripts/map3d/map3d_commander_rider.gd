@@ -31,6 +31,8 @@ var _yaw := 0.0  ## the way he is turned there
 var _route := PackedVector2Array()  ## the corners still ahead of him on a ride, the last his place
 var _moving := false  ## on a ride, or still turning to his facing at its end
 var _keeping := false  ## he covered a walk's ground last frame: he keeps with a place that moves
+var _gait := WALK  ## the clip he rides on this frame
+var _pace := 0.0  ## that gait's own pace, model metres a second
 var _drawn := false  ## he stands somewhere: a new place is RIDDEN to, never appeared at
 var _sized: Array = []  ## the scales `_at` was measured in
 var _state: GameState  ## the state he last stood under: a swapped one (a loaded save) rides nobody
@@ -121,35 +123,58 @@ static func side_m(half_wid: float, half_len: float, gap: float, k: float) -> fl
 	return (half_wid + 2.0 * half_len * gap) * k
 
 
-## The corners he rides through from `from` to `to` (the last is `to`), round the block's LEFT
-## flank and never through it. In the frame of `face`: `left` is the outside of its left file,
+## The corners he rides through from `from` to `to` (the last is `to`), round his block and never
+## through it. In the frame of `face`: `left` / `right` are the outsides of its flank files,
 ## `front` its first rank's front, `rear` its rear rank's back. A leg is clear when both its ends
-## are outside the left file, both ahead of the first rank, or both behind the rear rank; he goes
-## straight when that is clear, else by the front-left corner, the rear-left corner, or both (each
-## as far out as the further-out end, and `margin` clear of the block at least). EMPTY when no such
-## way is clear (he stands on the block's right, level with it): he is stood at `to` at once.
-static func route(from: Vector2, to: Vector2, face: Vector2, left: float, front: float, rear: float,
-		margin := 0.0) -> PackedVector2Array:
+## are outside one flank, both ahead of the first rank, or both behind the rear rank; the way is
+## the SHORTEST of clear legs through the block's four corners (each as far out as the further-out
+## end, and `margin` clear of the flank files / `margin_y` of the ranks at least; the left wins a
+## tie), so from ahead of the first rank to the left rear it goes round the left flank. Every turn
+## on the way, and the turn to `face` at its end, counts `about` metres a half turn: where two ways
+## are near in length he takes the one with less turning, and comes onto his place already facing
+## the enemy rather than riding past it and back. EMPTY when there is none (he stands inside the
+## block): he is stood at `to` at once.
+static func route(from: Vector2, to: Vector2, face: Vector2, left: float, right: float, front: float, rear: float,
+		margin := 0.0, margin_y := 0.0, about := 0.0) -> PackedVector2Array:
 	var across := Vector2(-face.y, face.x)
 	var a := Vector2(from.dot(across), from.dot(face))
 	var b := Vector2(to.dot(across), to.dot(face))
-	var out := minf(minf(a.x, b.x), left - margin)
-	var ahead := Vector2(out, maxf(maxf(a.y, b.y), front + margin))
-	var behind := Vector2(out, minf(minf(a.y, b.y), rear - margin))
-	for corners: Array in [[], [ahead], [behind], [ahead, behind], [behind, ahead]]:
-		var way: Array = [a] + corners + [b]
-		var clear := true
-		for i in range(1, way.size()):
-			var p: Vector2 = way[i - 1]
-			var q: Vector2 = way[i]
-			clear = clear and ((p.x <= left and q.x <= left) or (p.y >= front and q.y >= front) or (p.y <= rear and q.y <= rear))
-		if clear:
-			var legs := PackedVector2Array()
-			for c: Vector2 in corners:
-				legs.append(across * c.x + face * c.y)
-			legs.append(to)
-			return legs
-	return PackedVector2Array()
+	var xl := minf(minf(a.x, b.x), left - margin)
+	var xr := maxf(maxf(a.x, b.x), right + margin)
+	var ahead := maxf(maxf(a.y, b.y), front + margin_y)
+	var behind := minf(minf(a.y, b.y), rear - margin_y)
+	var best: Array = [INF, []]
+	_ways([a, Vector2(xl, ahead), Vector2(xl, behind), Vector2(xr, ahead), Vector2(xr, behind), b], [0], 0.0, Vector2.ZERO,
+		[left, right, front, rear], about, best)
+	var legs := PackedVector2Array()
+	if float(best[0]) < INF:
+		for k: int in best[1]:
+			legs.append(to if k == 5 else across * (best[2] as Array)[k].x + face * (best[2] as Array)[k].y)
+	return legs
+
+
+## route's search: every way from the last point of `path` (indices into `at`: the start, the four
+## corners, the end) on to the end by clear legs, its `cost` so far the legs ridden plus `about` a
+## half turn; the cheapest is kept in `best` ([cost, the indices after the start, at]).
+static func _ways(at: Array, path: Array, cost: float, heading: Vector2, box: Array, about: float, best: Array) -> void:
+	var p: Vector2 = at[path[-1]]
+	for k: int in [5, 1, 2, 3, 4]:  # straight on first, then the left corners: they win a tie
+		var q: Vector2 = at[k]
+		if k in path or not ((p.x <= box[0] and q.x <= box[0]) or (p.x >= box[1] and q.x >= box[1])
+				or (p.y >= box[2] and q.y >= box[2]) or (p.y <= box[3] and q.y <= box[3])):
+			continue
+		var leg := q - p
+		var way := leg if leg.length() > 0.0001 else heading
+		var c := cost + leg.length() + (about * absf(heading.angle_to(way)) / PI if heading != Vector2.ZERO else 0.0)
+		if k == 5:
+			c += about * absf(way.angle_to(Vector2(0.0, 1.0))) / PI if way != Vector2.ZERO else 0.0
+			if c < float(best[0]) - 0.0001:
+				best[0] = c
+				best[1] = path.slice(1) + [5]
+				if best.size() < 3:
+					best.append(at)
+		elif c < float(best[0]):
+			_ways(at, path + [k], c, way, box, about, best)
 
 
 ## One frame of his ride: from `at` turned `yaw` toward the next corner of `route`, `step` metres
@@ -269,9 +294,10 @@ func stand(delta := 0.0) -> void:
 		_state = st
 		_drawn = false
 		_from = []
-	# a battle block before its first round: not while its figures walk to their points (the room
-	# between the lines is not settled). In the fight its figures step in and out all the time.
-	visible = not battle or (not (_piece["groups"] as Array).is_empty() and (fight or not bool(_piece.get("easing", false))))
+	# a battle block whose figures walk to their points (owner 2026-11-28: 跟着走进来): he comes in
+	# with them, at their gait — the gallop where his unit's arm gallops in, else the walk
+	visible = not battle or not (_piece["groups"] as Array).is_empty()
+	_pace = _gait_m(_gallops and battle and not fight and bool(_piece.get("easing", false)))
 	if not visible:
 		_drawn = false
 		_moving = false
@@ -291,9 +317,8 @@ func stand(delta := 0.0) -> void:
 		if battle or key != _stood or not _drawn or _moving:  # a pan moves none of it; a battle block's figures move under him
 			_stood = key
 			_place(root, battle, fight, k, root_k, delta)
-		if _moving:  # the walk, its hooves keeping the ground he covers this frame
-			var pace := _repo.bal("map3d_commander_walk_stride_m") * k / maxf(_clip_s(WALK), 0.0001)
-			_play(WALK, clampf(Vector2(global_position.x - was.x, global_position.z - was.z).length() / delta / pace,
+		if _moving:  # his gait, its hooves keeping the ground he covers this frame
+			_play(_gait, clampf(Vector2(global_position.x - was.x, global_position.z - was.z).length() / delta / (_pace * k),
 				_repo.bal("map3d_unit_anim_min"), _repo.bal("map3d_unit_anim_max")) if measured else _repo.bal("map3d_commander_ride_pace"))
 		else:
 			var clip := clip_for(String(_piece.get("action", "")), String(_piece.get("layout", "")), _gallops, fight)
@@ -308,6 +333,13 @@ func stand(delta := 0.0) -> void:
 ## Whether he is on a ride (or still turning to his facing at its end).
 func riding() -> bool:
 	return _moving
+
+
+## Sets the gait he rides at (`_gait`: MARCH, the gallop, or the walk) and returns its own pace,
+## model metres a second: its measured stride over its clip's length.
+func _gait_m(gallop: bool) -> float:
+	_gait = "MARCH" if gallop else WALK
+	return _repo.bal("map3d_commander_gallop_stride_m" if gallop else "map3d_commander_walk_stride_m") / maxf(_clip_s(_gait), 0.0001)
 
 
 ## His place in the piece's own flat frame (x right, z to the rear, the front −z; a battle
@@ -351,7 +383,7 @@ func _place(root: Node3D, battle: bool, fight: bool, k: float, root_k: float, de
 	if not fight:
 		var lead := lead_m(_half.y, _repo.bal("map3d_commander_gap"), k)
 		if battle:
-			lead = standoff_lead(lead, _room(root, face, front.dot(face)), _repo.bal("map3d_commander_standoff_share"), _half.y * k)
+			lead = standoff_lead(lead, _room(root, face), _repo.bal("map3d_commander_standoff_share"), _half.y * k)
 		# lines too close for a place between them: beside the left end of his first rank
 		goal = front + face * lead / root_k if lead >= 0.0 else first_rank_left_of(points, sides, face) - across * side
 	var goal_yaw := Map3DUnits.facing_yaw(face)
@@ -369,10 +401,14 @@ func _place(root: Node3D, battle: bool, fight: bool, k: float, root_k: float, de
 		# a new place: ridden to round the left flank. One nearer than `map3d_commander_ride_min` of
 		# his lengths does not move him, unless he is riding already (his block walking to new
 		# points: he keeps with it).
-		var back := INF  # the rear rank's back: the way round behind the block
+		var back := INF  # the rear rank's back and the right file's outside: the ways round the block
+		var right := -INF
 		for i in points.size():
 			back = minf(back, points[i].dot(face) - reaches[i])
-		_route = route(_at, goal, face, rear.dot(across), front.dot(face), back, side)
+			right = maxf(right, points[i].dot(across) + sides[i])
+		# clear of the flank files by his lane's gap, of the ranks by his own half length
+		_route = route(_at, goal, face, rear.dot(across), right, front.dot(face), back, side, 0.5 * length,
+			_repo.bal("map3d_commander_about_face") * length)
 		far = _route.is_empty()
 	if far:  # a first sight, or no clear way round: stood at his place at once
 		_at = goal
@@ -380,41 +416,45 @@ func _place(root: Node3D, battle: bool, fight: bool, k: float, root_k: float, de
 		_route = PackedVector2Array()
 		_drawn = true
 	var before := _at
-	var rode := ride(_at, _yaw, _route, goal_yaw, _repo.bal("map3d_commander_ride_pace")
-		* _repo.bal("map3d_commander_walk_stride_m") * k / root_k / maxf(_clip_s(WALK), 0.0001) * delta, _turn * delta)
+	var rode := ride(_at, _yaw, _route, goal_yaw, _repo.bal("map3d_commander_ride_pace") * _pace * k / root_k * delta, _turn * delta)
 	_at = rode[0]
 	_yaw = rode[1]
 	_route = rode[2]
 	# keeping with a place that walks on at a pace his walk can play (a slower drift he lets go, and
 	# catches up when it is far enough); still riding: that, corners ahead, or his turn to his facing
-	_keeping = before.distance_to(_at) > maxf(0.0001 * length, _repo.bal("map3d_unit_anim_min")
-		* _repo.bal("map3d_commander_walk_stride_m") * k / root_k / maxf(_clip_s(WALK), 0.0001) * delta)
+	_keeping = before.distance_to(_at) > maxf(0.0001 * length, _repo.bal("map3d_unit_anim_min") * _pace * k / root_k * delta)
 	_moving = _keeping or not _route.is_empty() or absf(angle_difference(_yaw, goal_yaw)) > 0.001
 	transform = Transform3D(Basis(Vector3.UP, _yaw).scaled(Vector3.ONE * k / root_k), Vector3(_at.x, 0.0, _at.y))
 	Map3DUnitRig.plant(_repo, _ctx.height_at, {"node": root, "height_m": _piece["height_m"], "figs": [self]})
 
 
-## The clear ground ahead of his first rank (`front_m` along `face` from the block's root) up to
-## the nearest drawn figure of the other side of his unit's battle, world metres; INF with none.
+## The clear ground between where his first rank will STAND and the nearest figure of the other
+## side of his unit's battle where IT will stand (the saved points drawn in:
+## Map3DBattleGroups.stand_xz), world metres; INF with none. Never the drawn figures: it is settled
+## from the first frame of a walk-in, so he takes one place and keeps it while the lines close.
 ## ponytail: only battle blocks are measured; a foe of the battle drawn as an ordinary block (a
 ## legacy save with no saved groups) gives no room. Measure its slots too if that case is ever seen.
-func _room(root: Node3D, face: Vector2, front_m: float) -> float:
+func _room(root: Node3D, face: Vector2) -> float:
 	var st := _ctx.state()
 	var fight: Dictionary = BattleSystem.battle_of(st, _code) if st != null else {}
 	var layer := root.get_parent() as Map3DLayerUnits
+	var here := Vector2(root.global_position.x, root.global_position.z)
+	var reach := func(group: Dictionary) -> float:
+		return (group["piece"]["extent"] as Vector2).y * (group["piece"]["node"] as Node3D).global_basis.get_scale().x
+	var front := -INF
+	for group: Dictionary in _piece["groups"]:
+		front = maxf(front, (Map3DBattleGroups.stand_xz(_ctx, _piece, group) - here).dot(face) + float(reach.call(group)))
 	var room := INF
 	for side: String in ["att", "def"]:
 		var codes: Array = fight.get(side, [])
 		if layer == null or _code in codes:
 			continue
 		for code: String in codes:
-			for group: Dictionary in layer.built_piece(code).get("groups", []):
-				var node: Node3D = group["piece"]["node"]
-				var along := Vector2(node.global_position.x - root.global_position.x,
-					node.global_position.z - root.global_position.z).dot(face) \
-					- (group["piece"]["extent"] as Vector2).y * node.global_basis.get_scale().x
-				if along > front_m:
-					room = minf(room, along - front_m)
+			var theirs := layer.built_piece(code)
+			for group: Dictionary in theirs.get("groups", []):
+				var along := (Map3DBattleGroups.stand_xz(_ctx, theirs, group) - here).dot(face) - float(reach.call(group))
+				if along > front:
+					room = minf(room, along - front)
 	return room
 
 

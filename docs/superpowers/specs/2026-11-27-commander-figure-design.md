@@ -115,6 +115,8 @@ owner first, renews the SHA and runs `map3d`.
    round the left flank and the ride back.
 4. **The close stand-off** (built, R6 below): beside the left end of his first rank where the lines
    leave him no place between them.
+5. **The walk-in** (built, R7 below): drawn while his block's figures walk to their battle points,
+   coming in with them.
 
 Steps 1–3 are merged. Follow-ups, each its own step if the owner wants it: a realm tint on the
 commander's own tunic, a commander for split-off units, the Blender fixes to the cloth listed under
@@ -143,6 +145,12 @@ Each was put to the owner with a proposal; he took all five as proposed (都按�
   battles showed (neither side's commander was drawn) and a proposal; his words: 对峙规则按建议改：
   站第一排左端旁边. Where the two lines stand too close to give him a place between them, he stands
   beside the left end of his first rank, seen facing the enemy.
+
+## Ruling on the walk-in (2026-11-28)
+
+- **R7 — while his block walks to its battle points.** Put to the owner as "士兵走位进场的那约十秒，
+  也要画出指挥官跟着走进来吗？" with the proposal that he walks in with his unit instead of appearing
+  once the block stands; his word: 「跟着走进来」.
 
 ## Defaults chosen without a ruling
 
@@ -279,3 +287,42 @@ the flank to the left rear without crossing his unit's front. A wider stand-off 
 between the lines; if the room changes he rides between the two. He is still not drawn while a
 block's figures walk to their points before the first round (a staged archers' walk-in lasts about
 ten seconds), and appears at his place once they stand.
+
+## Step 5 as built (2026-11-28): the walk-in
+
+R7 in `Map3DCommanderRider` only.
+
+- **Drawn from the first frame.** A block gone into its battle is a new piece; the old block's rider
+  hands the new one his world place (step 3's hand-over), and `easing` no longer hides him.
+- **Which place, while both lines still move.** The room between the lines is measured between where
+  the two sides will STAND (`Map3DBattleGroups.stand_xz`, the saved points drawn in), not between the
+  drawn figures. It is known on the first frame, so "ahead of the first rank" or "beside its left
+  end" (R6) is chosen once and he cannot swap back and forth as the lines close. Once the figures
+  stand the two measures are the same number, so a stand-off that is not walking in is unchanged.
+- **Where, each frame.** That place is measured off the figures as they are DRAWN, so it comes in
+  with them and he keeps with it (step 3's keeping); when they stand he is on it, with no jump.
+- **The way there is the shortest clear way round the block**, by any of its four corners. Step 3's
+  route knew only the left flank; a unit that stood facing one way and forms its battle line facing
+  another has its commander on the new block's right or rear, where step 3 would have stood him at
+  his place at once (a jump). From ahead of the first rank to the left rear the shortest way is still
+  round the left flank, as the ruling has it. Only from inside the block is there no way.
+- **Turns count.** The first build took the plainly shortest way; in the staged walk-in that was
+  across his own archers' new front, past his place, a hook back and an about-face on the spot before
+  the first rank (the critic's first defect). Every half turn on a way, and the turn to his unit's
+  facing at its end, now counts `map3d_commander_about_face` (3) of his lengths, and the corners
+  stand half his length off the ranks instead of his whole side gap: in the same staged battle he
+  rides round behind his men and up their left, and comes onto his place facing the enemy. From
+  straight ahead of the first rank to the left end the short hook back remains (the rear way is far
+  longer).
+- **His gait is his unit's.** A cavalry block gallops in at the cavalry's own stride, four times his
+  walk; a walk cannot keep with it, so while a galloping arm's block walks in he rides `MARCH` paced
+  off its measured stride. Every other ride (the fight's, the ride back) stays at the walk.
+- **Review** (real windows, `snapshot_screen --battle-case field --battle-arm archers --battle-foe
+  foot --dev`, every frame of the walk-in; sheets in the session's notes folder,
+  `commander-step5-review/`): one independent critic pass on the first build; the route was changed
+  for its first defect and re-shot. In the staged battle he reaches his place about a second after
+  his men stand, riding on without a jump. No bench: no node or draw was added.
+- **Not built**: a seen foe whose block was not drawn before contact has no old rider, so its
+  commander stands at his place at once while only the crown's unit is seen walking in (the staged
+  battles show this). A place may sit up to `map3d_commander_ride_min` of his lengths off the exact
+  one after a walk-in slower than his walk can play (step 3's rule for a slow drift).
