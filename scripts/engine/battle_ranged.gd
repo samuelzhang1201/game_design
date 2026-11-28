@@ -241,11 +241,11 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 	for foe: String in all_foes:
 		if foe not in nearby: nearby.append(foe)
 	nearby.sort()
-	var touching := BodyBattleContact.exposure_candidate(repo, source, own_id, unit, nearby, boundary)
-	if touching.status != "complete": return _fire_failure(own_id, unit, touching.reason)
+	var touch := BodyBattleContact.exposure_candidate(repo, source, own_id, unit, nearby, boundary)
+	if touch.status != "complete": return _fire_failure(own_id, unit, touch.reason)
 	var close := BodyBattleContact.query_candidate(repo, source, own_id, unit, nearby, boundary)
 	if close.status != "complete": return _fire_failure(own_id, unit, close.reason)
-	if int(touching.engaged) > 0:
+	if int(touch.engaged) > 0:
 		# Close defence (a received retreat stays retreat). Outside self-defence against an
 		# attacking foe, the designated target and local sight still restrict the pair.
 		if action.kind == "retreat":
@@ -342,7 +342,7 @@ static func counts_candidate(repo: DataRepository, source: GameState, battle_id:
 
 ## The original per-target fire filters, with both fields' (and absorbed sources') party terms.
 static func _fire_barred(repo: DataRepository, state: GameState, battle: Dictionary, opponents: Dictionary,
-		side: String, other: String, unit: String, foe: String, designated: String, sight: int, pursuit_target := "") -> String:
+		side: String, _other: String, unit: String, foe: String, designated: String, sight: int, pursuit_target := "") -> String:
 	if designated != "" and designated != foe: return "A received designated target restricts fire"
 	if not BattleSystem._can_fight(repo, state, foe) or bool(UnitBodies._entry(state, foe).get("captured", false)):
 		return "Captured or incapable targets are not fired upon"

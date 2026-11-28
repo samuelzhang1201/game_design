@@ -8,9 +8,11 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const GLB := "res://assets/3D/units/militia/militia.glb"
 const LOOPS: Array[String] = ["MARCH", "GARRISON", "STANDBY", "DEFEND"]
 const STRIKES: Array[String] = ["ATTACK", "SLASH", "ATTACK_VAR1", "ATTACK_2", "SLASH_2", "SLASH_3"]
+const FALLS: Array[String] = ["DEATH", "DEATH_2"]
+const DUEL: Array[String] = ["BLOCK", "BLOCK_2", "BLOCK_3", "BLOCK_4", "HIT", "HIT_2", "HIT_3"]
 
 
-func test_the_militia_figure_carries_its_ten_clips_and_its_skirt() -> void:
+func test_the_militia_figure_carries_its_clips_and_its_skirt() -> void:
 	var node: Node = (load(GLB) as PackedScene).instantiate()
 	autofree(node)
 	assert_not_null(node.get_node_or_null("mil_rig"), "the armature is mil_rig")
@@ -18,7 +20,7 @@ func test_the_militia_figure_carries_its_ten_clips_and_its_skirt() -> void:
 	for clip in LOOPS:
 		assert_true(player.has_animation(clip), clip)
 		assert_eq(player.get_animation(clip).loop_mode, Animation.LOOP_LINEAR, clip + " loops (set in the .import)")
-	for clip in STRIKES:
+	for clip in STRIKES + DUEL + FALLS:
 		assert_true(player.has_animation(clip), clip)
 		assert_eq(player.get_animation(clip).loop_mode, Animation.LOOP_NONE, clip + " plays once")
 	# 34 keyed frames at 30 a second: an export at the source scene's 24 would read 1.375 s
@@ -46,7 +48,7 @@ func test_the_militia_is_recorded_within_budget() -> void:
 	assert_eq(int(row["bones"]), 100)
 	assert_eq(int(row["fps"]), 30)
 	assert_gt(float(row["stride_m"]), 0.0, "measured off its own MARCH")
-	for clip: String in LOOPS + STRIKES:
+	for clip: String in LOOPS + STRIKES + DUEL + FALLS:
 		assert_true((row["actions"] as Dictionary).has(clip), clip)
 
 
@@ -97,7 +99,7 @@ func test_a_militia_wears_its_own_figure_and_no_other_unit_of_its_arm_does() -> 
 	assert_eq(String(built["model"]), "militia")
 	assert_eq(String(built["footprint"]), "infantry", "the battle rows close up by the engine bodies' footprint")
 	assert_not_null((built["figs"][0] as Node).get_node_or_null("mil_rig"), "the militia scene stands")
-	assert_almost_eq(float(built["stride_m"]), 1.3597, 1e-9, "its own MARCH's stride (the infantry's slides its feet)")
+	assert_almost_eq(float(built["stride_m"]), 1.5042, 1e-9, "its own MARCH's stride (the lock's planted-sole speed x 33 frames)")
 	var other := Map3DFormation.of_regiment(repo, rows.plain, tier, 1.6)
 	autofree(other["node"])
 	assert_null((other["figs"][0] as Node).get_node_or_null("mil_rig"), "the infantry keeps its figure")
@@ -107,20 +109,24 @@ func test_a_militia_wears_its_own_figure_and_no_other_unit_of_its_arm_does() -> 
 	assert_almost_eq(float(built["height_m"]), 1.7051, 0.001)
 
 
-## What the figure has not got (reported, never faked): no duel, no fall, no pivots.
-func test_the_militia_strikes_its_chain_and_never_duels() -> void:
+## The front-rank duel and the falls (spec 2026-11-26-militia-figure-wiring-design steps 1 and 1b), and its
+## pivot pair.
+func test_the_militia_duels_and_falls() -> void:
 	var repo: DataRepository = SuiteData.repo()
 	var art: Dictionary = repo.army_art["militia"]
 	var node: Node = (load(GameArt.path(GameArt.ARMY_MODELS, "militia")) as PackedScene).instantiate()
 	autofree(node)
 	var player: AnimationPlayer = node.find_child("AnimationPlayer", true, false)
-	assert_eq(Map3DClipChain.of_art(art).get("ATTACK"), STRIKES, "in battle it strikes its six clips by turns")
-	for clip in STRIKES:
+	assert_eq(Map3DClipChain.of_art(art).get("ATTACK"), STRIKES, "in the ranks it strikes its six clips by turns")
+	for clip in STRIKES + DUEL + FALLS:
 		assert_ne(Map3DUnits.clip_named(player, clip), "", clip)
-	assert_false(Map3DDuel.duels(art, player), "no BLOCK / HIT clips: it is never gathered into a duel")
-	assert_eq(Map3DClipChain.of_column(art, "duel"), {}, "and no DEATH: a loss is freed at once")
-	for clip: String in ["PIVOT_LEFT", "PIVOT_RIGHT", "BLOCK", "HIT", "DEATH"]:
-		assert_eq(Map3DUnits.clip_named(player, clip), "", clip + " is not installed")
+	assert_true(Map3DDuel.duels(art, player), "its STRIKE, BLOCK and HIT clips are installed, each with a contact share")
+	var duel := Map3DClipChain.of_column(art, "duel")
+	assert_eq(duel.get("BLOCK"), ["BLOCK", "BLOCK_2", "BLOCK_3", "BLOCK_4"])
+	assert_eq(duel.get("HIT"), ["HIT", "HIT_2", "HIT_3"])
+	assert_eq(duel.get("DEATH"), FALLS, "a loss falls (Map3DDuelDriver.fall) instead of being freed at once")
+	for clip: String in ["PIVOT_LEFT", "PIVOT_RIGHT"]:
+		assert_ne(Map3DUnits.clip_named(player, clip), "", clip + ": the arm's locomotion pivots")
 	var tint := GameArt.table(GameArt.UNIT_REALM_TINT).of("militia") as ShaderMaterial
 	assert_not_null(tint, "its tunic and skirt wear the realm's colour")
 	assert_eq((tint.get_shader_parameter("tunic_mask") as Texture2D).resource_path,

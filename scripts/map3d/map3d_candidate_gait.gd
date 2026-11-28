@@ -64,13 +64,13 @@ static func strides(length_m: float, stride_m: float) -> int:
 
 
 ## A move op's length in the figure's model metres (sim metres -> built world -> model).
-static func model_length(ctx: Map3DContext, piece: Dictionary, child: Dictionary, op: Dictionary) -> float:
+static func model_length(ctx: Map3DContext, _piece: Dictionary, child: Dictionary, op: Dictionary) -> float:
 	var dx := BodyMotion._difference(int(op.b[0]), int(op.a[0]))
 	var dy := BodyMotion._difference(int(op.b[1]), int(op.a[1]))
 	var world := sqrt(dx * dx + dy * dy) * float(ctx.meta["m_per_px"]) / float(ArmySystem.metres_per_pack_px(ctx.repo))
 	var repo := ctx.repo
-	var reference := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
-	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, reference, child["reference_height_m"], child["size"])
+	var ref_distance := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
+	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_distance, child["reference_height_m"], child["size"])
 	return world / (k * float(child.get("statures", [1.0])[0]))
 
 

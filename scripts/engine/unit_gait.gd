@@ -17,13 +17,13 @@ static func run_step_m(repo: DataRepository, walk_m: int) -> int:
 ## part of it belonging to the personnel who run. The fraction below one supply
 ## is kept in `entry.run_supply_rem` (over 1000 × `substeps`), so short or small
 ## runs are paid in full later, never truncated away.
-static func run_substep(repo: DataRepository, entry: Dictionary, base_bite: int, run_bite: int,
+static func run_substep(repo: DataRepository, entry: Dictionary, base_bite: int, bite_run: int,
 		substeps: int) -> bool:
 	var supplies := int(entry.get("supplies", 0))
 	if supplies < base_bite:
 		return false
 	var owed := int(entry.get("run_supply_rem", 0)) \
-		+ run_bite * (int(repo.bal("army_run_supply_permille")) - 1000)
+		+ bite_run * (int(repo.bal("army_run_supply_permille")) - 1000)
 	var per_supply := 1000 * maxi(substeps, 1)
 	@warning_ignore("integer_division")  # whole supplies, the rest carried
 	var charge := owed / per_supply

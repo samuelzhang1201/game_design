@@ -75,6 +75,22 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1qxvk"]
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+bg_color = Color(0.12156863, 0.101960786, 0.08235294, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.29411766, 0.24313726, 0.1882353, 0.4)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66g1x"]
 content_margin_top = 3.0
 content_margin_bottom = 3.0
@@ -626,9 +642,11 @@ CardButtonSmall/font_sizes/font_size = 12
 CardCommand/base_type = &"Button"
 CardCommand/font_sizes/font_size = 14
 CardCommand/fonts/font = ExtResource("1_el5ut")
+CardCommand/styles/disabled = SubResource("StyleBoxFlat_1qxvk")
 CardCommandSmall/base_type = &"Button"
 CardCommandSmall/font_sizes/font_size = 12
 CardCommandSmall/fonts/font = ExtResource("1_el5ut")
+CardCommandSmall/styles/disabled = SubResource("StyleBoxFlat_1qxvk")
 CardCross/base_type = &"Button"
 CardCross/font_sizes/font_size = 11
 CardFigure/base_type = &"Label"

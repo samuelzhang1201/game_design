@@ -48,11 +48,15 @@ func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_view: Object, p_units
 	_cut.clear()
 
 
-## A road (pack px) in world XZ, laid on the drawn roads, a point every line step.
+## A road (pack px) in world XZ, laid on the drawn roads, a point every line
+## step. The courier's road leaves the roads in straight grid legs; they are
+## rounded (as the roads are drawn, map_route_smoothing_steps) before the
+## points near a road are put back on it, so an off-road leg reads as a track.
 static func _world(p_ctx: Map3DContext, route: PackedVector2Array) -> PackedVector2Array:
 	var step_px := p_ctx.line_step() / maxf(float(p_ctx.meta.get("m_per_px", 1.0)), 0.001)
+	var round := MapGeometry.smooth_open(route, int(p_ctx.repo.bal("map_route_smoothing_steps")))
 	var pts := PackedVector2Array()
-	for p in Map3DSupplyRoad.on_roads(p_ctx.repo, Map3DGeometry.resample(route, step_px)):
+	for p in Map3DSupplyRoad.on_roads(p_ctx.repo, Map3DGeometry.resample(round, step_px)):
 		pts.append(p_ctx.to_world(p))
 	return pts
 

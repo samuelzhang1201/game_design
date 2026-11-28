@@ -176,7 +176,7 @@ static func note(battle: Dictionary, events: Array) -> void:
 static func for_realm(repo: DataRepository, record: Dictionary, realm: String) -> Dictionary:
 	var out := {}
 	for key: String in ["battle_id", "place", "start_day", "end_day", "duration_days", "rounds", "outcome"]:
-		var value: Variant = record.get(key, {} if key == "outcome" else "")
+		var value: Variant = record.get(key, {}) if key == "outcome" else record.get(key, "")
 		out[key] = value.duplicate(true) if value is Dictionary or value is Array else value
 	var side := ""
 	out["participants"] = []

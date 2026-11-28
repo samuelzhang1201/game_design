@@ -15,7 +15,7 @@ extends Map3DHudPiece
 ## The dashed road a marching regiment still has ahead, design px wide (in
 ## the realm's own colour); its end ring is four times it.
 @export var route_px := 2.0
-## The Shift-drag selection box's line (spec 2026-10-07-army-split-and-ground
+## The drag selection box's line (spec 2026-10-07-army-split-and-ground
 ## §5.6), design px; edited on the node.
 @export var box_color := Color(1.0, 0.92, 0.6, 0.9)
 @export var box_width_px := 1.5
@@ -53,7 +53,7 @@ func markers() -> Array:
 		var layout_key := [ctx.repo.bal("map_army_stack_gap_px"), ctx.repo.bal("map3d_declutter_step_px"), ctx.repo.bal("map3d_declutter_max_px")]
 		if symbols != null: layout_key.append_array([symbols.marker_size, symbols.line_px, symbols.glyphs.hash()])
 		var symbol_key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(), true,
-			_observations_key, view.selected_armies().duplicate(), layout_key]
+			_observations_key, view.lit_armies().duplicate(), layout_key]
 		if symbol_key != _key:
 			_cache = _symbol_markers(_observations)
 			_key = symbol_key
@@ -65,7 +65,7 @@ func markers() -> Array:
 	var st := ctx.state()
 	var key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(),
 		view.military(), st.tick if st != null else 0, st.day if st != null else 0,
-		view.unit_rects().size(), view.unit_moves(), view.selected_armies().duplicate()]
+		view.unit_rects().size(), view.unit_moves(), view.lit_armies().duplicate()]
 	if key == _key:
 		return _cache
 	_cache = _cut()
@@ -106,7 +106,7 @@ func _symbol_markers(observations: Dictionary = {}) -> Array:
 	if labels != null: obstacles.append_array(labels.rects())
 	var scroll := view.get_node_or_null("Hud/LegendScroll") as Control
 	if scroll != null and scroll.visible: obstacles.append(Rect2(scroll.position, scroll.size))
-	return symbols.layout(ctx.repo, points, obstacles, view.selected_armies())
+	return symbols.layout(ctx.repo, points, obstacles, view.lit_armies())
 
 
 func _cut() -> Array:
@@ -139,7 +139,7 @@ func _cut() -> Array:
 	var labels := sibling("Labels") as Map3DHudLabels
 	if labels != null:
 		keep_off.append_array(labels.rects())
-	return ArmyCounters.layout(repo, points, h, keep_off, view.selected_armies())
+	return ArmyCounters.layout(repo, points, h, keep_off, view.lit_armies())
 
 
 func drawn_count() -> int:
@@ -173,7 +173,7 @@ func _draw() -> void:
 			_box_ink.queue_redraw()
 	else:
 		clear_symbols()
-		ArmyCounters.draw(self, ctx.repo, list, view.selected_armies())
+		ArmyCounters.draw(self, ctx.repo, list, view.lit_armies())
 		if view.box_rect.has_area(): draw_rect(view.box_rect, box_color, false, box_width_px)
 
 
@@ -196,17 +196,17 @@ func _sync_symbol_nodes(list: Array) -> void:
 		var code := String(marker["code"])
 		keep[code] = true
 		if not _symbol_nodes.has(code):
-			var ink := Node2D.new()
-			add_child(ink)
-			ink.draw.connect(func() -> void:
-				var key: Array = ink.get_meta("look")
-				symbols.draw_symbol(ink, Rect2(-symbols.marker_size * 0.5, symbols.marker_size), key[0], key[1], key[2], key[3]))
-			_symbol_nodes[code] = ink
+			var ink_node := Node2D.new()
+			add_child(ink_node)
+			ink_node.draw.connect(func() -> void:
+				var look_key: Array = ink_node.get_meta("look")
+				symbols.draw_symbol(ink_node, Rect2(-symbols.marker_size * 0.5, symbols.marker_size), look_key[0], look_key[1], look_key[2], look_key[3]))
+			_symbol_nodes[code] = ink_node
 		var ink: Node2D = _symbol_nodes[code]
 		ink.position = (marker["symbol_rect"] as Rect2).get_center()
 		if ink.get_index() != order: move_child(ink, order)
 		order += 1
-		var key := [marker["arm"], marker["frame"], marker["royal"], view.selected_armies().has(code)]
+		var key := [marker["arm"], marker["frame"], marker["royal"], view.lit_armies().has(code)]
 		if changed or ink.get_meta("look", []) != key:
 			ink.set_meta("look", key)
 			ink.queue_redraw()

@@ -752,9 +752,13 @@ static func _siege_day(repo: DataRepository, state: GameState, lead: String, id:
 	if progress >= 1000:
 		_fall(repo, state, lead, id, hosts, events)
 		return
-	# the blockade's day (spec §4.1): entries close, the stores move, and a
+	# the men's plan for today (spec §4, SiegeTactics), the engines and the
+	# bombardment against the repair (§4.2), then the blockade's
+	# day (spec §4.1): entries close, the stores move, and a
 	# starving garrison may yield under the laws, handing the town over
 	var sid := id if crown else SiegeRecord.of_town(state, town)
+	SiegeTactics.day(repo, state, sid)
+	SiegeTactics.bombard(repo, state, sid)
 	var blockade := SiegeBlockade.day(repo, state, sid)
 	if SiegeBlockade.yields(repo, state, sid) and not SiegeBlockade.hand_over(repo, state, sid).has("error"):
 		_fall(repo, state, lead, id, hosts, events, true)
@@ -893,7 +897,7 @@ static func _lifted(repo: DataRepository, state: GameState, h: String, why: Stri
 
 ## The crown's siege `id` ends without the town (lost to it, its units gone):
 ## the record closes, told once as siege_ours_lifted {why}.
-static func _crown_lifted(repo: DataRepository, state: GameState, id: String, why: String, events: Array) -> void:
+static func _crown_lifted(_repo: DataRepository, state: GameState, id: String, why: String, events: Array) -> void:
 	var town := String(state.sieges[id]["town"])
 	state.sieges.erase(id)
 	events.append({"kind": OURS + "lifted", "host": "", "town": town, "day": state.absolute_day(),

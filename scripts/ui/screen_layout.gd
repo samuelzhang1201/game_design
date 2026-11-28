@@ -64,9 +64,10 @@ static func apply(top: float, left: Control, map: Control, right_panels: Array,
 		right_open: bool, right_width: float = RIGHT_WIDTH) -> void:
 	var bottom := bottom_inset()
 	var m := margin()
-	var g := gap()
 	var right_inset := m + (right_width + right_gap() if right_open else 0.0)
-	var middle_left := m + LEFT_WIDTH + g
+	# the map runs to the screen's margin: the facts column lies over it,
+	# shown only while something is chosen (owner 2026-11-26)
+	var middle_left := m
 	if left != null:
 		_place(left, Vector2(0, 0), Vector2(0, 1), m, top, m + LEFT_WIDTH, -bottom)
 	if map != null:
@@ -148,3 +149,48 @@ static func _place(c: Control, anchor_min: Vector2, anchor_max: Vector2,
 	c.offset_top = top
 	c.offset_right = right
 	c.offset_bottom = bottom
+
+
+## The left column laid down on the map (owner 2026-11-26, AR-4 step 2): it
+## slides in from the screen's left edge, its shadow with it, eased out over
+## `ui_column_slide_seconds`, and back out eased in when nothing is chosen;
+## `done` runs once it is out and hidden (at once with no slide). A slide
+## the other way is turned round where it is.
+static func slide_column(column: Control, open: bool, done := Callable()) -> void:
+	var secs := Game.data.bal("ui_column_slide_seconds")
+	var tw: Tween = column.get_meta("slide_tween") if column.has_meta("slide_tween") else null
+	var sliding := tw != null and tw.is_valid()
+	if sliding and bool(column.get_meta("slide_open")) == open:
+		return
+	if not sliding and column.visible == open:
+		if done.is_valid():
+			done.call()
+		return
+	var rest: float = float(column.get_meta("slide_rest_x")) if sliding else column.position.x
+	if sliding:
+		tw.kill()
+		column.remove_meta("slide_tween")
+	if secs <= 0.0 or not column.is_inside_tree():
+		column.position.x = rest
+		column.visible = open
+		if done.is_valid():
+			done.call()
+		return
+	var away := -(column.size.x + Game.data.bal("ui_column_slide_clear_px"))
+	if open and not column.visible:
+		column.position.x = away
+		column.visible = true
+	tw = column.create_tween()
+	column.set_meta("slide_tween", tw)
+	column.set_meta("slide_open", open)
+	column.set_meta("slide_rest_x", rest)
+	tw.tween_property(column, "position:x", rest if open else away, secs) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT if open else Tween.EASE_IN)
+	tw.finished.connect(func() -> void:
+		column.remove_meta("slide_tween")
+		if open:
+			return
+		column.visible = false
+		column.position.x = rest
+		if done.is_valid():
+			done.call())

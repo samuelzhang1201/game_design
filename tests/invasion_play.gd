@@ -84,15 +84,18 @@ static func by_size(repo: DataRepository, codes: Array, smallest: bool) -> Array
 
 ## The units of the player's `n` smallest (`smallest`) or largest pack
 ## regiments — by the men of their units (ArmySplit: a regiment's units share
-## its `parent_code`), code order on ties — in code order. The same pick as
-## tools/sim_invasion.gd's defences.
+## its `parent_code`), code order on ties — in code order. The pick of
+## tools/sim_invasion.gd's defences, but for the opening militia regiments
+## (data/army/game_arm_starts.csv), which are left out: these scenarios were
+## built on a line regiment as the weakest garrison, and a militia one a
+## quarter its size gives way before the assault they check.
 static func regiment_units(repo: DataRepository, smallest: bool, n: int) -> Array:
 	var men: Dictionary = {}
 	var units: Dictionary = {}
 	var state := SuiteData.campaign(repo, 42)
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		var parent := String(r.get("parent_code", ""))
-		if parent == "" or String(r.get("is_naval", "0")) == "1":
+		if parent == "" or String(r.get("is_naval", "0")) == "1" or MapObjects.regiment_arm(repo, r) == "militia":
 			continue
 		men[parent] = int(men.get(parent, 0)) + MilitaryRoster.living(state, String(r["regiment_code"]))
 		if not units.has(parent):

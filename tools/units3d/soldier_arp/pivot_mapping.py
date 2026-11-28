@@ -59,6 +59,11 @@ CANONICAL_PHASE = 8 / 420
 CONTACT_UM = 23217
 SEAM_UM = 1935
 GLB = Path(__file__).resolve().parents[3] / 'assets/3D/units/infantry/infantry.glb'
+RIG = 'inf_rig'  # the armature node above the joints
+NUDGE_LEAD = .03  # the swing-out leads and trails the step by this share of the pivot
+NUDGE = ()  # (leg index, bones under ROOT, degrees): swung out while that leg steps
+HELD = None  # name prefix of bones that hold their NEUTRAL_PHASE keys with the legs (the militia's skirt)
+PLACE_NATIVE = False  # a held foot stands where the coupled frame's own sole is, not under its hip
 # Another body on the same rig contract (`inf_rig`, the same pack walk) overrides what its own MARCH
 # and scale give; `use(arm)` binds the module to it. The heavy infantry's plate soldier
 # (2026-11-20): on a 420-phase scan of its MARCH the infantry's phases sit on the same events
@@ -69,13 +74,44 @@ GLB = Path(__file__).resolve().parents[3] / 'assets/3D/units/infantry/infantry.g
 # The axemen's hand-axe soldier (2026-11-23) is the infantry's body and pack walk with another
 # weapon: its 420-phase MARCH capture matches the infantry's leg bones to 2e-7 m and its rest
 # height is the same 1.636 m, so it keeps every infantry value.
-ARMS = {'infantry': {}, 'heavy_infantry': {'CONTACT_UM': 22699, 'SEAM_UM': 1892}, 'axemen': {}}
+# The militiaman (2026-11-26) is another skeleton (`mil_rig`, 100 bones: 30 skirt bones under
+# root.x whose keys are baked into every clip) walking the infantry's authored stances at its own
+# stride. On a 420-phase scan of its MARCH the infantry's phases sit on the same events (8/420:
+# right shoe planted at 0.3 mm, left lifted 11.5 mm, thighs 12.2 deg; 182/420: thighs 8.4 deg,
+# their least is 7.1 at 187; planted soles 181/420 at 7.5 mm and 396/420 at 3.7 mm, the right's
+# flattest within 0.1 mm), so it keeps them; its bounds are ceil(world bound / k * 1e6) at k = 24.7922 (rest
+# height 1.7051 m at size 0.62). The skirt's keys are baked for MARCH's legs, so played at the
+# body phase over legs held at the passing frame a leg cuts the cloth: the skirt holds the passing
+# frame's keys with the legs (HELD), and the two front chains over a stepping knee swing out 15
+# degrees, the chain on either side of them half of that so the hem keeps a curve (NUDGE: 9 still
+# cut two frames, 12 is the least that clears, and the legs cut at a 1 degree turn as at 90, so
+# the swing is not scaled by the turn; check_glb.py prints no crossing at 1, 45, 90, 135 and
+# 179.999999 degrees either way).
+ARMS = {'infantry': {}, 'heavy_infantry': {'CONTACT_UM': 22699, 'SEAM_UM': 1892}, 'axemen': {},
+        'militia': {'RIG': 'mil_rig', 'HELD': 'skirt_', 'CONTACT_UM': 24202, 'SEAM_UM': 2017,
+                    'NUDGE': ((0, ('skirt_00_a', 'skirt_01_a'), 15.), (0, ('skirt_02_a', 'skirt_09_a'), 7.5),
+                              (1, ('skirt_08_a', 'skirt_09_a'), 15.), (1, ('skirt_07_a', 'skirt_00_a'), 7.5))},
+        # The longbowman (2026-11-27): the infantry's rig contract (`inf_rig`) walking his own retargeted
+        # MARCH (36 frames), so its own events on a 420-phase scan: the thighs most nearly parallel at 400/420
+        # (4.1 deg, right sole planted, the left passing 23 mm up) are both the held frame and the entry/exit
+        # (the lift of a pivot's step scales with the turn, its travel does not: an entry in mid-stride, as
+        # 359/420, slid the right sole 197 mm along the ground at a 1 microdegree turn), the held feet where that
+        # frame's soles stand (PLACE_NATIVE: under the hips they stood 7 cm apart against his walk's 26, so the
+        # right sole still slid 118 mm at a 1 microdegree turn), each foot's flattest
+        # planted patch at 160/420 (left, 9.3 mm) and the
+        # right's own at the entry, 400/420 (4.9 mm: held where it stood, it does not slide); bounds at k 25.7242 (rest height 1.6433 m at size 0.62).
+        'archers': {'CANONICAL_PHASE': 400 / 420, 'NEUTRAL_PHASE': 400 / 420, 'PLACE_NATIVE': True, 'FOOT_PHASES': (160 / 420, 400 / 420),
+                    'CONTACT_UM': 23325, 'SEAM_UM': 1944}}
+
+DEFAULTS = {k: globals()[k] for k in {k for a in ARMS.values() for k in a}}
 
 
 def use(arm):
     """Bind the module's parameters and GLB to `arm`."""
     global GLB
-    globals().update(ARMS[arm])
+    # the infantry's values first: an arm overrides only what it names, never what the last bound arm set
+    globals().update({k: DEFAULTS[k] for k in {k for a in ARMS.values() for k in a}}, **ARMS[arm])
+    COUPLED.update(neutral=(NEUTRAL_PHASE, NEUTRAL_PHASE), foot=FOOT_PHASES)
     GLB = Path(__file__).resolve().parents[3] / f'assets/3D/units/{arm}/{arm}.glb'
 SOLE_PATCH_M = .005
 ROOT = 'root.x'
@@ -152,7 +188,7 @@ def _trs(node):
 
 
 def installed_template(glb, baseline):
-    """The installed GLB's sample_transition template: rest = its glTF joint nodes under inf_rig
+    """The installed GLB's sample_transition template: rest = its glTF joint nodes under RIG
     (parents first), the two legs, and contact binds whose markers sit at the bind boot's sole
     patch (sole: the patch centroid; toe: the centroid of its toe-weighted part), axes level."""
     import pivot  # noqa: E402 (sibling module)
@@ -163,11 +199,11 @@ def installed_template(glb, baseline):
 
     def visit(i, parent):
         n = nodes[i]
-        if n['name'] == 'inf_rig' or n['name'] in joints:
+        if n['name'] == RIG or n['name'] in joints:
             bones.append({'name': n['name'], 'parent': parent, 'local': _trs(n)})
             for c in n.get('children', []):
                 visit(c, n['name'])
-    visit(next(i for i, n in enumerate(nodes) if n.get('name') == 'inf_rig'), '')
+    visit(next(i for i, n in enumerate(nodes) if n.get('name') == RIG), '')
     rest = {}
     for b in bones:
         rest[b['name']] = (rest[b['parent']] if b['parent'] else np.eye(4)) @ b['local']
@@ -195,7 +231,7 @@ def installed_template(glb, baseline):
         legs.append(leg)
         contacts[leg['hip']] = binds
     return {'rest': {'bones': bones, 'legs': legs}, 'contacts': {'legs': contacts},
-            'transition': {'entry_pose': {'inf_rig': bones[0]['local']}},
+            'transition': {'entry_pose': {RIG: bones[0]['local']}},
             'source_glb_sha256': hashlib.sha256(Path(glb).read_bytes()).hexdigest()}
 
 
@@ -274,8 +310,8 @@ def knots(ev):
 
 
 def native_locals(model, phase, template):
-    root = np.asarray(template['transition']['entry_pose']['inf_rig'])
-    g = dict(model.native(phase), inf_rig=root)
+    root = np.asarray(template['transition']['entry_pose'][RIG])
+    g = {**model.native(phase), RIG: root}
     return {b['name']: root.copy() if not b['parent'] else np.linalg.inv(g[b['parent']]) @ g[b['name']]
             for b in template['rest']['bones']}
 
@@ -294,6 +330,7 @@ def build_case(model, template, op, phases, neutral, last_step, foot, plane):
     flat = {li: model.native(foot[li]) for li in (0, 1)}
     low = {li: model.minima(flat[li], legs)[li] for li in (0, 1)}
     frames = []
+    held = [native_locals(model, p, template) for p in (entry, neutral[0], exit_)] if HELD else None
     for u in f['phases']:
         bp = body_phase(entry, exit_, u)
         local, g, desired = native_locals(model, bp, template), model.native(bp), {}
@@ -326,6 +363,34 @@ def build_case(model, template, op, phases, neutral, last_step, foot, plane):
                 desired[leg['toe']][:3, 3] += desired[leg['ankle']][:3, 3] - old[leg['ankle']]
                 for follower, role in leg['followers'].items():
                     desired[follower][:3, 3] += desired[leg[role]][:3, 3] - old[leg[role]]
+        if HELD:
+            # Cloth hung over the legs is keyed for MARCH's legs at each phase: over legs held at
+            # the passing frame it holds that frame's keys, eased in while the legs leave the
+            # entry and out while they go to the exit.
+            qi = min(1., u / max(swings_of(ev, li)[0][1] for li in (0, 1)))
+            qo = min(1., max(0., (u - t_out) / (1. - t_out))) if (t_out := min(swings_of(ev, li)[-1][0] for li in (0, 1))) < 1. else 0.
+            for bone in f['rest']['bones']:
+                n = bone['name']
+                if n.startswith(HELD):
+                    local[n] = blend(blend(held[0][n], held[1][n], qi*qi*(3-2*qi)), held[2][n], qo*qo*(3-2*qo))
+            # A swinging leg's knee rises under the front of the cloth: its chains swing out and back
+            # with the step (NUDGE: a leg, chains' first bones and their degrees while it steps).
+            parents = {b['name']: b['parent'] for b in f['rest']['bones']}
+            for li, chains, degrees in NUDGE:
+                s = max((_ease((u-a+NUDGE_LEAD)/(2*NUDGE_LEAD))*_ease((z+NUDGE_LEAD-u)/(2*NUDGE_LEAD))
+                         for a, z in swings_of(ev, li)), default=0.)
+                s *= _ease(u/(2*NUDGE_LEAD))*_ease((1-u)/(2*NUDGE_LEAD))  # both ends stay native MARCH
+                for n in chains if s else ():
+                    above = g[ROOT] if parents[n] == ROOT else None
+                    assert above is not None, 'a nudged bone hangs on ' + ROOT
+                    m = above @ local[n]
+                    out = m[:3, 3] - above[:3, 3]
+                    out[1] = 0.
+                    axis = np.cross((0., -1., 0.), out / np.linalg.norm(out))
+                    t = np.deg2rad(degrees*s)
+                    k = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
+                    m[:3, :3] = (np.eye(3) + np.sin(t)*k + (1-np.cos(t))*(k @ k)) @ m[:3, :3]
+                    local[n] = np.linalg.inv(above) @ m
         rebuilt, refs = {}, {}
         for bone in f['rest']['bones']:
             n = bone['name']
@@ -352,7 +417,9 @@ def build_case(model, template, op, phases, neutral, last_step, foot, plane):
             sm, tm = mid[leg['ankle']] @ sb, mid[leg['toe']] @ tb
             gs, gt = (sx, tx) if last else (sm, tm)
             place = gs[:3, 3].copy()
-            if not last:  # under the coupled frame's hip, flat on its own midstance sole
+            if not last and PLACE_NATIVE:  # where the coupled frame's own sole stands (its own stance width)
+                place[[0, 2]] = (pose[li][leg['ankle']] @ sb)[:3, 3][[0, 2]]
+            elif not last:  # under the coupled frame's hip, flat on its own midstance sole
                 offset = mid[leg['ankle']][:3, :3] @ sb[:3, 3]
                 place[[0, 2]] = pose[li][leg['hip']][:3, 3][[0, 2]] + offset[[0, 2]]
             place[1] = sx[1, 3] if last else ground + sm[1, 3] - low[li]
@@ -366,6 +433,11 @@ def build_case(model, template, op, phases, neutral, last_step, foot, plane):
     f['author_mapping'] = {'neutral_phases': list(neutral), 'foot_phases': list(foot), 'plane_y': plane, 'last_step': last_step, 'first_free_leg': legs[first]['hip'],
                            'final_support_leg': legs[final_support]['hip'], 'floor_model_y': ground}
     return f
+
+
+def _ease(q):
+    q = min(1., max(0., q))
+    return q*q*(3-2*q)
 
 
 def swings_of(ev, li):
@@ -614,6 +686,8 @@ def main():
                  'sole': g['sole'][:3, :3], 'toe': g['toe'][:3, :3], 'swings': g['swings']} for g in case['plan']]
         payload = {'note': 'generated by tools/units3d/soldier_arp/pivot_mapping.py plan; do not edit',
                    'march_phase': CANONICAL_PHASE, 'rest': case['rest'], 'legs': legs}
+        if HELD:  # bones a smaller turn must not ease toward the entry pose (Map3DInfantryLocomotion)
+            payload['held'] = [b['name'] for b in case['rest']['bones'] if b['name'].startswith(HELD)]
         args.out.write_text(json.dumps(encode(payload), separators=(',', ':')) + '\n')
         print('plan', args.out)
     elif args.command == 'audit':

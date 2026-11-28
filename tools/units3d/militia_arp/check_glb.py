@@ -27,6 +27,7 @@ SHOTS = (("MARCH", 8), ("GARRISON", 0), ("DEFEND", 20), ("SLASH", 20), ("ATTACK_
 
 def _load(glb):
     bpy.ops.wm.read_factory_settings(use_empty=True)      # no default cube, light or camera
+    bpy.context.scene.render.fps = 30                     # the clips' own rate: a frame here is a key there
     bpy.ops.import_scene.gltf(filepath=str(glb))
     rig = next(o for o in bpy.data.objects if o.type == "ARMATURE")
     body = next(o for o in bpy.data.objects if o.type == "MESH" and o.find_armature() == rig)

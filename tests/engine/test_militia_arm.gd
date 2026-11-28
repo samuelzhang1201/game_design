@@ -85,13 +85,14 @@ func test_militia_has_every_land_arm_row() -> void:
 	assert_eq(WarFolio.kit_of(repo, arm).size(), 4, "kettle hat, tunic, round shield, short sword")
 
 
-func test_the_pack_opens_with_no_militia() -> void:
-	# The pack's column is the importer's 0 for a game arm; the opening regiments are the spec's step 2.
+func test_the_pack_carries_a_militia_column() -> void:
+	# A whole number in every row; the opening regiments that fill it are the spec's step 2
+	# (data/army/game_arm_starts.csv, checked in test_army_starts.gd).
 	for table: String in ["regiments", "kingdoms"]:
-		var rows: Dictionary = repo.world_table("military", table)
+		var rows: Dictionary = SuiteData.repo().world_table("military", table)
 		assert_gt(rows.size(), 0, table)
 		for code: String in rows:
-			assert_eq(String(rows[code].get("militia", "")), "0", "%s %s" % [table, code])
+			assert_true(String(rows[code].get("militia", "")).is_valid_int(), "%s %s" % [table, code])
 
 
 func test_militia_draws_the_militiaman_and_borrows_the_rest() -> void:
@@ -103,8 +104,11 @@ func test_militia_draws_the_militiaman_and_borrows_the_rest() -> void:
 		assert_eq(GameArt.path(table, "militia"), GameArt.path(table, "infantry"), table)
 
 
-func test_the_candidate_locomotion_path_does_not_admit_the_militia_yet() -> void:
-	# The militiaman has no pivot pair, so the arm has no unit_locomotion.csv row and no
-	# body_locomotion_militia_* keys: the opt-in v2 march candidate refuses it by name, never guesses.
-	assert_true(BodyMotion._loco_policy(repo, "militia").is_empty())
-	assert_false(repo.unit_footprints["militia"].has("locomotion_certificate"))
+func test_the_candidate_locomotion_path_admits_the_militia() -> void:
+	# The militiaman has his pivot pair and certificate (unit_locomotion.csv, body_locomotion_militia_*):
+	# the opt-in v2 march candidate admits the arm like every other land arm.
+	var policy := BodyMotion._loco_policy(repo, "militia")
+	assert_false(policy.is_empty())
+	assert_eq(int(policy.turn_q), 400000)
+	assert_eq(int(policy.contact_um), 24202, "ceil(0.60e6 / 24.7922): the militiaman's own scale")
+	assert_eq(int(policy.radius_m), int(repo.unit_footprints["militia"].radius_m))

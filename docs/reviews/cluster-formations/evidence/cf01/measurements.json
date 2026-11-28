@@ -69,41 +69,22 @@
 		"res://assets/3D/terrain/textures/sand_03_alb_ht.png.import": "f4e674525c233c52e113024fbbbb2417dca6c0f41a79a0655e3d2a060602d5f0",
 		"res://assets/3D/terrain/textures/sand_03_nrm_rgh.png": "a1f1433ebf8b3aeed32de91779be734d2e99f4ee046609bdbcac7c46a81de9a7",
 		"res://assets/3D/terrain/textures/sand_03_nrm_rgh.png.import": "5ab253873160041b107e7c30616037c6e5bc841f4d3960b40d3252a01bfa6c84",
-		"res://assets/3D/units/archers/archers.glb": "f7112ff73bda1a6150cc6c45c6b8a8a4538334be0d1008b54df517f393a9f6b2",
-		"res://assets/3D/units/archers/archers.glb.import": "8bec227ce7a2623cfd7dbe62fc773cf23cca7d6f6273ee00adcaeaf86a3e4283",
-		"res://assets/3D/units/archers/archers_archers_body_metal_rough.jpg": "c94059dc1cd9c2ff7d6f5ce29283e08e433cf638a8d08f5686417bb47baa0ba7",
-		"res://assets/3D/units/archers/archers_archers_body_metal_rough.jpg.import": "abd291136c4f2ed333b809ce3798a9e3e29e147d15e89c9c86981ff4ce57427b",
-		"res://assets/3D/units/archers/archers_archers_body_normal.jpg": "264cb3ab255df74c2dad64ef48541be7c234eb6af3bca2e94fa9a86a81c28ec4",
-		"res://assets/3D/units/archers/archers_archers_body_normal.jpg.import": "41c08da6297fac1ac4e9a8ddcaa5aa33f945e1870478ccde4e495d19624d238d",
-		"res://assets/3D/units/archers/archers_arrow.res": "60db0721273e60b499e839f755d314343671c4e389a4055d788c2339efd318fd",
-		"res://assets/3D/units/archers/archers_arrow_archers_arrow_metal_rough.jpg": "df3567a1636d4dffbf621283deed1bd18e3b5d4bbd336caf0e257f3018f222d3",
-		"res://assets/3D/units/archers/archers_arrow_archers_arrow_metal_rough.jpg.import": "ac785e4ba611b66502a77c43e89c6069f3ba99713adfa2ebb365ef964e6ddbaf",
-		"res://assets/3D/units/archers/archers_arrow_archers_arrow_normal.jpg": "d10ef1f7eaab6cf3eeed80cbe195770e386d5a9b32fee4d7423a99538702ad52",
-		"res://assets/3D/units/archers/archers_arrow_archers_arrow_normal.jpg.import": "953e21e16fb391c6df20a17e1bef7571252497374e5013ebb4a9dc45d8cf7355",
-		"res://assets/3D/units/archers/archers_arrow_tripo_image_a0b7e2fc-bcdd-4027-9e2f-c1aedd82e123_0.jpg": "e809ca8fd8ccfcf78f4d547cea4efc1d9aaf6faf5b34eca1b63d7f1c7496ec32",
-		"res://assets/3D/units/archers/archers_arrow_tripo_image_a0b7e2fc-bcdd-4027-9e2f-c1aedd82e123_0.jpg.import": "22b8cd14eef4ea5a63e0b4c5f20bc21479135aac43e4cb191fb9376938aaa121",
-		"res://assets/3D/units/archers/archers_bow.res": "193c73bf7ebff99067a03ccd8bc644a5ebcadbcad40e2b619fbfef47e3f3ff29",
-		"res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_0.jpg": "245dde1da3b707110efa45b17a04a4fc0f34b60e46a3eb65cb6d1f2e0df0a804",
-		"res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_0.jpg.import": "2ff91d064b76d61d9ff6ae1edafee50bad88e0ea033042978eb15b71f9450dda",
-		"res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_1.jpg": "9b562f22dfccb2968aa2ab45db155119cbc96f8b3b94c7739176e5afe490bb36",
-		"res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_1.jpg.import": "26c7ad9d67c50819914931d2b10b495224e5e577c1962b05e4577f98dbdfe944",
-		"res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_2.jpg": "a45721d6fc4f8bcc409f47da94dd74ca12ab3cd3fc327cfed53666b607da5732",
-		"res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_2.jpg.import": "11d5c08b1d6fde3ca11c87c4473b8918245e8e440b7374c892aa67f223ed5d24",
-		"res://assets/3D/units/archers/archers_quiver.res": "c6ffbb9806925ac42f75b3e6a0271a4cf113cf86ed0d364badc5b37de02df975",
-		"res://assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_0.jpg": "1164ae683442cb6da8be06b1ef91f4196b898d5b9f2797d2ac9fdfeb72a3bb8a",
-		"res://assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_0.jpg.import": "655aa7cedc5c1968b5828991c3ee55483c500aa868d4d82ed03e765f38261a7c",
-		"res://assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg": "f1225d1d75e4bd47f82ec957e875c8d65cc7c7576eb330b2eee85bfd5d7615c4",
-		"res://assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg.import": "3d1b0b7a807b6798161b3ad06e9b4fc9d38f151661dcfd68ad84fa847080348f",
-		"res://assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg": "b01cd1fd1d48928ee7649773230aa7da44eea1ac0e01941840d5788cbb24bbbd",
-		"res://assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg.import": "c8dc15fa86145c123bff4e26fef8300d719dfc5d946d22be712cf4d478ce9067",
-		"res://assets/3D/units/army_models.tres": "4bea2efd6d71728eb5869c9a0de689191c459531266b9e5f4e30136ace98e155",
-		"res://assets/3D/units/axemen/axemen.glb": "ebaf4eb91c286703ac43563c8042d36f797841b81f16b586270675aef60f6728",
+		"res://assets/3D/units/archers/archers.glb": "f4040848e5fb2b8d74ea7aec791988f29c1c5cdc5cd77696943700fbc381195e",
+		"res://assets/3D/units/archers/archers.glb.import": "98e2b85b8e28e126093e25e662a376ba39e655924db3a913094dcf05421e95e1",
+		"res://assets/3D/units/archers/archers_archers_atlas.jpg": "abde700536969e3f9b295d8bd582a3ce452fe95d18a5dde8901eb10dca4a802e",
+		"res://assets/3D/units/archers/archers_archers_atlas.jpg.import": "1d7a5161ad5f81a23c37623e6e58958e7b54e05c6d9baaa66975d563aea4ff15",
+		"res://assets/3D/units/archers/archers_archers_atlas_mr.jpg": "285cd55996cd22c9935c92d36c37a5277f6bfbd981b79cff1e42bd3d7d85793a",
+		"res://assets/3D/units/archers/archers_archers_atlas_mr.jpg.import": "3c57572bf928bbbb9e95f0e71b5167b9c764bc6de43d9634a462ca8f7dc8e993",
+		"res://assets/3D/units/archers/archers_archers_atlas_n.jpg": "0fd46de6f9a0bb94f82411d9624d4478cf8b14f355bd20bf2739fb6a231ffa64",
+		"res://assets/3D/units/archers/archers_archers_atlas_n.jpg.import": "63814b2fc86ce7d9c79e340863a5adb82d787c0938a788352e12b89369fd5ca9",
+		"res://assets/3D/units/army_models.tres": "29b5ce441a77b226c45fb0cd8792ccc68263d5821c56a43ccf49edcbc02ca231",
+		"res://assets/3D/units/axemen/axemen.glb": "32a4b382240a19364a355fa90acce2a4387d6a6eacd281eeeda93803688c3a61",
 		"res://assets/3D/units/axemen/axemen.glb.import": "8c4d3ea770adee5f42cf5f04bd6f12653b75f55d77a039d349283332264389bf",
-		"res://assets/3D/units/axemen/axemen_axemen_atlas.jpg": "a42e81dbf6fe606d4d85364ac1f4d7395b8b7e6bfe2ea960d7eea9154a4d46d6",
+		"res://assets/3D/units/axemen/axemen_axemen_atlas.jpg": "559cc88cba98f985aaa086bfc4cf1ff6dca3125e2d285b22ebabaeee1c8ad93d",
 		"res://assets/3D/units/axemen/axemen_axemen_atlas.jpg.import": "e2725d93924a341b656b521c78bd4469ac86bfa7b3bebccf5c5551f684d922a0",
-		"res://assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg": "8a253b7d231c93e85a04e0a9b0817dc96961b705649c1a6805fb222d7ff6a26f",
+		"res://assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg": "05df6128430af00d598b3840ac008b5df002b03882196bdb65f9fa57e809c886",
 		"res://assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg.import": "6c562853e71ae3b84e43210d42fb0ccc580734db83bf53706f82f486a509be89",
-		"res://assets/3D/units/axemen/axemen_axemen_atlas_n.jpg": "5ef0e8c3d09acb87488ca7da474c7dd5a691629e924cfe4b3f8bd5b37c3e50cf",
+		"res://assets/3D/units/axemen/axemen_axemen_atlas_n.jpg": "dc1149255706f7d488936c18f6b316a6f66339661dd3b3debba2f1e78ca334d5",
 		"res://assets/3D/units/axemen/axemen_axemen_atlas_n.jpg.import": "837d4a5606836554a50ce1003814c8512a9af5751208ca3e5cc9d6bc8c6ebca6",
 		"res://assets/3D/units/cavalry/cavalry.glb": "358faa790b53f0157cc74691d57f92223a65fedbcf437cf2395be948c0ac3397",
 		"res://assets/3D/units/cavalry/cavalry.glb.import": "a0aaba5c3411f28d80a62a11e8f11037d362d222ce7adfb977e5c9c10c233d30",
@@ -121,14 +102,22 @@
 		"res://assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas_mr.jpg.import": "95d1913c96bd3e83d6062a022f6f356a87a8f5ce70c00f23f0f60ee81501f0ca",
 		"res://assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas_n.jpg": "7771c87b67fe2a840a81c571597db68113961245487e94f6d4aa592dd0540e9d",
 		"res://assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas_n.jpg.import": "d6ea70623a453c74cd002452f6e045666cf5debc84294cff5bd36c42172f08af",
-		"res://assets/3D/units/infantry/infantry.glb": "fa7fdcb75f50b1b77756bffa325e309600c1d1b4283a9085b38737234fcab94d",
+		"res://assets/3D/units/infantry/infantry.glb": "aeca28e607eb8b580c5a5edf9b6f92750220e7e306b2772b12f01cdec9341e91",
 		"res://assets/3D/units/infantry/infantry.glb.import": "622a873cecde657eefd5ffac2281e66d1d98554ac85c6cfc0fad6d367c25cc65",
-		"res://assets/3D/units/infantry/infantry_infantry_atlas.jpg": "5f6be178220a2305f4b3d31ce3fdabef24f1a364356e8381c2da74e333030e6a",
-		"res://assets/3D/units/infantry/infantry_infantry_atlas.jpg.import": "271eb1f94d0e35b3273bdfd6064d088e3af29ef508fcc064b69aa856afb3b457",
-		"res://assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg": "128ed90d97360fef366ac05a7e5824cf95357a61a023769adf68ef5d2bb9e20f",
-		"res://assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg.import": "c759b2678a820c71304167b6873d5b65d894bf2228906af7c12a19aab8c65f88",
-		"res://assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "532ca77c142fe4620751d00195e2c62f1ebb476ef523b41fa5a27ae813259f27",
-		"res://assets/3D/units/infantry/infantry_infantry_atlas_n.jpg.import": "88390be297d3271f1f4a43cccfd9d37dc68bdc5cec98712d00f552c9b6cf1542",
+		"res://assets/3D/units/infantry/infantry_infantry_atlas.jpg": "b93b631837bab25716f128469a951c44dd55d0abbdc75e342be713c590ceded0",
+		"res://assets/3D/units/infantry/infantry_infantry_atlas.jpg.import": "d1608d7fbf9160d80362f76be8372a274f5cf11b8d2ee5bfcd7e1c55820ea046",
+		"res://assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg": "374f9f032614496eb0aec3f44076f10514c807ededc1cbb8f5e1e0693115fbff",
+		"res://assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg.import": "36f986e41607a8ef71e09f2d8887fdbd82101a2a6b83bda28c57a468564a8f04",
+		"res://assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "d6f56e2def31bf535bd1c56a9b5a2646ae576d72e4b5bdc19d84828c0dbba9b6",
+		"res://assets/3D/units/infantry/infantry_infantry_atlas_n.jpg.import": "dd0e96ad674d7fdf7f89d72135599aacfce3de3d51a24f2f7661550fd3cfca1c",
+		"res://assets/3D/units/militia/militia.glb": "06e89e974643d37b417d41fa63ddc79171d1a01392501b373217725de3f4a381",
+		"res://assets/3D/units/militia/militia.glb.import": "8047961d46e16747dd3f7143b0c97d928f1fd640ed6386dad21cfe931a1de039",
+		"res://assets/3D/units/militia/militia_militia_atlas.jpg": "198a0c29d11917c94431ab100f9ccef9290a654247167ef72c464c8da3e4488e",
+		"res://assets/3D/units/militia/militia_militia_atlas.jpg.import": "0e2264f9e82da7019cac05ca567a98ec05fce282940631d30d0e92f09aa377da",
+		"res://assets/3D/units/militia/militia_militia_atlas_mr.jpg": "5859d236d244d719000006c2e1e9e985db96af479f9115476199d054334c2333",
+		"res://assets/3D/units/militia/militia_militia_atlas_mr.jpg.import": "155b54980e53b22180055c34ec452a0cd0a4750fa555665c45f3afcc62bab03a",
+		"res://assets/3D/units/militia/militia_militia_atlas_n.jpg": "f90fbe7fafe3336fe5069a9c7c7fbf8b0927cdfe7d19ffb53ee40d46adfec510",
+		"res://assets/3D/units/militia/militia_militia_atlas_n.jpg.import": "f0a245b8bd0626528fc065bb9b62548e11c1c72d5de44bf3bc9b8320febe8270",
 		"res://assets/3D/units/royal/royal.glb": "93c66032437fc27ec2688ae498759ea9942ac40e2d3c23102963ef71c9d9125a",
 		"res://assets/3D/units/royal/royal.glb.import": "07b6d67c710ecbcabb271b8ff2c17d411ad222e51eab946751b6bb73ce400c23",
 		"res://assets/3D/units/royal/royal_royal_atlas.jpg": "9702f92409b3ceedf6307eae1e0d8fc7eec75df20bd0c7278debadbde8c35b41",
@@ -137,22 +126,23 @@
 		"res://assets/3D/units/royal/royal_royal_atlas_mr.jpg.import": "ce415cba84687cbd3bf659d4dec769d6a054d6d9462172e3b45a0f0f8c5bed92",
 		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg": "87dae2d5426bf52b5f4dd43676ce6a2bf92b9ff22e922e1ba98a8628caffe2ed",
 		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
-		"res://data/screens/map3d/army_art.csv": "6706ed176c90e4ecdd8877138fc21a45d077759b6a4743e001702629935a28b6",
-		"res://data/screens/map3d/balance.csv": "33dea7e472bfe0b9245734daaa8d631526fbb67eaf9f8eb20f819bfb26446f20",
+		"res://data/screens/map3d/army_art.csv": "c1774ecb68ee5662891aefc5ea22b423626280d2124ab48b67a06235b1ab8f05",
+		"res://data/screens/map3d/balance.csv": "31acf897722aac166845e413adf611651ca56f1b271f6071f4ceb85c86d5a7f9",
 		"res://data/world/maps.csv": "cd856ebde844cdac7b8f370c5a51b414eecbb091b3a48bcc12de9a23bd775443",
 		"res://scenes/map3d/worlds/beria.tscn": "c665914748691603c93ba9dfda0aacf6887c36f9b022e80a6a382d00f7237e81",
-		"res://scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
+		"res://scenes/models/units/archers.tscn": "e6f4b6daaf6f3384b964c195a3ed3e7eb10eebb148a3608d6931acaae8b24f48",
 		"res://scenes/models/units/axemen.tscn": "bddf8c926838e8576b5d54ff4370984b521d47d3977297b48c25663df3e15adc",
 		"res://scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
 		"res://scenes/models/units/heavy_infantry.tscn": "3efc8e2c93ee9c5b3ac833e09b61a174a3e2190637d9f5ad5219dba362d662a4",
 		"res://scenes/models/units/infantry.tscn": "69256e86dfd2d93050522bdcef422afa3ce3d4c2472d063752b7b085da848921",
+		"res://scenes/models/units/militia.tscn": "35f1417d1c72eea009b6d37a21f7649f0b9aab20015695b16af099a8036c522f",
 		"res://scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
 		"res://scripts/engine/army_system.gd": "3d1a3c0f6c8b77ba5455ac022798b2f5745c219d125459e111a3c53f64c3c2aa",
 		"res://scripts/engine/art_table.gd": "ae374d656f22d6542b66b8a6176e608c8112d4f6711bb847f1bb72dd7cae531a",
-		"res://scripts/map3d/map3d_formation.gd": "f86ed5dda46368df3c40823804337c6589517934be1411d67fac27e6d8ad20d6",
+		"res://scripts/map3d/map3d_formation.gd": "32e2ec41417dac078eac796bea104cca5982963b578ae37c6e6859c5b9d1d720",
 		"res://scripts/map3d/map3d_geometry.gd": "64797a53505cff9bd849e9245107f9be9f73fbb78cc2d27ab9f58b71bfce9e4c",
 		"res://scripts/map3d/map3d_units.gd": "e842566f033267ae5cbb8bf548bed2aefc88103a9234b344cdc1b3554e32fb4d",
-		"res://tools/units3d/measure_unit_bodies.gd": "0424f4ff16899fc8d8f68a701fd41b5565df5aa45314ef3cded122d315637ed4"
+		"res://tools/units3d/measure_unit_bodies.gd": "c8ad094b77748f876aee8ae5109b42dad833800a9f8d6ad0dc910a6c08ce1070"
 	},
 	"map_info": {
 		"distance_scale": "1",
@@ -180,18 +170,42 @@
 	},
 	"models": {
 		"archers": {
-			"all_mesh_radius_m": 931.426905999614,
-			"attack_only_vertices": 0,
-			"body_radius_m": 932,
-			"deploy_min_depth_m": 3818,
-			"deploy_min_width_m": 9680,
-			"model_hash": "3093f04062d850cbc79ebf3fc730d676c2e405f53005883fbd091e130ac3b865",
-			"radius_m": 931.426905999614,
-			"rank_pitch_m": 1954,
+			"all_mesh_radius_m": 1217.29808462892,
+			"attack_only_vertices": 2208,
+			"body_radius_m": 1218,
+			"deploy_min_depth_m": 4962,
+			"deploy_min_width_m": 12540,
+			"model_hash": "a950857b643a978495ed0ea9135f08c55a01f6be8c19b7699c4b9434d7f55479",
+			"radius_m": 1217.29808462892,
+			"rank_pitch_m": 2526,
 			"sampled_clips": [
+				{
+					"clip": "ATTACK",
+					"length_s": 2.26666665077209,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
 				{
 					"clip": "DEATH",
 					"length_s": 2.36666655540466,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DODGE",
+					"length_s": 1.13333332538605,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DODGE_L",
+					"length_s": 0.600000023841858,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DODGE_R",
+					"length_s": 0.600000023841858,
 					"player": "AnimationPlayer",
 					"samples": 17
 				},
@@ -208,20 +222,38 @@
 					"samples": 17
 				},
 				{
+					"clip": "HIT",
+					"length_s": 0.966666638851166,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT_2",
+					"length_s": 0.699999988079071,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "HIT_3",
+					"length_s": 0.699999988079071,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
 					"clip": "MARCH",
-					"length_s": 1.16666662693024,
+					"length_s": 1.20000004768372,
 					"player": "AnimationPlayer",
 					"samples": 17
 				},
 				{
 					"clip": "PIVOT_LEFT",
-					"length_s": 2.0,
+					"length_s": 4.0,
 					"player": "AnimationPlayer",
 					"samples": 17
 				},
 				{
 					"clip": "PIVOT_RIGHT",
-					"length_s": 2.0,
+					"length_s": 4.0,
 					"player": "AnimationPlayer",
 					"samples": 17
 				},
@@ -240,25 +272,25 @@
 			],
 			"scale_inputs": {
 				"attack_bones": [
-					"DEF-weapon.R"
+					"cc_arrow"
 				],
 				"fov_deg": 45.0,
 				"max_stature": 1.06,
 				"max_tilt_deg": 14.0,
-				"model_height": 2.26497411727905,
+				"model_height": 1.64330744743347,
 				"ref_m": 10973.6980107868,
 				"ref_px": 12.0,
-				"simulation_scale": 421.437687637757,
-				"size": 0.7,
+				"simulation_scale": 514.483486808863,
+				"size": 0.62,
 				"stand_extent": [
-					0.905093431472778,
-					0.948496401309967
+					0.609222888946533,
+					0.934750378131866
 				],
 				"view_h_px": 1600.0,
 				"world_per_sim_m": 0.05,
-				"world_scale": 21.0718843818879
+				"world_scale": 25.7241743404432
 			},
-			"slot_pitch_m": 1954,
+			"slot_pitch_m": 2526,
 			"status": "ok",
 			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
 		},
@@ -268,7 +300,7 @@
 			"body_radius_m": 998,
 			"deploy_min_depth_m": 4082,
 			"deploy_min_width_m": 10340,
-			"model_hash": "e35c1bf97aed32b85650eb908be09cb3f0a94aca801b1700df73f05dcdca72a3",
+			"model_hash": "6b7b137334f8679b60c94769b4381ccfbab6560e532de7f7c9a7153ef25806c5",
 			"radius_m": 997.2861748235,
 			"rank_pitch_m": 2086,
 			"sampled_clips": [
@@ -429,7 +461,7 @@
 			"body_radius_m": 998,
 			"deploy_min_depth_m": 4082,
 			"deploy_min_width_m": 10340,
-			"model_hash": "2dcea4c1d9ba473c67bc4745b0f0308ca5ee48450e41d603e73e337c40a06531",
+			"model_hash": "7b4d4b7ab852ddc93a0e70585d82c729878948a18f6d1621e5a148bf4598d78c",
 			"radius_m": 997.2861748235,
 			"rank_pitch_m": 2086,
 			"sampled_clips": [
@@ -828,7 +860,7 @@
 			"body_radius_m": 998,
 			"deploy_min_depth_m": 4082,
 			"deploy_min_width_m": 10340,
-			"model_hash": "e35c1bf97aed32b85650eb908be09cb3f0a94aca801b1700df73f05dcdca72a3",
+			"model_hash": "6b7b137334f8679b60c94769b4381ccfbab6560e532de7f7c9a7153ef25806c5",
 			"radius_m": 997.2861748235,
 			"rank_pitch_m": 2086,
 			"sampled_clips": [
@@ -980,6 +1012,113 @@
 				"world_scale": 25.8437468293282
 			},
 			"slot_pitch_m": 2086,
+			"status": "ok",
+			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
+		},
+		"militia": {
+			"all_mesh_radius_m": 958.358209125139,
+			"attack_only_vertices": 2009,
+			"body_radius_m": 787,
+			"deploy_min_depth_m": 3238,
+			"deploy_min_width_m": 8230,
+			"model_hash": "268b528e5268630966e931daadab1fe21bbbfd2fa57ac52a5eda11c48d5cb9d0",
+			"radius_m": 786.106235974678,
+			"rank_pitch_m": 1664,
+			"sampled_clips": [
+				{
+					"clip": "ATTACK",
+					"length_s": 1.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "ATTACK_2",
+					"length_s": 1.29999995231628,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "ATTACK_VAR1",
+					"length_s": 1.73333334922791,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "DEFEND",
+					"length_s": 3.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "GARRISON",
+					"length_s": 3.66666674613953,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "MARCH",
+					"length_s": 1.10000002384186,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "PIVOT_LEFT",
+					"length_s": 4.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "PIVOT_RIGHT",
+					"length_s": 4.0,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "SLASH",
+					"length_s": 1.5,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "SLASH_2",
+					"length_s": 1.56666672229767,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "SLASH_3",
+					"length_s": 1.36666667461395,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "STANDBY",
+					"length_s": 2.5,
+					"player": "AnimationPlayer",
+					"samples": 17
+				}
+			],
+			"scale_inputs": {
+				"attack_bones": [
+					"cc_weapon.r"
+				],
+				"fov_deg": 45.0,
+				"max_stature": 1.06,
+				"max_tilt_deg": 14.0,
+				"model_height": 1.70508301258087,
+				"ref_m": 10973.6980107868,
+				"ref_px": 12.0,
+				"simulation_scale": 495.843627094048,
+				"size": 0.62,
+				"stand_extent": [
+					0.51953399181366,
+					0.583850800991058
+				],
+				"view_h_px": 1600.0,
+				"world_per_sim_m": 0.05,
+				"world_scale": 24.7921813547024
+			},
+			"slot_pitch_m": 1664,
 			"status": "ok",
 			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
 		},

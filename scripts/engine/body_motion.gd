@@ -470,6 +470,7 @@ class _Nat:
 		var remainder := 0
 		for i: int in range(a.size() - 1, -1, -1):
 			var value: int = (remainder << 15) + int(a[i])
+			@warning_ignore("integer_division")
 			out[i] = value / divisor
 			remainder = value % divisor
 		return trim(out)
@@ -586,8 +587,10 @@ static func _loco_turn(start: int, finish: int) -> int:
 
 @warning_ignore("integer_division")
 static func _loco_duration(amount: int, rate: int, divisor: int) -> int:
+	@warning_ignore("integer_division")
 	if amount < 0 or rate <= 0 or divisor <= 0 or (amount > 0 and rate > INT_MAX / amount): return -1
 	var product := amount * rate
+	@warning_ignore("integer_division")
 	return product / divisor + (1 if product % divisor else 0)
 
 const LOCO_ENGINE_KEYS: Array[String] = ["digest", "turn_q", "contact_um", "radius_m", "clips", "all_turns"]
@@ -622,6 +625,7 @@ static func _loco_op(kind: String, t0: int, t1: int, a: Array, b: Array, yaw: in
 ## A heading's nearest whole degree, in microdegrees: where a row facing its march ends.
 @warning_ignore("integer_division")
 static func _loco_whole(heading: int) -> int:
+	@warning_ignore("integer_division")
 	return posmod((heading + LOCOMOTION_Q / 2) / LOCOMOTION_Q, 360) * LOCOMOTION_Q
 
 ## A body with `face_heading` (a row in no battle) ends facing its last leg's whole-degree
@@ -664,6 +668,7 @@ static func _loco_timeline(body: Dictionary, path: Array, turn_q: int) -> Dictio
 		ops.append(_loco_op("pivot", time, time + duration, here, here, yaw, finish_turn))
 		time += duration
 	if time < LOCOMOTION_Q: ops.append(_loco_op("hold", time, LOCOMOTION_Q, here, here, final_yaw))
+	@warning_ignore("integer_division")
 	return {"unit": body.unit, "slot": body.slot, "start": body.start.duplicate(), "end": here,
 		"start_yaw_udeg": body.start_yaw_udeg, "final_facing_deg": final_yaw / LOCOMOTION_Q,
 		"budget_m": body.budget_m, "used_m": used, "ops": ops}
@@ -685,7 +690,9 @@ static func _loco_prefix(path: Array, budget: int) -> Array:
 			budget -= length
 		else:
 			# Checked local deltas and budget bound this product below 2^53.
+			@warning_ignore("integer_division")
 			var dx: int = int(_difference(path[i][0], path[i - 1][0])) * budget / length
+			@warning_ignore("integer_division")
 			var dy: int = int(_difference(path[i][1], path[i - 1][1])) * budget / length
 			if dx or dy: out.append([int(path[i - 1][0]) + dx, int(path[i - 1][1]) + dy])
 			break
@@ -700,6 +707,7 @@ static func _loco_segments(move: Dictionary) -> Array[Dictionary]:
 @warning_ignore("integer_division")
 static func _loco_grid_ok(grid: MarchPath) -> bool:
 	if grid == null or grid.cols <= 0 or grid.rows <= 0 or grid.cell_m <= 0 or grid.water_open: return false
+	@warning_ignore("integer_division")
 	if grid.cols > INT_MAX / grid.rows or grid.cols > INT_MAX / grid.cell_m or grid.rows > INT_MAX / grid.cell_m: return false
 	return grid.closed.size() == grid.cols * grid.rows and grid.water.size() == grid.closed.size()
 

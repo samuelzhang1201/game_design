@@ -76,7 +76,13 @@ LOCK = {"WALK": {"legs": [(s, "thigh_twist" + s, "thigh_stretch" + s, "leg_stret
 # across the ankle), so it enters the certifier's planting band a sixth of a frame before its
 # touchdown key, while the foot still closes on its landing place at 0.09 m a frame: 12.1 mm of
 # slide and a 11.6 mm margin, 23.7 against a bound of 22.7.
-ARM_LOCK = {"heavy_infantry": {"WALK": {"approach_frames": 1}}}
+# The militiaman's low shoe is skinned across the ankle: with its rigid points on the ground the
+# skinned sole is 2 mm off it and the toe digs 8 mm under at push-off, so each frame's height is
+# then set by the skinned sole (`skin_ground`: a stance sole on the ground, a swinging one clear
+# of it); his approach frame as the plate soldier's (without it the sole is in the planting band
+# a frame before its touchdown key, 81 mm from its landing place; the left leg's approach point
+# is 18 mm past its reach and pulled back, in the air).
+ARM_LOCK = {"heavy_infantry": {"WALK": {"approach_frames": 1}}, "militia": {"WALK": {"skin_ground": True, "approach_frames": 1}}}
 BODY = "Infantry_body"
 # Knobs another soldier built on this pipeline sets before install() (tools/units3d/militia_arp/game_export.py):
 # the unit's name (output folder, GLB, mesh, atlas files), its armature's node name, and whether the body
@@ -354,17 +360,37 @@ LOCKED = {}
 
 
 def _foot_points(src, foot, toe):
-    """Each vertex skinned mostly to the foot or toe bone, in that bone's rest frame (rigid)."""
+    """Each vertex skinned mostly to the foot or toe bone, in that bone's rest frame (rigid). Only a
+    bone's group counts: the militia body also carries its parts as groups (`p_shoes`, weight 1), which
+    hid most of a shoe from the lock (79 of the right foot's vertices, its heel not among them)."""
     body = bpy.data.objects[BODY]
-    groups = {g.index: g.name for g in body.vertex_groups}
+    groups = {g.index: g.name for g in body.vertex_groups if g.name in src.data.bones}
     out = []
     for v in body.data.vertices:
-        if not v.groups:
+        own = [e for e in v.groups if e.group in groups]
+        if not own:
             continue
-        g = max(v.groups, key=lambda e: e.weight)
+        g = max(own, key=lambda e: e.weight)
         name = groups.get(g.group)
         if name in (foot, toe):
             out.append((name, src.data.bones[name].matrix_local.inverted() @ v.co))
+    return out
+
+
+def _foot_skin(src, foot, toe, keep):
+    """The same vertices as `_foot_points`, each as its skin: [(bone, weight, the vertex in that bone's rest
+    frame)] over the exported bones (`keep`), weights normalized (the mesh the game draws, not a rigid foot)."""
+    body = bpy.data.objects[BODY]
+    groups = {g.index: g.name for g in body.vertex_groups if g.name in src.data.bones}
+    inv = {b.name: b.matrix_local.inverted() for b in src.data.bones}
+    out = []
+    for v in body.data.vertices:
+        own = [e for e in v.groups if e.group in groups]
+        if not own or groups[max(own, key=lambda e: e.weight).group] not in (foot, toe):
+            continue
+        rows = [(groups[e.group], e.weight) for e in own if e.weight > 0 and groups[e.group] in keep]
+        total = sum(w for _, w in rows)
+        out.append([(n, w / total, inv[n] @ v.co) for n, w in rows])
     return out
 
 
@@ -491,39 +517,51 @@ def _lock_feet(src, clip, poses):
             off[f] = off[f] + Vector((0.0, 0.0, lift))
         report[side + "_max_lift_m"] = round(max(o.z for o in off), 4)
         worst = pull = 0.0
-        for f in range(n):
-            d = off[f]
-            if d.length < 1e-9:
-                continue
-            worst = max(worst, d.length)
-            pose = poses[f]
-            h = pose[hip].translation.copy()
-            k0 = pose[knee].translation.copy()
-            a0 = pose[foot].translation.copy()
-            a1 = a0 + d
-            l1, l2 = (k0 - h).length, (a0 - k0).length
-            # the new knee: same bend plane side, lengths kept. A pinned target past the leg's
-            # reach is pulled back to it, the knee kept bent at least min_knee_deg: a clamped
-            # straight knee left the foot up to 3 mm off the shin and the leg on its singular pose.
-            axis = (a1 - h)
-            reach = math.sqrt(l1 * l1 + l2 * l2 + 2 * l1 * l2 * math.cos(math.radians(cfg["min_knee_deg"])))
-            dist = min(axis.length, reach)
-            axis.normalize()
-            pull = max(pull, (a1 - (h + axis * dist)).length)
-            a1 = h + axis * dist
-            d = a1 - a0
-            bend = (k0 - h) - axis * (k0 - h).dot(axis)
-            bend.normalize()
-            along = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist)
-            k1 = h + axis * along + bend * math.sqrt(max(l1 * l1 - along * along, 0.0))
-            r1 = Matrix.Translation(h) @ _turn(k0 - h, k1 - h) @ Matrix.Translation(-h)
-            r2 = Matrix.Translation(k1) @ _turn(a0 - k0, a1 - k1) @ Matrix.Translation(-k0)
-            for b in (hip, hip2):
-                pose[b] = r1 @ pose[b]
-            for b in (knee, knee2):
-                pose[b] = r2 @ pose[b]
-            for b in (foot, toe):
-                pose[b] = Matrix.Translation(d) @ pose[b]
+        moves = [(f, off[f]) for f in range(n)]
+        # `skin_ground` (a body whose shoe is skinned across the ankle: the militiaman's sole sank
+        # 21 mm where a stance flexes the ankle far from rest, rigid points still on the ground):
+        # after the rigid lock, each frame's foot is moved in height by what its SKINNED sole
+        # shows: a stance sole onto the ground, a swinging one clear of it (clear_m while `early`).
+        skin = _foot_skin(src, foot, toe, poses[0]) if cfg.get("skin_ground") else None
+        for sweep in range(1 + (4 if skin else 0)):
+            if sweep:
+                moves = []
+                for f in range(n):
+                    low_f = min(sum(((poses[f][b] @ c) * w for b, w, c in rows), Vector()).z for rows in skin)
+                    dz = -low_f if stance[f] else max(0.0, (cfg["clear_m"] if early[f] else 0.0) - low_f)
+                    moves.append((f, Vector((0.0, 0.0, dz))))
+            for f, d in moves:
+                if d.length < 1e-9:
+                    continue
+                worst = max(worst, d.length)
+                pose = poses[f]
+                h = pose[hip].translation.copy()
+                k0 = pose[knee].translation.copy()
+                a0 = pose[foot].translation.copy()
+                a1 = a0 + d
+                l1, l2 = (k0 - h).length, (a0 - k0).length
+                # the new knee: same bend plane side, lengths kept. A pinned target past the leg's
+                # reach is pulled back to it, the knee kept bent at least min_knee_deg: a clamped
+                # straight knee left the foot up to 3 mm off the shin and the leg on its singular pose.
+                axis = (a1 - h)
+                reach = math.sqrt(l1 * l1 + l2 * l2 + 2 * l1 * l2 * math.cos(math.radians(cfg["min_knee_deg"])))
+                dist = min(axis.length, reach)
+                axis.normalize()
+                pull = max(pull, (a1 - (h + axis * dist)).length)
+                a1 = h + axis * dist
+                d = a1 - a0
+                bend = (k0 - h) - axis * (k0 - h).dot(axis)
+                bend.normalize()
+                along = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist)
+                k1 = h + axis * along + bend * math.sqrt(max(l1 * l1 - along * along, 0.0))
+                r1 = Matrix.Translation(h) @ _turn(k0 - h, k1 - h) @ Matrix.Translation(-h)
+                r2 = Matrix.Translation(k1) @ _turn(a0 - k0, a1 - k1) @ Matrix.Translation(-k0)
+                for b in (hip, hip2):
+                    pose[b] = r1 @ pose[b]
+                for b in (knee, knee2):
+                    pose[b] = r2 @ pose[b]
+                for b in (foot, toe):
+                    pose[b] = Matrix.Translation(d) @ pose[b]
         report[side] = {"max_offset_m": round(worst, 4), "max_reach_pullback_m": round(pull, 4),
                         "touchdown": round(start / n, 4)}
     for b in poses[0]:
@@ -613,7 +651,9 @@ def _poses(src, keep, clip):
         # frames: these clips already end on their first pose (WALK 0.8 mm, IDLE 0.7 deg apart), so
         # lerping whole frames toward frame 1 would drag a planted foot across its touchdown.
         n = len(poses)
-        fix = {b: poses[0][b] @ poses[-1][b].inverted() for b in poses[0]}
+        # a bone scaled to 0 (the archer's arrow while not drawn) has no seam to spread
+        fix = {b: poses[0][b] @ poses[-1][b].inverted() if abs(poses[-1][b].determinant()) > 1e-12
+               else Matrix.Identity(4) for b in poses[0]}
         for k in range(SEAM_FRAMES):
             i = n - SEAM_FRAMES + k
             w = (k + 1) / SEAM_FRAMES

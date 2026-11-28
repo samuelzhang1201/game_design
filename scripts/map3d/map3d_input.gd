@@ -1,12 +1,12 @@
 class_name Map3DInput
 extends RefCounted
-## The 3D map's pointer and keys (spec 2026-09-20 §1; was Map3DView._gui_input
-## and the key half of _process). Left or middle drag pans, right drag turns,
-## the wheel and a trackpad pinch zoom about the pointer, a two-finger drag
-## pans, WASD / arrows pan. A press on the compass eases north (the MEASUREMENT
-## ruler went 2026-10-02, owner). Shift + left click toggles a unit in or out of
-## the selection, and Shift + left drag draws the selection box (spec
-## 2026-10-07-army-split-and-ground §5.6, ruling R4: a plain drag pans).
+## The 3D map's pointer and keys (spec 2026-09-20 §1). A left drag on open
+## map draws the selection box (Shift + left drag adds to the selection), a
+## right drag pans, a middle drag turns, the wheel and a trackpad pinch zoom
+## about the pointer, a two-finger drag pans, WASD / arrows pan. A left click
+## selects, a Shift + left click toggles a unit; a right click opens the order
+## menu or the spy offer. A press on the compass eases north (spec
+## 2026-11-27-map3d-rts-drag-bindings, which replaces ruling R4).
 ## handle() returns true exactly where the view used to accept_event().
 
 ## A press and release further apart than this is a drag (WorldMapView.CLICK_SLOP).
@@ -18,10 +18,10 @@ var repo: DataRepository
 var _press_pos := Vector2.ZERO
 var _dragging := false
 var _press_on_hud := false
-## A Shift + left press is down: its drag draws the box, its click toggles.
+## A left press is down that may draw the box (not while an order aims).
 var _boxing := false
 var _rpress_pos := Vector2.ZERO
-## Whether the right button has turned the view since it went down.
+## Whether the right button has panned the view since it went down (a drag, not a click).
 var _rdragged := false
 ## A planned march's line, bent by a left drag while its confirm stands.
 var route := Map3DRouteEdit.new()
@@ -87,29 +87,22 @@ func _button(mb: InputEventMouseButton) -> bool:
 		if not mb.pressed and route.bending():
 			route.release()
 			return true
-		# an aimed order's click is its destination, Shift or not
-		if mb.pressed and mb.shift_pressed and not view.aiming:
-			_boxing = true
-			_press_pos = mb.position
-			_dragging = false
-			return true
-		if not mb.pressed and _boxing:
-			_boxing = false
-			view.box_rect = Rect2()
-			if _dragging:
-				view.select_box(Rect2(_press_pos, Vector2.ZERO).expand(mb.position))
-			else:
-				view.toggle_at(mb.position)
-			_dragging = false
-			return true
 		if mb.pressed:
 			_press_pos = mb.position
 			_dragging = false
-			if _boxing:   # a Shift press whose release was lost: this one pans
-				_boxing = false
-				view.box_rect = Rect2()
+			# an aimed order's click is its destination: no box while it aims
+			_boxing = not view.aiming
+			return true
+		view.box_rect = Rect2()
+		if _dragging and _boxing:
+			view.select_box(Rect2(_press_pos, Vector2.ZERO).expand(mb.position), mb.shift_pressed)
 		elif not _dragging:
-			view.select_at(mb.position)
+			if mb.shift_pressed and not view.aiming:
+				view.toggle_at(mb.position)
+			else:
+				view.select_at(mb.position)
+		_boxing = false
+		_dragging = false
 		return true
 	if mb.button_index == MOUSE_BUTTON_RIGHT:
 		if mb.pressed:
@@ -136,23 +129,20 @@ func _motion(mm: InputEventMouseMotion) -> bool:
 		if route.bending():
 			route.drag(mm.position)
 			return true
-		if _boxing:
-			if not _dragging and _press_pos.distance_to(mm.position) > CLICK_SLOP:
-				_dragging = true
-			if _dragging:
-				view.box_rect = Rect2(_press_pos, Vector2.ZERO).expand(mm.position)
-			return true
 		if not _dragging and _press_pos.distance_to(mm.position) > CLICK_SLOP:
 			_dragging = true
-		if _dragging:
+		if _dragging and _boxing:
+			view.box_add = mm.shift_pressed
+			view.box_rect = Rect2(_press_pos, Vector2.ZERO).expand(mm.position)
+		return true
+	if mm.button_mask & MOUSE_BUTTON_MASK_RIGHT:
+		if not _rdragged and _rpress_pos.distance_to(mm.position) > CLICK_SLOP:
+			_rdragged = true
+			rig.pan_by(mm.position - _rpress_pos)   # the ground catches up with the pointer
+		elif _rdragged:
 			rig.pan_by(mm.relative)
 		return true
 	if mm.button_mask & MOUSE_BUTTON_MASK_MIDDLE:
-		rig.pan_by(mm.relative)
-		return true
-	if mm.button_mask & MOUSE_BUTTON_MASK_RIGHT:
-		if _rpress_pos.distance_to(mm.position) > CLICK_SLOP:
-			_rdragged = true
 		rig.turn_by(mm.relative.x)
 		return true
 	return false

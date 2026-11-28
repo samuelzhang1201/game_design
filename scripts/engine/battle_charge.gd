@@ -373,11 +373,11 @@ static func _settle_candidate(repo: DataRepository, source: GameState, candidate
 	var distance := _candidate_distance(common[0], common.back())
 	if charge.phase == "approach":
 		var straight := true
-		for move: Dictionary in moves:
-			if move.unit != code: continue
-			distance = mini(distance, _candidate_distance(move.start, move.end))
-			if int(move.final_facing_deg) != heading: straight = false
-			for op: Dictionary in move.ops:
+		for step_move: Dictionary in moves:
+			if step_move.unit != code: continue
+			distance = mini(distance, _candidate_distance(step_move.start, step_move.end))
+			if int(step_move.final_facing_deg) != heading: straight = false
+			for op: Dictionary in step_move.ops:
 				if op.kind == "pivot" and (posmod(roundi(float(op.yaw0_udeg) / BodyMotion.LOCOMOTION_Q), 360) != heading \
 					or posmod(roundi(float(op.yaw0_udeg + op.turn_udeg) / BodyMotion.LOCOMOTION_Q), 360) != heading): straight = false
 				if op.kind == "move" and WarFront.facing_deg(Vector2(BodyMotion._difference(op.b[0], op.a[0]), BodyMotion._difference(op.b[1], op.a[1]))) != heading: straight = false

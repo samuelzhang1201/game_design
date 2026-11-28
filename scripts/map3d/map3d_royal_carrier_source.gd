@@ -17,18 +17,18 @@ const _SOURCES: Dictionary = {
 	"res://scripts/map3d/map3d_unit_settle.gd":"26ba22e211409286e6a750a34a3821a483811aae95ca1f086396c53b38f76a2f",
 	"res://scripts/map3d/map3d_clip_chain.gd":"060d7d1b304c8f4d885a925496913fbd954dabae4cc4021ad3758f03001eacde",
 	"res://scripts/map3d/map3d_unit_rig.gd":"2c4b803c4ae0dc6b9b5edab71c3489cad449c03a3a0382fd2844a4c378c3bc7f",
-	"res://scripts/map3d/map3d_royal_locomotion_source.gd":"b4301e3953e92676cdb0386bf4324c9e779687c665dfd9c9433a0083d3e827e7",
+	"res://scripts/map3d/map3d_royal_locomotion_source.gd":"31a3888507626ffcf759f5db0be022dc73c6141dd7a4684c79e2e6c7c261a8ca",
 	"res://scripts/map3d/map3d_world_loader.gd":"b59e4fb2cb7223fbd1989047fce0b2c5e05ab2cd0f3878a24fc212c9dc4c61bd",
-	"res://scripts/engine/body_motion.gd":"9569c803075e8d598341de5a0bcda3e137de7a053b8678faf12ea64341f81328",
-	"res://scripts/engine/army_system.gd":"3d1a3c0f6c8b77ba5455ac022798b2f5745c219d125459e111a3c53f64c3c2aa",
-	"res://scripts/engine/march_path.gd":"8f4b63b38c2f1e447ece94f09851939b1336a1a9f51880e05a07c8719264e568",
-	"res://scripts/engine/unit_bodies.gd":"e5ef5385575531e95914d0adb6cd6dcf59751d093a29e428fc48284a8621b4ca",
+	"res://scripts/engine/body_motion.gd":"b4ec64d222dea0b3258e05ab048de8823089b041cc0ed32e49f383f8006e3b8f",
+	"res://scripts/engine/army_system.gd":"90f7bb23411b631f6acb957fa568baf206a522ca887a58eb4df25fbcc388b4c7",
+	"res://scripts/engine/march_path.gd":"3110c00c673de522915a2379c7e7200185637a879203c8dfe9bda68a114a4d17",
+	"res://scripts/engine/unit_bodies.gd":"0354eae7a79f60f766b4f5d77ed9f504c24102ef8d9e2b938bf1857391c6b67c",
 	"res://scripts/engine/war_front.gd":"73c5fa064b95c84f4e5c5215bf120bd7ff7e496792179810ed59ba64d053a6dc",
-	"res://scripts/map3d/map3d_battle_groups.gd":"80d5c09b0a3484ee03cb7d51ea9c56873d291116f5a89ab6591161942ef63a3e",
+	"res://scripts/map3d/map3d_battle_groups.gd":"46f7c16e8392b6449183eee3121a019d9ca97f38b41e6d8429f7554c6db3730d",
 	"res://scripts/map3d/map3d_units.gd":"e842566f033267ae5cbb8bf548bed2aefc88103a9234b344cdc1b3554e32fb4d",
 	"res://scripts/map3d/map3d_formation.gd":"32e2ec41417dac078eac796bea104cca5982963b578ae37c6e6859c5b9d1d720",
 	"res://scripts/map3d/map3d_geometry.gd":"64797a53505cff9bd849e9245107f9be9f73fbb78cc2d27ab9f58b71bfce9e4c",
-	"res://scripts/map3d/map3d_layer_units.gd":"e21edc6325b8f849c13dccf9c8b352d00eeea1745982efc4669df9a484b55577",
+	"res://scripts/map3d/map3d_layer_units.gd":"f12ccd89fc21f8514ca9dd676baa7e417a57d18f4373238524aa95cdf4141ebc",
 	"res://scripts/map3d/map3d_unit_standard.gd":"ec4b2f5fcc15e9b962ec86fd4c39c3e0bef5bfed3d02224870ada8a41ff3c3df",
 	"res://scripts/map3d/map3d_national_flag.gd":"c9fd16bf11475c6ca628881ef3ca9a1eab389635007f19c673bd7f5b6becccb4",
 	"res://scripts/map3d/map3d_context.gd":"d7d45a27a77d7859a7df00b6d87980e106535c198b2828795d5f47837a5d3172"}
@@ -48,18 +48,18 @@ static func extract(ctx: Map3DContext, child: Dictionary, model_root: Node3D) ->
 	for key: String in ["reference_height_m", "size", "height_m", "extent"]:
 		if not child.has(key): return Bounds._reject("placement_missing:"+key)
 	var repo := ctx.repo
-	var reference := Map3DGeometry.distance_for_bar(repo,ctx.meta,repo.bal("map3d_zoom_start_scale"),ctx.view_size.y)
+	var ref_distance := Map3DGeometry.distance_for_bar(repo,ctx.meta,repo.bal("map3d_zoom_start_scale"),ctx.view_size.y)
 	var origin: Array = ctx.meta.get("pack_origin", [])
 	if origin.size() != 2: return Bounds._reject("pack_origin")
 	var placement := {"origin": Vector2(origin[0],origin[1]),
 		"alpha": float(ctx.meta.get("m_per_px",0.0))/ArmySystem.metres_per_pack_px(repo),
-		"k": Map3DUnits.scale_for(repo,repo.bal("map3d_fov_deg"),ctx.view_size.y,reference,child.reference_height_m,child.size),
+		"k": Map3DUnits.scale_for(repo,repo.bal("map3d_fov_deg"),ctx.view_size.y,ref_distance,child.reference_height_m,child.size),
 		"extent": child.extent, "height": child.height_m, "clear": repo.bal("map3d_unit_seat_clear"),
 		"sink": repo.bal("map3d_unit_sink_m"), "ring": int(repo.bal("map3d_unit_seat_ring")),
 		"ancestor": Map3DUnitRig._local_to(root,model_root),
 		"identity": {"reference_height_m": child.reference_height_m, "size": child.size,
 			"metres_per_pack_px":ArmySystem.metres_per_pack_px(repo),
-			"reference": reference, "view_size": ctx.view_size, "meta": ctx.meta.duplicate(true),
+			"reference": ref_distance, "view_size": ctx.view_size, "meta": ctx.meta.duplicate(true),
 			"r1":binding.identity,"root_generation":binding.generation,
 			"source_scene": {"path":scene,"sha256":FileAccess.get_sha256(scene)},
 			"ancestor_path": String(root.get_path_to(model_root)), "ancestry": _ancestry(root,model_root)}}
@@ -161,18 +161,18 @@ static func _bind_source(child: Dictionary, model: Node3D, calibration: Map3DRoy
 	detached.free()
 	if not actual.ok: return Bounds._reject("loaded_source_invalid",{"r1":actual.get("diagnostics",{}).duplicate(true)})
 	# Reproduce only the two existing formation writers on the fresh authored root.
-	var reference := Node3D.new()
-	reference.transform = expected.source.node_frames["."]
-	reference.position = child.slots[index]
+	var ref_node := Node3D.new()
+	ref_node.transform = expected.source.node_frames["."]
+	ref_node.position = child.slots[index]
 	var stature: Variant = null
 	if child.has("statures"):
 		if not child.statures is Array or index >= child.statures.size() or not Bounds._number(child.statures[index]) or child.statures[index] <= 0:
-			reference.free()
+			ref_node.free()
 			return Bounds._reject("source_stature")
 		stature = child.statures[index]
-		reference.scale = Vector3.ONE*float(stature)
-	var root_matches: bool = model.transform == reference.transform
-	reference.free()
+		ref_node.scale = Vector3.ONE*float(stature)
+	var root_matches: bool = model.transform == ref_node.transform
+	ref_node.free()
 	if not root_matches: return Bounds._reject("loaded_root_transform")
 	actual.source.node_frames["."] = expected.source.node_frames["."]
 	# Enabled native tracks overwrite these live poses at every phase; only their
@@ -182,7 +182,7 @@ static func _bind_source(child: Dictionary, model: Node3D, calibration: Map3DRoy
 		var key: String = {Animation.TYPE_POSITION_3D:"position",Animation.TYPE_ROTATION_3D:"rotation",Animation.TYPE_SCALE_3D:"scale"}[track.type]
 		actual.source.bones[track.bone][key] = expected.source.bones[track.bone][key]
 	actual.source["calibration"] = expected.source.calibration
-	if calibration._source_digest(actual.source) != expected.source.sha256: return Bounds._reject("loaded_source_mismatch")
+	if Map3DRoyalLocomotionSource._source_digest(actual.source) != expected.source.sha256: return Bounds._reject("loaded_source_mismatch")
 	# Re-measure only the figure: a later selected Glow is not part of model bounds.
 	var measured := Node3D.new()
 	var copy: Node3D = model.duplicate(0) as Node3D

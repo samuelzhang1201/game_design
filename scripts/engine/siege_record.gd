@@ -12,13 +12,17 @@ extends RefCounted
 ## day's battles may storm), assault_due (an assault owed), starved (1: the
 ## hunger was told), militia (the militia unit codes it raised, TownMilitia),
 ## woken (the standing units it woke, TownMilitia.wake), entries and stores
-## (the blockade, SiegeBlockade). A host's mind keeps only `siege_id`, set until the
+## (the blockade, SiegeBlockade), alloc and history (the men's plan and its
+## cuts, SiegeTactics; absent in an old save, read empty), engines_built,
+## engine_work, engine_wear and breach (the bombardment, SiegeTactics.bombard;
+## absent in an old save, read 0). A host's mind keeps only `siege_id`, set until the
 ## siege's end has been told.
 
 ## The figures an old save kept on the host minds (migrate erases them).
 const LEGACY := ["siege_progress", "siege_days", "siege_town", "assault", "assault_due", "starved"]
 ## The figures a record resets when its last host leaves.
-const FIGURES := ["progress", "days", "assault", "assault_due", "starved"]
+const FIGURES := ["progress", "days", "assault", "assault_due", "starved", "engines_built", "engine_work",
+	"engine_wear", "breach"]
 
 
 ## True when the town's burg features hold walls or a citadel.
@@ -140,10 +144,10 @@ static func migrate(repo: DataRepository, state: GameState) -> void:
 		var mind: Dictionary = state.ai_hosts[h]
 		if mind.has("occupied") or mind.has("occupied_house"):
 			var cells: Dictionary = mind.get("occupied", {})
-			var town := String(mind.get("target_id", ""))
-			if not cells.is_empty() and town != "" and not state.occupations.has(town):
+			var target_town := String(mind.get("target_id", ""))
+			if not cells.is_empty() and target_town != "" and not state.occupations.has(target_town):
 				var by := SiegeSystem.host_label(repo, h)
-				state.occupations[town] = {"town": town, "occupier": SiegeSystem._kingdom_of(repo, state, h),
+				state.occupations[target_town] = {"town": target_town, "occupier": SiegeSystem._kingdom_of(repo, state, h),
 					"from": repo.resolve_realm("player_realm"), "house": String(mind.get("occupied_house", "")),
 					"host": h, "by": by, "day": state.absolute_day(), "cells": cells.duplicate()}
 				occupied += 1
@@ -188,7 +192,8 @@ static func _open(repo: DataRepository, state: GameState, town: String, attacker
 	state.sieges[id] = {"town": town, "attacker": attacker, "defender": SiegeSystem.holder_of(repo, state, town),
 		"hosts": [], "units": [], "task_id": "", "opened_day": state.absolute_day(), "days": 0,
 		"integrity": 1000 if walled(repo, town) else 0, "progress": 0, "assault": 0, "assault_due": 0,
-		"starved": 0, "militia": [], "woken": []}
+		"starved": 0, "militia": [], "woken": [], "alloc": {}, "history": [],
+		"engines_built": 0, "engine_work": 0, "engine_wear": 0, "breach": 0}
 	if levy:
 		TownMilitia.wake(repo, state, id)
 		TownMilitia.raise(repo, state, id)

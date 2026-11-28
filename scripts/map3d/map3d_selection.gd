@@ -85,10 +85,10 @@ func select(picked: Dictionary) -> void:
 			_show_ring("")
 			_set_province("")
 			army = code
-			armies = [code]
+			armies = group_with(code)
 			_refresh_hud()
 			object_selected.emit({"title": MapObjects.label_of(ctx.repo, picked),
-				"obj": {"kind": "army", "code": code}})
+				"obj": {"kind": "army", "code": code, "codes": armies.duplicate()}})
 		"manor":
 			var cell := int(picked["cell"])
 			army = ""
@@ -141,10 +141,16 @@ func toggle_pick(picked: Dictionary) -> void:
 	_select_armies(codes)
 
 
-## A Shift-drag box (design px): every LAND unit of the player's whose piece
-## it touches (spec §5.6; a piece is drawn at every zoom), sorted.
-func select_box(r: Rect2) -> void:
-	var codes: Array = []
+## A drag box (design px): every LAND unit of the player's whose piece it
+## touches (spec §5.6; a piece is drawn at every zoom), sorted; `add` (a Shift
+## drag) keeps the units already selected. A held box lights these codes
+## before release (box_codes); the release selects them.
+func select_box(r: Rect2, add := false) -> void:
+	_select_armies(box_codes(r, add))
+
+
+func box_codes(r: Rect2, add := false) -> Array:
+	var codes: Array = armies.duplicate() if add else []
 	var rects: Dictionary = view.unit_rects()
 	for code: String in rects:
 		if (rects[code] as Rect2).intersects(r) and not codes.has(code):
@@ -152,7 +158,45 @@ func select_box(r: Rect2) -> void:
 	codes = codes.filter(func(c: String) -> bool: return _mine(c) and String(ArmySystem.regiment(
 		ctx.repo, c, ctx.state()).get("is_naval", "0")) != "1")
 	codes.sort()
-	_select_armies(codes)
+	return codes
+
+
+## While a drag box is held, the units its release would select (else []).
+var box_lit: Array = []
+
+
+func lit() -> Array: return box_lit if view.box_rect.has_area() else armies
+
+
+## The pieces' glow: the selection, or a held box's preview, whose units not yet
+## selected glow at map3d_unit_glow_preview of the light (the shader's `dim`).
+## ponytail: a saved battle group's figure glows keep full light; dim them too if that reads wrong.
+func light(units: Map3DLayerUnits) -> void:
+	units.set_selected(lit())
+	for code: String in lit():
+		var host := units.built_piece(code).get("node") as Node3D
+		var glow := host.get_node_or_null(Map3DUnitGlow.NAME) as GeometryInstance3D if host != null else null
+		if glow != null:
+			glow.set_instance_shader_parameter("dim", 1.0 if armies.has(code) else ctx.repo.bal("map3d_unit_glow_preview"))
+
+
+## A plain click on a member of an army selects the whole army, the clicked
+## one first (spec 2026-11-27-army-groups-design); else the unit alone.
+func group_with(code: String) -> Array:
+	var state := ctx.state()
+	var id := ArmyGroups.group_of(state, code) if state != null else ""
+	if id == "":
+		return [code]
+	var codes: Array = [code]
+	for c: String in state.army_groups[id]["members"]:
+		if c != code and ArmyGroups.eligible(ctx.repo, state, c):   # one fallen today is gone already
+			codes.append(c)
+	return codes
+
+
+## The selection becomes `codes` (an army's SELECT on its card).
+func select_armies(codes: Array) -> void:
+	_select_armies(codes.filter(func(c: String) -> bool: return _mine(c)))
 
 
 func _mine(code: String) -> bool:
@@ -173,7 +217,7 @@ func _select_armies(codes: Array) -> void:
 	_refresh_hud()
 	if army != "":
 		object_selected.emit({"title": MapObjects.label_of(ctx.repo, {"kind": "army", "code": army}),
-			"obj": {"kind": "army", "code": army}})
+			"obj": {"kind": "army", "code": army, "codes": armies.duplicate()}})
 	elif had:
 		object_selected.emit({})
 

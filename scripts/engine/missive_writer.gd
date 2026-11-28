@@ -352,9 +352,9 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 		var place := battle_place(repo, state, at.get(id, {}))
 		match String(e["kind"]):
 			"battle_event":
-				var receipt: Dictionary = e.get("receipt", {})
-				var text := String(receipt.get("reason", ""))
-				for effect: Dictionary in receipt.get("effects", []):
+				var receipt_row: Dictionary = e.get("receipt", {})
+				var text := String(receipt_row.get("reason", ""))
+				for effect: Dictionary in receipt_row.get("effects", []):
 					if effect.has("metric"):
 						text += " %s: %+d." % [String(effect.metric).capitalize(), int(effect.get("delta", 0))]
 				facts.append(MissiveLog.words(String(e.token), String(repo.event_titles.get(String(e.event_id), "Battlefield decision")), text))

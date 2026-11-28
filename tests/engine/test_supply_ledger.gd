@@ -128,7 +128,7 @@ func test_the_town_card_shows_its_stores() -> void:
 	var rows := {}
 	for f: Array in card["fields"]:
 		rows[String(f[0])] = String(f[1])
-	assert_true(rows.has("Strategic stores"), "a realm town reads its stores")
+	assert_true(rows.has("In store"), "a realm town reads its stores")
 	assert_eq(rows["Supply lines"], "1 from here")
 
 func test_no_card_or_node_still_names_a_stronghold() -> void:

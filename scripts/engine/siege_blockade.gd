@@ -110,7 +110,8 @@ static func open_share(rec: Dictionary) -> int:
 
 ## The besiegers close the entries (spec §4.1): every entry but a sea one, by
 ## share descending then id, takes the stationed besiegers (SiegeSystem.stationed)
-## until it holds siege_blockade_men_per_entry fit men — first those already
+## until it holds siege_blockade_men_per_entry of the plan's blockade men
+## (SiegeTactics.men_for; each unit gives SiegeTactics.men_of at most) — first those already
 ## standing at it (a road entry; code order), then the others in code order;
 ## an entry short of them stays open, and so does every entry after it. A unit
 ## closes one entry at most. The closing units camp at it (_camp), and its closed_by
@@ -142,13 +143,17 @@ static func close(repo: DataRepository, state: GameState, id: String) -> void:
 				standing[e].append(c)
 				free.erase(c)
 	var per := int(repo.bal("siege_blockade_men_per_entry"))
+	# only the men the plan puts to the blockade close entries (SiegeTactics)
+	var budget := SiegeTactics.men_for(repo, state, id, "blockade")
 	for e: String in order:
 		var pool: Array = (standing[e] as Array) + free
 		var men := 0
 		var mine: Array = []
-		while men < per and not pool.is_empty():
+		while men < per and budget > 0 and not pool.is_empty():
 			var c := String(pool.pop_front())
-			men += ArmySystem.fit_count(repo, state, c)
+			var give := mini(budget, SiegeTactics.men_of(repo, state, c, town))
+			men += give
+			budget -= give
 			mine.append(c)
 			free.erase(c)
 		for c: String in standing[e]:
