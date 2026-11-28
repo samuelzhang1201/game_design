@@ -48,15 +48,24 @@ stopped offscreen and freed with the piece, and needs no edit of the royal carri
   planted on his own ground (`Map3DUnitRig.plant`). The same on the march, standing by, in garrison and
   holding a front line.
 - **A battle block before its first round** (`physical_groups`, `BattleSystem.battle_of(...).rounds` 0,
-  the stand-off; a block whose battle is gone too): not drawn while its figures walk to their points
-  (`easing`). Then he stands ahead of the foremost drawn figure in the frame of the unit's saved
-  `facing_deg`, on STANDBY, `map3d_commander_standoff_share` of the clear ground between his first rank
-  and the nearest drawn enemy figure of his battle (`_room`, `standoff_lead`), never past his ordinary
-  lead — the two sides' commanders keep the middle of that ground between them. Where that share would
+  the stand-off; a block whose battle is gone too): he stands ahead of the foremost drawn figure in the
+  frame of the unit's saved `facing_deg`, on STANDBY, `map3d_commander_standoff_share` of the ROOM
+  between the lines, never past his ordinary lead — the two sides' commanders keep the middle of that
+  ground between them. The room (`_room`, `standoff_lead`) is the clear ground between where his first
+  rank and the nearest enemy figure of his battle will STAND (`Map3DBattleGroups.stand_xz`), never the
+  drawn figures: it is settled on the first frame of a walk-in, so he takes ONE place and never swaps
+  as the lines close. Where that share would
   back his tail into his own rank (lines closer than his half length over that share: the usual
   stand-off) he stands BESIDE THE LEFT END OF HIS FIRST RANK instead (`first_rank_left_of`): outside
   the left file by the fight's `map3d_commander_rear_gap` and half his width, level with the foremost
   figures' own line, facing the enemy. That is the lane he rides down when the fight starts.
+- **Walking in** (`piece["easing"]` before the first round): he is DRAWN and comes in with his men.
+  The piece is new (a block gone into its battle), so the old block's rider hands him his place; his
+  place is measured off the figures as they are DRAWN, so it moves in with them and he keeps with it,
+  facing the way he rides, and is on it without a jump when they stand. His gait is the walk; where
+  his unit's arm gallops in (`commander_gallops`) it is `MARCH`, the gallop, at its own measured
+  stride — a walk cannot keep with galloping cavalry. With no old rider (first sight, a loaded save,
+  symbol mode) he stands at his place at once.
 - **In the fight** (`rounds > 0`, the crown's unit and a seen foe's alike, each in its own facing's
   frame, so a foe's is on HIS left seen facing the crown): at the unit's LEFT REAR — outside the left
   file by `map3d_commander_rear_gap` of his own lengths and half his width (`side_m`), and
@@ -66,13 +75,16 @@ stopped offscreen and freed with the piece, and needs no edit of the royal carri
   him, a block walking to new saved points does. The figures' steps (`easing`) do not hide him.
 - **He rides between his places** (`route`, `ride`; view-only, real seconds, so on a stopped clock too):
   a new place further than `map3d_commander_ride_min` of his lengths is ridden to at
-  `map3d_commander_ride_pace` times `MARCH_WALK`'s own pace (a nearer one does not move him), round the
-  unit's LEFT flank and never through it — a leg is clear when both its ends are outside the left file,
-  both ahead of the first rank or both behind the rear rank; he goes straight when that is clear, else
-  by the front-left corner, the rear-left corner or both, each as far out as the further-out end and
-  his side gap clear of the block at least. He rides the way he FACES, turning at the Units node's
+  `map3d_commander_ride_pace` times his gait's own pace (a nearer one does not move him), round his
+  block and never through it — a leg is clear when both its ends are outside one flank file, both
+  ahead of the first rank or both behind the rear rank; the way is the SHORTEST of clear legs through
+  the block's four corners (each as far out as the further-out end, his side gap clear of the flank
+  files and half his length of the ranks at least; the left wins a tie), every half turn on it and the
+  turn to his unit's facing at its end counted as `map3d_commander_about_face` of his lengths. So from
+  ahead of the first rank to the left rear it is round the LEFT flank, and to a place beside his block
+  he comes up from behind, already facing the enemy, where that is not much the longer way. He rides the way he FACES, turning at the Units node's
   `turn_deg_per_s` as he goes, so a corner is an arc he passes, not a halt; the last stretch he rides
-  straight onto his place, only as far as he faces it (a horse does not slide sideways). He plays `MARCH_WALK` at the
+  straight onto his place, only as far as he faces it (a horse does not slide sideways). He plays his gait's clip at the
   ground he covers that frame (within `map3d_unit_anim_min` / `_max`), and at the end turns to his
   unit's facing before he takes his clip. He keeps with a place that walks on (his block going to
   new points) while it covers ground at `map3d_unit_anim_min` of his walk's pace or more; a slower
@@ -82,9 +94,8 @@ stopped offscreen and freed with the piece, and needs no edit of the royal carri
   it, a formation rebuilt) hands its drawn rider's world place to the new piece's rider (`sync`: the
   old node is still queued for deletion), who rides on from there. NEVER a ride: under a swapped state
   (a loaded save: he keeps the `GameState` he last stood under), on first sight, after he was not
-  drawn (the walk-in, symbol mode, a hidden view), when his scale changed, or with
-  no clear way round the left (he stands on the block's right, level with it) — he is stood at his
-  place at once.
+  drawn (symbol mode, a hidden view), when his scale changed, or from INSIDE his block (no clear
+  way) — he is stood at his place at once.
 - **Size**: `map3d_commander_size` is his `army_art.csv`-style size (his model box, banner tip
   included, over the piece height), measured so his horse is the cavalry's horse at every camera
   whatever arm he leads (`test_map3d_commander_rider.gd` checks it against the two installed models;
