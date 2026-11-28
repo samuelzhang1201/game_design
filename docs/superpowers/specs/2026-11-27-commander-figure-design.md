@@ -205,18 +205,23 @@ settled beyond the plan above:
   measured off the stand points alone he rode ahead to where a redeploying block was GOING and stood
   alone there for the seconds its men took to walk (the first real-window runs showed both). For the
   same reason `easing` hides him only before the first round.
-- **The place**: outside the left file by `map3d_commander_rear_gap` of his own lengths and half his
-  width, level with the rear rank's own line, facing the enemy with his unit, on `COMMAND` at speed 1.
+- **The place**: outside the left file by `map3d_commander_rear_gap` (1) of his own lengths and half
+  his width, `map3d_commander_rear_back` (0.5) of his lengths behind the rear rank's own line, facing
+  the enemy with his unit, on `COMMAND` at speed 1. The spec's "level with the rear rank" was built
+  first and bracketed at gaps 0.25 / 0.5 / 1: the independent critic found that under 1 the banner's
+  sweep lands among his own left file, and that level with the rear rank his horse — as long as a
+  two-rank block is deep — reaches the first rank, so he read as on the flank, not at the rear.
 - **The ride goes round the left flank by corners**: a leg is clear when both its ends are outside
   the left file, both ahead of the first rank or both behind the rear rank. Front to left rear is one
   corner (front-left); a unit whose saved points moved off in the fight (the first real-window run
   showed the archers shifting ground at a day's end, and him jumping to their new left rear) is
   reached round the rear-left corner. Only from the block's right, level with it, is there no way,
   and he is stood at his place at once.
-- **He turns into his way and rides only as far as he faces it** (the frame's stride times the cosine
-  of what is left to turn), so he pivots on the spot at each corner instead of sliding sideways; at the
-  end he turns to his unit's facing before he takes `COMMAND` or `STANDBY`. He turns at the Units
-  node's `turn_deg_per_s`.
+- **He rides the way he faces, turning as he goes**, so a corner is an arc and he never slides
+  sideways; the last stretch (two turning radii) he rides straight onto his place, only as far as he
+  faces it, and there turns to his unit's facing before he takes `COMMAND` or `STANDBY`. He turns at
+  the Units node's `turn_deg_per_s`. (Built first as a pivot on the spot at each corner: the critic
+  called it a rook's move.)
 - **His hooves are paced off the ground he covers that frame**, held within `map3d_unit_anim_min` /
   `_max`, so the walk slows through a turn and keeps the ground on a block that is itself marching
   off. The ride's own pace is `map3d_commander_ride_pace` times `MARCH_WALK`'s.
@@ -245,3 +250,12 @@ settled beyond the plan above:
   at the left rear; the ride from the front is seen only where a stand-off is wider. The review's
   ride was shot with `map3d_commander_standoff_share` forced to 0.5 for the shot (one commander then
   has his place between the lines). The stand-off rule is the open question for the owner.
+- **Review** (real windows, `snapshot_screen --battle-case field --battle-arm archers --battle-foe
+  foot`; sheets and the scratch shot flags in the session's notes folder, `commander-step3-review/`):
+  one independent critic pass; its three defects fixable by a number or a placement were fixed (the
+  gap, the half length back, the arced corners) and re-shot. Left open, each needing art or a ruling:
+  he is not drawn in a close stand-off; both sides' commanders wear the same maroon; the horse stands
+  stock-still under `COMMAND`; `MARCH_WALK` is a short, high-kneed step.
+- **Bench** (`bench.tscn --battle-arm foot`, still camera, the owner's editor and other sessions'
+  Godot running): low 6.31 ms of 8.5, medium 7.21 of 8.5, high 10.18 of 12, ultra 10.61 of 12.5 — no
+  draw distance was added.

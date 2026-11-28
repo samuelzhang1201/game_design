@@ -422,8 +422,9 @@ func test_a_frame_of_his_ride_turns_into_his_way_and_rides_as_far_as_he_faces_it
 	assert_almost_eq((rode[0] as Vector2).y, -3.0, 1e-5)
 	assert_almost_eq(float(rode[1]), 0.0, 1e-5)
 	assert_eq((rode[2] as PackedVector2Array).size(), 1)
-	# his corner to the west (-x): its yaw is a quarter turn, +PI/2. He may turn 0.5 rad: still
-	# PI/2 - 0.5 off his way, he rides cos(PI/2 - 0.5) = sin 0.5 = 0.479426 of his 4 m: 1.917702 m
+	# the last stretch (his place within two radii, 2 x 4 / 0.5 = 16 m) is ridden straight onto it,
+	# only as far as he faces it. His place 10 m to the west (-x): its yaw is a quarter turn, +PI/2.
+	# He may turn 0.5 rad: still PI/2 - 0.5 off, he rides cos(PI/2 - 0.5) = sin 0.5 = 0.479426 of 4 m
 	rode = Map3DCommanderRider.ride(Vector2.ZERO, 0.0, PackedVector2Array([Vector2(-10, 0)]), 0.0, 4.0, 0.5)
 	assert_almost_eq(float(rode[1]), 0.5, 1e-5)
 	assert_almost_eq((rode[0] as Vector2).x, -1.917702, 1e-4)
@@ -432,10 +433,17 @@ func test_a_frame_of_his_ride_turns_into_his_way_and_rides_as_far_as_he_faces_it
 	rode = Map3DCommanderRider.ride(Vector2.ZERO, 0.0, PackedVector2Array([Vector2(0, 10)]), 0.0, 4.0, 0.5)
 	assert_eq(rode[0], Vector2.ZERO)
 	assert_almost_eq(absf(float(rode[1])), 0.5, 1e-5)
-	# half a metre short of a corner with 3 m to ride: on it, and it is dropped; the next is ahead
+	# a corner with another beyond it is an arc, not a halt: half a metre short of it with 3 m to
+	# ride he rides on the way he faces, 2.5 m past it, and it is passed (he is within his 3 m)
 	rode = Map3DCommanderRider.ride(Vector2(0, -9.5), 0.0, PackedVector2Array([Vector2(0, -10), Vector2(-5, -10)]), 0.0, 3.0, 1.0)
-	assert_eq(rode[0], Vector2(0, -10))
+	assert_eq(rode[0], Vector2(0, -12.5))
 	assert_eq(rode[2], PackedVector2Array([Vector2(-5, -10)]))
+	# far from his place (100 m to the west, more than two radii of 4 / 0.5 = 8 m) he rides where he
+	# faces while he turns: 0.5 rad round, 4 m along (-sin 0.5, -cos 0.5) = (-1.917702, -3.510330)
+	rode = Map3DCommanderRider.ride(Vector2.ZERO, 0.0, PackedVector2Array([Vector2(-100, 0)]), 0.0, 4.0, 0.5)
+	assert_almost_eq(float(rode[1]), 0.5, 1e-5)
+	assert_almost_eq((rode[0] as Vector2).x, -1.917702, 1e-4)
+	assert_almost_eq((rode[0] as Vector2).y, -3.510330, 1e-4)
 	# arrived: he turns to his facing, 0.25 rad of the 1 rad left
 	rode = Map3DCommanderRider.ride(Vector2(-5, -10), 1.0, PackedVector2Array([Vector2(-5, -10)]), 0.0, 3.0, 0.25)
 	assert_eq(rode[0], Vector2(-5, -10))
@@ -486,6 +494,11 @@ func _block(ctx: Map3DContext, piece: Dictionary) -> Dictionary:
 	return out
 
 
+## How far behind his rear rank's line he commands, world metres.
+func _back(rider: Map3DCommanderRider) -> float:
+	return rider._repo.bal("map3d_commander_rear_back") * 2.0 * rider._half.y * rider.global_basis.get_scale().x
+
+
 ## Where a rider is drawn from his piece's root, flat world metres.
 func _from_root(rider: Node3D) -> Vector2:
 	var root := rider.get_parent() as Node3D
@@ -512,7 +525,8 @@ func _ride_out(rider: Map3DCommanderRider) -> PackedVector2Array:
 				rider._repo.bal("map3d_unit_anim_max")), 1e-3, "his hooves keep the ground he covers")
 			fastest = maxf(fastest, rider._anim.speed_scale)
 	assert_false(rider.riding(), "he arrives")
-	assert_almost_eq(fastest, rider._repo.bal("map3d_commander_ride_pace"), 1e-3, "on the straight he rides at his ride's pace")
+	# (his place is drawn in single-precision world metres, thousands from the origin: a part in a thousand)
+	assert_almost_eq(fastest, rider._repo.bal("map3d_commander_ride_pace"), 0.01, "on the straight he rides at his ride's pace")
 	return trail
 
 
@@ -554,7 +568,8 @@ func test_when_the_fight_begins_he_rides_round_the_left_flank_to_the_left_rear_a
 		# arrived: outside the left file by his gap and half his width, level with the rear rank
 		var at := _from_root(rider)
 		assert_almost_eq(at.dot(across), float(block["left"]) - (rider._half.x + 2.0 * rider._half.y * gap) * k, 0.01, code + " is outside his left file")
-		assert_almost_eq(at.dot(face), float(block["rear"]), 0.01, code + " is level with his rear rank")
+		assert_almost_eq(at.dot(face), float(block["rear"]) - repo.bal("map3d_commander_rear_back") * 2.0 * rider._half.y * k, 0.01,
+			code + " is behind his rear rank's line by his share of a length")
 		var ahead := -rider.global_basis.z
 		assert_almost_eq(Vector2(ahead.x, ahead.z).normalized().dot(face), 1.0, 1e-4, code + " faces the enemy with his unit")
 		assert_eq(_clip(rider), "COMMAND")
@@ -695,7 +710,7 @@ func test_no_ride_after_a_state_swap_or_from_nowhere() -> void:
 	assert_false(rider.riding(), "a loaded save rides nobody")
 	assert_eq(_clip(rider), "COMMAND")
 	var block := _block(f["ctx"], layer.built_piece(f["own"]))
-	assert_almost_eq(_from_root(rider).dot(block["face"]), float(block["rear"]), 0.01)
+	assert_almost_eq(_from_root(rider).dot(block["face"]), float(block["rear"]) - _back(rider), 0.01)
 	assert_lt(_from_root(rider).dot(block["across"]), float(block["left"]))
 	# a unit first seen mid-fight: the same
 	f = _field(3000.0)
@@ -709,7 +724,7 @@ func test_no_ride_after_a_state_swap_or_from_nowhere() -> void:
 		assert_false(rider.riding(), code + " is stood at his place")
 		assert_eq(_clip(rider), "COMMAND")
 		block = _block(f["ctx"], layer.built_piece(code))
-		assert_almost_eq(_from_root(rider).dot(block["face"]), float(block["rear"]), 0.01)
+		assert_almost_eq(_from_root(rider).dot(block["face"]), float(block["rear"]) - _back(rider), 0.01)
 	# a stand-off too tight to draw him: when the fight starts he appears at the left rear
 	f = _field(0.0)
 	layer = f["layer"]
@@ -725,7 +740,7 @@ func test_no_ride_after_a_state_swap_or_from_nowhere() -> void:
 	assert_true(rider.visible)
 	assert_false(rider.riding(), "no ride from nowhere")
 	block = _block(f["ctx"], layer.built_piece(f["own"]))
-	assert_almost_eq(_from_root(rider).dot(block["face"]), float(block["rear"]), 0.01)
+	assert_almost_eq(_from_root(rider).dot(block["face"]), float(block["rear"]) - _back(rider), 0.01)
 	# hidden with his piece mid-ride (the far zoom's symbols), shown again: stood at his place
 	f = _field(3000.0)
 	layer = f["layer"]

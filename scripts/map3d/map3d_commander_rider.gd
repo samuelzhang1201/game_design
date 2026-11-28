@@ -139,9 +139,10 @@ static func route(from: Vector2, to: Vector2, face: Vector2, left: float, front:
 
 
 ## One frame of his ride: from `at` turned `yaw` toward the next corner of `route`, `step` metres
-## of the route's frame and `turn` radians at most. He turns into his way and rides only as far as
-## he faces it (a horse does not slide sideways); a corner reached is dropped; past the last he
-## turns to `goal_yaw`. -> [at, yaw, the route left].
+## of the route's frame and `turn` radians at most. He rides the way he FACES, turning as he goes,
+## so a corner is an arc (of `step` / `turn` metres' radius) and is passed once he is that near it;
+## on the last stretch (two of those radii) he rides straight onto his place, only as far as he
+## faces it; there he turns to `goal_yaw`. -> [at, yaw, the route left].
 static func ride(at: Vector2, yaw: float, route_left: PackedVector2Array, goal_yaw: float, step: float, turn: float) -> Array:
 	var left := route_left.duplicate()
 	while not left.is_empty() and at.distance_to(left[0]) <= 0.0001:
@@ -151,13 +152,19 @@ static func ride(at: Vector2, yaw: float, route_left: PackedVector2Array, goal_y
 		return [at, rotate_toward(yaw, goal_yaw, turn), left]
 	var way := left[0] - at
 	var want := Map3DUnits.facing_yaw(way)
+	var radius := step / turn if turn > 0.0 else 0.0
 	yaw = rotate_toward(yaw, want, turn)
-	var go := step * maxf(cos(angle_difference(yaw, want)), 0.0)
-	if go >= way.length():
-		at = left[0]
-		left.remove_at(0)
+	if left.size() == 1 and way.length() <= maxf(step, 2.0 * radius):
+		var go := step * maxf(cos(angle_difference(yaw, want)), 0.0)
+		if go >= way.length():
+			at = left[0]
+			left.remove_at(0)
+		else:
+			at += way.normalized() * go
 	else:
-		at += way.normalized() * go
+		at += Vector2(-sin(yaw), -cos(yaw)) * step  # the way a yaw faces (Map3DUnits.yaw_for)
+		if left.size() > 1 and at.distance_to(left[0]) <= maxf(step, radius):
+			left.remove_at(0)
 	return [at, yaw, left]
 
 
@@ -326,7 +333,7 @@ func _place(root: Node3D, battle: bool, fight: bool, k: float, root_k: float, de
 	var front := front_of(points, reaches, face)
 	var rear := left_rear_of(points, sides, face)
 	var side := side_m(_half.x, _half.y, _repo.bal("map3d_commander_rear_gap"), k) / root_k
-	var goal := rear - across * side
+	var goal := rear - across * side - face * _repo.bal("map3d_commander_rear_back") * 2.0 * _half.y * k / root_k
 	if not fight:
 		var lead := lead_m(_half.y, _repo.bal("map3d_commander_gap"), k)
 		if battle:

@@ -56,8 +56,8 @@ stopped offscreen and freed with the piece, and needs no edit of the royal carri
   back his tail into his own rank (lines closer than his half length over that share) he is NOT DRAWN.
 - **In the fight** (`rounds > 0`, the crown's unit and a seen foe's alike, each in its own facing's
   frame, so a foe's is on HIS left seen facing the crown): at the unit's LEFT REAR — outside the left
-  file by `map3d_commander_rear_gap` of his own lengths and half his width (`side_m`), level with the
-  rear rank (`left_rear_of`) — facing the enemy with his unit, on `COMMAND` at its own speed. A figure
+  file by `map3d_commander_rear_gap` of his own lengths and half his width (`side_m`), and
+  `map3d_commander_rear_back` of his lengths behind the rear rank's line (`left_rear_of`) — facing the enemy with his unit, on `COMMAND` at its own speed. A figure
   counts where it is DRAWN, except one a duel or the mixed fight has claimed (its player's `duel`
   meta), which counts where it STANDS (`Map3DBattleGroups.stand_xz`): men gone to fight do not move
   him, a block walking to new saved points does. The figures' steps (`easing`) do not hide him.
@@ -67,8 +67,9 @@ stopped offscreen and freed with the piece, and needs no edit of the royal carri
   unit's LEFT flank and never through it — a leg is clear when both its ends are outside the left file,
   both ahead of the first rank or both behind the rear rank; he goes straight when that is clear, else
   by the front-left corner, the rear-left corner or both, each as far out as the further-out end and
-  his side gap clear of the block at least. He turns into his way at the Units node's `turn_deg_per_s`
-  and rides only as far as he faces it (a horse does not slide sideways), plays `MARCH_WALK` at the
+  his side gap clear of the block at least. He rides the way he FACES, turning at the Units node's
+  `turn_deg_per_s` as he goes, so a corner is an arc he passes, not a halt; the last stretch he rides
+  straight onto his place, only as far as he faces it (a horse does not slide sideways). He plays `MARCH_WALK` at the
   ground he covers that frame (within `map3d_unit_anim_min` / `_max`), and at the end turns to his
   unit's facing before he takes his clip. He keeps with a place that walks on (his block going to
   new points) while it covers ground at `map3d_unit_anim_min` of his walk's pace or more; a slower
