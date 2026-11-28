@@ -420,7 +420,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "3691e11edcf06fe861f1530beeca71926657c7b1b9acc81e8d14369790720fd3",
+  "sha256": "5ce289bfa2a1ef02f7f0115e5d648952c8ef40f3654cf255b561ff2b03eacdac",
   "uniform": 512
  },
  "config": {
@@ -484,8 +484,8 @@
  },
  "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
  "input_sha256": {
-  "assets/3D/units/cavalry/cavalry.glb": "358faa790b53f0157cc74691d57f92223a65fedbcf437cf2395be948c0ac3397",
-  "assets/3D/units/cavalry/cavalry.glb.import": "a0aaba5c3411f28d80a62a11e8f11037d362d222ce7adfb977e5c9c10c233d30",
+  "assets/3D/units/cavalry/cavalry.glb": "d23edc264552a542c988234f758263ab56cc995350410fbdf39c564d901e0f69",
+  "assets/3D/units/cavalry/cavalry.glb.import": "d9e72ef2c7bee2763b7766d6a0995b71de5fb64bb7234344e567df9f95bb1532",
   "assets/3D/units/cavalry/cavalry_cavalry_atlas.jpg": "0119d3b0e7bc66ef68877c7375ab405f9d9d2230722a89645fed2952ea719cf1",
   "assets/3D/units/cavalry/cavalry_cavalry_atlas.jpg.import": "545fb109774e0763665ec1060737195152572361ac5749fa3bc2c525ae7f48ed",
   "assets/3D/units/cavalry/cavalry_cavalry_atlas_mr.jpg": "e0da151ba499c0f6be2faa8deae2f08b12155519a6fe8f62072de7458d5dc13e",
@@ -505,9 +505,9 @@
   "assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
   "data/army/balance.csv": "bf53003122f9905360410abc2dd32796da8c8f2579f535561e946d9f818bc5fb",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "c1774ecb68ee5662891aefc5ea22b423626280d2124ab48b67a06235b1ab8f05",
-  "data/screens/map3d/balance.csv": "3813020ee080ac4122864cd5712c0775a2a9ba1e8f3d3b7e042f7c9f00c0be80",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "97480475bffbeb73f2700a23104c50c15ec1a757788c11be04277f6c0c07094a",
+  "data/screens/map3d/army_art.csv": "be59bf35540c2f6253d29ddfa5fa1635d2e27f3fc08eb8f96e9d9f8b943c3252",
+  "data/screens/map3d/balance.csv": "d8108334a55a41058ff93c71d3ce313e4f5a197d6a6e57995195ffb4108203c9",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "e82dab2c791b187f18e9b4c929041c867c94850f7fcdb777a8461669771d11c7",
   "scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
   "scripts/map3d/map3d_cavalry_locomotion.gd": "f903643b66d24f3ea2979c6c288c41d7f880b47597a50ad99c9bce8c3473d420",
@@ -526,11 +526,11 @@
    "MARCH"
   ],
   "contact_um": 32990,
-  "digest": "8eb6b55ef28f1e28ec04f0f1b35df0a1837dffcf8b19476912c9870464552302",
+  "digest": "293959f8180eb34a626e8fc59757c9ad295821233bca061f83217c220878e165",
   "radius_m": 804,
   "turn_q": 400000
  },
- "payload_sha256": "8eb6b55ef28f1e28ec04f0f1b35df0a1837dffcf8b19476912c9870464552302",
+ "payload_sha256": "293959f8180eb34a626e8fc59757c9ad295821233bca061f83217c220878e165",
  "report": {
   "bounds_um": {
    "contact": 32990,
@@ -548,7 +548,7 @@
     "phase": 0.6640625,
     "surface": 0,
     "turn_udeg": null,
-    "vertex": 2665
+    "vertex": 2839
    }
   },
   "hover": {
@@ -571,22 +571,22 @@
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 2851
+      "vertex": 3025
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 2852
+      "vertex": 3026
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 2853
+      "vertex": 3027
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 2854
+      "vertex": 3028
      }
     ],
     "vertices": 217
@@ -596,22 +596,22 @@
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 1348
+      "vertex": 1496
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 1349
+      "vertex": 1497
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 1350
+      "vertex": 1498
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 1351
+      "vertex": 1499
      }
     ],
     "vertices": 207
@@ -621,22 +621,22 @@
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 3874
+      "vertex": 4072
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 3875
+      "vertex": 4073
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 3876
+      "vertex": 4074
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 3877
+      "vertex": 4075
      }
     ],
     "vertices": 230
@@ -646,22 +646,22 @@
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 2596
+      "vertex": 2770
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 2597
+      "vertex": 2771
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 2598
+      "vertex": 2772
      },
      {
       "mesh": "cavalry",
       "surface": 0,
-      "vertex": 2599
+      "vertex": 2773
      }
     ],
     "vertices": 222
@@ -679,7 +679,7 @@
     "phase": 0.0,
     "surface": 0,
     "turn_udeg": -1,
-    "vertex": 1353
+    "vertex": 1501
    }
   },
   "planting_band": {
@@ -726,15 +726,15 @@
        0.0
       ],
       "turn_udeg": null,
-      "vertex": 1350
+      "vertex": 1498
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -747,15 +747,15 @@
        0.0
       ],
       "turn_udeg": -1,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -768,15 +768,15 @@
        0.0
       ],
       "turn_udeg": -2000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -789,15 +789,15 @@
        0.0
       ],
       "turn_udeg": -45000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -810,15 +810,15 @@
        0.0
       ],
       "turn_udeg": -90000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -831,15 +831,15 @@
        0.0
       ],
       "turn_udeg": -135000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -852,15 +852,15 @@
        0.0
       ],
       "turn_udeg": -179999999,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -873,15 +873,15 @@
        0.6057692307692307
       ],
       "turn_udeg": -1,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -894,15 +894,15 @@
        0.6057692307692307
       ],
       "turn_udeg": -2000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -915,15 +915,15 @@
        0.6057692307692307
       ],
       "turn_udeg": -45000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -936,15 +936,15 @@
        0.6057692307692307
       ],
       "turn_udeg": -90000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -957,15 +957,15 @@
        0.6057692307692307
       ],
       "turn_udeg": -135000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -978,15 +978,15 @@
        0.6057692307692307
       ],
       "turn_udeg": -179999999,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -999,15 +999,15 @@
        0.0
       ],
       "turn_udeg": 1,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -1020,15 +1020,15 @@
        0.0
       ],
       "turn_udeg": 2000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -1041,15 +1041,15 @@
        0.0
       ],
       "turn_udeg": 45000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -1062,15 +1062,15 @@
        0.0
       ],
       "turn_udeg": 90000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -1083,15 +1083,15 @@
        0.0
       ],
       "turn_udeg": 135000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -1104,15 +1104,15 @@
        0.0
       ],
       "turn_udeg": 179999999,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -1125,15 +1125,15 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "MARCH",
@@ -1146,15 +1146,15 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1167,15 +1167,15 @@
        0.6057692307692307
       ],
       "turn_udeg": 1,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1188,15 +1188,15 @@
        0.6057692307692307
       ],
       "turn_udeg": 2000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1209,15 +1209,15 @@
        0.6057692307692307
       ],
       "turn_udeg": 45000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1230,15 +1230,15 @@
        0.6057692307692307
       ],
       "turn_udeg": 90000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1251,15 +1251,15 @@
        0.6057692307692307
       ],
       "turn_udeg": 135000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1272,15 +1272,15 @@
        0.6057692307692307
       ],
       "turn_udeg": 179999999,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1293,15 +1293,15 @@
        0.6057692307692307
       ],
       "turn_udeg": 180000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     },
     {
      "bound_um": 2750,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 2,
+     "total_um": 2,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1314,14 +1314,14 @@
        0.6057692307692307
       ],
       "turn_udeg": 180000000,
-      "vertex": 15497
+      "vertex": 15611
      }
     }
    ],
    "margin_um": 0,
    "pass": true,
-   "sampled_um": 1,
-   "total_um": 1,
+   "sampled_um": 2,
+   "total_um": 2,
    "witness": {
     "from": [
      "PIVOT_RIGHT",
@@ -1334,7 +1334,7 @@
      0.6057692307692307
     ],
     "turn_udeg": 180000000,
-    "vertex": 15497
+    "vertex": 15611
    }
   },
   "skin": {
@@ -1366,7 +1366,7 @@
       "surface": 0,
       "touchdown_phase": 0.60546875,
       "turn_udeg": null,
-      "vertex": 1353
+      "vertex": 1501
      }
     },
     "PIVOT_LEFT": {
@@ -1382,7 +1382,7 @@
       "surface": 0,
       "touchdown_phase": 0.48828125,
       "turn_udeg": -2000000,
-      "vertex": 1353
+      "vertex": 1501
      }
     },
     "PIVOT_RIGHT": {
@@ -1398,7 +1398,7 @@
       "surface": 0,
       "touchdown_phase": 0.48828125,
       "turn_udeg": 2000000,
-      "vertex": 1353
+      "vertex": 1501
      }
     }
    },
@@ -1413,7 +1413,7 @@
     "surface": 0,
     "touchdown_phase": 0.60546875,
     "turn_udeg": null,
-    "vertex": 1353
+    "vertex": 1501
    }
   },
   "stance": {
