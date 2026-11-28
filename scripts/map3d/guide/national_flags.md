@@ -53,7 +53,10 @@ stopped offscreen and freed with the piece, and needs no edit of the royal carri
   `facing_deg`, on STANDBY, `map3d_commander_standoff_share` of the clear ground between his first rank
   and the nearest drawn enemy figure of his battle (`_room`, `standoff_lead`), never past his ordinary
   lead — the two sides' commanders keep the middle of that ground between them. Where that share would
-  back his tail into his own rank (lines closer than his half length over that share) he is NOT DRAWN.
+  back his tail into his own rank (lines closer than his half length over that share: the usual
+  stand-off) he stands BESIDE THE LEFT END OF HIS FIRST RANK instead (`first_rank_left_of`): outside
+  the left file by the fight's `map3d_commander_rear_gap` and half his width, level with the foremost
+  figures' own line, facing the enemy. That is the lane he rides down when the fight starts.
 - **In the fight** (`rounds > 0`, the crown's unit and a seen foe's alike, each in its own facing's
   frame, so a foe's is on HIS left seen facing the crown): at the unit's LEFT REAR — outside the left
   file by `map3d_commander_rear_gap` of his own lengths and half his width (`side_m`), and
@@ -79,7 +82,7 @@ stopped offscreen and freed with the piece, and needs no edit of the royal carri
   it, a formation rebuilt) hands its drawn rider's world place to the new piece's rider (`sync`: the
   old node is still queued for deletion), who rides on from there. NEVER a ride: under a swapped state
   (a loaded save: he keeps the `GameState` he last stood under), on first sight, after he was not
-  drawn (a tight stand-off, the walk-in, symbol mode, a hidden view), when his scale changed, or with
+  drawn (the walk-in, symbol mode, a hidden view), when his scale changed, or with
   no clear way round the left (he stands on the block's right, level with it) — he is stood at his
   place at once.
 - **Size**: `map3d_commander_size` is his `army_art.csv`-style size (his model box, banner tip
