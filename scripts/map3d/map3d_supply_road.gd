@@ -106,6 +106,34 @@ static func soften(line: PackedVector2Array, passes: int) -> PackedVector2Array:
 	return out
 
 
+## `line` (a point every line step) with its corners rounded: round each point
+## turning more than `turn_deg`, the points within `span` of it are eased
+## (as soften, weighed down with the distance from the corner, span² / 2
+## times: a bend some `span` steps across). Where the line turns off one road
+## onto another at a junction it sweeps round, as a cart would; the straight
+## and gently curving stretches, the most of a road, are left on it.
+static func round_corners(line: PackedVector2Array, span: int, turn_deg: float) -> PackedVector2Array:
+	var n := line.size()
+	if n < 3 or span < 1:
+		return line
+	var w := PackedFloat32Array()
+	w.resize(n)
+	for i in range(1, n - 1):
+		var u := line[i] - line[i - 1]
+		var v := line[i + 1] - line[i]
+		if u.length() < 0.0001 or v.length() < 0.0001 or absf(rad_to_deg(u.angle_to(v))) <= turn_deg:
+			continue
+		for j in range(maxi(1, i - span), mini(n - 1, i + span + 1)):
+			w[j] = maxf(w[j], 1.0 - float(absi(j - i)) / float(span + 1))
+	var out := line
+	for _k in maxi(1, span * span / 2):
+		var nx := out.duplicate()
+		for i in range(1, n - 1):
+			nx[i] = out[i].lerp(out[i] * 0.5 + (out[i - 1] + out[i + 1]) * 0.25, w[i])
+		out = nx
+	return out
+
+
 ## [i, point]: the road's nearest point to `piece` lies on its segment i-1..i
 ## (the end, i = size - 1, when that is as near).
 static func nearest(road: PackedVector2Array, piece: Vector2) -> Array:

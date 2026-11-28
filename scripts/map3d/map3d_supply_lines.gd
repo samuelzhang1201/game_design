@@ -52,8 +52,9 @@ func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_view: Object, p_units
 ## step. The courier's road leaves the roads in straight grid legs; they are
 ## rounded (as the roads are drawn, map_route_smoothing_steps) before the
 ## points near a road are put back on it, so an off-road leg reads as a track;
-## the out-and-back spurs are cut before and after, and the steps where the
-## snap starts or stops eased (map3d_supply_ease_passes) so no join kinks.
+## the out-and-back spurs are cut before and after, the steps where the snap
+## starts or stops eased (map3d_supply_ease_passes) so no join kinks, and the
+## turns from one road onto another rounded (map3d_supply_corner_steps).
 static func _world(p_ctx: Map3DContext, route: PackedVector2Array) -> PackedVector2Array:
 	var step_px := p_ctx.line_step() / maxf(float(p_ctx.meta.get("m_per_px", 1.0)), 0.001)
 	var round := MapGeometry.smooth_open(route, int(p_ctx.repo.bal("map_route_smoothing_steps")))
@@ -61,6 +62,8 @@ static func _world(p_ctx: Map3DContext, route: PackedVector2Array) -> PackedVect
 		Map3DSupplyRoad.unspur(Map3DGeometry.resample(round, step_px), step_px))
 	laid = Map3DSupplyRoad.soften(Map3DSupplyRoad.unspur(laid, step_px),
 		int(p_ctx.repo.bal("map3d_supply_ease_passes")))
+	laid = Map3DSupplyRoad.round_corners(laid, int(p_ctx.repo.bal("map3d_supply_corner_steps")),
+		p_ctx.repo.bal("map3d_supply_corner_turn_deg"))
 	var pts := PackedVector2Array()
 	for p in laid:
 		pts.append(p_ctx.to_world(p))
