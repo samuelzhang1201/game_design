@@ -51,7 +51,9 @@ import, then the pivot / certificate steps below.
   the shaft between them rebuilt as an 8-sided tube (the skill: never collapse a slender part) on one
   line of the source's own wood texels. The horse (10,525 tris) is in budget and untouched.
 - **Clips** (rider clip → game): MARCH ← MARCH (the run), STANDBY, GARRISON, DEFEND (the rear),
-  ATTACK ← ATTACK_REAR_LOOP (in place; `ATTACK` / `ATTACK_STAB` gallop), PIVOT_LEFT / PIVOT_RIGHT ←
+  ATTACK ← ATTACK_REAR_LOOP (in place; `ATTACK` / `ATTACK_STAB` gallop), ATTACK_CLEAVE and ATTACK_ARC
+  (owner 2026-11-24/28: two more strikes, in place — both hands on the lance and a leant cut down to the
+  right; one hand and a rising arc — each from and back to GARRISON's guard), PIVOT_LEFT / PIVOT_RIGHT ←
   the source turns (fixtures the pivot provider seeks, never plays). Keyed from frame 0; a loop whose
   last frame is not its first pose gets its first pose appended (MARCH: 13 frames, frame 14 = 1), else
   the residual is spread over its last 6 frames. Not shipped: DEATH (no cavalry caller; the thrown
@@ -68,7 +70,13 @@ import, then the pivot / certificate steps below.
   and no key leaves a hoof under the ground. The dense MARCH is exported alone at 240 fps and its
   channels moved into the shipped GLB (`_transplant`); `cavalry.glb.import` bakes at `animation/fps`
   240 so Godot keeps them. The stride is the locked speed over the loop's 104 keys.
-- **`cavalry.glb.import`**: MARCH, STANDBY, GARRISON, DEFEND and ATTACK loop;
+- **The melee chain** (`army_art.csv` `chains`, `Map3DClipChain`): ATTACK, ATTACK_CLEAVE and ATTACK_ARC by
+  turns, each ONCE, the guard between them — so all three are LOOP_NONE in the import (a looped clip never
+  finishes and the chain would stand on it; `test_map3d_clip_chain.gd`). The cleave cants and slides the
+  lance in the fist: `cc_weapon.r` is exported as a bone, so its keys ride along. Known wart (owner
+  2026-11-28: keep all three): ATTACK is in the reverse grip, so the blend in and out of it turns the lance
+  end for end in about 0.2 s; it goes when the rearing strike is re-authored in the usual grip.
+- **`cavalry.glb.import`**: MARCH, STANDBY, GARRISON and DEFEND loop;
   `animation/remove_immutable_tracks=false` (the reverse grip keys `cc_weapon.r` turned half round,
   constant over ATTACK: dropped, the lance would show the usual grip); the import script
   (`archer_arp/pivot_import.gd`) still re-keys the PIVOT pair exactly.

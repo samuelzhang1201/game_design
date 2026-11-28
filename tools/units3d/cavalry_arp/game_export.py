@@ -40,9 +40,11 @@ from mathutils.bvhtree import BVHTree
 # PIVOT_LEFT / RIGHT are the source turns, fixtures the provider seeks and never plays. DEATH is not
 # shipped: no cavalry caller plays it (army_art.csv has no duel column for the arm), and its rider
 # thrown 2.3 m off the horse would widen the body envelope every footprint is measured from (cf01).
+# ATTACK_CLEAVE (both hands, a leant cut down to the right) and ATTACK_ARC (one hand, a rising arc) are the two
+# in-place strikes (owner 2026-11-24/28), played ONCE from and back to GARRISON's guard: army_art.csv `chains`.
 GAME = {"MARCH": "MARCH", "STANDBY": "STANDBY", "GARRISON": "GARRISON", "DEFEND": "DEFEND",
-        "ATTACK": "ATTACK_REAR_LOOP", "PIVOT_LEFT": "PIVOT_LEFT",
-        "PIVOT_RIGHT": "PIVOT_RIGHT"}
+        "ATTACK": "ATTACK_REAR_LOOP", "ATTACK_CLEAVE": "ATTACK_CLEAVE", "ATTACK_ARC": "ATTACK_ARC",
+        "PIVOT_LEFT": "PIVOT_LEFT", "PIVOT_RIGHT": "PIVOT_RIGHT"}
 LOOPS = {"MARCH", "STANDBY", "GARRISON", "DEFEND", "ATTACK"}
 REST = ("STANDBY", 1)
 SEAM_FRAMES = 6

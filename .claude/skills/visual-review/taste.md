@@ -48,6 +48,9 @@ existing one.
   swings out at the shoulder; a wrist does not kink to carry a blade).
 - **Carried equipment has weight and a secure grip.** A shield follows the
   stride in a continuous arc; rapid trembling reads as a broken attachment.
+  A two-handed strike keeps BOTH hands on the weapon from the wind-up to the
+  recovery, and the arms stay easy through it: no forearm turned out, no palm
+  flipped up, no arm pressed into the body.
 - **A unit's soldiers are one kind.** A figure singled out by a prop posed onto
   the common model by code (a bolted-on standard and a rewired arm) reads worse
   than none; a distinct role needs its own model, made as carefully as the rest.
