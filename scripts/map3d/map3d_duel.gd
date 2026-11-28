@@ -17,18 +17,48 @@ static func contact_of(art: Dictionary) -> Dictionary:
 	return out
 
 
-## Whether an arm duels: its `duel` names STRIKE, BLOCK and HIT clips, every one
-## installed on `anim` with its `contact` share (DEATH is the fall's, not the duel's).
+## Whether an arm duels: its `duel` names HIT clips, and every STRIKE, BLOCK and
+## HIT clip it names is installed on `anim` with its `contact` share (DEATH is the
+## fall's, not the duel's). STRIKE and BLOCK are optional: an arm with no STRIKE
+## (the archers) only takes blows, one with no BLOCK takes every blow with a HIT.
 static func duels(art: Dictionary, anim: AnimationPlayer) -> bool:
 	var kinds := Map3DClipChain.of_column(art, "duel")
 	var contact := contact_of(art)
+	if anim == null or not kinds.has("HIT"):
+		return false
 	for kind: String in ["STRIKE", "BLOCK", "HIT"]:
-		if not kinds.has(kind) or anim == null:
-			return false
-		for clip: String in kinds[kind]:
+		for clip: String in kinds.get(kind, []):
 			if not contact.has(clip) or Map3DUnits.clip_named(anim, clip) == "":
 				return false
 	return true
+
+
+## Whether an arm strikes in a duel (its `duel` names STRIKE clips).
+static func strikes(art: Dictionary) -> bool:
+	return String(art.get("duel", "")).contains("STRIKE:")
+
+
+## Two that only take blows never pair: such pairs leave `wanted`, their figures `taken`.
+static func drop_strikeless(wanted: Dictionary, taken: Dictionary) -> void:
+	for key: String in wanted.keys():
+		var pair: Array = wanted[key]
+		if not strikes(pair[0]["art"]) and not strikes(pair[1]["art"]):
+			wanted.erase(key)
+			taken.erase(pair[0]["key"])
+			taken.erase(pair[1]["key"])
+
+
+## Turn `turn`'s striker `s`, struck `d` and reply `kind` for pair `figs`: one
+## that only takes blows (the archers) is struck every turn; one with no BLOCK takes a HIT.
+static func cast(figs: Array, turn: Dictionary) -> Dictionary:
+	var s: Dictionary = figs[0] if turn["striker"] == "a" else figs[1]
+	var d: Dictionary = figs[1] if turn["striker"] == "a" else figs[0]
+	if not strikes(s["art"]):
+		var was := s
+		s = d
+		d = was
+	var kind := String(turn["reply"]) if Map3DClipChain.of_column(d["art"], "duel").has(turn["reply"]) else "HIT"
+	return {"s": s, "d": d, "kind": kind}
 
 
 ## The front figures of the two sides paired along the front (`across`), never

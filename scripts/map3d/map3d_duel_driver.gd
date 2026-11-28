@@ -161,8 +161,8 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 	var waiting: Dictionary = {}  ## key -> {f, foes}: this frame's front figures left unpaired
 	_impacts.clear()
 	for battle: Dictionary in battles:
-		if int(battle["rounds"]) <= 0:
-			continue
+		if int(battle["rounds"]) <= 0 or not (battle["a"] + battle["b"]).any(func(f: Dictionary) -> bool: return Map3DDuel.strikes(f["art"])):
+			continue  # no one there strikes (archers against archers): they keep their blocks
 		var figs: Dictionary = {}
 		var h := 0.0
 		for f: Dictionary in battle["a"] + battle["b"]:
@@ -185,12 +185,13 @@ func run(battles: Array, delta: float, running: bool, tune: Dictionary) -> Array
 			wanted["%s|%s" % [p["a"], p["b"]]] = [figs[p["a"]], figs[p["b"]]]
 			taken[p["a"]] = true
 			taken[p["b"]] = true
+		Map3DDuel.drop_strikeless(wanted, taken)
 		for side: String in ["a", "b"]:  # no one fights air: the front left over guards toward a foe
 			var foes: Array = battle["b" if side == "a" else "a"]
 			if foes.is_empty():
 				continue
 			for f: Dictionary in battle[side]:
-				if not taken.has(f["key"]):
+				if not taken.has(f["key"]) and Map3DDuel.strikes(f["art"]):  # one that only takes blows keeps its piece's action
 					waiting[f["key"]] = {"f": f, "foes": foes}
 	for key: String in _pairs.keys():
 		if not wanted.has(key):
@@ -406,21 +407,23 @@ static func _aim(figs: Array, tune: Dictionary) -> bool:
 ## Turn `n`'s clips and when each starts (Map3DDuel.turn / timing).
 static func _begin(p: Dictionary, key: String, tune: Dictionary) -> void:
 	var figs: Array = p["figs"]
-	var kinds := Map3DClipChain.of_column(figs[0]["art"], "duel")
-	var reply_n := maxi((kinds["BLOCK"] as Array).size(), (kinds["HIT"] as Array).size())
+	var kinds := Map3DClipChain.of_column(figs[0 if Map3DDuel.strikes(figs[0]["art"]) else 1]["art"], "duel")
+	var reply_n := maxi((kinds.get("BLOCK", []) as Array).size(), (kinds["HIT"] as Array).size())
 	var turn := Map3DDuel.turn(key, int(p["n"]), (kinds["STRIKE"] as Array).size(), reply_n,
 		float(tune["steal"]), float(tune["double"]), float(tune["hit"]))
-	var s: Dictionary = figs[0] if turn["striker"] == "a" else figs[1]
-	var d: Dictionary = figs[1] if turn["striker"] == "a" else figs[0]
+	var c := Map3DDuel.cast(figs, turn)
+	var s: Dictionary = c["s"]
+	var d: Dictionary = c["d"]
+	var kind := String(c["kind"])
 	var strikes: Array = Map3DClipChain.of_column(s["art"], "duel")["STRIKE"]
-	var replies: Array = Map3DClipChain.of_column(d["art"], "duel")[turn["reply"]]
+	var replies: Array = Map3DClipChain.of_column(d["art"], "duel")[kind]
 	var strike := String(strikes[int(turn["strike"]) % strikes.size()])
 	var reply := String(replies[int(turn["reply_variant"]) % replies.size()])
 	var timing := Map3DDuel.timing(_length(s["anim"], strike), float(Map3DDuel.contact_of(s["art"])[strike]),
 		_length(d["anim"], reply), float(Map3DDuel.contact_of(d["art"])[reply]))
 	var rest := lerpf(float(tune["rest_min"]), float(tune["rest_max"]), float(turn["rest_u"]))
 	p["turn"] = {"s": s["anim"], "d": d["anim"], "strike": strike, "reply": reply, "strike_at": timing["strike_at"],
-		"reply_at": timing["reply_at"], "contact_at": timing["contact_at"], "kind": turn["reply"],
+		"reply_at": timing["reply_at"], "contact_at": timing["contact_at"], "kind": kind,
 		"sf": s, "df": d, "end": timing["end"], "total": maxf(float(timing["end"]) + rest, 0.05),
 		"struck": false, "replied": false, "contacted": false, "guarded": false}
 

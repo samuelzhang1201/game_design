@@ -26,5 +26,5 @@ func test_the_infantry_row_names_the_new_infantrys_clips() -> void:
 	assert_eq(duel.get("BLOCK"), ["BLOCK", "BLOCK_2", "BLOCK_3", "BLOCK_4"])
 	assert_eq(duel.get("HIT"), ["HIT", "HIT_2", "HIT_3"])
 	assert_eq(duel.get("DEATH"), ["DEATH", "DEATH_2"])
-	for piece: String in ["archers", "cavalry", "artillery", "royal"]:
+	for piece: String in ["cavalry", "artillery", "royal"]:
 		assert_eq(Map3DClipChain.of_column(repo.army_art.get(piece, {}), "duel"), {}, piece + " never duels")
