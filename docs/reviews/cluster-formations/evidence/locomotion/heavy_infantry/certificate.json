@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "1e8adc76c09462ce754d7d0ff8352238eefb1e821e766e044503c2c6cf6d744e",
+  "sha256": "8be4db41c1373ddbba0434ca218b6294df5c935e462cbab6849a2d112c4c308e",
   "uniform": 512
  },
  "config": {
@@ -426,9 +426,9 @@
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
   "data/army/balance.csv": "bf53003122f9905360410abc2dd32796da8c8f2579f535561e946d9f818bc5fb",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "be59bf35540c2f6253d29ddfa5fa1635d2e27f3fc08eb8f96e9d9f8b943c3252",
+  "data/screens/map3d/army_art.csv": "c5f2e011f771f02896f537f59827c083974a92aba1fe1669e2026490fdb2ce1f",
   "data/screens/map3d/balance.csv": "d8108334a55a41058ff93c71d3ce313e4f5a197d6a6e57995195ffb4108203c9",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "e82dab2c791b187f18e9b4c929041c867c94850f7fcdb777a8461669771d11c7",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "97480475bffbeb73f2700a23104c50c15ec1a757788c11be04277f6c0c07094a",
   "scenes/models/units/heavy_infantry.tscn": "3efc8e2c93ee9c5b3ac833e09b61a174a3e2190637d9f5ad5219dba362d662a4",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
   "scripts/map3d/map3d_heavy_infantry_locomotion.gd": "0ba8678c2b758a993bd0dfe3d983fd8a18f4e4c042bf936f2bc98c5219f1786f",
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 22699,
-  "digest": "31684e86ac4ea1871729c473838fdd8d157dbe89ba51c28ed0beef4526f0e99e",
+  "digest": "da24f85b6569ac043a5b026cb114e6ae970ec49df42e1934a9c2eca30cb141f7",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "31684e86ac4ea1871729c473838fdd8d157dbe89ba51c28ed0beef4526f0e99e",
+ "payload_sha256": "da24f85b6569ac043a5b026cb114e6ae970ec49df42e1934a9c2eca30cb141f7",
  "report": {
   "bounds_um": {
    "contact": 22699,

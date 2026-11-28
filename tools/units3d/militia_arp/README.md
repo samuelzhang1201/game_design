@@ -10,13 +10,14 @@ row names it as its `figure` (`TownMilitia.FIGURE`), and the 3D map draws that u
 `Map3DFormation.figure_of`) while its card, footprint and engine bodies stay its first arm's.
 
 The body is the owner's parts Tripo militiaman (kettle hat, coif, knee-length tunic, belt, trousers, leg wraps,
-shoes); the sword and shield are the infantry's. The clips are the infantry's first ten, on the infantry's
-names, but NOT the infantry's motion: see Clips.
+shoes); the sword and shield are the infantry's. The clips are the infantry's first ten and its seven BLOCK / HIT
+duel clips and two falls, on the infantry's names, but NOT the infantry's motion: see Clips.
 
 ## Source (git-ignored)
 
-`assets/3D/model_wip/blender_output/militia/militia_parts_11_hem.blend`: rig `rig` (Auto-Rig Pro), body
-`Militia_body`, the infantry's `Weapon` / `Shield` on `cc_weapon.r / .l`, the ten clips. The build's steps,
+`assets/3D/model_wip/blender_output/militia/militia_parts_13_falls.blend` (its first ten clips are
+`militia_parts_11_hem.blend`'s, its duel clips `_12_duel`'s): rig `rig` (Auto-Rig Pro), body `Militia_body`, the infantry's `Weapon` /
+`Shield` on `cc_weapon.r / .l`, the ten clips, the seven duel clips and the two falls. The build's steps,
 gates and the owner's rulings are in that folder's `PLAN_parts_rebuild.md`; its scripts in `scripts/`
 (`p1`..`p10`).
 
@@ -53,9 +54,37 @@ for the tunic:
 - Sole grounding by the foot vertices (`ground.py`) and gear clearance (`solve_clear.py`; the sword and shield
   may brush the free lower skirt).
 
-No duel clips (BLOCK*, HIT*, DEATH*), so on the map it strikes its chain in place, is never gathered into a
-duel, and a loss is freed at once with no fall (`army_art.csv` `militia` has no `duel` / `contact`). A raised
-town militia never marches; a regiment of the `militia` arm does, on the pivot pair below.
+Then the front-rank duel's BLOCK, BLOCK_2, BLOCK_3, BLOCK_4, HIT, HIT_2, HIT_3 (spec
+`docs/superpowers/specs/2026-11-26-militia-figure-wiring-design.md` step 1), in the source
+`militia_parts_12_duel.blend` (a copy of `_11_hem`; that folder's `PLAN_parts_rebuild.md`, script
+`scripts/p11_duel.py`): the infantry's actions transferred by `s12_transfer.py`, narrowed by `narrow_duel`
+(p9's 0.6 about the start's ankle midpoint, the pelvis moved with the narrowed feet so a fall would keep its
+travel, the raise weighted by how upright the trunk is), the skirt baked and `repair`ed, the shield cleared by
+`solve_clear`, the sword cleared out of the crouching blocks' spread skirt by `solve_sword_cloth` (the skirt
+counted for the sword hand only). Their `contact` shares in `army_art.csv` are the infantry's: the transfer keeps
+the timing. The exporter takes BLOCK..BLOCK_3's steps out, as the infantry's.
+
+Then the falls DEATH and DEATH_2 (step 1b, `militia_parts_13_falls.blend`, script `scripts/p12_falls.py`),
+narrowed as the duel's. The drape hangs columns round a VERTICAL axis, which a body on the ground breaks (face
+down the skirt stood off the back like a sail, on the back the legs came through a bell). The lying-cloth rule:
+- `lie_axis`: `bake` and `repair` run with the rig object stood up about its pelvis so the THIGHS' mean
+  direction points down, by how far the thighs have left pointing down (`_thigh_w`; the trunk's tilt was the
+  first measure, and DEATH sits down before it tips back, so the cloth spread behind like a cape). The drape then
+  hangs along the legs and its hull clears both thighs. `bake` measures the chains' rest after `simulate`, which
+  leaves the last (turned) frame on: it is set back to the first frame, or every frame is keyed against a turned
+  rest.
+- `floor`: the real ground. A chain end under the frame's threshold turns about its head onto it; the
+  threshold rises (`GROUNDS`, 1.5 to 6 cm) only on a frame whose skin is still under the ground, never to one
+  that puts a leg through the cloth.
+- `settle`: gravity. Lying, each chain facing up curls its lower two bones toward the ground as far as no leg
+  crosses the skirt (`SETTLE_MAX`), eroded over two frames and held to `SETTLE_RATE` degrees a frame.
+  Rejected: holding the upper columns in inside the drape (`LEAN`, it stood the cloth up as a sail), turning the
+  chains with the thighs about the belt (`lie`, into the thighs).
+Gates: no leg through the skirt in any frame, no skin more than 1 cm under the ground; the sword out of the
+kneeling DEATH_2's skirt by `solve_sword_cloth`, the shield out of the body by `solve_clear`. The shield's rim
+dips into the ground at the moment of impact (2 / 8 cm), as in the infantry's own clips. Close up the lying skirt
+is a stiff panel more than cloth (critic 2026-11-27: right at the game's 60 to 150 m, box-like folds nearer).
+A raised town militia never marches; a regiment of the `militia` arm does, on the pivot pair below.
 
 ## Pivots and the locomotion certificate (2026-11-26)
 
@@ -64,7 +93,7 @@ PIVOT_RIGHT / PIVOT_LEFT are appended to the installed GLB by the infantry's pip
 `pivot_mapping.py --arm militia` (`ARMS`: rig `mil_rig`, bounds 24202 / 2017 µm at k 24.7922, the infantry's
 phases: on a 420-phase scan this MARCH has the same events at 8, 181, 182 and 396 of 420), then
 `pivot.bake(bare GLB, solve, GLB, 4.0, rig="mil_rig")`. The `.import` names the pivot post-import script.
-A re-export (`game_export.py`) writes the bare ten-clip GLB again: re-run all of it and the certificates.
+A re-export (`game_export.py`) writes the bare nineteen-clip GLB again: re-run all of it and the certificates.
 Plan `assets/3D/units/militia/militia_pivot_plan.json`, fixture `tests/fixtures/militia_pivot_mapping.json`
 (`test_pivot_mapping.py` re-audits and re-bakes it), provider `Map3DMilitiaLocomotion`, certificate
 `docs/reviews/cluster-formations/evidence/locomotion/militia/`. Audit: skin flags introduced 0, penetration
@@ -97,7 +126,7 @@ bare GLB as the pair and checked the same way). A new MARCH, or new skirt keys, 
 
 `game_export.py` runs the infantry's exporter (`tools/units3d/infantry_arp/game_export.py`) with
 `UNIT = "militia"`, `RIG_NAME = "mil_rig"`, `BODY = "Militia_body"`, `BODY_CLASSES = False`, the first ten
-clips and the scene at 30 frames a second (the source's scene sits at Blender's 24, and the glTF exporter times
+clips, the seven duel clips and the two falls, and the scene at 30 frames a second (the source's scene sits at Blender's 24, and the glTF exporter times
 keys by the scene). From the infantry's export it keeps: rest = GARRISON frame 1, loops closed by their seam
 residual, ATTACK_VAR1 / ATTACK_2 in place, MARCH's contact lock with the infantry's authored stances, the
 shield thumb folded, the shield wood toned, metal at `GAME_METAL` of the authored map. The body has no authored
