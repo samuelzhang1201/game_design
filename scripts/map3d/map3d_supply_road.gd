@@ -70,6 +70,42 @@ static func on_roads(repo: DataRepository, route: PackedVector2Array) -> PackedV
 	return out
 
 
+## How many points ahead a spur is looked for (unspur): an out-and-back of up
+## to half this many line steps is cut.
+const SPUR_SPAN := 16
+
+
+## `line` (a point every `step`) with its out-and-back spurs cut: where a point
+## within SPUR_SPAN ahead comes back within `step` of one, the points between
+## go. The courier's road runs into a node and back out of it, and two nearby
+## roads pull neighbouring points onto either one, both drawn as a needle.
+static func unspur(line: PackedVector2Array, step: float) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var i := 0
+	while i < line.size():
+		out.append(line[i])
+		var nxt := i + 1
+		for j in range(mini(line.size() - 1, i + SPUR_SPAN), i + 1, -1):
+			if line[i].distance_to(line[j]) < step:
+				nxt = j
+				break
+		i = nxt
+	return out
+
+
+## `line` eased `passes` times (each point half itself, a quarter each
+## neighbour; the ends stay), so a step where a point was put on a road and
+## its neighbour was not reads as a bend.
+static func soften(line: PackedVector2Array, passes: int) -> PackedVector2Array:
+	var out := line
+	for _k in passes:
+		var nx := out.duplicate()
+		for i in range(1, out.size() - 1):
+			nx[i] = out[i] * 0.5 + (out[i - 1] + out[i + 1]) * 0.25
+		out = nx
+	return out
+
+
 ## [i, point]: the road's nearest point to `piece` lies on its segment i-1..i
 ## (the end, i = size - 1, when that is as near).
 static func nearest(road: PackedVector2Array, piece: Vector2) -> Array:

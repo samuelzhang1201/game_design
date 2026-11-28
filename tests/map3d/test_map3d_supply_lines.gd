@@ -285,3 +285,33 @@ func test_the_layer_draws_a_front_line_dark_dashed() -> void:
 		assert_null(lines.line_mesh("SupplyBroken"), st)
 		assert_null(lines.line_mesh("SupplyBreak"), st)
 	await wait_process_frames(2)
+
+
+## A flowing line has no needle and no kink where it comes onto or leaves a
+## road: over forty town-to-town roads no point turns back on itself (> 90°)
+## and under 1 % turn more than 30° (the snap alone made 9 %, some 180°).
+func test_the_line_has_no_kinks_at_the_road_joins() -> void:
+	var ctx := _ctx()
+	var towns: Array = _repo.burgs.keys()
+	towns.sort()
+	var n := 0
+	var sharp := 0
+	var worst := 0.0
+	for i in mini(towns.size(), 40):
+		var b: Dictionary = _repo.burgs[towns[(i * 7 + 3) % towns.size()]]
+		var route := SupplyLines.road_between_px(_repo, String(towns[i]), Vector2(float(b["x"]), float(b["y"])))
+		if route.size() < 2:
+			continue
+		var w := Map3DSupplyLines._world(ctx, route)
+		for k in range(1, w.size() - 1):
+			var u := w[k] - w[k - 1]
+			var v := w[k + 1] - w[k]
+			if u.length() < 0.001 or v.length() < 0.001:
+				continue
+			var t := absf(rad_to_deg(u.angle_to(v)))
+			n += 1
+			worst = maxf(worst, t)
+			sharp += 1 if t > 30.0 else 0
+	assert_gt(n, 1000, "enough roads walked")
+	assert_lt(worst, 90.0, "no point turns back")
+	assert_lt(float(sharp) / float(n), 0.01, "%d of %d points turn over 30 degrees" % [sharp, n])
