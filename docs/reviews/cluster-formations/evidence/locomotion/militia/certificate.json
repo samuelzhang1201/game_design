@@ -41,7 +41,7 @@
     ],
     "length_s": 1.10000002384186,
     "loop_mode": 1,
-    "tracks": 106
+    "tracks": 108
    },
    "PIVOT_LEFT": {
     "key_times": [
@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "748a763ff85db836e2c8b6dbae4fb9143d975f7af06e9f0953e8870733808430",
+  "sha256": "82e778227975e3c0088f54c57443083a82cba4834e12c6f4654ed9b7593a2b9e",
   "uniform": 512
  },
  "config": {
@@ -415,7 +415,7 @@
  "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
  "input_sha256": {
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
-  "assets/3D/units/militia/militia.glb": "06e89e974643d37b417d41fa63ddc79171d1a01392501b373217725de3f4a381",
+  "assets/3D/units/militia/militia.glb": "18fa1b4ca654fdd8fc3396fae6f79799dccaddc2e880bc6efa8c79d2a0293a36",
   "assets/3D/units/militia/militia.glb.import": "8047961d46e16747dd3f7143b0c97d928f1fd640ed6386dad21cfe931a1de039",
   "assets/3D/units/militia/militia_militia_atlas.jpg": "198a0c29d11917c94431ab100f9ccef9290a654247167ef72c464c8da3e4488e",
   "assets/3D/units/militia/militia_militia_atlas.jpg.import": "0e2264f9e82da7019cac05ca567a98ec05fce282940631d30d0e92f09aa377da",
@@ -423,11 +423,11 @@
   "assets/3D/units/militia/militia_militia_atlas_mr.jpg.import": "155b54980e53b22180055c34ec452a0cd0a4750fa555665c45f3afcc62bab03a",
   "assets/3D/units/militia/militia_militia_atlas_n.jpg": "f90fbe7fafe3336fe5069a9c7c7fbf8b0927cdfe7d19ffb53ee40d46adfec510",
   "assets/3D/units/militia/militia_militia_atlas_n.jpg.import": "f0a245b8bd0626528fc065bb9b62548e11c1c72d5de44bf3bc9b8320febe8270",
-  "assets/3D/units/militia/militia_pivot_plan.json": "7785d3eea502cf4621aeb190ef49ea5686fa5d8ce5d245fd29e92941223b12dc",
+  "assets/3D/units/militia/militia_pivot_plan.json": "88ac33db31c538247d9ee39715bc2c61c5708284566627dc6550fb8519dd189c",
   "data/army/balance.csv": "bf53003122f9905360410abc2dd32796da8c8f2579f535561e946d9f818bc5fb",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "c1774ecb68ee5662891aefc5ea22b423626280d2124ab48b67a06235b1ab8f05",
-  "data/screens/map3d/balance.csv": "3813020ee080ac4122864cd5712c0775a2a9ba1e8f3d3b7e042f7c9f00c0be80",
+  "data/screens/map3d/army_art.csv": "c5f2e011f771f02896f537f59827c083974a92aba1fe1669e2026490fdb2ce1f",
+  "data/screens/map3d/balance.csv": "d8108334a55a41058ff93c71d3ce313e4f5a197d6a6e57995195ffb4108203c9",
   "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "97480475bffbeb73f2700a23104c50c15ec1a757788c11be04277f6c0c07094a",
   "scenes/models/units/militia.tscn": "35f1417d1c72eea009b6d37a21f7649f0b9aab20015695b16af099a8036c522f",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 24202,
-  "digest": "add57656b299608ea6274d7ea6a954bd546a256bec73e73021946a3d788429ed",
+  "digest": "8a8518918a73deafd81a374e2a0a7088bceeee26fb20fb2cb949e6dfc093ab28",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "add57656b299608ea6274d7ea6a954bd546a256bec73e73021946a3d788429ed",
+ "payload_sha256": "8a8518918a73deafd81a374e2a0a7088bceeee26fb20fb2cb949e6dfc093ab28",
  "report": {
   "bounds_um": {
    "contact": 24202,
@@ -490,11 +490,6 @@
      {
       "mesh": "militia",
       "surface": 0,
-      "vertex": 8979
-     },
-     {
-      "mesh": "militia",
-      "surface": 0,
       "vertex": 8980
      },
      {
@@ -506,6 +501,11 @@
       "mesh": "militia",
       "surface": 0,
       "vertex": 8982
+     },
+     {
+      "mesh": "militia",
+      "surface": 0,
+      "vertex": 8983
      }
     ],
     "vertices": 492
@@ -515,22 +515,22 @@
      {
       "mesh": "militia",
       "surface": 0,
-      "vertex": 8994
+      "vertex": 8995
      },
      {
       "mesh": "militia",
       "surface": 0,
-      "vertex": 9064
+      "vertex": 9066
      },
      {
       "mesh": "militia",
       "surface": 0,
-      "vertex": 9096
+      "vertex": 9098
      },
      {
       "mesh": "militia",
       "surface": 0,
-      "vertex": 9097
+      "vertex": 9099
      }
     ],
     "vertices": 485
@@ -548,7 +548,7 @@
     "phase": 0.0,
     "surface": 0,
     "turn_udeg": -1,
-    "vertex": 16401
+    "vertex": 16400
    }
   },
   "planting_band": {
@@ -587,15 +587,15 @@
        0.0
       ],
       "turn_udeg": null,
-      "vertex": 8937
+      "vertex": 1502
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -608,15 +608,15 @@
        0.0
       ],
       "turn_udeg": -1,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -629,15 +629,15 @@
        0.0
       ],
       "turn_udeg": -2000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -650,15 +650,15 @@
        0.0
       ],
       "turn_udeg": -45000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -671,15 +671,15 @@
        0.0
       ],
       "turn_udeg": -90000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -692,15 +692,15 @@
        0.0
       ],
       "turn_udeg": -135000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -713,15 +713,15 @@
        0.0
       ],
       "turn_udeg": -179999999,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -734,15 +734,15 @@
        0.01904761904761905
       ],
       "turn_udeg": -1,
-      "vertex": 1685
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -755,15 +755,15 @@
        0.01904761904761905
       ],
       "turn_udeg": -2000000,
-      "vertex": 1685
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -776,15 +776,15 @@
        0.01904761904761905
       ],
       "turn_udeg": -45000000,
-      "vertex": 1685
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -797,15 +797,15 @@
        0.01904761904761905
       ],
       "turn_udeg": -90000000,
-      "vertex": 15716
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -818,15 +818,15 @@
        0.01904761904761905
       ],
       "turn_udeg": -135000000,
-      "vertex": 15716
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_LEFT",
@@ -839,15 +839,15 @@
        0.01904761904761905
       ],
       "turn_udeg": -179999999,
-      "vertex": 15716
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -860,15 +860,15 @@
        0.0
       ],
       "turn_udeg": 1,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -881,15 +881,15 @@
        0.0
       ],
       "turn_udeg": 2000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -902,15 +902,15 @@
        0.0
       ],
       "turn_udeg": 45000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -923,15 +923,15 @@
        0.0
       ],
       "turn_udeg": 90000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -944,15 +944,15 @@
        0.0
       ],
       "turn_udeg": 135000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -965,15 +965,15 @@
        0.0
       ],
       "turn_udeg": 179999999,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -986,15 +986,15 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "MARCH",
@@ -1007,15 +1007,15 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1028,15 +1028,15 @@
        0.01904761904761905
       ],
       "turn_udeg": 1,
-      "vertex": 8939
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1049,15 +1049,15 @@
        0.01904761904761905
       ],
       "turn_udeg": 2000000,
-      "vertex": 8939
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1070,15 +1070,15 @@
        0.01904761904761905
       ],
       "turn_udeg": 45000000,
-      "vertex": 8939
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1091,15 +1091,15 @@
        0.01904761904761905
       ],
       "turn_udeg": 90000000,
-      "vertex": 8939
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1112,15 +1112,15 @@
        0.01904761904761905
       ],
       "turn_udeg": 135000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1133,15 +1133,15 @@
        0.01904761904761905
       ],
       "turn_udeg": 179999999,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1154,15 +1154,15 @@
        0.01904761904761905
       ],
       "turn_udeg": 180000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     },
     {
      "bound_um": 2017,
      "margin_um": 0,
      "pass": true,
-     "sampled_um": 1,
-     "total_um": 1,
+     "sampled_um": 10,
+     "total_um": 10,
      "witness": {
       "from": [
        "PIVOT_RIGHT",
@@ -1175,14 +1175,14 @@
        0.01904761904761905
       ],
       "turn_udeg": 180000000,
-      "vertex": 8937
+      "vertex": 17083
      }
     }
    ],
    "margin_um": 0,
    "pass": true,
-   "sampled_um": 1,
-   "total_um": 1,
+   "sampled_um": 10,
+   "total_um": 10,
    "witness": {
     "from": [
      "PIVOT_RIGHT",
@@ -1195,7 +1195,7 @@
      0.01904761904761905
     ],
     "turn_udeg": 180000000,
-    "vertex": 8937
+    "vertex": 17083
    }
   },
   "skin": {
@@ -1225,7 +1225,7 @@
       "surface": 0,
       "touchdown_phase": 0.66015625,
       "turn_udeg": null,
-      "vertex": 16565
+      "vertex": 16564
      }
     },
     "PIVOT_LEFT": {
@@ -1241,7 +1241,7 @@
       "surface": 0,
       "touchdown_phase": 0.21484375,
       "turn_udeg": -1,
-      "vertex": 16401
+      "vertex": 16400
      }
     },
     "PIVOT_RIGHT": {
@@ -1257,7 +1257,7 @@
       "surface": 0,
       "touchdown_phase": 0.21484375,
       "turn_udeg": 1,
-      "vertex": 16401
+      "vertex": 16400
      }
     }
    },
@@ -1272,7 +1272,7 @@
     "surface": 0,
     "touchdown_phase": 0.21484375,
     "turn_udeg": 1,
-    "vertex": 16401
+    "vertex": 16400
    }
   },
   "stance": {
