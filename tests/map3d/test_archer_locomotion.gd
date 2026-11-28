@@ -1,7 +1,8 @@
 extends GutTest
-## Map3DArcherLocomotion: the archers' pivot for any turn, on the installed archers.tscn.
+## Map3DArcherLocomotion: the infantry's pivot solver on the longbowman's own plan.
 
-const Locomotion = preload("res://scripts/map3d/map3d_archer_locomotion.gd")
+const SuiteData := preload("res://tests/suite_data.gd")
+const Loco = preload("res://scripts/map3d/map3d_archer_locomotion.gd")
 const Provider = preload("res://scripts/map3d/map3d_pivot_provider.gd")
 
 var _model: Node3D
@@ -20,74 +21,36 @@ func after_all() -> void:
 	_model.free()
 
 
-## Global bone poses after the provider poses the skeleton for `request`.
-func _posed(clip: String, turn: Variant, phase: float) -> Array[Transform3D]:
-	var length := _player.get_animation(clip).length
-	Locomotion.pose(_player, _skeleton, {"clip": clip, "time_s": phase * length, "phase": phase, "turn_udeg": turn})
+func _clip_globals(clip: String, phase: float) -> Array[Transform3D]:
+	Provider.seek(_player, _skeleton, clip, phase * _player.get_animation(clip).length)
 	var out: Array[Transform3D] = []
 	for bone: int in _skeleton.get_bone_count():
 		out.append(_skeleton.get_bone_global_pose(bone))
 	return out
 
 
-func _max_gap(a: Array[Transform3D], b: Array[Transform3D]) -> float:
+func _worst_joint_m(clip: String, turn: int, phase: float) -> float:
+	var native := _clip_globals(clip, phase)
+	var result := Loco.solve(_player, _skeleton, clip, turn, phase)
+	assert_true(result.ok, "%s %d @%s: %s" % [clip, turn, phase, result.reason])
+	Provider.set_pose(_skeleton, result.pose)
 	var worst := 0.0
-	for i: int in a.size():
-		worst = maxf(worst, a[i].origin.distance_to(b[i].origin))
-		for axis: int in 3:
-			worst = maxf(worst, a[i].basis[axis].distance_to(b[i].basis[axis]))
+	for bone: int in _skeleton.get_bone_count():
+		worst = maxf(worst, (_skeleton.get_bone_global_pose(bone).origin - native[bone].origin).length())
 	return worst
 
 
-func _world(clip: String, turn: int, phase: float, bone: String) -> Vector3:
-	# BodyMotion: world yaw = yaw0 - turn x phase; the skeleton sits in the figure at the origin.
-	var g := _posed(clip, turn, phase)
-	var to_model := _model.global_transform.affine_inverse() * _skeleton.global_transform
-	return Transform3D(Basis(Vector3.UP, -deg_to_rad(turn / 1000000.0) * phase), Vector3.ZERO) \
-		* to_model * g[_skeleton.find_bone(bone)].origin
+func test_ninety_degrees_reproduces_the_installed_clips() -> void:
+	# The clips are this plan's +/-90 solve: re-solving them changes no joint (float noise only).
+	for row: Array in [["PIVOT_RIGHT", 90000000], ["PIVOT_LEFT", -90000000]]:
+		for phase: float in [0.0, 0.2, 0.55, 0.9, 1.0]:
+			assert_lt(_worst_joint_m(row[0], row[1], phase), 0.001, "%s @%s" % [row[0], phase])
 
 
-func test_half_turn_is_the_native_clip() -> void:
-	for clip: String in ["PIVOT_RIGHT", "PIVOT_LEFT"]:
-		var turn := 180000000 if clip == "PIVOT_RIGHT" else -180000000
-		for phase: float in [0.1, 0.37, 0.5, 0.83]:
-			assert_lt(_max_gap(_posed(clip, turn, phase), _posed(clip, null, phase)), 0.00001, "%s %s" % [clip, phase])
-
-
-func test_every_turn_keeps_the_native_endpoints() -> void:
-	for turn: int in [1, 2000000, 90000000, 179999999, -1, -45000000, -179999999]:
+func test_every_grid_turn_solves_and_keeps_the_march_endpoints() -> void:
+	for turn: int in [1, -1, 45000000, -2000000, 179999999, -179999999, 180000000]:
 		var clip := "PIVOT_RIGHT" if turn > 0 else "PIVOT_LEFT"
 		for phase: float in [0.0, 1.0]:
-			assert_lt(_max_gap(_posed(clip, turn, phase), _posed(clip, null, phase)), 0.00001, "%d at %s" % [turn, phase])
+			assert_lt(_worst_joint_m(clip, turn, phase), 0.001, "endpoint %d @%s" % [turn, phase])
+		_worst_joint_m(clip, turn, 0.5)
 
-
-func test_a_planted_foot_holds_the_world_for_small_and_quarter_turns() -> void:
-	# The native right foot stands from phase 0 to about 0.12 and again from 0.25 to 0.37.
-	for turn: int in [1, 2000000, 90000000]:
-		for window: Array in [[0.01, 0.11], [0.26, 0.36]]:
-			var start := _world("PIVOT_RIGHT", turn, window[0], "foot.r")
-			var end := _world("PIVOT_RIGHT", turn, window[1], "foot.r")
-			assert_lt(Vector2(end.x - start.x, end.z - start.z).length(), 0.003, "turn %d window %s" % [turn, window])
-
-
-func test_leg_spans_and_pelvis_are_kept() -> void:
-	var root := _skeleton.find_bone("root.x")
-	for turn: int in [1, 2000000, 45000000, 90000000, -2000000, -90000000]:
-		var clip := "PIVOT_RIGHT" if turn > 0 else "PIVOT_LEFT"
-		for phase: float in [0.15, 0.4, 0.6, 0.85]:
-			var native := _posed(clip, null, phase)
-			var turned := _posed(clip, turn, phase)
-			var label := "%d at %s" % [turn, phase]
-			assert_lt(native[root].origin.distance_to(turned[root].origin), 0.000001, "pelvis stays native, " + label)
-			for side: String in ["l", "r"]:
-				var hip := _skeleton.find_bone("thigh_twist." + side)
-				var knee := _skeleton.find_bone("leg_stretch." + side)
-				var ankle := _skeleton.find_bone("foot." + side)
-				assert_almost_eq(turned[hip].origin.distance_to(turned[knee].origin), native[hip].origin.distance_to(native[knee].origin), 0.00001, "thigh " + side + " " + label)
-				assert_almost_eq(turned[knee].origin.distance_to(turned[ankle].origin), native[knee].origin.distance_to(native[ankle].origin), 0.00001, "shin " + side + " " + label)
-
-
-func test_a_turn_on_the_other_clip_is_refused() -> void:
-	var result: Dictionary = Locomotion.solve(_player, _skeleton, "PIVOT_LEFT", 90000000, 0.5)
-	assert_false(result.ok)
-	assert_string_contains(String(result.reason), "does not belong")

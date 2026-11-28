@@ -86,7 +86,7 @@ Previews: `preview.py` (EEVEE, fixed three-quarter camera) → `preview/<CLIP>/`
 `Two Hand Club Combo` is not on this figure: it belongs to a longsword, no-shield one (owner).
 
 Open: ATTACK_VAR1 swings the shield flat at frame 9 (as the source clip does); game export
-(constraint-free skeleton like `archer_arp/export.py`, the `cc_weapon.*` sockets kept); whether
+(a constraint-free skeleton, the `cc_weapon.*` sockets kept); whether
 the lunging clip keeps its travel.
 
 ## Pivot clips (PIVOT_RIGHT / PIVOT_LEFT)

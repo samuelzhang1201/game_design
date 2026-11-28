@@ -223,7 +223,7 @@ class Pieces(unittest.TestCase):
     def test_dependency_closure_of_the_archer_scene(self):
         files = cert.closure(['scenes/models/units/archers.tscn'])
         for rel in ('assets/3D/units/archers/archers.glb', 'assets/3D/units/archers/archers.glb.import',
-                    'tools/units3d/archer_arp/pivot_import.gd', 'assets/3D/units/archers/archers_bow.res'):
+                    'tools/units3d/archer_arp/pivot_import.gd', 'assets/3D/units/archers/archers_archers_atlas.jpg'):
             self.assertIn(rel, files)
         self.assertFalse(any(f.startswith('.godot/') for f in files))
 

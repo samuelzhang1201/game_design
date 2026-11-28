@@ -1,15 +1,36 @@
 {
  "arm": "archers",
- "note": "LOCO-CERT-ARCH. Provider Map3DArcherLocomotion: the installed 180-degree pivot at the operation phase, each foot's world track turned by (|T|/180 - 1) x its native accumulated heading, a two-bone leg IK, the body above the legs eased toward the entry pose by |T|/180. Pivots enter and leave MARCH at phase 0 only; the hold is MARCH frozen at 0 (the consumer's admitted phase, recorded as a consumer requirement). Stance, hover and slide use each foot's planting band inherited from native MARCH. turn_q 400000 is the contract's example value (contact does not depend on duration); LOCO-POLICY installs the real row.",
+ "note": "LOCO-CERT-ARCH (2026-11-27). The longbowman's own scene and provider: Map3DArcherLocomotion is Map3DInfantryLocomotion's solver on this body's coupled pivot plan (archers_pivot_plan.json; the shipped clips are its +/-90 solve). Pivots enter and leave MARCH at 400/420 (right sole planted, the thighs most nearly parallel, the left 23 mm up) only and the hold is MARCH frozen there (a consumer requirement, as the infantry's). Stride 1.2586 measured off its MARCH (the export's foot lock); k 25.7242 (rest height 1.6433 m at size 0.62), contact 23325 um.",
  "scene": "scenes/models/units/archers.tscn",
  "provider": "scripts/map3d/map3d_archer_locomotion.gd",
- "feet": {"l": ["foot.l", "toes_01.l"], "r": ["foot.r", "toes_01.r"]},
- "forward": [0, 0, -1],
- "stride_m": 1.5283,
+ "feet": {
+  "l": [
+   "foot.l",
+   "toes_01.l"
+  ],
+  "r": [
+   "foot.r",
+   "toes_01.r"
+  ]
+ },
+ "patch_band_m": 0.005,
+ "forward": [
+  0,
+  0,
+  -1
+ ],
+ "stride_m": 1.2586,
  "turn_q": 400000,
  "radius_m": 932,
+ "entry_phase": 0.9523809523809523,
  "hold_clip": "MARCH",
- "march_stop_phases": [0.0],
- "march_start_phases": [0.0],
- "hold_phases": [0.0]
+ "march_stop_phases": [
+  0.9523809523809523
+ ],
+ "march_start_phases": [
+  0.9523809523809523
+ ],
+ "hold_phases": [
+  0.9523809523809523
+ ]
 }

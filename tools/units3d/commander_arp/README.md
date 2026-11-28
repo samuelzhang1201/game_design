@@ -59,5 +59,7 @@ under the map's environment and sun.
 
 ## Not made
 
-No pivot plan, no locomotion certificate, no realm tint mask, no `MARCH_WALK` stride (measure it off the
-clip before he walks on the map: spec step 2).
+No pivot plan, no locomotion certificate, no realm tint mask. `MARCH_WALK`'s stride is not locked by the
+exporter: it is measured off the installed clip and kept in `balance.csv` `map3d_commander_walk_stride_m`
+(re-measure after a re-export; the size key `map3d_commander_size` too, which
+`tests/map3d/test_map3d_commander_rider.gd` checks against the model).
