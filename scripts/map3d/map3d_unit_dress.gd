@@ -8,11 +8,13 @@ extends RefCounted
 ## not drawn from the overlay's `albedo_atlas` (a prop on its own texture) is left bare.
 
 
-## The tunics. No figure carries a standard (owner 2026-11-23: every soldier of a unit alike); the
-## flag arguments stay because the royal-pinned Units layer still passes them.
-static func sync(repo: DataRepository, piece: Dictionary, reg: Dictionary, _realm_flags: ArtTable,
+## The tunics, and the unit's mounted commander under his realm's banner (Map3DCommanderRider).
+## No SOLDIER carries a standard (owner 2026-11-23: every soldier of a unit alike); the standard's
+## scene stays an argument because the royal-pinned Units layer still passes it.
+static func sync(repo: DataRepository, piece: Dictionary, reg: Dictionary, realm_flags: ArtTable,
 		_national_standard: PackedScene) -> void:
 	dress(repo, piece, String(reg.get("kingdom_code", "")), GameArt.table(GameArt.UNIT_REALM_TINT))
+	Map3DCommanderRider.sync(repo, piece, reg, realm_flags)
 
 
 ## The realm's map colour as cloth: its hue at saturation `sat`, and the value whose linear
