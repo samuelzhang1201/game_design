@@ -114,8 +114,9 @@ func test_a_regiment_is_in_the_province_it_marched_into() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	var reg: Dictionary = {}
+	# a unit holding its town's seat stands on the town's point, in the pack's province
 	for r: Dictionary in MapObjects.regiments_of(repo, realm):
-		if String(r.get("is_naval", "0")) != "1":
+		if String(r.get("is_naval", "0")) != "1" and ArmyGround.seated_in(repo, s, String(r["regiment_code"])) != "":
 			reg = r
 			break
 	var code := String(reg["regiment_code"])

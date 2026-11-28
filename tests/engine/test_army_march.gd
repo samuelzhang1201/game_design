@@ -25,9 +25,20 @@ func _mine() -> Array:
 ## A regiment with real arms, so base_pace_km is not zero.
 func _marcher() -> Dictionary:
 	for r: Dictionary in _mine():
-		if ArmySystem.base_pace_km(repo, r) > 0 and String(r.get("is_naval", "0")) != "1":
+		if ArmySystem.base_pace_km(repo, r) > 0 and String(r.get("is_naval", "0")) != "1" and _dry_east(r):
 			return r
 	return {}
+
+
+## The marches here walk east from where it stands: that road must be dry
+## land (a land column never stands on the sea, MapEconomy.is_dry).
+func _dry_east(r: Dictionary) -> bool:
+	var at := ArmySystem.position_of(repo, SuiteData.campaign(repo, 7), r)
+	var per_km := 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
+	for km in range(0, 101):
+		if not MapEconomy.is_dry(repo, at + Vector2(km * per_km, 0.0)):
+			return false
+	return true
 
 
 func test_a_new_campaign_seats_every_regiment_where_the_pack_put_it() -> void:

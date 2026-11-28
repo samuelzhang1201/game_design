@@ -127,6 +127,21 @@ static func contains_land(repo: DataRepository, p: Vector2) -> bool:
 					return true
 	return false
 
+## Whether a pack point is DRY by the shore the 3D map draws: the pack's
+## coast loops (geography/coasts.csv, the loops tools/map3d/bake_world.py
+## lays the shoreline on), inside an odd number of land and lake loops — an
+## island in a lake counts as land. Finer than cell_at, whose nearest-land
+## fallback answers for a point out at sea. A pack with no coasts answers by
+## cell_at.
+static func is_dry(repo: DataRepository, p: Vector2) -> bool:
+	if repo.coasts.is_empty():
+		return cell_at(repo, p) >= 0
+	var inside := false
+	for row: Dictionary in repo.coasts:
+		if (row["bbox"] as Rect2).has_point(p) and Geometry2D.is_point_in_polygon(p, row["polyline"]):
+			inside = not inside
+	return inside
+
 static func cell_polygon(repo: DataRepository, cell: Dictionary) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for v in (cell["vertex_ids"] as PackedInt32Array):

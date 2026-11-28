@@ -91,18 +91,25 @@ static func _bucket(taken: Dictionary, p_m: Vector2i) -> Vector2i:
 	return Vector2i(floori(float(p_m.x) / cell), floori(float(p_m.y) / cell))
 
 
-## Ground a unit of clearance `radius` may camp on: land, not a blocked terrain,
-## and no unit held within the sum of the two radii (half a pitch with the rule
-## off). `any_terrain` waives the blocked terrains, for a
+## Ground a unit of clearance `radius` may camp on: DRY land by the pixel mask
+## the 3D shore is drawn from (MapEconomy.is_dry, never cell_at's nearest
+## land), not a blocked terrain, and no unit held within the sum of the two
+## radii (`is_clear`). `any_terrain` waives the blocked terrains, for a
 ## town that stands among them (a mountain hold): its camps lie on the
 ## mountain, the one ground it has.
 static func is_free(repo: DataRepository, taken: Dictionary, p_m: Vector2i,
 		any_terrain := false, radius := 0) -> bool:
 	var px := ArmySystem.metres_to_pack(repo, p_m)
-	if MapEconomy.cell_at(repo, px) < 0:
+	if not MapEconomy.is_dry(repo, px):
 		return false
 	if not any_terrain and repo.army_camp_blocked.has(ArmySystem.terrain_at(repo, px)):
 		return false
+	return is_clear(repo, taken, p_m, radius)
+
+
+## No unit held within the sum of the two radii of `p_m` (half a pitch with
+## the rule off), whatever the ground: a town's seat is its own point.
+static func is_clear(repo: DataRepository, taken: Dictionary, p_m: Vector2i, radius := 0) -> bool:
 	var on := clearance_on(repo)
 	var cell := int(taken["cell"])
 	var half := float(cell) / 2.0
@@ -333,7 +340,7 @@ static func settle(repo: DataRepository, state: GameState, code: String, near_m 
 	var taken := held_taken(repo, state, code)
 	# the seat is the town's point: taken only while no other unit stands within clearance of it
 	if town != "" and seat_of(repo, state, town) == "" \
-			and (not clearance_on(repo) or is_free(repo, taken, centre, true, unit_radius(repo, reg))):
+			and (not clearance_on(repo) or is_clear(repo, taken, centre, unit_radius(repo, reg))):
 		state.town_seat[town] = code
 		_put(entry, centre)
 		return

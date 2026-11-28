@@ -460,3 +460,57 @@ func test_bounded_slot_search_finds_inner_side_slots_and_refuses_overflow() -> v
 	assert_ne(bounded, ArmyGround.NONE, "a side slot within the same ring is still available")
 	assert_lte(Vector2(bounded - centre).length(), float(bound))
 	assert_eq(ArmyGround.free_slot(r, centre, "infantry", taken, "", true, near, 1, pitch - 1), ArmyGround.NONE)
+
+
+
+func _loop(kind: String, pts: Array) -> Dictionary:
+	var poly := PackedVector2Array(pts)
+	return {"kind": kind, "polyline": poly, "bbox": MapGeometry.bounds(poly)}
+
+
+func test_is_dry_is_the_coast_loops_by_parity() -> void:
+	# A hand-made shore: land 0..100 square, a lake 40..60 in it, an island 45..55 in the lake.
+	var r := DataRepository.new()
+	r.coasts = [_loop("land", [Vector2(0, 0), Vector2(100, 0), Vector2(100, 100), Vector2(0, 100)]),
+		_loop("lake", [Vector2(40, 40), Vector2(60, 40), Vector2(60, 60), Vector2(40, 60)]),
+		_loop("land", [Vector2(45, 45), Vector2(55, 45), Vector2(55, 55), Vector2(45, 55)])]
+	assert_true(MapEconomy.is_dry(r, Vector2(20, 20)), "inside the land loop: one loop, dry")
+	assert_false(MapEconomy.is_dry(r, Vector2(42, 50)), "in the lake: two loops, wet")
+	assert_true(MapEconomy.is_dry(r, Vector2(50, 50)), "on the island: three loops, dry")
+	assert_false(MapEconomy.is_dry(r, Vector2(120, 50)), "out at sea: no loop, wet")
+
+
+func test_a_harbour_slot_at_sea_is_not_free() -> void:
+	# The trap behind the harbour regiments on the water (owner 2026-11-28): cell_at falls back
+	# to the NEAREST land cell, so a camp slot out at sea passed as land. Hand-checked on the
+	# default pack's harbour town at (1370.5, 676.7): its horse and archers took ring 2's
+	# east slots (1383.7 and 1379.3, y 676.7), outside every coast loop, each with a land cell by
+	# cell_at. Here: from every port town, the first point east of it outside the loops.
+	var found := 0
+	for code: String in repo.burgs:
+		var b: Dictionary = repo.burgs[code]
+		if String(b.get("is_port", "0")) != "1":
+			continue
+		for step in range(1, 20):
+			var p := Vector2(float(b["x"]) + step, float(b["y"]))
+			if not MapEconomy.is_dry(repo, p):
+				assert_false(ArmyGround.is_free(repo, ArmyGround.new_taken(repo), ArmySystem.pack_to_metres(repo, p),
+					true), "%s +%d px is sea" % [code, step])
+				if MapEconomy.cell_at(repo, p) >= 0:
+					found += 1
+				break
+	assert_gt(found, 0, "some sea point by a port still has a cell by cell_at (the trap)")
+
+
+func test_no_land_unit_starts_on_the_water() -> void:
+	# Every land unit of every realm at the campaign's start stands inside the drawn shore.
+	var state: GameState = SuiteData.campaign(repo, 42)
+	var checked := 0
+	for code: String in ArmySystem.roster(repo, state):
+		var reg := ArmySystem.regiment(repo, code, state)
+		if String(reg.get("is_naval", "0")) == "1":
+			continue
+		var p := ArmySystem.position_of(repo, state, reg)
+		checked += 1
+		assert_true(MapEconomy.is_dry(repo, p), "%s starts on the water at %s" % [code, p])
+	assert_gt(checked, 20)
