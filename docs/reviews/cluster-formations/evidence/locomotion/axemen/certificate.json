@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "ba6383eb1a73260d2f8222dad5d459942f7d7484ac37378ecb943e3b8d3bf355",
+  "sha256": "1e5dc2c3468e501bbd804fe3db490fb5c20ab8f9cfcbdc47595a4ebe5a2d4ca4",
   "uniform": 512
  },
  "config": {
@@ -424,11 +424,11 @@
   "assets/3D/units/axemen/axemen_axemen_atlas_n.jpg.import": "837d4a5606836554a50ce1003814c8512a9af5751208ca3e5cc9d6bc8c6ebca6",
   "assets/3D/units/axemen/axemen_pivot_plan.json": "b953c2e3a4b5c49404f979e8d5ea1a5987cf4e507058c0629bebc3972fb761c9",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
-  "data/army/balance.csv": "e7789ba5f28e4cd555ed8922c3d6597c6dd0027d2208c2891b1c264270136443",
+  "data/army/balance.csv": "bf53003122f9905360410abc2dd32796da8c8f2579f535561e946d9f818bc5fb",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "b83c9f488c55f6f9fbf7d606ad587d5547026498e110a4189df2372f22d5ef09",
+  "data/screens/map3d/army_art.csv": "005c4f71cc960bd47b2efe22d87e44edf1968730fee4f3db6dee193ef1ee4895",
   "data/screens/map3d/balance.csv": "3813020ee080ac4122864cd5712c0775a2a9ba1e8f3d3b7e042f7c9f00c0be80",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "33ca5ca575e4eda37deeb57504abd9a3af4ea6681c9d58aaf079724246c4f59f",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "97480475bffbeb73f2700a23104c50c15ec1a757788c11be04277f6c0c07094a",
   "scenes/models/units/axemen.tscn": "bddf8c926838e8576b5d54ff4370984b521d47d3977297b48c25663df3e15adc",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
   "scripts/map3d/map3d_axemen_locomotion.gd": "1eb52b16841519df2cda6ee0fe0eff2392d2ad611d2ed6b139163455a015b16f",
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 23217,
-  "digest": "1d7fcda2cd6bba9d5b2498ec45c01787762b574f7bf5b8305d1685e5a4803dd7",
+  "digest": "cf42a753a2ab471bf192368e7396553f98b12cf7114bc49c0513707487d1ec19",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "1d7fcda2cd6bba9d5b2498ec45c01787762b574f7bf5b8305d1685e5a4803dd7",
+ "payload_sha256": "cf42a753a2ab471bf192368e7396553f98b12cf7114bc49c0513707487d1ec19",
  "report": {
   "bounds_um": {
    "contact": 23217,

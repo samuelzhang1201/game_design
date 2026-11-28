@@ -1,112 +1,79 @@
 extends GutTest
-## The equipped ARP replacement keeps six distinct source clips and separate gear.
+## The archers' figure as installed (tools/units3d/archer_parts/): the parts Tripo longbowman on the
+## infantry's rig contract, thirteen clips plus the pivot pair, bow, quiver and arrow in one skinned mesh.
+
+const GLB := "res://assets/3D/units/archers/archers.glb"
+const LOOPS: Array[String] = ["MARCH", "GARRISON", "STANDBY", "ATTACK", "SPRINT"]
+const ONCE: Array[String] = ["DRAW", "HIT", "HIT_2", "HIT_3", "DODGE", "DODGE_L", "DODGE_R", "DEATH",
+	"PIVOT_LEFT", "PIVOT_RIGHT"]
 
 
-func test_archer_clips_keep_the_runtime_contract_and_one_shots() -> void:
-	var model: Node = load(GameArt.path(GameArt.ARMY_MODELS, "archers")).instantiate()
-	autofree(model)
-	var player := Map3DUnits.find_anim(model)
-	assert_not_null(player)
-	if player == null:
-		return
-	for clip: String in ["STANDBY", "MARCH", "SPRINT", "DRAW", "GARRISON", "DEATH"]:
-		var named := Map3DUnits.clip_named(player, clip)
-		assert_ne(named, "", "the supplied clip is exported: " + clip)
-		if named == "":
-			continue
-		var animation := player.get_animation(named)
-		assert_gt(animation.length, 0.4, clip + " retains its sampled motion")
-		var loop := Animation.LOOP_NONE if clip in ["DRAW", "DEATH"] else Animation.LOOP_LINEAR
-		assert_eq(animation.loop_mode, loop, clip + " has the appropriate playback mode")
-	assert_almost_eq(player.get_animation(Map3DUnits.clip_named(player, "MARCH")).length,
-		35.0 / 30.0, 0.0001, "Standard Walk retains its 35-frame cycle without a leading hold")
+func test_the_archer_carries_his_clips_on_the_infantry_rig() -> void:
+	var node: Node = (load(GLB) as PackedScene).instantiate()
+	autofree(node)
+	assert_not_null(node.get_node_or_null("inf_rig"), "the armature is inf_rig")
+	var player: AnimationPlayer = node.find_child("AnimationPlayer", true, false)
+	for clip in LOOPS:
+		assert_true(player.has_animation(clip), clip)
+		if player.has_animation(clip):
+			assert_eq(player.get_animation(clip).loop_mode, Animation.LOOP_LINEAR, clip + " loops (set in the .import)")
+	for clip in ONCE:
+		assert_true(player.has_animation(clip), clip)
+		if player.has_animation(clip):
+			assert_eq(player.get_animation(clip).loop_mode, Animation.LOOP_NONE, clip + " plays once")
+	# 36 unique frames at 30 a second
+	assert_almost_eq(player.get_animation("MARCH").length, 1.2, 0.001, "MARCH is timed at 30 frames a second")
+	var skeleton: Skeleton3D = node.find_child("Skeleton3D", true, false)
+	for bone: String in ["cc_weapon.l", "cc_bow_string", "cc_arrow", "spine_02.x"]:
+		assert_gte(skeleton.find_bone(bone), 0, "the gear's bone " + bone)
+	var meshes := Map3DUnits.meshes(node)
+	assert_eq(meshes.size(), 1, "body, bow, quiver and arrow are one skinned mesh")
+	assert_eq(String(meshes[0].name), "archers")
+	assert_eq(meshes[0].mesh.get_surface_count(), 1, "one material on one atlas")
 
 
-func test_equipment_uses_the_characters_named_skin_and_editable_materials() -> void:
-	var model: Node = load(GameArt.path(GameArt.ARMY_MODELS, "archers")).instantiate()
-	autofree(model)
-	var meshes := Map3DUnits.meshes(model)
-	assert_eq(meshes.size(), 4, "body, bow, loaded quiver and arrow remain separate meshes")
-	var skeletons := model.find_children("*", "Skeleton3D", true, false)
-	assert_eq(skeletons.size(), 1, "equipment shares one animated skeleton")
-	if skeletons.size() != 1:
-		return
-	var skeleton: Skeleton3D = skeletons[0]
-	assert_eq(skeleton.get_bone_name(skeleton.get_bone_parent(skeleton.find_bone("DEF-bow"))),
-		"DEF-weapon.L", "bow mounts on the left hand")
-	var body := model.find_child("archers", true, false) as MeshInstance3D
-	var body_binds := {}
-	for i in body.skin.get_bind_count():
-		body_binds[body.skin.get_bind_name(i)] = body.skin.get_bind_pose(i)
-	for bone: String in ["head", "DEF-weapon.L", "DEF-weapon.R", "DEF-arrow", "DEF-bow", "DEF-quiver", "DEF-string"]:
-		assert_gte(skeleton.find_bone(bone), 0, "attachment retained: " + bone)
-	for mesh: MeshInstance3D in meshes:
-		assert_eq(mesh.get_node(mesh.skeleton), skeleton, mesh.name + " follows the character")
-		assert_not_null(mesh.skin, mesh.name + " retains its skin")
-		if mesh != body:
-			assert_lte(mesh.skin.get_bind_count(), 2, "gear does not upload the whole character palette")
-			for i in mesh.skin.get_bind_count():
-				var bone := mesh.skin.get_bind_name(i)
-				assert_true(body_binds.has(bone), "gear binds to an exported character bone")
-				if body_binds.has(bone):
-					assert_true(mesh.skin.get_bind_pose(i).is_equal_approx(body_binds[bone]),
-						mesh.name + " keeps the character's exact bind space")
-		for surface in mesh.mesh.get_surface_count():
-			assert_not_null(mesh.get_surface_override_material(surface), "editable material: " + mesh.name)
+func test_the_hidden_arrow_stays_invertible() -> void:
+	# scaled to 0 the pivot solver refuses the pose (Map3DInfantryPivot._affine): it hides at 0.001
+	var node: Node = (load(GLB) as PackedScene).instantiate()
+	autofree(node)
+	var player: AnimationPlayer = node.find_child("AnimationPlayer", true, false)
+	var skeleton: Skeleton3D = node.find_child("Skeleton3D", true, false)
+	var arrow := skeleton.find_bone("cc_arrow")
+	for clip: String in ["MARCH", "STANDBY", "PIVOT_RIGHT"]:   # GARRISON aims: the arrow is nocked
+		player.play(clip)
+		player.seek(0.5 * player.get_animation(clip).length, true)
+		var scale := skeleton.get_bone_pose_scale(arrow)
+		assert_gt(minf(scale.x, minf(scale.y, scale.z)), 0.0, clip + ": the arrow's scale is not 0")
+		assert_lt(maxf(scale.x, maxf(scale.y, scale.z)), 0.01, clip + ": the arrow is hidden")
 
 
-func test_all_clips_keep_the_left_grip_and_draw_with_the_right_hand() -> void:
-	var model: Node = load(GameArt.path(GameArt.ARMY_MODELS, "archers")).instantiate()
-	add_child_autofree(model)
-	var player := Map3DUnits.find_anim(model)
-	var skeleton: Skeleton3D = model.find_children("*", "Skeleton3D", true, false)[0]
-	var left := skeleton.find_bone("hand.l")
-	var right := skeleton.find_bone("hand.r")
-	var bow := skeleton.find_bone("DEF-bow")
-	var arrow := skeleton.find_bone("DEF-arrow")
-	var grip := Transform3D.IDENTITY
-	var first := true
-	for clip: String in ["STANDBY", "MARCH", "SPRINT", "DRAW", "GARRISON", "DEATH"]:
-		var name := Map3DUnits.clip_named(player, clip)
-		player.play(name)
-		for sample in 11:
-			player.seek(player.get_animation(name).length * sample / 10.0, true)
-			var mounted := skeleton.get_bone_global_pose(left).affine_inverse() * skeleton.get_bone_global_pose(bow)
-			if first:
-				grip = mounted
-				first = false
-			assert_lt(mounted.origin.distance_to(grip.origin), 0.002, clip + " keeps its left grip")
-			assert_lt(mounted.basis.get_rotation_quaternion().angle_to(grip.basis.get_rotation_quaternion()),
-				0.002, clip + " keeps its wrist orientation")
-			if clip == "DRAW" and sample >= 4:
-				assert_lt(skeleton.get_bone_global_pose(right).origin.distance_to(
-					skeleton.get_bone_global_pose(arrow).origin), 0.16, "the right hand retrieves and draws the arrow")
+func test_the_archer_is_recorded() -> void:
+	var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/3D/units/units3d.json"))
+	var row: Dictionary = info["archers"]
+	assert_between(int(row["tris"]), 15000, 23000, "the foot soldiers' budget, the bow and quiver on top")
+	assert_eq(int(row["fps"]), 30)
+	assert_gt(float(row["stride_m"]), 0.0, "measured off its own MARCH")
+	for clip: String in LOOPS + ["DRAW", "HIT", "DODGE", "DEATH"]:
+		assert_true((row["actions"] as Dictionary).has(clip), clip)
 
 
-func test_equipment_is_bounded_and_keeps_every_vertex_skinned() -> void:
-	var model: Node = load(GameArt.path(GameArt.ARMY_MODELS, "archers")).instantiate()
-	autofree(model)
-	var total := 0
-	for gear: String in ["archers_bow", "archers_quiver", "archers_arrow"]:
-		var mesh := model.find_child(gear, true, false) as MeshInstance3D
-		assert_not_null(mesh)
-		if mesh == null:
-			continue
-		var triangles := 0
-		var max_weight_error := 0.0
-		for surface in mesh.mesh.get_surface_count():
-			var arrays := mesh.mesh.surface_get_arrays(surface)
-			var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-			triangles += indices.size() / 3
-			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-			var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
-			var influences := weights.size() / vertices.size()
-			for vertex in vertices.size():
-				var weight := 0.0
-				for influence in influences:
-					weight += weights[vertex * influences + influence]
-				max_weight_error = maxf(max_weight_error, absf(weight - 1.0))
-		assert_lt(max_weight_error, 0.001, gear + " keeps every vertex skinned with normalized weights")
-		total += triangles
-		assert_lt(triangles, 20000, gear + " does not retain a dense generation mesh")
-	assert_lt(total, 40000, "the three props together cost less than the original body")
+func test_the_realm_tints_mask_covers_the_gambeson_only() -> void:
+	var mask := load("res://assets/3D/units/archers/archers_tunic_mask.png") as Texture2D
+	var atlas := load("res://assets/3D/units/archers/archers_archers_atlas.jpg") as Texture2D
+	assert_not_null(mask, "exported with the atlases (tools/units3d/archer_parts/game_export.py)")
+	assert_eq(mask.get_size(), atlas.get_size(), "in the atlas's frame")
+	var img := mask.get_image()
+	img.convert(Image.FORMAT_L8)
+	var set_texels := 0
+	for byte in img.get_data():
+		if byte > 127:
+			set_texels += 1
+	var share := float(set_texels) / float(img.get_width() * img.get_height())
+	assert_between(share, 0.04, 0.15, "the gambeson and its sleeves, not the whole body")
+	# the bow's and the quiver's strip (the right-hand quarter) carries no cloth
+	var gear := img.get_region(Rect2i(img.get_width() * 3 / 4, 0, img.get_width() / 4, img.get_height()))
+	var stray := 0
+	for byte in gear.get_data():
+		if byte > 127:
+			stray += 1
+	assert_eq(stray, 0, "nothing of the mask on the gear")

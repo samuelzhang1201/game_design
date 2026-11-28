@@ -44,7 +44,7 @@ keeping the cloth's shading (atlas luminance over the tunic's mean). The scene's
 own material is untouched, so the WAR ROOM's tin and ink are unchanged. The colour
 is the realm's political-palette hue at saturation `map3d_unit_tint_sat`,
 its value solved for the linear luminance `map3d_unit_tint_lum`: every realm's
-tunic equally light, told apart by hue. The cavalry, royal and archer models
+tunic equally light, told apart by hue. The cavalry and royal models
 have no cloth material in their Tripo atlases: their `<model>_tunic_mask.png` is
 baked by `tools/units3d/cloth_mask.py` (an HSV window per atlas on the dyed
 cloth; it prints the `tunic_luminance` for the arm's
@@ -52,6 +52,8 @@ cloth; it prints the `tunic_luminance` for the arm's
 `unit_realm_tint_axemen.tres` is the infantry's overlay reading the axe atlas, with the infantry's tunic mask
 (the body's region of the two atlases is the same). The militia's mask comes from its exporter
 (`tools/units3d/militia_arp/game_export.py`: the tunic's and skirt's faces by the
-source's `part_id`), under `unit_realm_tint_militia.tres`. An overlay is painted only on a mesh drawn from
-its material's `albedo_atlas`, so a prop on its own texture (the archer's bow,
-quiver, arrow) keeps its colours.
+source's `part_id`), under `unit_realm_tint_militia.tres`; the archers' likewise
+(`tools/units3d/archer_parts/game_export.py`: the gambeson's faces by the source's `part`), under
+`unit_realm_tint_archers.tres`. An overlay is painted only on a mesh drawn from
+its material's `albedo_atlas`, so a prop on its own texture keeps its colours; a prop
+in the figure's own atlas is left untinted by the mask (the archer's bow, quiver, arrow).

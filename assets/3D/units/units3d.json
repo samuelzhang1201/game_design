@@ -1,43 +1,68 @@
 {
  "archers": {
   "actions": {
-   "STANDBY": [
-    1,
-    154
-   ],
    "MARCH": [
-    1,
-    37
-   ],
-   "SPRINT": [
-    1,
-    16
-   ],
-   "DRAW": [
-    1,
-    31
+    0,
+    36
    ],
    "GARRISON": [
-    1,
-    114
+    0,
+    113
+   ],
+   "STANDBY": [
+    0,
+    153
+   ],
+   "ATTACK": [
+    0,
+    68
+   ],
+   "DRAW": [
+    0,
+    30
+   ],
+   "SPRINT": [
+    0,
+    15
+   ],
+   "HIT": [
+    0,
+    29
+   ],
+   "HIT_2": [
+    0,
+    21
+   ],
+   "HIT_3": [
+    0,
+    21
+   ],
+   "DODGE": [
+    0,
+    34
+   ],
+   "DODGE_L": [
+    0,
+    18
+   ],
+   "DODGE_R": [
+    0,
+    18
    ],
    "DEATH": [
-    1,
-    72
+    0,
+    71
    ]
   },
-  "bones": 73,
+  "bones": 72,
   "fps": 30,
-  "height_m": 1.85,
+  "height_m": 1.623,
   "kind": "humanoid",
   "label": "Archer",
-  "source": "Owner-provided ARP soldier and six FBX clips; tools/units3d/archer_arp/. Equipment exported separately and assembled in scenes/models/units/archers.tscn.",
-  "stride_m": 1.184335,
-  "tris": 381626,
-  "weights": {
-   "body": "corrected ARP skin, all six influences retained",
-   "equipment": "named skin binds; bow string sampled to DEF-string"
-  }
+  "source": "The owner's parts Tripo archer (tripo_inbox units/no-rigging/archers/archer.glb) rigged with Auto-Rig Pro on the infantry's rig contract, its walk, run, aim, shoot, hits, dodges and death from the supplied Mixamo clips (Motion/arhcer), decimated and baked: assets/3D/model_wip/blender_output/archer/arc_longbow.blend (git-ignored), tools/units3d/archer_parts/game_export.py. Bow, quiver and arrow in the one skinned mesh.",
+  "stride_m": 1.2586,
+  "tris": 22075,
+  "weights": "ARP skin limited to 4; bow rigid on cc_weapon.l with its string on cc_bow_string, quiver on spine_02.x, arrow on cc_arrow (scaled to 0.001 while not drawn)"
  },
  "axemen": {
   "actions": {

@@ -1,10 +1,10 @@
 [gd_resource type="ShaderMaterial" format=3]
 
 [ext_resource type="Shader" uid="uid://cipw05pfwbhxt" path="res://scenes/map3d/materials/unit_realm_tint.gdshader" id="1_shader"]
-[ext_resource type="Texture2D" path="res://assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg" id="2_albedo"]
-[ext_resource type="Texture2D" path="res://assets/3D/units/archers/archers_archers_body_metal_rough.jpg" id="3_mr"]
-[ext_resource type="Texture2D" path="res://assets/3D/units/archers/archers_archers_body_normal.jpg" id="4_normal"]
-[ext_resource type="Texture2D" path="res://assets/3D/units/archers/archers_tunic_mask.png" id="5_mask"]
+[ext_resource type="Texture2D" uid="uid://puj0ravt2lwj" path="res://assets/3D/units/archers/archers_archers_atlas.jpg" id="2_albedo"]
+[ext_resource type="Texture2D" uid="uid://ixbyaolxsdts" path="res://assets/3D/units/archers/archers_archers_atlas_mr.jpg" id="3_mr"]
+[ext_resource type="Texture2D" uid="uid://bt4cml38jncdg" path="res://assets/3D/units/archers/archers_archers_atlas_n.jpg" id="4_normal"]
+[ext_resource type="Texture2D" uid="uid://k0aqiu2ldjbd" path="res://assets/3D/units/archers/archers_tunic_mask.png" id="5_mask"]
 
 [resource]
 render_priority = 1
@@ -13,6 +13,6 @@ shader_parameter/albedo_atlas = ExtResource("2_albedo")
 shader_parameter/mr_atlas = ExtResource("3_mr")
 shader_parameter/normal_atlas = ExtResource("4_normal")
 shader_parameter/tunic_mask = ExtResource("5_mask")
-shader_parameter/tunic_luminance = 0.148
+shader_parameter/tunic_luminance = 0.069
 shader_parameter/shade_max = 2.0
 shader_parameter/cloth_roughness = 0.85
