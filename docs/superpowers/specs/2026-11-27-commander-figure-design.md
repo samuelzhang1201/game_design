@@ -112,12 +112,13 @@ owner first, renews the SHA and runs `map3d`.
    `MARCH` / `MARCH_WALK` / `STANDBY` by the unit's action and arm, sight, the bench. The walk's stride is measured off
    `MARCH_WALK` first (the gallop's is the cavalry's 2.4224 m). Visual review on the real map.
 3. **The battle** (built, "Step 3 as built"): the left rear in the fight, `COMMAND`, the ride there
-   round the left flank and the ride back. The stand-off place stays step 2's interim rule, which the
-   owner has still to rule on (below).
+   round the left flank and the ride back.
+4. **The close stand-off** (built, R6 below): beside the left end of his first rank where the lines
+   leave him no place between them.
 
-Steps 1–3 are merged or in review; nothing further is planned in this spec. Follow-ups, each its own
-step if the owner wants it: the stand-off rule, a realm tint on the commander's own tunic, a commander
-for split-off units, the Blender fixes to the cloth listed under the look review.
+Steps 1–3 are merged. Follow-ups, each its own step if the owner wants it: a realm tint on the
+commander's own tunic, a commander for split-off units, the Blender fixes to the cloth listed under
+the look review.
 
 ## Rulings on the five questions (2026-11-28)
 
@@ -135,6 +136,13 @@ Each was put to the owner with a proposal; he took all five as proposed (都按�
   by the figure taking no formation place and changing no number.
 - **R5 — enemy commanders.** A seen enemy unit shows its commander under its own realm's banner; a ghost
   never does.
+
+## Ruling on the stand-off (2026-11-28)
+
+- **R6 — a stand-off with no room between the lines.** Put to the owner with what the real staged
+  battles showed (neither side's commander was drawn) and a proposal; his words: 对峙规则按建议改：
+  站第一排左端旁边. Where the two lines stand too close to give him a place between them, he stands
+  beside the left end of his first rank, seen facing the enemy.
 
 ## Defaults chosen without a ruling
 
@@ -249,7 +257,7 @@ settled beyond the plan above:
   So in play, as the rule stands, he is not seen from contact until the first round, when he appears
   at the left rear; the ride from the front is seen only where a stand-off is wider. The review's
   ride was shot with `map3d_commander_standoff_share` forced to 0.5 for the shot (one commander then
-  has his place between the lines). The stand-off rule is the open question for the owner.
+  has his place between the lines). The owner then ruled R6.
 - **Review** (real windows, `snapshot_screen --battle-case field --battle-arm archers --battle-foe
   foot`; sheets and the scratch shot flags in the session's notes folder, `commander-step3-review/`):
   one independent critic pass; its three defects fixable by a number or a placement were fixed (the
@@ -259,3 +267,15 @@ settled beyond the plan above:
 - **Bench** (`bench.tscn --battle-arm foot`, still camera, the owner's editor and other sessions'
   Godot running): low 6.31 ms of 8.5, medium 7.21 of 8.5, high 10.18 of 12, ultra 10.61 of 12.5 — no
   draw distance was added.
+
+## Step 4 as built (2026-11-28): the close stand-off
+
+R6 in `Map3DCommanderRider` only. Where `standoff_lead` finds no place between the lines (the common
+case: the engine's lines stand about two of his lengths apart) he stands beside the left end of his
+first rank — outside the left file by the fight's `map3d_commander_rear_gap` and half his width, level
+with the foremost figures' own line (`first_rank_left_of`) — facing the enemy on `STANDBY`. No new key:
+he is then already in the lane he rides down, so when the fight starts he wheels about and rides down
+the flank to the left rear without crossing his unit's front. A wider stand-off keeps step 2's place
+between the lines; if the room changes he rides between the two. He is still not drawn while a
+block's figures walk to their points before the first round (a staged archers' walk-in lasts about
+ten seconds), and appears at his place once they stand.

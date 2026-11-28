@@ -285,12 +285,38 @@ func test_in_a_stand_off_he_is_ahead_of_the_block() -> void:
 	assert_eq(int(state.battles[0].get("rounds", 0)), 0, "contact made, no round fought: the stand-off")
 	var layer := _layer(ctx)  # a view opened on the battle: its figures stand on their points, nobody walks in
 	var share := repo.bal("map3d_commander_standoff_share")
-	# the fixture's lines stand a horse's length apart: no place for a commander between them
+	# the fixture's lines stand a horse's length apart: no place for a commander between them, so
+	# each stands beside the left end of his own first rank (owner 2026-11-28: 站第一排左端旁边):
+	# outside the left file by his gap and half his width, level with the first rank's own line
+	var ends := {}
 	for code: String in [own, foe]:
-		var rider := Map3DCommanderRider.of_piece(layer.built_piece(code))
+		var piece := layer.built_piece(code)
+		var rider := Map3DCommanderRider.of_piece(piece)
 		assert_not_null(rider, code)
 		rider.stand()
-		assert_false(rider.visible, code + ": lines this close leave him no place")
+		assert_true(rider.visible, code + " is drawn in a close stand-off")
+		assert_false(rider.riding(), "stood there at once on first sight")
+		var block := _block(ctx, piece)
+		var k := rider.global_basis.get_scale().x
+		var at := _from_root(rider)
+		assert_almost_eq(at.dot(block["across"]), float(block["left"])
+			- (rider._half.x + 2.0 * rider._half.y * repo.bal("map3d_commander_rear_gap")) * k, 0.01, code + " is outside his left file")
+		assert_almost_eq(at.dot(block["face"]), float(block["rank"]), 0.01, code + " is level with his first rank")
+		var ahead := -rider.global_basis.z
+		assert_almost_eq(Vector2(ahead.x, ahead.z).normalized().dot(block["face"]), 1.0, 1e-4, code + " faces the enemy")
+		assert_eq(_clip(rider), "STANDBY")
+		assert_eq(int(piece["figures"]), (piece["groups"] as Array).size(), "no group is his")
+		# a click on him there is a click on his unit, and nobody else stands on that ground
+		assert_lt(Map3DPicker.ray_depth(piece, rider.global_position + Vector3.UP * 500.0, Vector3.DOWN), INF,
+			code + ": a ray on him beside his first rank meets his unit's piece")
+		rider.visible = false
+		assert_eq(Map3DPicker.ray_depth(piece, rider.global_position + Vector3.UP * 500.0, Vector3.DOWN), INF)
+		rider.visible = true
+		ends[code] = rider.global_position
+	# each on his own left: the two stand on opposite sides of the field, not nose to nose
+	var own_block := _block(ctx, layer.built_piece(own))
+	var between: Vector3 = ends[foe] - ends[own]
+	assert_gt(Vector2(between.x, between.z).dot(own_block["across"]), 0.0, "the foe's commander is toward the crown's right")
 	# the foe a further 3 km off: room for both
 	var away := Vector2(int(state.foes[foe]["x_m"]) - int(state.regiments[own]["x_m"]),
 		int(state.foes[foe]["y_m"]) - int(state.regiments[own]["y_m"])).normalized() * 3000.0
@@ -342,6 +368,22 @@ func test_in_a_stand_off_he_is_ahead_of_the_block() -> void:
 	var apart := (riders[own] as Node3D).global_position.distance_to((riders[foe] as Node3D).global_position)
 	assert_gt(apart, 2.0 * (riders[own] as Map3DCommanderRider)._half.y * (riders[own] as Node3D).global_basis.get_scale().x,
 		"the two commanders stand more than a horse's length apart between the lines")
+
+
+func test_a_first_ranks_left_end_is_outside_its_left_file_level_with_its_foremost_figures() -> void:
+	# facing -z (0, -1): the right is +x. Sides 1: the left file's outside is min(-2, 6, 2) - 1 = -3.
+	# Along the facing the places are 4, 4, 0: the first rank's line is 4, so (-3, -4).
+	var at := Map3DCommanderRider.first_rank_left_of(PackedVector2Array([Vector2(-2, -4), Vector2(6, -4), Vector2(2, 0)]),
+		PackedFloat32Array([1.0, 1.0, 1.0]), Vector2(0, -1))
+	assert_almost_eq(at.x, -3.0, 1e-5)
+	assert_almost_eq(at.y, -4.0, 1e-5)
+	# a diagonal facing (0.6, 0.8), right (-0.8, 0.6): across less the sides 1, 2, 0.5 is -9, 4, -1.5
+	# -> left -9; along 6, 8, 7 -> rank 8. 8 x (0.6, 0.8) - 9 x (-0.8, 0.6) = (4.8 + 7.2, 6.4 - 5.4) = (12, 1)
+	at = Map3DCommanderRider.first_rank_left_of(PackedVector2Array([Vector2(10, 0), Vector2(0, 10), Vector2(5, 5)]),
+		PackedFloat32Array([1.0, 2.0, 0.5]), Vector2(0.6, 0.8))
+	assert_almost_eq(at.x, 12.0, 1e-4)
+	assert_almost_eq(at.y, 1.0, 1e-4)
+	assert_eq(Map3DCommanderRider.first_rank_left_of(PackedVector2Array(), PackedFloat32Array(), Vector2(1, 0)), Vector2.ZERO)
 
 
 func test_a_blocks_left_rear_is_outside_its_left_file_level_with_its_rear_rank() -> void:
@@ -479,17 +521,19 @@ func _field(gap_m: float) -> Dictionary:
 
 
 ## A battle piece's block where its figures STAND, in the frame of its facing from its root:
-## {face, across, left (the left file's outside), rear (the rear rank's line), front (the first rank's front)}.
+## {face, across, left (the left file's outside), rear (the rear rank's line), rank (the first rank's line),
+## front (the first rank's front)}.
 func _block(ctx: Map3DContext, piece: Dictionary) -> Dictionary:
 	var face := WarFront.facing_vector(int(piece["facing_deg"]))
 	var across := Vector2(-face.y, face.x)
 	var root: Node3D = piece["node"]
-	var out := {"face": face, "across": across, "left": INF, "rear": INF, "front": -INF}
+	var out := {"face": face, "across": across, "left": INF, "rear": INF, "front": -INF, "rank": -INF}
 	for group: Dictionary in piece["groups"]:
 		var p := Map3DBattleGroups.stand_xz(ctx, piece, group) - Vector2(root.global_position.x, root.global_position.z)
 		var reach: Vector2 = (group["piece"]["extent"] as Vector2) * (group["piece"]["node"] as Node3D).scale.x
 		out["left"] = minf(out["left"], p.dot(across) - reach.x)
 		out["rear"] = minf(out["rear"], p.dot(face))
+		out["rank"] = maxf(out["rank"], p.dot(face))
 		out["front"] = maxf(out["front"], p.dot(face) + reach.y)
 	return out
 
@@ -725,22 +769,40 @@ func test_no_ride_after_a_state_swap_or_from_nowhere() -> void:
 		assert_eq(_clip(rider), "COMMAND")
 		block = _block(f["ctx"], layer.built_piece(code))
 		assert_almost_eq(_from_root(rider).dot(block["face"]), float(block["rear"]) - _back(rider), 0.01)
-	# a stand-off too tight to draw him: when the fight starts he appears at the left rear
+	# a close stand-off: he stands beside his first rank's left end, and when the fight starts he
+	# rides down his unit's left flank to its left rear
 	f = _field(0.0)
 	layer = f["layer"]
 	rider = Map3DCommanderRider.of_piece(layer.built_piece(f["own"]))
-	# even one handed the place of the marching block's rider (a block gone into its battle): he was
-	# not drawn in between, so that place is forgotten
+	rider.stand(0.1)
+	assert_true(rider.visible)
+	block = _block(f["ctx"], layer.built_piece(f["own"]))
+	assert_almost_eq(_from_root(rider).dot(block["face"]), float(block["rank"]), 0.01)
+	(f["state"] as GameState).battles[0]["rounds"] = 1
+	rider.stand()
+	assert_true(rider.riding(), "from the first rank's left end he rides to the left rear")
+	# he wheels about (his place is behind him) and goes down the flank, never in among his left file
+	var lane := _from_root(rider).dot(block["across"])
+	var trail := _ride_out(rider)
+	for p: Vector2 in trail:
+		assert_lt(p.dot(block["across"]), float(block["left"]) - rider._half.x * rider.global_basis.get_scale().x, "outside his left file")
+	assert_almost_eq(trail[-1].dot(block["across"]), lane, 0.01, "the same lane he stood in")
+	assert_almost_eq(_from_root(rider).dot(block["face"]), float(block["rear"]) - _back(rider), 0.01)
+	assert_eq(_clip(rider), "COMMAND")
+	# a block still walking to its points before the first round: not drawn, and a place handed
+	# over by the marching block's rider is forgotten (no ride from it once the block stands)
+	f = _field(0.0)
+	layer = f["layer"]
+	rider = Map3DCommanderRider.of_piece(layer.built_piece(f["own"]))
 	rider._from = [Vector2(rider.global_position.x, rider.global_position.z) + Vector2(300.0, 0.0), 0.0]
 	rider._state = f["state"]
+	layer.built_piece(f["own"])["easing"] = true
 	rider.stand(0.1)
-	assert_false(rider.visible, "lines this close leave him no place")
-	(f["state"] as GameState).battles[0]["rounds"] = 1
+	assert_false(rider.visible, "hidden while his block walks in")
+	layer.built_piece(f["own"])["easing"] = false
 	rider.stand(0.1)
 	assert_true(rider.visible)
 	assert_false(rider.riding(), "no ride from nowhere")
-	block = _block(f["ctx"], layer.built_piece(f["own"]))
-	assert_almost_eq(_from_root(rider).dot(block["face"]), float(block["rear"]) - _back(rider), 0.01)
 	# hidden with his piece mid-ride (the far zoom's symbols), shown again: stood at his place
 	f = _field(3000.0)
 	layer = f["layer"]

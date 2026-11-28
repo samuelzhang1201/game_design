@@ -67,7 +67,8 @@ static func lead_m(half_len: float, gap: float, k: float) -> float:
 ## His lead in a stand-off, world metres: `share` of the clear ground between his first rank and
 ## the nearest enemy figure (`room`), never past his ordinary `lead`, so the two sides' commanders
 ## keep the middle of that ground between them; -1 when that would back his tail into his own rank
-## (`least`, his half length): lines that close leave him no place, and he is not drawn.
+## (`least`, his half length): lines that close leave him no place between them, and he stands
+## beside the left end of his first rank instead (first_rank_left_of).
 static func standoff_lead(lead: float, room: float, share: float, least: float) -> float:
 	var out := minf(room * share, lead)
 	return out if out >= least else -1.0
@@ -99,6 +100,19 @@ static func left_rear_of(points: PackedVector2Array, sides: PackedFloat32Array, 
 		left = minf(left, points[i].dot(across) - sides[i])
 		rear = minf(rear, points[i].dot(face))
 	return face * rear + across * left if not points.is_empty() else Vector2.ZERO
+
+
+## The left end of a block's first rank seen facing `face`: the outside of its left file, level
+## with the foremost figures' own places, in left_rear_of's frame. Where he stands in a stand-off
+## whose lines leave him no place between them (owner 2026-11-28: 站第一排左端旁边).
+static func first_rank_left_of(points: PackedVector2Array, sides: PackedFloat32Array, face: Vector2) -> Vector2:
+	var across := Vector2(-face.y, face.x)
+	var left := INF
+	var rank := -INF
+	for i in points.size():
+		left = minf(left, points[i].dot(across) - sides[i])
+		rank = maxf(rank, points[i].dot(face))
+	return face * rank + across * left if not points.is_empty() else Vector2.ZERO
 
 
 ## How far outside the left file his centre stands in a fight, world metres at his scale `k`:
@@ -276,12 +290,12 @@ func stand(delta := 0.0) -> void:
 		var measured := _drawn and delta > 0.0
 		if battle or key != _stood or not _drawn or _moving:  # a pan moves none of it; a battle block's figures move under him
 			_stood = key
-			visible = _place(root, battle, fight, k, root_k, delta)
-		if visible and _moving:  # the walk, its hooves keeping the ground he covers this frame
+			_place(root, battle, fight, k, root_k, delta)
+		if _moving:  # the walk, its hooves keeping the ground he covers this frame
 			var pace := _repo.bal("map3d_commander_walk_stride_m") * k / maxf(_clip_s(WALK), 0.0001)
 			_play(WALK, clampf(Vector2(global_position.x - was.x, global_position.z - was.z).length() / delta / pace,
 				_repo.bal("map3d_unit_anim_min"), _repo.bal("map3d_unit_anim_max")) if measured else _repo.bal("map3d_commander_ride_pace"))
-		elif visible:
+		else:
 			var clip := clip_for(String(_piece.get("action", "")), String(_piece.get("layout", "")), _gallops, fight)
 			var pace_key: Array = _piece.get("pace_key", [])
 			_play(clip, 1.0 if clip in ["STANDBY", "COMMAND"] or pace_key.size() != 2 or not bool(pace_key[1]) else march_rate(
@@ -297,11 +311,11 @@ func riding() -> bool:
 
 
 ## His place in the piece's own flat frame (x right, z to the rear, the front −z; a battle
-## block's root is upright and unscaled at the unit's place): centred ahead of the first rank, or
-## in a `fight` outside the left file level with the rear rank; ridden to from where he stands
-## (`ride`, `route`), then planted on his own ground like every figure (Map3DUnitRig.plant).
-## False when a stand-off leaves him no room (standoff_lead).
-func _place(root: Node3D, battle: bool, fight: bool, k: float, root_k: float, delta: float) -> bool:
+## block's root is upright and unscaled at the unit's place): centred ahead of the first rank;
+## in a stand-off with no room between the lines, beside the left end of his first rank; in a
+## `fight`, outside the left file behind the rear rank. Ridden to from where he stands (`ride`,
+## `route`), then planted on his own ground like every figure (Map3DUnitRig.plant).
+func _place(root: Node3D, battle: bool, fight: bool, k: float, root_k: float, delta: float) -> void:
 	var face := Vector2(0.0, -1.0)
 	var points := PackedVector2Array()
 	var reaches := PackedFloat32Array()
@@ -338,13 +352,8 @@ func _place(root: Node3D, battle: bool, fight: bool, k: float, root_k: float, de
 		var lead := lead_m(_half.y, _repo.bal("map3d_commander_gap"), k)
 		if battle:
 			lead = standoff_lead(lead, _room(root, face, front.dot(face)), _repo.bal("map3d_commander_standoff_share"), _half.y * k)
-			if lead < 0.0:
-				_drawn = false  # no place: not drawn, and never ridden from here
-				_moving = false
-				_keeping = false
-				_from = []
-				return false
-		goal = front + face * lead / root_k
+		# lines too close for a place between them: beside the left end of his first rank
+		goal = front + face * lead / root_k if lead >= 0.0 else first_rank_left_of(points, sides, face) - across * side
 	var goal_yaw := Map3DUnits.facing_yaw(face)
 	if not _from.is_empty():  # handed over by the rider of the piece this one replaced
 		var stood := root.global_transform.affine_inverse() * Vector3(_from[0].x, root.global_position.y, _from[0].y)
@@ -383,7 +392,6 @@ func _place(root: Node3D, battle: bool, fight: bool, k: float, root_k: float, de
 	_moving = _keeping or not _route.is_empty() or absf(angle_difference(_yaw, goal_yaw)) > 0.001
 	transform = Transform3D(Basis(Vector3.UP, _yaw).scaled(Vector3.ONE * k / root_k), Vector3(_at.x, 0.0, _at.y))
 	Map3DUnitRig.plant(_repo, _ctx.height_at, {"node": root, "height_m": _piece["height_m"], "figs": [self]})
-	return true
 
 
 ## The clear ground ahead of his first rank (`front_m` along `face` from the block's root) up to
