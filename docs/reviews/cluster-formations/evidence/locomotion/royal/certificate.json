@@ -822,7 +822,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "6eeccf69a876237f8fbf17ef411dcbca1e237d69539b052e4c36a8388e83678c",
+  "sha256": "1ca205c36a7117cf5acb7c7a8d6cf5c2061af361cd69b950e4839895df050862",
   "uniform": 512
  },
  "config": {
@@ -900,9 +900,9 @@
   "assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
   "data/army/balance.csv": "bf53003122f9905360410abc2dd32796da8c8f2579f535561e946d9f818bc5fb",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "c5f2e011f771f02896f537f59827c083974a92aba1fe1669e2026490fdb2ce1f",
+  "data/screens/map3d/army_art.csv": "7724a1de24775ea66dfcb08496320e1412b88707c9c18274b6ade8348750d957",
   "data/screens/map3d/balance.csv": "d8108334a55a41058ff93c71d3ce313e4f5a197d6a6e57995195ffb4108203c9",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "97480475bffbeb73f2700a23104c50c15ec1a757788c11be04277f6c0c07094a",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "15c037821266843aad83689dbaada61275b55ac5336c302df5b0440db6293cc8",
   "scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
   "scripts/map3d/map3d_cavalry_pivot.gd": "b210d21b965ff11830e290d81b526eb7e713b9ddf2c285467b9838e27a96197d",
   "scripts/map3d/map3d_cavalry_pivot_math.gd": "0c9ae12d36755d2d9b5928d6343c7a6c4bdb871aa62d7c6e0013c729d65911e1",
@@ -919,11 +919,11 @@
    "MARCH"
   ],
   "contact_um": 29338,
-  "digest": "eb1a7207e66f41eb611644ef14a8e8448bb9fe26fe6eefa797c585308e70a2da",
+  "digest": "172ddf8bd88d8e68b94216c49d02e84a185b29965fff81c10b136674fc80c28e",
   "radius_m": 749,
   "turn_q": 400000
  },
- "payload_sha256": "eb1a7207e66f41eb611644ef14a8e8448bb9fe26fe6eefa797c585308e70a2da",
+ "payload_sha256": "172ddf8bd88d8e68b94216c49d02e84a185b29965fff81c10b136674fc80c28e",
  "report": {
   "bounds_um": {
    "contact": 29338,
