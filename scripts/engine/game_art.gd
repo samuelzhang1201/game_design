@@ -36,6 +36,9 @@ const UNIT_IMPACT_SOUNDS := "res://assets/audio/units/impact_sounds.tres"
 ## The one-shot burst at a duel blow's meeting point (Map3DImpactBursts), by
 ## the reply's kind: BLOCK sparks, HIT dust.
 const IMPACT_BURSTS := "res://assets/3D/effects/impact_bursts.tres"
+## The drawn arrow rain (Map3DVolleys): one MultiMeshInstance3D, its arrow's tip
+## at the origin and its shaft along +Z, one figure height to 1.
+const ARROW_VOLLEY := "res://scenes/map3d/effects/arrow_volley.tscn"
 ## The overlay each arm's map figure wears its realm's colour through
 ## (Map3DUnitDress), by army_piece key; an arm with none keeps its colours.
 const UNIT_REALM_TINT := "res://assets/3D/units/realm_tint.tres"

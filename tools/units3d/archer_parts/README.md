@@ -29,7 +29,7 @@ the ARP add-on's handlers made every operator rebuild the rig's depsgraph.
 | WALK | MARCH | yes | marching, and the pivots' body |
 | AIM | GARRISON | yes | garrison, hold (DEFEND falls back to it) |
 | IDLE | STANDBY | yes | standby; its frame 1 is the rest the map sizes the piece by |
-| SHOOT | ATTACK | yes | attack (draw, aim, release, reach back) |
+| SHOOT | ATTACK | yes | attack (draw, aim, release, reach back); a unit the engine has firing in battle (Map3DVolleys), each loosing a drawn arrow at its release (`contact` ATTACK 0.8088, frame 55 of 68) |
 | DRAW | DRAW | no | — |
 | RUN | SPRINT | yes | — |
 | HIT, HIT_2, HIT_3 | same | no | — |

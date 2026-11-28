@@ -48,11 +48,18 @@ feeds back.
 
 ## Design
 
-- **Who shoots.** In a battle past its first round, each drawn `physical_groups` piece's group child whose
-  AnimationPlayer plays ATTACK, whose arm's `contact` names an ATTACK share, not claimed by a duel. Its
-  release is the frame its clip position crosses that share (a wrap counts).
-- **Target.** The nearest drawn, non-ghost piece of the other side of that battle (by the figure's stand).
-  Landing: one of its group figures, hashed, plus a scatter of up to `map3d_volley_scatter_h` figure heights.
+- **Who shoots** (builder's call, found in the real window: a battle's archers stand in their aim, GARRISON,
+  unless the player's own side is ordered to attack, and a foe's order is never shown, so the clip alone would
+  shoot nothing on either side). A unit shoots when the ENGINE has it firing: `BattleRanged.counts` `firing` > 0,
+  read once a game day, in a battle past its first round. Firing is what both sides see, so a foe's archers
+  shoot too without revealing its order. Its standing figures (not walking in, not a duellist or a body) are
+  claimed with the duels' `duel` meta, so the piece's action leaves them be, and loop ATTACK from a hashed phase;
+  once the unit stops firing, a figure is handed back its piece's action. Each figure's release is the frame its
+  ATTACK position crosses the arm's measured `contact` ATTACK share (a wrap counts); the archers' is 0.8088, the
+  key where the arrow bone `cc_arrow` drops to 0.001 (55 of 68).
+- **Target.** The nearest drawn, non-ghost piece of the other side of that battle (by the shooter piece's
+  centre). Landing: one of its figures where it is DRAWN now (a foe still walking in included), hashed, plus a
+  scatter of up to `map3d_volley_scatter_h` figure heights.
 - **Flight.** From `map3d_volley_from_h` figure heights over the shooter's ground to the landing ground;
   time = distance / `map3d_volley_speed_m` clamped to `map3d_volley_min_s`..`_max_s`; apex
   `map3d_volley_apex` × distance over the straight line (a parabola in the share). The arrow is sized in
@@ -71,5 +78,8 @@ feeds back.
 
 ## Left to the builder
 
-Arrow mesh proportions and thickness (tuned in the real window so it reads at the battle zoom), the exact
-CSV values (first guesses, then the review).
+Settled in the real-window review (2026-11-28): the arrow at true proportion (0.455 of a figure, a 0.75 m arrow
+on a 1.65 m man) with a pale, not white, fletching reads at the 260 m zoom; the arc `map3d_volley_apex` 0.25 (the
+independent critic ranked it over 0.15, whose flat shots got lost among the figures; 0.35 left the frame).
+Open: with one ruling-A arrow per figure, a small staged battle (four archer figures) reads as single arrows, not
+rain; the density follows the drawn figures.

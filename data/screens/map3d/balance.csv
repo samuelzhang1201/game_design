@@ -214,7 +214,7 @@ map3d_volley_from_h,0.75,"Arrow rain (view-only): an arrow leaves this many figu
 map3d_volley_speed_m,120,"Arrow rain (view-only): flight time = ground distance / this many world metres a second, held within map3d_volley_min_s..max_s (first guess)"
 map3d_volley_min_s,1.2,"Arrow rain (view-only): the shortest flight, seconds"
 map3d_volley_max_s,3,"Arrow rain (view-only): the longest flight, seconds"
-map3d_volley_apex,0.35,"Arrow rain (view-only): the arc's height over the straight line at its middle, a share of the ground distance (first guess)"
+map3d_volley_apex,0.25,"Arrow rain (view-only): the arc's height over the straight line at its middle, a share of the ground distance (first guess)"
 map3d_volley_scatter_h,1.5,"Arrow rain (view-only): an arrow lands within this many figure heights of a hashed target figure's stand"
 map3d_volley_sink_h,0.15,"Arrow rain (view-only): a landed arrow's tip stands this many figure heights into the ground along its way"
 map3d_volley_stick_s,4,"Arrow rain (view-only): a landed arrow stands in the ground this many seconds before it fades"

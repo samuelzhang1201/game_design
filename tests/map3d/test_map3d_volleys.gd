@@ -101,3 +101,39 @@ func test_balance_keys_exist() -> void:
 	var t := Map3DVolleys.tune_of(SuiteData.repo())
 	for key: String in tune:
 		assert_gt(float(t[key]), 0.0, key)
+
+
+func _player() -> AnimationPlayer:
+	var anim := AnimationPlayer.new()
+	var lib := AnimationLibrary.new()
+	for clip: String in ["ATTACK", "GARRISON"]:
+		var a := Animation.new()
+		a.length = 1.0
+		lib.add_animation(clip, a)
+	anim.add_animation_library("", lib)
+	add_child_autofree(anim)
+	return anim
+
+
+func test_hand_back_gives_the_piece_its_action() -> void:
+	var v := Map3DVolleys.new()
+	var anim := _player()
+	anim.set_meta("duel", true)
+	anim.play("ATTACK")
+	v._claimed[anim] = {"action": "GARRISON"}
+	v._hand_back(anim, v._claimed[anim])
+	assert_false(anim.has_meta("duel"), "released to its piece")
+	assert_eq(anim.current_animation, "GARRISON")
+	assert_false(v._claimed.has(anim))
+
+
+func test_hand_back_leaves_a_body_lying() -> void:
+	var v := Map3DVolleys.new()
+	var anim := _player()
+	anim.set_meta("duel", true)
+	anim.set_meta("fallen", true)
+	anim.play("ATTACK")
+	v._claimed[anim] = {"action": "GARRISON"}
+	v._hand_back(anim, v._claimed[anim])
+	assert_true(anim.has_meta("duel"), "a fallen figure stays the fall's")
+	assert_eq(anim.current_animation, "ATTACK")

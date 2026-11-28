@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://2uix5y43npos"]
+
+[ext_resource type="ArrayMesh" path="res://scenes/map3d/effects/arrow_volley_mesh.tres" id="1_y0hdk"]
+
+[sub_resource type="MultiMesh" id="MultiMesh_4vf2r"]
+transform_format = 1
+use_colors = true
+mesh = ExtResource("1_y0hdk")
+
+[node name="ArrowVolley" type="MultiMeshInstance3D" unique_id=1153637748]
+cast_shadow = 0
+extra_cull_margin = 16384.0
+multimesh = SubResource("MultiMesh_4vf2r")
