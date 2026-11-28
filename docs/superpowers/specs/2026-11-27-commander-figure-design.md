@@ -111,8 +111,13 @@ owner first, renews the SHA and runs `map3d`.
 2. **Ahead of the first rank**: the node on every admitted commanded unit, the flag, scale, planting,
    `MARCH` / `MARCH_WALK` / `STANDBY` by the unit's action and arm, sight, the bench. The walk's stride is measured off
    `MARCH_WALK` first (the gallop's is the cavalry's 2.4224 m). Visual review on the real map.
-3. **The battle**: the stand-off place, the ride to the left rear, `COMMAND`, the ride back. Visual
-   review through `snapshot_screen --battle-case encounter`.
+3. **The battle** (built, "Step 3 as built"): the left rear in the fight, `COMMAND`, the ride there
+   round the left flank and the ride back. The stand-off place stays step 2's interim rule, which the
+   owner has still to rule on (below).
+
+Steps 1–3 are merged or in review; nothing further is planned in this spec. Follow-ups, each its own
+step if the owner wants it: the stand-off rule, a realm tint on the commander's own tunic, a commander
+for split-off units, the Blender fixes to the cloth listed under the look review.
 
 ## Rulings on the five questions (2026-11-28)
 
@@ -186,3 +191,71 @@ settled beyond the plan above:
   runs): low 6.27 ms of 8.5, medium 6.27 of 8.5, high 11.19 of 12, ultra 12.24 of 12.5 — every tier inside
   its budget, so no draw distance was added.
 - Split-off units (`…:living:v2:N`) have no `commander_id`, so they ride without a figure.
+
+## Step 3 as built (2026-11-28)
+
+`Map3DCommanderRider` only (no pinned file, no engine file). The rule as it stands:
+`scripts/map3d/guide/national_flags.md`. What the build settled beyond the plan:
+
+- **A fight is `rounds > 0`** of the unit's battle (`BattleSystem.battle_of`), for the crown's unit
+  and a seen foe's alike — not the unit's action, which a foe's figures do not carry the same way.
+- **A figure claimed by a duel or the mixed fight counts where it STANDS**
+  (`Map3DBattleGroups.stand_xz`, its saved point drawn in; the claim is its player's `duel` meta),
+  every other where it is drawn. Measured off the live nodes alone his place wandered with the mêlée;
+  measured off the stand points alone he rode ahead to where a redeploying block was GOING and stood
+  alone there for the seconds its men took to walk (the first real-window runs showed both). For the
+  same reason `easing` hides him only before the first round.
+- **The place**: outside the left file by `map3d_commander_rear_gap` (1) of his own lengths and half
+  his width, `map3d_commander_rear_back` (0.5) of his lengths behind the rear rank's own line, facing
+  the enemy with his unit, on `COMMAND` at speed 1. The spec's "level with the rear rank" was built
+  first and bracketed at gaps 0.25 / 0.5 / 1: the independent critic found that under 1 the banner's
+  sweep lands among his own left file, and that level with the rear rank his horse — as long as a
+  two-rank block is deep — reaches the first rank, so he read as on the flank, not at the rear.
+- **The ride goes round the left flank by corners**: a leg is clear when both its ends are outside
+  the left file, both ahead of the first rank or both behind the rear rank. Front to left rear is one
+  corner (front-left); a unit whose saved points moved off in the fight (the first real-window run
+  showed the archers shifting ground at a day's end, and him jumping to their new left rear) is
+  reached round the rear-left corner. Only from the block's right, level with it, is there no way,
+  and he is stood at his place at once.
+- **He rides the way he faces, turning as he goes**, so a corner is an arc and he never slides
+  sideways; the last stretch (two turning radii) he rides straight onto his place, only as far as he
+  faces it, and there turns to his unit's facing before he takes `COMMAND` or `STANDBY`. He turns at
+  the Units node's `turn_deg_per_s`. (Built first as a pivot on the spot at each corner: the critic
+  called it a rook's move.)
+- **His hooves are paced off the ground he covers that frame**, held within `map3d_unit_anim_min` /
+  `_max`, so the walk slows through a turn and keeps the ground on a block that is itself marching
+  off. The ride's own pace is `map3d_commander_ride_pace` times `MARCH_WALK`'s.
+- **Out of the battle the piece is REPLACED** (a battle block and an ordinary block are different
+  pieces, so his node is freed with the old one). The old rider's world place is handed to the new
+  piece's rider in the same refresh, who rides on from there; the same hand-over carries him across a
+  formation rebuilt under him. A hand-over is dropped the moment he is not drawn.
+- **No ride** under a swapped state (he keeps the `GameState` he last stood under), on first sight,
+  after he was not drawn, or when his scale changed (a window resized). A place nearer than
+  `map3d_commander_ride_min` of his lengths does not move him at all.
+- **He keeps with a block that walks to new points** (the archers shift ground at a day's end and
+  walk there over real seconds): while his place moves at `map3d_unit_anim_min` of his walk's pace
+  or more he walks beside it at its speed; a slower drift he lets go and commands, and rides after
+  it once it is `ride_min` off. Riding always to the exact place instead kept him walking on the
+  spot through a whole day of a slow advance, never commanding.
+- **A battle block's root jumps to the unit's new place at a day's end** while its figures still
+  stand where they were. He is the root's child, so he jumped with it and waited alone, hundreds of
+  metres ahead, for his men to arrive (seen in the first real-window runs). He now keeps his own
+  ground when the root moves (`_anchor`).
+- **Walking in** he keeps step 2's behaviour (not drawn until the block stands): the stand-off place
+  depends on the room between two lines that are both still walking.
+- **What the real staged battles showed** (`snapshot_screen --battle-case field`, foot against foot
+  and archers against foot): under step 2's stand-off rule NEITHER side's commander is drawn in the
+  stand-off — the lines the engine draws stand about two of his lengths apart, under the rule's 2.5.
+  So in play, as the rule stands, he is not seen from contact until the first round, when he appears
+  at the left rear; the ride from the front is seen only where a stand-off is wider. The review's
+  ride was shot with `map3d_commander_standoff_share` forced to 0.5 for the shot (one commander then
+  has his place between the lines). The stand-off rule is the open question for the owner.
+- **Review** (real windows, `snapshot_screen --battle-case field --battle-arm archers --battle-foe
+  foot`; sheets and the scratch shot flags in the session's notes folder, `commander-step3-review/`):
+  one independent critic pass; its three defects fixable by a number or a placement were fixed (the
+  gap, the half length back, the arced corners) and re-shot. Left open, each needing art or a ruling:
+  he is not drawn in a close stand-off; both sides' commanders wear the same maroon; the horse stands
+  stock-still under `COMMAND`; `MARCH_WALK` is a short, high-kneed step.
+- **Bench** (`bench.tscn --battle-arm foot`, still camera, the owner's editor and other sessions'
+  Godot running): low 6.31 ms of 8.5, medium 7.21 of 8.5, high 10.18 of 12, ultra 10.61 of 12.5 — no
+  draw distance was added.
