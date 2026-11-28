@@ -41,26 +41,54 @@ stopped offscreen and freed with the piece, and needs no edit of the royal carri
 - **Hung unseen**: a new rider is invisible until his first `stand()` on the next frame, when his piece
   is seated — before that his size and place are not his, and an invisible mesh takes no click.
 - **Where he stands** (`_place`, each frame from the live piece; re-solved only when the piece's
-  transform, extent or his scale changes): alone, centred on the files, straight ahead of the first rank
-  — the foremost slot plus a figure's half depth (`front_of` over the piece's `slots`, not its half
-  `extent`: a block's ranks do not straddle its centre), then `map3d_commander_gap` of his own lengths
-  clear and half his length (`lead_m`) — facing the unit's way, planted on his own ground
-  (`Map3DUnitRig.plant`). The same on the march, standing by, in garrison and holding a front line.
-- **A battle block** (`physical_groups`): not drawn while its figures walk to their points (`easing`).
-  Then, through the stand-off (`BattleSystem.battle_of(...).rounds` 0), he stands ahead of the foremost drawn figure in the frame of the unit's saved `facing_deg`, on
-  STANDBY, `map3d_commander_standoff_share` of the clear ground between his first rank and the nearest
-  drawn enemy figure of his battle (`_room`, `standoff_lead`), never past his ordinary lead — the two
-  sides' commanders keep the middle of that ground between them. Where that share would back his tail
-  into his own rank (lines closer than his half length over that share) he is NOT DRAWN. Once a
-  round is fought he is not drawn either: his ride to the unit's left rear and `COMMAND` are the
-  spec's step 3.
+  transform, extent or his scale changes, in a battle block, or while he rides): alone, centred on the
+  files, straight ahead of the first rank — the foremost slot plus a figure's half depth (`front_of` over
+  the piece's `slots`, not its half `extent`: a block's ranks do not straddle its centre), then
+  `map3d_commander_gap` of his own lengths clear and half his length (`lead_m`) — facing the unit's way,
+  planted on his own ground (`Map3DUnitRig.plant`). The same on the march, standing by, in garrison and
+  holding a front line.
+- **A battle block before its first round** (`physical_groups`, `BattleSystem.battle_of(...).rounds` 0,
+  the stand-off; a block whose battle is gone too): not drawn while its figures walk to their points
+  (`easing`). Then he stands ahead of the foremost drawn figure in the frame of the unit's saved
+  `facing_deg`, on STANDBY, `map3d_commander_standoff_share` of the clear ground between his first rank
+  and the nearest drawn enemy figure of his battle (`_room`, `standoff_lead`), never past his ordinary
+  lead — the two sides' commanders keep the middle of that ground between them. Where that share would
+  back his tail into his own rank (lines closer than his half length over that share) he is NOT DRAWN.
+- **In the fight** (`rounds > 0`, the crown's unit and a seen foe's alike, each in its own facing's
+  frame, so a foe's is on HIS left seen facing the crown): at the unit's LEFT REAR — outside the left
+  file by `map3d_commander_rear_gap` of his own lengths and half his width (`side_m`), level with the
+  rear rank (`left_rear_of`) — facing the enemy with his unit, on `COMMAND` at its own speed. A figure
+  counts where it is DRAWN, except one a duel or the mixed fight has claimed (its player's `duel`
+  meta), which counts where it STANDS (`Map3DBattleGroups.stand_xz`): men gone to fight do not move
+  him, a block walking to new saved points does. The figures' steps (`easing`) do not hide him.
+- **He rides between his places** (`route`, `ride`; view-only, real seconds, so on a stopped clock too):
+  a new place further than `map3d_commander_ride_min` of his lengths is ridden to at
+  `map3d_commander_ride_pace` times `MARCH_WALK`'s own pace (a nearer one does not move him), round the
+  unit's LEFT flank and never through it — a leg is clear when both its ends are outside the left file,
+  both ahead of the first rank or both behind the rear rank; he goes straight when that is clear, else
+  by the front-left corner, the rear-left corner or both, each as far out as the further-out end and
+  his side gap clear of the block at least. He turns into his way at the Units node's `turn_deg_per_s`
+  and rides only as far as he faces it (a horse does not slide sideways), plays `MARCH_WALK` at the
+  ground he covers that frame (within `map3d_unit_anim_min` / `_max`), and at the end turns to his
+  unit's facing before he takes his clip. He keeps with a place that walks on (his block going to
+  new points) while it covers ground at `map3d_unit_anim_min` of his walk's pace or more; a slower
+  drift he lets go, commanding, and rides after it once it is `map3d_commander_ride_min` off. A battle
+  block's root that jumps to its unit's new place (a day's end) does not carry him: he keeps his own
+  ground (`_anchor`). A piece REPLACED in a refresh (a block gone into its battle or come out of
+  it, a formation rebuilt) hands its drawn rider's world place to the new piece's rider (`sync`: the
+  old node is still queued for deletion), who rides on from there. NEVER a ride: under a swapped state
+  (a loaded save: he keeps the `GameState` he last stood under), on first sight, after he was not
+  drawn (a tight stand-off, the walk-in, symbol mode, a hidden view), when his scale changed, or with
+  no clear way round the left (he stands on the block's right, level with it) — he is stood at his
+  place at once.
 - **Size**: `map3d_commander_size` is his `army_art.csv`-style size (his model box, banner tip
   included, over the piece height), measured so his horse is the cavalry's horse at every camera
   whatever arm he leads (`test_map3d_commander_rider.gd` checks it against the two installed models;
   re-measure after a re-export of either).
-- **Clip** (`clip_for`): `MARCH` (the gallop) ahead of an arm whose `army_art.csv` `commander_gallops`
-  is 1 (the cavalry), `MARCH_WALK` ahead of every other arm, only while an ordinary piece's action is
-  MARCH; `STANDBY` otherwise. His march keeps his unit's ground (`march_rate`): the men's plan-timed
+- **Clip** (`clip_for`): `COMMAND` in a battle block's fight; `MARCH` (the gallop) ahead of an arm
+  whose `army_art.csv` `commander_gallops` is 1 (the cavalry), `MARCH_WALK` ahead of every other arm,
+  only while an ordinary piece's action is MARCH; `STANDBY` otherwise; `MARCH_WALK` on a ride. His
+  march keeps his unit's ground (`march_rate`): the men's plan-timed
   pace (`pace_key`) carried over by the two strides (`map3d_commander_walk_stride_m` measured off
   `MARCH_WALK`, `map3d_commander_gallop_stride_m` the cavalry's lock) and scales. Each clip starts at a
   phase hashed from the unit's code.
