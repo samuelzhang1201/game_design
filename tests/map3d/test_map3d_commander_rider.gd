@@ -306,6 +306,12 @@ func test_in_a_stand_off_he_is_ahead_of_the_block() -> void:
 		assert_almost_eq(Vector2(ahead.x, ahead.z).normalized().dot(block["face"]), 1.0, 1e-4, code + " faces the enemy")
 		assert_eq(_clip(rider), "STANDBY")
 		assert_eq(int(piece["figures"]), (piece["groups"] as Array).size(), "no group is his")
+		# a click on him there is a click on his unit, and nobody else stands on that ground
+		assert_lt(Map3DPicker.ray_depth(piece, rider.global_position + Vector3.UP * 500.0, Vector3.DOWN), INF,
+			code + ": a ray on him beside his first rank meets his unit's piece")
+		rider.visible = false
+		assert_eq(Map3DPicker.ray_depth(piece, rider.global_position + Vector3.UP * 500.0, Vector3.DOWN), INF)
+		rider.visible = true
 		ends[code] = rider.global_position
 	# each on his own left: the two stand on opposite sides of the field, not nose to nose
 	var own_block := _block(ctx, layer.built_piece(own))
