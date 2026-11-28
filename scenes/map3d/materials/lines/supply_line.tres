@@ -5,14 +5,17 @@
 [resource]
 render_priority = 0
 shader = ExtResource("1_c4mjx")
-shader_parameter/colour = Color(0.85882354, 0.6392157, 0.2, 1)
-shader_parameter/glow = Color(0.9490196, 0.78431374, 0.3764706, 1)
-shader_parameter/edge = Color(0.22745098, 0.16470589, 0.078431375, 0.9019608)
-shader_parameter/width_px = 6.0
+shader_parameter/colour = Color(0.74, 0.58, 0.27, 1)
+shader_parameter/halo = Color(0.25, 0.17, 0.07, 0.9)
+shader_parameter/mark = Color(0.25, 0.17, 0.07, 0.85)
+shader_parameter/width_px = 14.0
 shader_parameter/lift_px = 10.0
+shader_parameter/core_share = 0.25
 shader_parameter/edge_share = 0.36
-shader_parameter/dash_px = 26.0
-shader_parameter/gap_px = 54.0
-shader_parameter/flow_px_s = 60.0
-shader_parameter/glow_strength = 1.0
+shader_parameter/mark_stroke_px = 2.5
+shader_parameter/mark_kind = 1
+shader_parameter/mark_share = 0.55
+shader_parameter/dash_px = 5.0
+shader_parameter/gap_px = 52.0
+shader_parameter/flow_px_s = 18.0
 shader_parameter/px_per_dist = 0.001
