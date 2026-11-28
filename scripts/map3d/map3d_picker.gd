@@ -226,7 +226,10 @@ static func ray_depth(piece: Dictionary, from: Vector3, dir: Vector3) -> float:
 	if not piece.has("node"):
 		return best
 	for mi: MeshInstance3D in Map3DUnits.meshes(piece["node"]):
-		var hit: Variant = (mi.global_transform * mi.get_aabb()).intersects_ray(from, dir) if mi.is_visible_in_tree() else null
+		var box := mi.get_aabb()
+		if mi.has_meta(Map3DCommanderRider.PICK_TOP):  # a commander: his horse and body, not the air round his banner
+			box.size.y = minf(box.size.y, float(mi.get_meta(Map3DCommanderRider.PICK_TOP)) - box.position.y)
+		var hit: Variant = (mi.global_transform * box).intersects_ray(from, dir) if mi.is_visible_in_tree() else null
 		if hit != null:
 			best = minf(best, from.distance_to(hit as Vector3))
 	return best

@@ -2,7 +2,7 @@ extends GutTest
 ## The mounted commander's figure as installed (tools/units3d/commander_arp/; spec
 ## 2026-11-27-commander-figure-design): the cavalry's skeleton contract plus the banner's
 ## cloth chain, one mesh of two surfaces, four looping clips, and a cloth that takes any
-## realm's flag. Nothing draws him on the map yet.
+## realm's flag. Where he stands on the map: test_map3d_commander_rider.gd.
 
 const SuiteData := preload("res://tests/suite_data.gd")
 
