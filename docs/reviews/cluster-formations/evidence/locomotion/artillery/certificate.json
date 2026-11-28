@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "bbe89838d12eca7f5846590c4dee15aedda08022e781b69711a88efde6a98425",
+  "sha256": "912ea992716230fc8e9aa2bd3b4883dec27c9798b305965e6c8dd2e23e0b145e",
   "uniform": 512
  },
  "config": {
@@ -414,24 +414,24 @@
  },
  "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
  "input_sha256": {
-  "assets/3D/units/infantry/infantry.glb": "fa7fdcb75f50b1b77756bffa325e309600c1d1b4283a9085b38737234fcab94d",
+  "assets/3D/units/infantry/infantry.glb": "aeca28e607eb8b580c5a5edf9b6f92750220e7e306b2772b12f01cdec9341e91",
   "assets/3D/units/infantry/infantry.glb.import": "622a873cecde657eefd5ffac2281e66d1d98554ac85c6cfc0fad6d367c25cc65",
-  "assets/3D/units/infantry/infantry_infantry_atlas.jpg": "5f6be178220a2305f4b3d31ce3fdabef24f1a364356e8381c2da74e333030e6a",
-  "assets/3D/units/infantry/infantry_infantry_atlas.jpg.import": "271eb1f94d0e35b3273bdfd6064d088e3af29ef508fcc064b69aa856afb3b457",
-  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg": "128ed90d97360fef366ac05a7e5824cf95357a61a023769adf68ef5d2bb9e20f",
-  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg.import": "c759b2678a820c71304167b6873d5b65d894bf2228906af7c12a19aab8c65f88",
-  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "532ca77c142fe4620751d00195e2c62f1ebb476ef523b41fa5a27ae813259f27",
-  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg.import": "88390be297d3271f1f4a43cccfd9d37dc68bdc5cec98712d00f552c9b6cf1542",
+  "assets/3D/units/infantry/infantry_infantry_atlas.jpg": "b93b631837bab25716f128469a951c44dd55d0abbdc75e342be713c590ceded0",
+  "assets/3D/units/infantry/infantry_infantry_atlas.jpg.import": "d1608d7fbf9160d80362f76be8372a274f5cf11b8d2ee5bfcd7e1c55820ea046",
+  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg": "374f9f032614496eb0aec3f44076f10514c807ededc1cbb8f5e1e0693115fbff",
+  "assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg.import": "36f986e41607a8ef71e09f2d8887fdbd82101a2a6b83bda28c57a468564a8f04",
+  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg": "d6f56e2def31bf535bd1c56a9b5a2646ae576d72e4b5bdc19d84828c0dbba9b6",
+  "assets/3D/units/infantry/infantry_infantry_atlas_n.jpg.import": "dd0e96ad674d7fdf7f89d72135599aacfce3de3d51a24f2f7661550fd3cfca1c",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
-  "data/army/balance.csv": "d22c86e3f2a730b1fd05c2bc7616d2057a0ddbe06ead85eb42e4dd68b11c0db4",
+  "data/army/balance.csv": "bf53003122f9905360410abc2dd32796da8c8f2579f535561e946d9f818bc5fb",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "ee1a91005a647ee1fc6de18febc77afe9b0b7605d24ef3c5d7de4be7dd973939",
-  "data/screens/map3d/balance.csv": "33dea7e472bfe0b9245734daaa8d631526fbb67eaf9f8eb20f819bfb26446f20",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "4245e17bf0ec85f220396a321db06d151827304f57b7d2be808115f7ff7c877b",
+  "data/screens/map3d/army_art.csv": "c5f2e011f771f02896f537f59827c083974a92aba1fe1669e2026490fdb2ce1f",
+  "data/screens/map3d/balance.csv": "d8108334a55a41058ff93c71d3ce313e4f5a197d6a6e57995195ffb4108203c9",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "97480475bffbeb73f2700a23104c50c15ec1a757788c11be04277f6c0c07094a",
   "scenes/models/units/infantry.tscn": "69256e86dfd2d93050522bdcef422afa3ce3d4c2472d063752b7b085da848921",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
-  "scripts/map3d/map3d_infantry_locomotion.gd": "fe9b7571d2f0ca286ba97e0f4c6326fe195277382f477bee651040f05c6ebaa5",
-  "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
+  "scripts/map3d/map3d_infantry_locomotion.gd": "ec3c26c6682d1685b15103db04f1a911237b4fc6e6bdf706422407361bfb79e3",
+  "scripts/map3d/map3d_infantry_pivot.gd": "00e8d95600b94e7c338f812022b720054e21cdc86a9e69dea4eadf95a65829fa",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
@@ -443,11 +443,11 @@
    "MARCH"
   ],
   "contact_um": 23217,
-  "digest": "5215784050d039ee01361b41bf8ee2b08a7e15f499cddd1dcd428d0a3d5771f6",
+  "digest": "27b694effc6e290f18513ee4e28e27fa0b688b4689302afd9ea30783b74d9816",
   "radius_m": 875,
   "turn_q": 400000
  },
- "payload_sha256": "5215784050d039ee01361b41bf8ee2b08a7e15f499cddd1dcd428d0a3d5771f6",
+ "payload_sha256": "27b694effc6e290f18513ee4e28e27fa0b688b4689302afd9ea30783b74d9816",
  "report": {
   "bounds_um": {
    "contact": 23217,
@@ -465,7 +465,7 @@
     "phase": 0.303030305493305,
     "surface": 0,
     "turn_udeg": null,
-    "vertex": 4870
+    "vertex": 4874
    }
   },
   "hover": {
@@ -546,7 +546,7 @@
     "phase": 0.0,
     "surface": 0,
     "turn_udeg": -1,
-    "vertex": 7122
+    "vertex": 7126
    }
   },
   "planting_band": {
@@ -585,7 +585,7 @@
        0.0
       ],
       "turn_udeg": null,
-      "vertex": 613
+      "vertex": 611
      }
     },
     {
@@ -606,7 +606,7 @@
        0.0
       ],
       "turn_udeg": -1,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -627,7 +627,7 @@
        0.0
       ],
       "turn_udeg": -2000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -648,7 +648,7 @@
        0.0
       ],
       "turn_udeg": -45000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -669,7 +669,7 @@
        0.0
       ],
       "turn_udeg": -90000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -690,7 +690,7 @@
        0.0
       ],
       "turn_udeg": -135000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -711,7 +711,7 @@
        0.0
       ],
       "turn_udeg": -179999999,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -732,7 +732,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -1,
-      "vertex": 7712
+      "vertex": 7718
      }
     },
     {
@@ -753,7 +753,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -2000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -774,7 +774,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -45000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -795,7 +795,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -90000000,
-      "vertex": 7712
+      "vertex": 7718
      }
     },
     {
@@ -816,7 +816,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -135000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -837,7 +837,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -179999999,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -858,7 +858,7 @@
        0.0
       ],
       "turn_udeg": 1,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -879,7 +879,7 @@
        0.0
       ],
       "turn_udeg": 2000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -900,7 +900,7 @@
        0.0
       ],
       "turn_udeg": 45000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -921,7 +921,7 @@
        0.0
       ],
       "turn_udeg": 90000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -942,7 +942,7 @@
        0.0
       ],
       "turn_udeg": 135000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -963,7 +963,7 @@
        0.0
       ],
       "turn_udeg": 179999999,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -984,7 +984,7 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -1005,7 +1005,7 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -1026,7 +1026,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 1,
-      "vertex": 552
+      "vertex": 550
      }
     },
     {
@@ -1047,7 +1047,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 2000000,
-      "vertex": 7252
+      "vertex": 7255
      }
     },
     {
@@ -1068,7 +1068,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 45000000,
-      "vertex": 7484
+      "vertex": 7487
      }
     },
     {
@@ -1089,7 +1089,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 90000000,
-      "vertex": 552
+      "vertex": 550
      }
     },
     {
@@ -1110,7 +1110,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 135000000,
-      "vertex": 7301
+      "vertex": 7304
      }
     },
     {
@@ -1131,7 +1131,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 179999999,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -1152,7 +1152,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 180000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     },
     {
@@ -1173,7 +1173,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 180000000,
-      "vertex": 7608
+      "vertex": 7614
      }
     }
    ],
@@ -1193,7 +1193,7 @@
      0.01904761904761905
     ],
     "turn_udeg": 180000000,
-    "vertex": 7608
+    "vertex": 7614
    }
   },
   "skin": {
@@ -1223,7 +1223,7 @@
       "surface": 0,
       "touchdown_phase": 0.208984375,
       "turn_udeg": null,
-      "vertex": 7670
+      "vertex": 7676
      }
     },
     "PIVOT_LEFT": {
@@ -1239,7 +1239,7 @@
       "surface": 0,
       "touchdown_phase": 0.224999994039536,
       "turn_udeg": -1,
-      "vertex": 7122
+      "vertex": 7126
      }
     },
     "PIVOT_RIGHT": {
@@ -1255,7 +1255,7 @@
       "surface": 0,
       "touchdown_phase": 0.224999994039536,
       "turn_udeg": 1,
-      "vertex": 7122
+      "vertex": 7126
      }
     }
    },
@@ -1270,7 +1270,7 @@
     "surface": 0,
     "touchdown_phase": 0.208984375,
     "turn_udeg": null,
-    "vertex": 7670
+    "vertex": 7676
    }
   },
   "stance": {

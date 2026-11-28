@@ -25,6 +25,7 @@ static func _context(repo: DataRepository, state: GameState) -> Array:
 
 @warning_ignore("integer_division")
 static func _share(daily: int, count: int, slice: int) -> int:
+	@warning_ignore("integer_division")
 	return daily / count + (1 if slice < daily % count else 0)
 
 static func _source_error(repo: DataRepository, source: GameState, boundary: Dictionary) -> String:
@@ -274,9 +275,9 @@ static func commit_candidate(repo: DataRepository, source: GameState, proposed: 
 			var intent: Dictionary = {}
 			for item: Dictionary in staged.intents:
 				if item.unit == code and item.slot == move.slot: intent = item
-			var reference: Array = []
-			for point: Array in intent.path_m: reference.append([int(path[0][0]) + int(point[0]) - int(move.start[0]), int(path[0][1]) + int(point[1]) - int(move.start[1])])
-			var prefix := ArmySystem._body_route_prefix(reference, BodyMotion._loco_path(move), true)
+			var ref_item: Array = []
+			for point: Array in intent.path_m: ref_item.append([int(path[0][0]) + int(point[0]) - int(move.start[0]), int(path[0][1]) + int(point[1]) - int(move.start[1])])
+			var prefix := ArmySystem._body_route_prefix(ref_item, BodyMotion._loco_path(move), true)
 			var length := BodyMotion._length(prefix)
 			if length < minimum:
 				minimum = length

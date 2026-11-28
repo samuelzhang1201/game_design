@@ -129,3 +129,112 @@ static func men_for(repo: DataRepository, state: GameState, id: String, tactic: 
 	if alloc.is_empty():
 		return pool(repo, state, id) if tactic == "blockade" else 0
 	return int(alloc.get(tactic, 0))
+
+
+## --- bombardment (spec §4.2, step 8) ----------------------------------------
+
+## The guns unit `code` can fire: its `artillery` × fit / personnel capacity,
+## whole (guns whose crews still stand).
+static func fit_guns(repo: DataRepository, state: GameState, code: String) -> int:
+	var reg := ArmySystem.regiment(repo, code, state)
+	var guns := int(float(reg.get("artillery", 0)))
+	var cap := ArmySystem.personnel_capacity(repo, reg)
+	if guns <= 0 or cap <= 0:
+		return 0
+	@warning_ignore("integer_division")
+	return guns * mini(cap, ArmySystem.fit_count(repo, state, code)) / cap
+
+
+## The works after a day: `crewed` engines knock `damage` each off `integrity`
+## (never below 0), then the defenders mend `repair` while it stands above 0
+## (never above 1000).
+static func batter(integrity: int, crewed: int, damage: int, repair: int) -> int:
+	var left := maxi(0, integrity - maxi(0, crewed) * maxi(0, damage))
+	return mini(1000, left + maxi(0, repair)) if left > 0 else 0
+
+
+## Record `id`'s engines and bombardment today (SiegeSystem._siege_day, after
+## the plan, before the blockade). A town with no works to batter
+## (siege_tactics.csv bombard_damage 0) spends nothing. Else: the engines men's
+## work builds engines (siege_engine_man_days each, siege_engine_gold paid on
+## finishing — the crown's treasury, an AI record's leading host's plunder;
+## short of it the work waits at one engine); the bombard men crew the
+## stationed fit guns first, then the built engines (siege_engine_crew each);
+## the walls take crewed × bombard_damage and the defenders mend
+## garrison_fit × siege_repair_per_100_men / 100 (batter); every
+## siege_engine_wear_days a built engine fired, one is lost; integrity at
+## siege_breach_integrity or below sets breach 1 for good. Each built, worn
+## engine and the breach is a reasoned `history` line.
+static func bombard(repo: DataRepository, state: GameState, id: String) -> void:
+	var rec: Dictionary = state.sieges[id]
+	var town := String(rec["town"])
+	var damage := int((repo.siege_tactics.get(TownMilitia.works_of_town(repo, town), {}) as Dictionary).get("bombard_damage", 0))
+	if damage <= 0:
+		return
+	var label := String((repo.burgs.get(town, {}) as Dictionary).get("label", town))
+	var history: Array = rec.get("history", [])
+	var today := state.absolute_day()
+	var need := maxi(1, int(repo.bal("siege_engine_man_days")))
+	var built := int(rec.get("engines_built", 0))
+	var work := int(rec.get("engine_work", 0)) + men_for(repo, state, id, "engines")
+	while work >= need:
+		if not _pay_engine(repo, state, rec, label):
+			work = need
+			break
+		built += 1
+		work -= need
+		history.append({"day": today, "kind": "engine_built", "engines": built,
+			"reason": "siege engine %d built before %s" % [built, label]})
+	var guns := 0
+	for c: String in SiegeSystem.stationed(repo, state, id):
+		guns += fit_guns(repo, state, c)
+	@warning_ignore("integer_division")
+	var crewed := mini(guns + built, men_for(repo, state, id, "bombard") / maxi(1, int(repo.bal("siege_engine_crew"))))
+	@warning_ignore("integer_division")
+	var repair := SiegeSystem.garrison_fit(repo, state, town) * int(repo.bal("siege_repair_per_100_men")) / 100
+	var integrity := batter(int(rec["integrity"]), crewed, damage, repair)
+	var wear := int(rec.get("engine_wear", 0))
+	if crewed > guns and built > 0:
+		wear += 1
+		if wear >= maxi(1, int(repo.bal("siege_engine_wear_days"))):
+			built -= 1
+			wear = 0
+			history.append({"day": today, "kind": "engine_worn", "engines": built,
+				"reason": "a siege engine before %s worn out: %d left" % [label, built]})
+	rec["engines_built"] = built
+	rec["engine_work"] = work
+	rec["engine_wear"] = wear
+	rec["integrity"] = integrity
+	if int(rec.get("breach", 0)) == 0 and integrity <= int(repo.bal("siege_breach_integrity")):
+		rec["breach"] = 1
+		history.append({"day": today, "kind": "breach", "integrity": integrity,
+			"reason": "the walls of %s breached at %d/1000" % [label, integrity]})
+	rec["history"] = history
+
+
+## Pays one engine's siege_engine_gold for record `rec`: the crown's from its
+## treasury (WorldLedger), an AI record's from its leading host's plunder.
+## False, nothing paid, when the chest holds less.
+static func _pay_engine(repo: DataRepository, state: GameState, rec: Dictionary, label: String) -> bool:
+	var gold := int(repo.bal("siege_engine_gold"))
+	if String(rec["attacker"]) == repo.resolve_realm("player_realm"):
+		if float(WorldLedger.value_of(repo, state, "metrics.treasury")) < float(gold):
+			return false
+		return not WorldLedger.apply(repo, state, "metrics.treasury", -float(gold),
+			"siege engine before " + label, "siege_engine").has("error")
+	var mind: Dictionary = state.ai_hosts.get(SiegeSystem.lead_of(repo, state, String(rec["town"])), {})
+	if int(mind.get("plunder", 0)) < gold:
+		return false
+	mind["plunder"] = int(mind["plunder"]) - gold
+	return true
+
+
+## The "siege works" figure for one arm (spec §4.4): the walls' bonus
+## `defend` (army_town_defence.csv) scaled by `integrity`,
+## 1000 + (defend − 1000) × integrity / 1000; for a unit that already `holds`
+## the works (ArmySystem.works_of), that over the full figure, never above 1000.
+static func works_permille(defend: int, integrity: int, holds: bool) -> int:
+	@warning_ignore("integer_division")
+	var scaled := 1000 + (defend - 1000) * clampi(integrity, 0, 1000) / 1000
+	@warning_ignore("integer_division")
+	return mini(1000, scaled * 1000 / defend) if holds and defend > 0 else scaled

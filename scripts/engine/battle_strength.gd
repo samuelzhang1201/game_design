@@ -79,6 +79,8 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 	var storm_works := _works_of_town(repo, storm_town)
 	var storm_weight := 0
 	var storm_arms: Array[String] = []
+	var siege := {} if attacking else _besieged_works(repo, state, code)
+	var walls_weight := 0
 	if capacity > 0:
 		for arm: String in repo.world_table("military", "unit_types"):
 			var count := int(float(reg.get(arm, 0)))
@@ -104,6 +106,9 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 				var attack := int((repo.army_town_defence.get("%s|%s" % [storm_works, arm], {}) as Dictionary).get("attack", 1000))
 				storm_weight += power * attack
 				storm_arms.append("%s %d" % [arm, attack])
+			if not siege.is_empty():
+				var defend := int((repo.army_town_defence.get("%s|%s" % [siege["works"], arm], {}) as Dictionary).get("defend", 1000))
+				walls_weight += power * SiegeTactics.works_permille(defend, int(siege["integrity"]), works != "")
 	@warning_ignore("integer_division")
 	var base := equipment * int(quality["power_permille"]) / 1000
 	@warning_ignore("integer_division")
@@ -127,6 +132,11 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 			"permille": storm_weight / equipment if equipment > 0 else 1000,
 			"reason": "storming the %s of %s (%s)" % [storm_works,
 				String((repo.burgs[storm_town] as Dictionary).get("label", storm_town)), ", ".join(storm_arms)]})
+	if not siege.is_empty():
+		@warning_ignore("integer_division")
+		factors.append({"category": "formation_terrain", "source": "town:works",
+			"permille": walls_weight / equipment if equipment > 0 else 1000,
+			"reason": "the %s of %s at %d/1000" % [siege["works"], siege["label"], int(siege["integrity"])]})
 	factors.append_array(extra_factors.duplicate(true))
 	for factor: Dictionary in factors:
 		factor["min_permille"] = int(repo.bal("battle_strength_factor_min_permille"))
@@ -139,6 +149,24 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 static func _storming_town(state: GameState, code: String) -> String:
 	var battle := BattleSystem.battle_of(state, code)
 	return String(battle.get("town", "")) if code in (battle.get("att", []) as Array) else ""
+
+
+## The besieged works defender `code` fights from (spec 2026-11-18-player-siege-design §4.4,
+## "siege works"): {works, integrity (0 with a breach), label} when it stands on the defending
+## side of a battle at a walled town with a siege record and the record's town lists it among
+## its defenders (SiegeSystem.defenders_of); {} else (an open town keeps its `town` row).
+static func _besieged_works(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var battle := BattleSystem.battle_of(state, code)
+	var town := String(battle.get("town", ""))
+	if town == "" or not code in (battle.get("def", []) as Array):
+		return {}
+	var id := SiegeRecord.of_town(state, town)
+	var works := _works_of_town(repo, town)
+	if id == "" or works == "town" or not code in SiegeSystem.defenders_of(repo, state, town):
+		return {}
+	var rec: Dictionary = state.sieges[id]
+	return {"works": works, "integrity": 0 if int(rec.get("breach", 0)) == 1 else int(rec.get("integrity", 0)),
+		"label": String((repo.burgs[town] as Dictionary).get("label", town))}
 
 
 ## A town's best works, "citadel" over "walls" over "town" (as ArmySystem.works_of for a seat).

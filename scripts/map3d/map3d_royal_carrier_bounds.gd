@@ -202,7 +202,7 @@ static func _sample_enclosure(t: Dictionary, q: Array, velocity: Array, accelera
 	if (pixel.control&4) != 0: return _reject("terrain_hole",{"cell":pixel.index,"fallback_sea":t.sea})
 	var step: float = t.spacing
 	var scaled: Array = []
-	var snapped: Array = []
+	var snapped_pts: Array = []
 	for axis in 2:
 		var divided: Array = _interval(q[axis],[step,step],"/")
 		if not _bounded(divided): return _reject("native_coordinate_range",{"q":q})
@@ -216,10 +216,10 @@ static func _sample_enclosure(t: Dictionary, q: Array, velocity: Array, accelera
 		if last-first > 1: return _reject("native_coordinate_box_too_wide",{"q":q,"snap_cells":[first,last]})
 		var candidates: Array = []
 		for index: int in range(first,last+1): candidates.append(_interval([float(index),float(index)],[step,step],"*"))
-		snapped.append(candidates)
+		snapped_pts.append(candidates)
 	var radius: Array = [INF,-INF]
-	for sx: Array in snapped[0]:
-		for sz: Array in snapped[1]:
+	for sx: Array in snapped_pts[0]:
+		for sz: Array in snapped_pts[1]:
 			var squared: Array = _interval(_square(_interval(q[0],sx,"-")),_square(_interval(q[1],sz,"-")),"+")
 			radius = _hull(radius,squared)
 	if not _bounded(radius): return _reject("native_radius_range",{"q":q,"radius":radius})

@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "4c98148371ed306133b2482f2e015225a135287a1765c59cbe0c1dfa64de77a0",
+  "sha256": "a4cc8487d6afe6022583e863aaeb7b67dcaa498d811b2e0a2d40abbe5963bf4f",
   "uniform": 512
  },
  "config": {
@@ -414,26 +414,26 @@
  },
  "digest_rule": "sha256 of canonical JSON (sorted keys, no spaces) of every field except payload_sha256, digest_rule and locomotion_certificate",
  "input_sha256": {
-  "assets/3D/units/axemen/axemen.glb": "ebaf4eb91c286703ac43563c8042d36f797841b81f16b586270675aef60f6728",
+  "assets/3D/units/axemen/axemen.glb": "32a4b382240a19364a355fa90acce2a4387d6a6eacd281eeeda93803688c3a61",
   "assets/3D/units/axemen/axemen.glb.import": "8c4d3ea770adee5f42cf5f04bd6f12653b75f55d77a039d349283332264389bf",
-  "assets/3D/units/axemen/axemen_axemen_atlas.jpg": "a42e81dbf6fe606d4d85364ac1f4d7395b8b7e6bfe2ea960d7eea9154a4d46d6",
+  "assets/3D/units/axemen/axemen_axemen_atlas.jpg": "559cc88cba98f985aaa086bfc4cf1ff6dca3125e2d285b22ebabaeee1c8ad93d",
   "assets/3D/units/axemen/axemen_axemen_atlas.jpg.import": "e2725d93924a341b656b521c78bd4469ac86bfa7b3bebccf5c5551f684d922a0",
-  "assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg": "8a253b7d231c93e85a04e0a9b0817dc96961b705649c1a6805fb222d7ff6a26f",
+  "assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg": "05df6128430af00d598b3840ac008b5df002b03882196bdb65f9fa57e809c886",
   "assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg.import": "6c562853e71ae3b84e43210d42fb0ccc580734db83bf53706f82f486a509be89",
-  "assets/3D/units/axemen/axemen_axemen_atlas_n.jpg": "5ef0e8c3d09acb87488ca7da474c7dd5a691629e924cfe4b3f8bd5b37c3e50cf",
+  "assets/3D/units/axemen/axemen_axemen_atlas_n.jpg": "dc1149255706f7d488936c18f6b316a6f66339661dd3b3debba2f1e78ca334d5",
   "assets/3D/units/axemen/axemen_axemen_atlas_n.jpg.import": "837d4a5606836554a50ce1003814c8512a9af5751208ca3e5cc9d6bc8c6ebca6",
   "assets/3D/units/axemen/axemen_pivot_plan.json": "b953c2e3a4b5c49404f979e8d5ea1a5987cf4e507058c0629bebc3972fb761c9",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
-  "data/army/balance.csv": "d22c86e3f2a730b1fd05c2bc7616d2057a0ddbe06ead85eb42e4dd68b11c0db4",
+  "data/army/balance.csv": "bf53003122f9905360410abc2dd32796da8c8f2579f535561e946d9f818bc5fb",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "ee1a91005a647ee1fc6de18febc77afe9b0b7605d24ef3c5d7de4be7dd973939",
-  "data/screens/map3d/balance.csv": "33dea7e472bfe0b9245734daaa8d631526fbb67eaf9f8eb20f819bfb26446f20",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "4245e17bf0ec85f220396a321db06d151827304f57b7d2be808115f7ff7c877b",
+  "data/screens/map3d/army_art.csv": "c5f2e011f771f02896f537f59827c083974a92aba1fe1669e2026490fdb2ce1f",
+  "data/screens/map3d/balance.csv": "d8108334a55a41058ff93c71d3ce313e4f5a197d6a6e57995195ffb4108203c9",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "97480475bffbeb73f2700a23104c50c15ec1a757788c11be04277f6c0c07094a",
   "scenes/models/units/axemen.tscn": "bddf8c926838e8576b5d54ff4370984b521d47d3977297b48c25663df3e15adc",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
   "scripts/map3d/map3d_axemen_locomotion.gd": "1eb52b16841519df2cda6ee0fe0eff2392d2ad611d2ed6b139163455a015b16f",
-  "scripts/map3d/map3d_infantry_locomotion.gd": "fe9b7571d2f0ca286ba97e0f4c6326fe195277382f477bee651040f05c6ebaa5",
-  "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
+  "scripts/map3d/map3d_infantry_locomotion.gd": "ec3c26c6682d1685b15103db04f1a911237b4fc6e6bdf706422407361bfb79e3",
+  "scripts/map3d/map3d_infantry_pivot.gd": "00e8d95600b94e7c338f812022b720054e21cdc86a9e69dea4eadf95a65829fa",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 23217,
-  "digest": "0592c92ccfa98d38b9d07ddbd7215f4a759fdbc8902466b2126bfbc7c54d5f52",
+  "digest": "5522b378b791dca79b0c5c1df90de944ac9825b96d681c25e2c194777dc540e4",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "0592c92ccfa98d38b9d07ddbd7215f4a759fdbc8902466b2126bfbc7c54d5f52",
+ "payload_sha256": "5522b378b791dca79b0c5c1df90de944ac9825b96d681c25e2c194777dc540e4",
  "report": {
   "bounds_um": {
    "contact": 23217,
@@ -467,7 +467,7 @@
     "phase": 0.303030305493305,
     "surface": 0,
     "turn_udeg": null,
-    "vertex": 4932
+    "vertex": 4936
    }
   },
   "hover": {
@@ -548,7 +548,7 @@
     "phase": 0.0,
     "surface": 0,
     "turn_udeg": -1,
-    "vertex": 7188
+    "vertex": 7192
    }
   },
   "planting_band": {
@@ -608,7 +608,7 @@
        0.0
       ],
       "turn_udeg": -1,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -629,7 +629,7 @@
        0.0
       ],
       "turn_udeg": -2000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -650,7 +650,7 @@
        0.0
       ],
       "turn_udeg": -45000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -671,7 +671,7 @@
        0.0
       ],
       "turn_udeg": -90000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -692,7 +692,7 @@
        0.0
       ],
       "turn_udeg": -135000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -713,7 +713,7 @@
        0.0
       ],
       "turn_udeg": -179999999,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -734,7 +734,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -1,
-      "vertex": 7741
+      "vertex": 7740
      }
     },
     {
@@ -755,7 +755,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -2000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -776,7 +776,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -45000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -797,7 +797,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -90000000,
-      "vertex": 7741
+      "vertex": 7740
      }
     },
     {
@@ -818,7 +818,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -135000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -839,7 +839,7 @@
        0.01904761904761905
       ],
       "turn_udeg": -179999999,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -860,7 +860,7 @@
        0.0
       ],
       "turn_udeg": 1,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -881,7 +881,7 @@
        0.0
       ],
       "turn_udeg": 2000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -902,7 +902,7 @@
        0.0
       ],
       "turn_udeg": 45000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -923,7 +923,7 @@
        0.0
       ],
       "turn_udeg": 90000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -944,7 +944,7 @@
        0.0
       ],
       "turn_udeg": 135000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -965,7 +965,7 @@
        0.0
       ],
       "turn_udeg": 179999999,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -986,7 +986,7 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -1007,7 +1007,7 @@
        0.0
       ],
       "turn_udeg": 180000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -1049,7 +1049,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 2000000,
-      "vertex": 7304
+      "vertex": 7308
      }
     },
     {
@@ -1112,7 +1112,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 135000000,
-      "vertex": 3713
+      "vertex": 3717
      }
     },
     {
@@ -1133,7 +1133,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 179999999,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -1154,7 +1154,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 180000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     },
     {
@@ -1175,7 +1175,7 @@
        0.01904761904761905
       ],
       "turn_udeg": 180000000,
-      "vertex": 7642
+      "vertex": 7641
      }
     }
    ],
@@ -1195,7 +1195,7 @@
      0.01904761904761905
     ],
     "turn_udeg": 180000000,
-    "vertex": 7642
+    "vertex": 7641
    }
   },
   "skin": {
@@ -1225,7 +1225,7 @@
       "surface": 0,
       "touchdown_phase": 0.208984375,
       "turn_udeg": null,
-      "vertex": 7699
+      "vertex": 7698
      }
     },
     "PIVOT_LEFT": {
@@ -1241,7 +1241,7 @@
       "surface": 0,
       "touchdown_phase": 0.224999994039536,
       "turn_udeg": -1,
-      "vertex": 7188
+      "vertex": 7192
      }
     },
     "PIVOT_RIGHT": {
@@ -1257,7 +1257,7 @@
       "surface": 0,
       "touchdown_phase": 0.224999994039536,
       "turn_udeg": 1,
-      "vertex": 7188
+      "vertex": 7192
      }
     }
    },
@@ -1272,7 +1272,7 @@
     "surface": 0,
     "touchdown_phase": 0.208984375,
     "turn_udeg": null,
-    "vertex": 7699
+    "vertex": 7698
    }
   },
   "stance": {

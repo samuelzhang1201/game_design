@@ -34,22 +34,22 @@ static func area(a: Array[Vector2], b: Array[Vector2], across: Vector2, depth: f
 ## line by at most `cross` of the other half (1: anywhere across); along the
 ## front within `spread` of its own `stand` (a wide battle is fought where its
 ## units stand).
-static func target(key: String, area: Dictionary, side: Vector2, cross: float, stand: Vector2, spread: float) -> Vector2:
-	var hl := float(area["half_len"])
-	var at := ((stand - (area["centre"] as Vector2)).dot(area["along"]))
+static func target(key: String, zone: Dictionary, side: Vector2, cross: float, stand: Vector2, spread: float) -> Vector2:
+	var hl := float(zone["half_len"])
+	var at := ((stand - (zone["centre"] as Vector2)).dot(zone["along"]))
 	var u := clampf(at + (Map3DMarchLag.unit(key + "|u") * 2.0 - 1.0) * minf(spread, 2.0 * hl), -hl, hl)
-	var own := -1.0 if (side - (area["centre"] as Vector2)).dot(area["across"]) < 0.0 else 1.0
+	var own := -1.0 if (side - (zone["centre"] as Vector2)).dot(zone["across"]) < 0.0 else 1.0
 	var v := own * lerpf(-cross, 1.0, Map3DMarchLag.unit(key + "|v"))
-	return area["centre"] + (area["along"] as Vector2) * u + (area["across"] as Vector2) * v * float(area["half_depth"])
+	return zone["centre"] + (zone["along"] as Vector2) * u + (zone["across"] as Vector2) * v * float(zone["half_depth"])
 
 
 ## `p` held inside `area` (its along and across coordinates clamped).
-static func inside(p: Vector2, area: Dictionary) -> Vector2:
-	var d: Vector2 = p - area["centre"]
-	var hl := float(area["half_len"])
-	var hd := float(area["half_depth"])
-	return area["centre"] + (area["along"] as Vector2) * clampf(d.dot(area["along"]), -hl, hl) \
-		+ (area["across"] as Vector2) * clampf(d.dot(area["across"]), -hd, hd)
+static func inside(p: Vector2, zone: Dictionary) -> Vector2:
+	var d: Vector2 = p - zone["centre"]
+	var hl := float(zone["half_len"])
+	var hd := float(zone["half_depth"])
+	return zone["centre"] + (zone["along"] as Vector2) * clampf(d.dot(zone["along"]), -hl, hl) \
+		+ (zone["across"] as Vector2) * clampf(d.dot(zone["across"]), -hd, hd)
 
 
 ## One separation pass over `points` (key -> XZ): every two closer than `space`

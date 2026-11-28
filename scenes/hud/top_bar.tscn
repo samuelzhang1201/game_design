@@ -1,18 +1,18 @@
 [gd_scene format=3 uid="uid://cbqhq1qgdyef8"]
 
-[ext_resource type="Script" uid="uid://cldctgj1xhk1e" path="res://scripts/ui/top_bar.gd" id="1"]
-[ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="2_bvebp"]
-[ext_resource type="Texture2D" uid="uid://bx6cc1qqqdwns" path="res://assets/2D/arms/beria/seat_walbover.png" id="3_coqo5"]
-[ext_resource type="Script" uid="uid://h5h3yt2h3rjo" path="res://scripts/ui/war_table/brass_dial.gd" id="4_65lof"]
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/body_bold.tres" id="5_k4d5w"]
-[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_normal.tres" id="7_rjjja"]
-[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_pressed.tres" id="8_tb6ui"]
-[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_hover.tres" id="9_hl2lw"]
-[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_hover_pressed.tres" id="10_b6fhy"]
-[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/tally_board.tres" id="11_mc1i8"]
-[ext_resource type="Script" uid="uid://xdngnt6rq1do" path="res://scripts/ui/resource_icon.gd" id="12_f3mk8"]
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="13_sr6fu"]
-[ext_resource type="Texture2D" uid="uid://b11n6evd7paun" path="res://assets/2D/icons/resources/menu.png" id="14_k14br"]
+[ext_resource type="Script" uid="uid://cldctgj1xhk1e" path="res://scripts/ui/top_bar.gd" id="1_s082s"]
+[ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="2_k3a5v"]
+[ext_resource type="Texture2D" uid="uid://bx6cc1qqqdwns" path="res://assets/2D/arms/beria/seat_walbover.png" id="3_remt8"]
+[ext_resource type="Script" uid="uid://h5h3yt2h3rjo" path="res://scripts/ui/war_table/brass_dial.gd" id="4_fsorp"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/body_bold.tres" id="5_rfjeh"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_normal.tres" id="6_ippce"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_pressed.tres" id="7_7i4n1"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_hover.tres" id="8_yv8dc"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/stud_hover_pressed.tres" id="9_5p1f6"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/tally_board.tres" id="10_rxaa7"]
+[ext_resource type="Script" uid="uid://xdngnt6rq1do" path="res://scripts/ui/resource_icon.gd" id="11_ij6vf"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="12_d1wxp"]
+[ext_resource type="Texture2D" uid="uid://b11n6evd7paun" path="res://assets/2D/icons/resources/menu.png" id="13_h8hfe"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_aabl5"]
 content_margin_left = 12.0
@@ -133,7 +133,7 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 64.0
 grow_horizontal = 2
-script = ExtResource("1")
+script = ExtResource("1_s082s")
 
 [node name="Bar" type="PanelContainer" parent="." unique_id=418093736]
 unique_name_in_owner = true
@@ -158,8 +158,8 @@ custom_minimum_size = Vector2(17, 20)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
-script = ExtResource("2_bvebp")
-texture = ExtResource("3_coqo5")
+script = ExtResource("2_k3a5v")
+texture = ExtResource("3_remt8")
 
 [node name="DateDial" type="Control" parent="Bar/Row" unique_id=932564032]
 unique_name_in_owner = true
@@ -169,8 +169,8 @@ layout_mode = 2
 size_flags_vertical = 4
 tooltip_text = "Spring 1, Year 1"
 mouse_filter = 1
-script = ExtResource("4_65lof")
-font = ExtResource("5_k4d5w")
+script = ExtResource("4_fsorp")
+font = ExtResource("5_rfjeh")
 
 [node name="DateLabel" type="Label" parent="Bar/Row" unique_id=1735647101]
 unique_name_in_owner = true
@@ -201,10 +201,10 @@ theme_override_colors/font_hover_color = Color(0.16862746, 0.12156863, 0.0823529
 theme_override_colors/font_hover_pressed_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 theme_override_constants/icon_max_width = 22
 theme_override_font_sizes/font_size = 13
-theme_override_styles/normal = ExtResource("7_rjjja")
-theme_override_styles/pressed = ExtResource("8_tb6ui")
-theme_override_styles/hover = ExtResource("9_hl2lw")
-theme_override_styles/hover_pressed = ExtResource("10_b6fhy")
+theme_override_styles/normal = ExtResource("6_ippce")
+theme_override_styles/pressed = ExtResource("7_7i4n1")
+theme_override_styles/hover = ExtResource("8_yv8dc")
+theme_override_styles/hover_pressed = ExtResource("9_5p1f6")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_dlslw")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_aenfk")
 toggle_mode = true
@@ -225,10 +225,10 @@ theme_override_colors/font_hover_color = Color(0.16862746, 0.12156863, 0.0823529
 theme_override_colors/font_hover_pressed_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 theme_override_constants/icon_max_width = 22
 theme_override_font_sizes/font_size = 13
-theme_override_styles/normal = ExtResource("7_rjjja")
-theme_override_styles/pressed = ExtResource("8_tb6ui")
-theme_override_styles/hover = ExtResource("9_hl2lw")
-theme_override_styles/hover_pressed = ExtResource("10_b6fhy")
+theme_override_styles/normal = ExtResource("6_ippce")
+theme_override_styles/pressed = ExtResource("7_7i4n1")
+theme_override_styles/hover = ExtResource("8_yv8dc")
+theme_override_styles/hover_pressed = ExtResource("9_5p1f6")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_i8sx6")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_ebc82")
 toggle_mode = true
@@ -248,10 +248,10 @@ theme_override_colors/font_hover_color = Color(0.16862746, 0.12156863, 0.0823529
 theme_override_colors/font_hover_pressed_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 theme_override_constants/icon_max_width = 22
 theme_override_font_sizes/font_size = 13
-theme_override_styles/normal = ExtResource("7_rjjja")
-theme_override_styles/pressed = ExtResource("8_tb6ui")
-theme_override_styles/hover = ExtResource("9_hl2lw")
-theme_override_styles/hover_pressed = ExtResource("10_b6fhy")
+theme_override_styles/normal = ExtResource("6_ippce")
+theme_override_styles/pressed = ExtResource("7_7i4n1")
+theme_override_styles/hover = ExtResource("8_yv8dc")
+theme_override_styles/hover_pressed = ExtResource("9_5p1f6")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_pclyg")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_58b1w")
 toggle_mode = true
@@ -271,10 +271,10 @@ theme_override_colors/font_hover_color = Color(0.16862746, 0.12156863, 0.0823529
 theme_override_colors/font_hover_pressed_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 theme_override_constants/icon_max_width = 22
 theme_override_font_sizes/font_size = 13
-theme_override_styles/normal = ExtResource("7_rjjja")
-theme_override_styles/pressed = ExtResource("8_tb6ui")
-theme_override_styles/hover = ExtResource("9_hl2lw")
-theme_override_styles/hover_pressed = ExtResource("10_b6fhy")
+theme_override_styles/normal = ExtResource("6_ippce")
+theme_override_styles/pressed = ExtResource("7_7i4n1")
+theme_override_styles/hover = ExtResource("8_yv8dc")
+theme_override_styles/hover_pressed = ExtResource("9_5p1f6")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_g03tp")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_q7xad")
 toggle_mode = true
@@ -290,7 +290,7 @@ size_flags_horizontal = 3
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_styles/panel = ExtResource("11_mc1i8")
+theme_override_styles/panel = ExtResource("10_rxaa7")
 
 [node name="Purses" type="GridContainer" parent="Bar/Row/TallyBoard" unique_id=1005042893]
 unique_name_in_owner = true
@@ -304,6 +304,9 @@ columns = 4
 [node name="CrownNameBox" type="HBoxContainer" parent="Bar/Row/TallyBoard/Purses" unique_id=1096815231]
 layout_mode = 2
 size_flags_vertical = 4
+tooltip_text = "The realm at a glance"
+mouse_filter = 0
+mouse_default_cursor_shape = 2
 theme_override_constants/separation = 5
 
 [node name="CrownMark" type="Control" parent="Bar/Row/TallyBoard/Purses/CrownNameBox" unique_id=404285847]
@@ -313,7 +316,7 @@ layout_mode = 2
 size_flags_vertical = 4
 tooltip_text = "The crown's — the realm's treasury and stores, which pay the court and buy land across the border"
 mouse_filter = 1
-script = ExtResource("12_f3mk8")
+script = ExtResource("11_ij6vf")
 key = "crown"
 
 [node name="CrownName" type="Label" parent="Bar/Row/TallyBoard/Purses/CrownNameBox" unique_id=1994725240]
@@ -336,7 +339,7 @@ custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 1
-script = ExtResource("12_f3mk8")
+script = ExtResource("11_ij6vf")
 key = "treasury"
 
 [node name="Value" type="Label" parent="Bar/Row/TallyBoard/Purses/Cell_treasury" unique_id=976221688]
@@ -363,7 +366,7 @@ custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 1
-script = ExtResource("12_f3mk8")
+script = ExtResource("11_ij6vf")
 key = "strategic"
 
 [node name="Value" type="Label" parent="Bar/Row/TallyBoard/Purses/Cell_strategic" unique_id=1653023367]
@@ -390,7 +393,7 @@ custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 1
-script = ExtResource("12_f3mk8")
+script = ExtResource("11_ij6vf")
 key = "grain"
 
 [node name="Value" type="Label" parent="Bar/Row/TallyBoard/Purses/Cell_grain" unique_id=214071847]
@@ -420,10 +423,10 @@ layout_mode = 2
 size_flags_vertical = 4
 tooltip_text = "Your house's own — what your provinces pay you as their lord, yours to spend: it buys and builds manors inside the realm"
 mouse_filter = 1
-script = ExtResource("2_bvebp")
+script = ExtResource("2_k3a5v")
 color = Color(0.34509805, 0.7058824, 0.8901961, 1)
 initial = "V"
-texture = ExtResource("3_coqo5")
+texture = ExtResource("3_remt8")
 
 [node name="HouseName" type="Label" parent="Bar/Row/TallyBoard/Purses/HouseNameBox" unique_id=1934704635]
 unique_name_in_owner = true
@@ -446,7 +449,7 @@ custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 1
-script = ExtResource("12_f3mk8")
+script = ExtResource("11_ij6vf")
 key = "lord_gold"
 
 [node name="Value" type="Label" parent="Bar/Row/TallyBoard/Purses/Cell_lord_gold" unique_id=248723616]
@@ -474,7 +477,7 @@ custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 1
-script = ExtResource("12_f3mk8")
+script = ExtResource("11_ij6vf")
 key = "lord_strategic"
 
 [node name="Value" type="Label" parent="Bar/Row/TallyBoard/Purses/Cell_lord_strategic" unique_id=1965941549]
@@ -502,7 +505,7 @@ custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 1
-script = ExtResource("12_f3mk8")
+script = ExtResource("11_ij6vf")
 key = "lord_civil"
 
 [node name="Value" type="Label" parent="Bar/Row/TallyBoard/Purses/Cell_lord_civil" unique_id=309248796]
@@ -533,7 +536,7 @@ focus_mode = 0
 theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 1)
 theme_override_colors/font_hover_color = Color(0.95686275, 0.85882354, 0.6039216, 1)
 theme_override_constants/icon_max_width = 22
-theme_override_fonts/font = ExtResource("13_sr6fu")
+theme_override_fonts/font = ExtResource("12_d1wxp")
 theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("StyleBoxEmpty_l0qut")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_l0qut")
@@ -542,7 +545,7 @@ theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_l0qut")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_3wv5c")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_l0qut")
 text = "Menu"
-icon = ExtResource("14_k14br")
+icon = ExtResource("13_h8hfe")
 
 [node name="EventChip" type="Label" parent="." unique_id=652630271]
 unique_name_in_owner = true

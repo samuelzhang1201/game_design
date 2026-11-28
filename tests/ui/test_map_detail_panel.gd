@@ -12,7 +12,7 @@ func _panel() -> MapDetailPanel:
 
 func _grid_texts(p: MapDetailPanel) -> Array[String]:
 	var out: Array[String] = []
-	for l in p.fields().get_children():
+	for l in p.fields().find_children("*", "Label", true, false):
 		out.append((l as Label).text)
 	return out
 
@@ -30,8 +30,21 @@ func test_a_town_gets_a_card() -> void:
 	var texts := _grid_texts(p)
 	assert_has(texts, "Population")
 	assert_has(texts, "Culture")
-	assert_gt(p.features_row().get_child_count(), 1, "feature glyphs after their label")
-	assert_gt(p.production_box().get_child_count(), 1, "goods rows after their label")
+	# AR-4 follow-up 3: features, goods and purses are rows under their
+	# sections, not loose boxes below the card
+	assert_false(p.features_row().visible, "no loose feature row")
+	assert_false(p.production_box().visible, "no loose goods box")
+	var features: HBoxContainer = p.fields().find_child("Field_Features", false, false)
+	assert_not_null(features, "a Features row")
+	assert_ne((features.get_child(1) as Label).text, "", "its features named beside its label")
+	var trade := p.fields().get_node_or_null("Section_trade")
+	assert_not_null(trade, "a Trade heading")
+	var goods: HBoxContainer = p.fields().find_child("Field_Production", false, false)
+	assert_not_null(goods, "a Production row")
+	assert_gt(goods.get_index(), trade.get_index(), "under the Trade heading")
+	assert_gt((goods.get_child(1) as Control).get_child_count(), 0, "a line a good")
+	assert_has(texts, "Wealth")
+	assert_has(texts, "Treasury")
 	assert_true(p.preview().visible, "a window onto the map")
 	assert_not_null(p.preview().mesh, "drawn from the terrain mesh, not a picture")
 	assert_true(p.ask_button().visible)
@@ -103,15 +116,24 @@ func test_a_regiment_opens_its_painted_card() -> void:
 	await wait_process_frames(1)
 	assert_true(p.visible)
 	assert_eq(p.title_label().text, String(r["label"]))
-	assert_gt(p.stats_grid().get_child_count(), 0, "its facts read as icons")
 	assert_eq(p.rows().get_child_count(), 0, "no plain lines")
 	assert_false(p.preview().visible, "no window onto the map")
 	assert_same(p.shield().texture, HouseArms.texture_of_kingdom(Game.data, mine))
-	# Regiment review (owner 2026-09-17): its values ("4564 (0 wounded)",
-	# "Hills (fortified)") are too wide for the default 4-column (2-pair)
-	# grid in the fixed left column, so its card asks for 2 — one
-	# icon+value pair a row.
-	assert_eq(p.stats_grid().columns, 2, "one icon+value pair a row so its wide values fit")
+	# AR-4 follow-up: its facts are named rows under the sections, as a
+	# province's are, with no bare icon grid; each keeps its tooltip.
+	assert_false(p.stats_grid().visible, "no icon grid")
+	for sec in ["ranks", "ground", "supply"]:
+		assert_not_null(p.fields().get_node_or_null("Section_" + sec), sec)
+	var morale: HBoxContainer = p.fields().find_child("Field_Morale", false, false)
+	assert_not_null(morale, "a Morale row")
+	var label: Label = morale.get_meta("field_label")
+	assert_eq(label.text, "Morale")
+	assert_eq(label.theme_type_variation, &"CardStatName")
+	assert_string_ends_with(p.stat_text("army_morale"), " of 100")
+	assert_string_starts_with(p.stat_tooltip("army_morale"), "Morale — ")
+	for key in ["army_height", "army_supply", "army_supply_line"]:
+		assert_false("×" in p.stat_text(key), key + " shows no multiplier")
+		assert_false("≈" in p.stat_text(key), key + " shows no estimate mark")
 
 ## A broken supply line (owner 2026-10-11): the card's Line row is written in
 ## CardWarn, the paper's rubric red; a flowing line in the card's own ink.
@@ -131,14 +153,14 @@ func test_a_broken_supply_line_is_written_in_the_warning_ink() -> void:
 	Game.state.supply_lines[code] = rec
 	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "army", "code": code}})
 	await wait_process_frames(1)
-	var cell: Label = p.stats_grid().find_child("Stat_army_supply_line", true, false)
+	var cell: Label = p.fields().find_child("Stat_army_supply_line", true, false)
 	assert_not_null(cell)
 	assert_eq(cell.theme_type_variation, &"CardWarn")
 	rec["state"] = SupplyLines.FLOWING
 	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "army", "code": code}})
 	await wait_process_frames(1)
-	cell = p.stats_grid().find_child("Stat_army_supply_line", true, false)
-	assert_eq(cell.theme_type_variation, &"CardValue", "a flowing line in the card's own ink")
+	cell = p.fields().find_child("Stat_army_supply_line", true, false)
+	assert_eq(cell.theme_type_variation, &"CardFigure", "a flowing line in the card's own ink")
 
 
 ## A courier's card flies his kingdom's arms, as his regiment's does (b0848aa;
@@ -420,10 +442,12 @@ func test_a_reported_fact_wears_a_small_tag_under_its_estimate() -> void:
 	MissiveLog.add(Game.data, Game.state, SpySystem.report(Game.data, Game.state, at, 900, 0))
 	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "manor", "cell": cell}})
 	await wait_process_frames(2)
-	var kids := p.fields().get_children()
-	var i := kids.find(kids.filter(func(n: Node) -> bool: return n is Label and (n as Label).text == "People")[0])
-	var label := kids[i] as Label
-	var cell_box := kids[i + 1] as VBoxContainer
+	var row := p.fields().get_node_or_null("Field_People") as HBoxContainer
+	assert_not_null(row, "the People row")
+	if row == null:
+		return
+	var label := row.get_child(0) as Label
+	var cell_box := row.get_child(1) as VBoxContainer
 	assert_not_null(cell_box, "the estimate and its tag stand in one cell")
 	if cell_box == null:
 		return
@@ -435,7 +459,7 @@ func test_a_reported_fact_wears_a_small_tag_under_its_estimate() -> void:
 	assert_eq(tag.get_theme_color("font_color"), MapPalette.named(Game.data, "intel_credible"))
 	assert_lt(label.size.x, cell_box.size.x, "the label column is only as wide as its words")
 	# one letter's facts name it once, under the first
-	var tags := kids.filter(func(n: Node) -> bool: return n is VBoxContainer).size()
+	var tags := p.fields().find_children("Estimate", "VBoxContainer", true, false).size()
 	assert_eq(tags, 1, "one tag for one letter's run of facts")
 
 
@@ -697,3 +721,35 @@ func test_an_idle_building_says_so_in_its_slot() -> void:
 			icon = n
 	assert_not_null(icon)
 	assert_almost_eq(icon.modulate.a, Game.data.bal("ui_slot_idle_alpha"), 0.001, "its art dimmed by the balance row")
+
+
+## AR-4 step 2 (owner 2026-11-26, CK3 as the reference): a province's facts
+## stand under ruled headings, each label at the top of its row and as wide
+## as the card's widest, the regiments one line each under a counted head.
+func test_a_province_card_reads_in_sections() -> void:
+	Game.start_campaign(42)
+	var p := _panel()
+	await wait_process_frames(1)
+	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
+	var capital := String(Game.data.burgs[String(realm["capital_burg"])]["province_code"])
+	p.show_province(capital)
+	await wait_process_frames(2)
+	assert_not_null(p.fields().get_node_or_null("Section_holding"), "the holding's heading")
+	assert_not_null(p.fields().get_node_or_null("Section_land"), "the land's heading")
+	var widths := {}
+	for row in p.fields().get_children():
+		if row is HBoxContainer:
+			var label := row.get_child(0) as Label
+			assert_eq(label.size_flags_vertical, Control.SIZE_SHRINK_BEGIN, "top-aligned: " + label.text)
+			widths[roundi(label.size.x)] = true
+	assert_eq(widths.size(), 1, "one label column: %s" % [widths.keys()])
+	var arms := p.fields().get_node_or_null("Section_military") as Label
+	if arms != null:
+		var items := p.fields().find_children("Item*", "Label", false, false).size()
+		assert_gt(items, 0, "the regiments one a line")
+		assert_string_contains(arms.text, "(%d)" % items, "the head counts them")
+	var pop := p.fields().get_node_or_null("Field_Population") as HBoxContainer
+	assert_not_null(pop)
+	if pop != null:
+		assert_false((pop.get_child(1) as Label).text.contains(")"), "no machine brackets")
+		assert_string_contains((pop.get_child(1) as Label).text, ",", "grouped thousands")

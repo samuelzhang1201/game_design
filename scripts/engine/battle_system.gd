@@ -402,7 +402,7 @@ static func homeward(state: GameState, code: String) -> bool:
 
 
 ## Turning home requests withdrawal while leaving the army exposed in contact.
-static func _withdraw_homeward(repo: DataRepository, state: GameState, _events: Array) -> void:
+static func _withdraw_homeward(_repo: DataRepository, state: GameState, _events: Array) -> void:
 	for battle: Dictionary in state.battles:
 		for side: String in SIDES:
 			if (battle[side] as Array).any(func(code: String) -> bool: return homeward(state, code)):

@@ -53,6 +53,9 @@ existing one.
   than none; a distinct role needs its own model, made as carefully as the rest.
 - **Cloth, leather and metal must read as different materials.** Padded cloth
   is matte and fibrous; broad oily highlights belong neither on tunics nor trousers.
+- **Plate is bare steel, in the mail's family.** A helmet or pauldron in a paint
+  colour reads as cloth or hide; steel a shade warm of grey reads as armour, and
+  cold blue-white steel reads as chalk. One piece carries one material edge to edge.
 - **Colour a little richer than true, never lighter.** Warmth and variety stay
   inside one palette; a shade that turns pink, chalky or garish is outside it.
 

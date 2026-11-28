@@ -157,7 +157,7 @@ func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 	assert_true(panel.visible, "the detail column opens")
 	assert_eq(panel.shown_province(), mine)
 	var texts: Array[String] = []
-	for l in panel.fields().get_children():
+	for l in panel.fields().find_children("*", "Label", true, false):
 		texts.append((l as Label).text)
 	assert_has(texts, "Population")
 	assert_has(texts, "Held by")
@@ -170,13 +170,14 @@ func test_selecting_a_province_shows_its_card_in_the_detail_column() -> void:
 	map.province_selected.emit(foreign)
 	await wait_process_frames(1)
 	texts.clear()
-	for l in panel.fields().get_children():
+	for l in panel.fields().find_children("*", "Label", true, false):
 		texts.append((l as Label).text)
 	assert_false(texts.has("Population"), "no details abroad")
 	assert_has(texts, "Held by")
 	assert_string_contains(panel.hint_label().text, "Little more is known")
 	map.province_selected.emit("")
-	await wait_process_frames(1)
+	var log_panel := screen.get_node("%LogPanel") as Control
+	await wait_until(func() -> bool: return not log_panel.visible, 2.0)   # it slides back off the map
 	assert_false(panel.visible, "clearing the selection closes the column")
 
 ## The court's council column (record, order box, suggestions) is
@@ -200,3 +201,34 @@ func test_council_column_opens_from_the_handle_and_leaves() -> void:
 	await wait_process_frames(2)
 	assert_false(side.visible, "LEAVE hides it")
 	assert_almost_eq(screen.find_child("MapPanel", true, false).get_global_rect().end.x, wide, 1.0)
+
+## The map shows whole until something is chosen (owner 2026-11-26): the facts
+## column is hidden, the map runs to the screen's margin under it, and the
+## top bar's Crown opens and closes the realm's card.
+func test_the_column_is_hidden_until_something_is_chosen() -> void:
+	Game.start_campaign(42)
+	var screen := _screen()
+	await wait_process_frames(1)
+	var column := screen.get_node("%LogPanel") as Control
+	assert_false(column.visible, "nothing chosen: the column is hidden")
+	assert_lt(screen.map_panel().get_global_rect().position.x, column.get_global_rect().end.x,
+		"the map runs under where the column lies")
+	var crown := screen.top_bar().find_child("CrownNameBox", true, false) as Control
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	var rest := column.position.x
+	crown.gui_input.emit(click)
+	assert_true(column.visible, "the Crown opens the column")
+	assert_true(screen.dashboard().visible, "on the realm's card")
+	# laid down on the map (AR-4 step 2): it slides in from the left edge
+	assert_lt(column.position.x, rest, "it starts off to the left, not cut in")
+	await wait_until(func() -> bool: return is_equal_approx(column.position.x, rest), 2.0)
+	assert_almost_eq(column.position.x, rest, 0.01, "and comes to rest where the scene puts it")
+	crown.gui_input.emit(click)
+	assert_true(column.visible, "it slides out, its card on it, rather than vanishing")
+	await wait_until(func() -> bool: return not column.visible, 2.0)
+	assert_false(column.visible, "and closes it again")
+	screen.detail_panel().show_province(String(Game.data.provinces.keys()[0]))
+	assert_true(column.visible, "a clicked place opens it with its card")
+	assert_false(screen.dashboard().visible)

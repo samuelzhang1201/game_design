@@ -97,6 +97,9 @@ var _manor := ""
 ## tooltip (0 the first), so the shot shows the tooltip as the player sees it
 ## (owner 2026-10-01: a town card's icon tooltip read dark on dark).
 var _town := ""
+## --regiment CODE opens that regiment's card in the left column ("first":
+## the player's first land regiment), as a click on its piece does.
+var _regiment := ""
 var _hover_icon := -1
 var _hover_target: Control
 ## --build <building> begins that building on the shot's manor (with
@@ -112,6 +115,10 @@ var _speed := -1
 ## at that share of its size, so a shot shows the pick: the card in the
 ## left column and the province's gold outline.
 var _click3d := Vector2(-1, -1)
+## --box3d fx0,fy0,fx1,fy1[,shift][,hold] (repeatable): a REAL left drag across
+## the 3D map from one window share to another, a few frames apart, Shift held
+## (adding to the selection) or the button kept down (the box in the shot).
+var _box3d: Array = []
 ## --hover3d fx,fy (with --screen root) hovers the 3D map there: the country
 ## card in the left column, the kingdom's wider outline, a town's name.
 var _hover3d := Vector2(-1, -1)
@@ -415,12 +422,16 @@ func _ready() -> void:
 			_manor = args[i + 1]
 		elif args[i] == "--town":
 			_town = args[i + 1]
+		elif args[i] == "--regiment":
+			_regiment = args[i + 1]
 		elif args[i] == "--hover-icon":
 			_hover_icon = int(args[i + 1])
 		elif args[i] == "--build":
 			_build = args[i + 1]
 		elif args[i] == "--idle":
 			_idle = args[i + 1]
+		elif args[i] == "--box3d":
+			_box3d.append(args[i + 1].split(","))
 		elif args[i] == "--click3d":
 			var parts := args[i + 1].split(",")
 			_click3d = Vector2(float(parts[0]), float(parts[1]))
@@ -1139,6 +1150,17 @@ func _process(_delta: float) -> void:
 		var v: Map3DView = _root.current_screen.map3d_view()
 		v.select_at(v.size * _click3d)
 		print("click3d: province=%s burg=%s" % [v.selected_province(), v.selected_burg()])
+	if _root != null and _frames >= 14 and (_frames - 14) % 4 == 0 and (_frames - 14) / 4 < _box3d.size() \
+			and _root.current_screen.has_method("map3d_view") \
+			and _root.current_screen.map3d_view() != null:
+		var bv: Map3DView = _root.current_screen.map3d_view()
+		var spec: PackedStringArray = _box3d[(_frames - 14) / 4]
+		var a := bv.size * Vector2(float(spec[0]), float(spec[1]))
+		var b := bv.size * Vector2(float(spec[2]), float(spec[3]))
+		_real_move(bv, a)
+		_real_path(bv, [a, b], spec.has("shift"), spec.has("hold"))
+		print("box3d: %s -> %s shift=%s hold=%s selected=%s" % [a, b, spec.has("shift"), spec.has("hold"),
+			bv.selected_armies()])
 	if _root != null and _frames == 12 and _hover3d.x >= 0.0 \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
@@ -1162,6 +1184,24 @@ func _process(_delta: float) -> void:
 				v3.select_object({"kind": "burg", "code": _town})
 			_root.current_screen.detail_panel().show_entry(
 				{"title": String(burg.get("label", _town)), "obj": {"kind": "burg", "code": _town}})
+	if _root != null and _frames == 6 and _regiment != "" and _root.current_screen.has_method("detail_panel"):
+		var code := _regiment
+		if code == "first":
+			for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+				if String(r.get("is_naval", "0")) != "1":
+					code = String(r["regiment_code"])
+					break
+		# select:N — the first N land units selected (FORM ARMY offered); army:N — formed too
+		var codes: Array = [code]
+		if code.begins_with("select:") or code.begins_with("army:"):
+			codes = []
+			for c: String in Game.state.regiments.keys():
+				if ArmyGroups.eligible(Game.data, Game.state, c) and codes.size() < int(code.get_slice(":", 1)):
+					codes.append(c)
+			if code.begins_with("army:"):
+				Game.form_army_group(codes)
+			code = String(codes[0])
+		_root.current_screen.detail_panel().show_entry({"title": code, "obj": {"kind": "army", "code": code, "codes": codes}})
 	if _root != null and _hover_icon >= 0 and _frames == 40 and _root.current_screen.has_method("detail_panel"):
 		var found: Array[Control] = []
 		_tooltipped(_root.current_screen.detail_panel(), found)

@@ -77,11 +77,11 @@ static func _whole_cursor(value: Variant) -> bool:
 
 static func _battle_cursor_error(tx: Dictionary) -> String:
 	for field: String in ["battle_ids", "substep_battle_ids", "processed_battle_ids", "over_battle_ids", "acknowledged_encounters"]:
-		var ids: Variant = tx.get(field, null if field in ["battle_ids", "substep_battle_ids", "processed_battle_ids"] else [])
-		if not ids is Array:
+		var listed: Variant = tx.get(field) if field in ["battle_ids", "substep_battle_ids", "processed_battle_ids"] else tx.get(field, [])
+		if not listed is Array:
 			return "saved battle IDs must be an array: " + field
 		var seen: Dictionary = {}
-		for id: Variant in ids:
+		for id: Variant in listed:
 			if not _whole_cursor(id) or seen.has(id):
 				return "saved battle IDs must be unique whole numbers: " + field
 			seen[id] = true

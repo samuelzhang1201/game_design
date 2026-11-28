@@ -60,6 +60,7 @@ func _ready() -> void:
 		_clock_buttons[speed] = b
 		b.pressed.connect(func() -> void: Game.set_clock_speed(speed))
 	%MenuButton.pressed.connect(func() -> void: SignalHub.menu_requested.emit())
+	%Purses.get_node("CrownNameBox").gui_input.connect(_on_crown_input)
 	(_clock_buttons[1] as Button).tooltip_text = "Play: a day every %.1f s" % Game.data.bal("time_day_seconds")
 	if not UiPalette.war_table():
 		_dress_leather()
@@ -69,6 +70,13 @@ func _ready() -> void:
 	SignalHub.state_changed.connect(refresh)
 	SignalHub.report_ready.connect(func(_r: TickReport) -> void: refresh())
 	refresh()
+
+## A click on the Crown's name opens or closes the realm's card.
+func _on_crown_input(event: InputEvent) -> void:
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+		SignalHub.realm_card_requested.emit()
+		accept_event()
 
 ## The leather chrome (balance ui_war_table 0): the 2026-09-28 bar — a leather
 ## strip, the arms beside the date, the clock and Menu as dark chips wearing

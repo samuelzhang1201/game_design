@@ -426,6 +426,8 @@ char_coast_dorian_tideford,coast_realm,1,fleet,,50,active
 char_coast_hadrian_tideford,coast_realm,1,infantry|axemen|heavy_infantry|militia,,15,active
 char_coast_ivo_seabrook,coast_realm,1,infantry|axemen|heavy_infantry|militia,,25,active
 char_coast_jory_bellhaven,coast_realm,1,infantry|axemen|heavy_infantry|militia,,35,active
+char_coast_kester_marrick,coast_realm,1,infantry|axemen|heavy_infantry|militia,,45,active
+char_coast_lucan_oakhaven,coast_realm,1,infantry|axemen|heavy_infantry|militia,,55,active
 char_coast_edric_marrick,coast_realm,1,infantry|axemen|heavy_infantry|militia|archers|cavalry|artillery|fleet,,60,reserve
 char_coast_emrys_oakhaven,coast_realm,1,infantry|axemen|heavy_infantry|militia|archers|cavalry|artillery|fleet,,70,reserve
 char_coast_florian_windmere,coast_realm,1,infantry|axemen|heavy_infantry|militia|archers|cavalry|artillery|fleet,,80,reserve

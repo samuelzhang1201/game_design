@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "60d3afae8480df05295a42dc7ea82321e0189360d79cdf2b28031eee249a7650",
+  "sha256": "8be4db41c1373ddbba0434ca218b6294df5c935e462cbab6849a2d112c4c308e",
   "uniform": 512
  },
  "config": {
@@ -424,16 +424,16 @@
   "assets/3D/units/heavy_infantry/heavy_infantry_heavy_infantry_atlas_n.jpg.import": "d6ea70623a453c74cd002452f6e045666cf5debc84294cff5bd36c42172f08af",
   "assets/3D/units/heavy_infantry/heavy_infantry_pivot_plan.json": "50de38d600f4a616e4027d274930a904a28ad748379b8cf7b784288e270e1fef",
   "assets/3D/units/infantry/infantry_pivot_plan.json": "2904deb6fa5db318e21a9a7a60232d91972ef4db4fbc623f09d8f6b665f75cb5",
-  "data/army/balance.csv": "d22c86e3f2a730b1fd05c2bc7616d2057a0ddbe06ead85eb42e4dd68b11c0db4",
+  "data/army/balance.csv": "bf53003122f9905360410abc2dd32796da8c8f2579f535561e946d9f818bc5fb",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "ee1a91005a647ee1fc6de18febc77afe9b0b7605d24ef3c5d7de4be7dd973939",
-  "data/screens/map3d/balance.csv": "33dea7e472bfe0b9245734daaa8d631526fbb67eaf9f8eb20f819bfb26446f20",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "4245e17bf0ec85f220396a321db06d151827304f57b7d2be808115f7ff7c877b",
+  "data/screens/map3d/army_art.csv": "c5f2e011f771f02896f537f59827c083974a92aba1fe1669e2026490fdb2ce1f",
+  "data/screens/map3d/balance.csv": "d8108334a55a41058ff93c71d3ce313e4f5a197d6a6e57995195ffb4108203c9",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "97480475bffbeb73f2700a23104c50c15ec1a757788c11be04277f6c0c07094a",
   "scenes/models/units/heavy_infantry.tscn": "3efc8e2c93ee9c5b3ac833e09b61a174a3e2190637d9f5ad5219dba362d662a4",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
   "scripts/map3d/map3d_heavy_infantry_locomotion.gd": "0ba8678c2b758a993bd0dfe3d983fd8a18f4e4c042bf936f2bc98c5219f1786f",
-  "scripts/map3d/map3d_infantry_locomotion.gd": "fe9b7571d2f0ca286ba97e0f4c6326fe195277382f477bee651040f05c6ebaa5",
-  "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
+  "scripts/map3d/map3d_infantry_locomotion.gd": "ec3c26c6682d1685b15103db04f1a911237b4fc6e6bdf706422407361bfb79e3",
+  "scripts/map3d/map3d_infantry_pivot.gd": "00e8d95600b94e7c338f812022b720054e21cdc86a9e69dea4eadf95a65829fa",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
  },
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 22699,
-  "digest": "d5648dcd82a1c88fb6226d7d18c3de72f78bd533d9b0fe87fda078d3e1a646d8",
+  "digest": "da24f85b6569ac043a5b026cb114e6ae970ec49df42e1934a9c2eca30cb141f7",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "d5648dcd82a1c88fb6226d7d18c3de72f78bd533d9b0fe87fda078d3e1a646d8",
+ "payload_sha256": "da24f85b6569ac043a5b026cb114e6ae970ec49df42e1934a9c2eca30cb141f7",
  "report": {
   "bounds_um": {
    "contact": 22699,

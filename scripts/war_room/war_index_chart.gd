@@ -57,6 +57,7 @@ static func wall_image(repo: DataRepository, px: int, aspect: float) -> Image:
 	var sheet := _parchment(repo, px, ch, paper, age) if mw != px or mh != ch else null
 	var map := _parchment(repo, mw, mh, paper, age)
 	if sheet != null:
+		@warning_ignore("integer_division")
 		sheet.blit_rect(map, Rect2i(Vector2i.ZERO, map.get_size()), Vector2i((px - mw) / 2, (ch - mh) / 2))
 		map = sheet
 	_burn_rim(map, pal["ink"], int(repo.bal("war_wall_map_rim_px")), repo.bal("war_wall_map_rim_alpha"))

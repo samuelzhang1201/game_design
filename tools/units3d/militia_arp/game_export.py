@@ -1,24 +1,27 @@
 """Install build of the town militia figure: the infantry's export (tools/units3d/infantry_arp/game_export.py)
 run on the militia source with the militia's names (README beside this file).
 
-Source (git-ignored): assets/3D/model_wip/blender_output/militia/militia_parts_11_hem.blend (rig `rig`, body
+Source (git-ignored): assets/3D/model_wip/blender_output/militia/militia_parts_13_falls.blend (rig `rig`, body
 `Militia_body`, the infantry's ShortSword `Weapon` / RoundShield `Shield` on cc_weapon.r / .l).
 Headless, nothing saved:
   Blender -b -y SOURCE.blend --python tools/units3d/militia_arp/game_export.py -- ROOT [OUT.json]
 Writes ROOT/assets/3D/units/militia/: militia.glb (armature `mil_rig`, one skinned mesh `militia`) and
-militia_militia_atlas{,_mr,_n}.jpg. The ten clips are named as the infantry's first ten (MARCH ... SLASH_3) and
-get the same loop closing, in-place lunges, MARCH contact lock and shield-hand thumb; the body has no authored
+militia_militia_atlas{,_mr,_n}.jpg. The ten clips are named as the infantry's first ten (MARCH ... SLASH_3), then
+the duel's BLOCK..BLOCK_4 and HIT..HIT_3, then the falls DEATH and DEATH_2 (their skirt by the lying-cloth rule, spec
+2026-11-26-militia-figure-wiring-design step 1b); they get the same loop closing, in-place lunges, MARCH contact lock and shield-hand thumb; the body has no authored
 material classes, so its baked atlas goes in as it is; the realm tint's mask (militia_tunic_mask.png) is drawn
 from the body's `part_id`: the tunic's and the skirt's faces.
 Then check what was written: check_glb.py (leg through skirt in the installed file must be none).
 """
 import importlib.util
 import json
+import math
 import sys
 from pathlib import Path
 
 import bpy
 import numpy as np
+from mathutils import Matrix, Vector
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("infantry_game_export", HERE.parent / "infantry_arp/game_export.py")
@@ -31,7 +34,40 @@ inf.UNIT = "militia"
 inf.RIG_NAME = "mil_rig"
 inf.BODY = "Militia_body"
 inf.BODY_CLASSES = False
-inf.GAME = {k: inf.GAME[k] for k in FIRST_TEN}
+DUEL = ("BLOCK", "BLOCK_2", "BLOCK_3", "BLOCK_4", "HIT", "HIT_2", "HIT_3")
+FALLS = ("DEATH", "DEATH_2")
+inf.GAME = {k: inf.GAME[k] for k in FIRST_TEN + DUEL + FALLS}
+
+
+# The skirt's keys are baked in the source for the legs it has there; the export's MARCH lock then moves the
+# legs. Where the installed file still shows a leg through the cloth (check_glb.py names the frame, counted from
+# 0, and the chains), those chains' _b and _c bones swing further out here, as the source's `nudge` does: the
+# degrees on the frame, half on the frames either side, a quarter one further.
+SKIRT_NUDGE = {"WALK": ((22, (8, 9), 5.0), (24, (8, 9), 4.0), (25, (3, 4), 5.0), (27, (3, 4), 3.0))}
+_poses = inf._poses
+
+
+def _nudged_poses(src, keep, clip):
+    poses = _poses(src, keep, clip)
+    n = len(poses) - 1                       # the last pose is the first again
+    for frame, chains, deg in SKIRT_NUDGE.get(clip, ()):
+        for df, w in ((0, 1.0), (-1, 0.5), (1, 0.5), (-2, 0.25), (2, 0.25)):
+            pose = poses[(frame + df) % n]
+            for k in chains:
+                b, c = "skirt_%02d_b" % k, "skirt_%02d_c" % k
+                for pivot, moved in ((b, (b, c)), (c, (c,))):
+                    h = pose[pivot].translation.copy()
+                    out = Vector((h.x - pose["root.x"].translation.x, h.y - pose["root.x"].translation.y, 0.0)).normalized()
+                    turn = Matrix.Translation(h) @ Matrix.Rotation(math.radians(deg * w), 4, Vector((0, 0, -1)).cross(out)) \
+                        @ Matrix.Translation(-h)
+                    for name in moved:
+                        pose[name] = turn @ pose[name]
+    for name in poses[0]:
+        poses[-1][name] = poses[0][name].copy()
+    return poses
+
+
+inf._poses = _nudged_poses
 
 
 # The source body's faces carry their part in the mesh attribute `part_id` (the build's order); the realm's

@@ -23,6 +23,8 @@ instance uniform vec2 half_m = vec2(1.0, 1.0);
 // the band's foot and crest, as shares of the SHORT half (per piece)
 instance uniform float inner : hint_range(0.0, 1.0) = 0.75;
 instance uniform float peak : hint_range(0.0, 1.0) = 0.9;
+// the glow's share of its full light (per piece): a held box's preview is fainter
+instance uniform float dim : hint_range(0.0, 1.0) = 1.0;
 // brightness multiplier on `strength` (light can exceed 1)
 uniform float gain : hint_range(0.0, 8.0) = 3.2;
 // how far the crest of the band burns toward white
@@ -44,7 +46,7 @@ void fragment() {
 	float body = max(ring, haze * (1.0 - smoothstep(0.0, peak, r)) * 0.5);
 	float crest = ring * ring;  // narrow bright line along the band's top
 	vec3 light = mix(tint.rgb, vec3(1.0), hot * crest);
-	ALBEDO = light * clamp(body * strength * gain * tint.a, 0.0, 1.0);
+	ALBEDO = light * clamp(body * strength * gain * tint.a * dim, 0.0, 1.0);
 	// a faint dark skirt just inside the band's foot, so the crest stands off
 	float dark = smoothstep(inner * 0.5, inner, s) * (1.0 - rise);
 	ALPHA = clamp(dark * skirt, 0.0, 1.0);

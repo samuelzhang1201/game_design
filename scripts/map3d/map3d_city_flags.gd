@@ -34,10 +34,10 @@ func sync(codes: Array, rows: Dictionary) -> void:
 			Map3DNationalFlag.city_realm(ctx.repo, ctx.state(), burg))
 		if texture == null: continue
 		if not _flags.has(code):
-			var flag := flag_scene.instantiate() as Map3DNationalFlag
-			flag.name = "Flag_" + code
-			add_child(flag)
-			_flags[code] = flag
+			var flag_node := flag_scene.instantiate() as Map3DNationalFlag
+			flag_node.name = "Flag_" + code
+			add_child(flag_node)
+			_flags[code] = flag_node
 			var h: Dictionary = rows[code][0]
 			for candidate: Dictionary in rows[code]:
 				if ctx.repo.map3d_houses.get(candidate["type"], {}).get("role", "") == "landmark":
@@ -46,13 +46,13 @@ func sync(codes: Array, rows: Dictionary) -> void:
 			var type := String(h["type"])
 			var model := Map3DAssetCache.house_model(GameArt.path(GameArt.HOUSE_MODELS, type))
 			if model.is_empty():
-				flag.queue_free(); _flags.erase(code)
+				flag_node.queue_free(); _flags.erase(code)
 				continue
 			if not _tops.has(type): _tops[type] = roof_top(model["mesh"])
 			var seat: Vector2 = _houses._seat(h, type)
 			var roof := Map3DHouses.transform_of(h, seat.y) * Vector3(_tops[type])
-			flag.position = roof - Vector3.UP * flag_scale * 0.06
-			flag.scale = Vector3.ONE * flag_scale
+			flag_node.position = roof - Vector3.UP * flag_scale * 0.06
+			flag_node.scale = Vector3.ONE * flag_scale
 		var flag: Map3DNationalFlag = _flags[code]
 		flag.set_texture(texture)
 		flag.visible = true  # the parent gates distance; a far ownership refresh must not hide children

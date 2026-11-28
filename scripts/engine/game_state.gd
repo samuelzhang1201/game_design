@@ -415,6 +415,12 @@ var recruitment_projects: Dictionary = {}
 var military_migration: Dictionary = {}
 ## town code -> the one unit holding its seat (ArmyGround, spec §4.4).
 var town_seat: Dictionary = {}
+## The crown's armies as SELECTION GROUPS (spec 2026-11-27-army-groups-design,
+## ArmyGroups): group id -> {name, members: [codes], formed_tick, formed_day};
+## every change with its reason in army_group_log. No rule reads them.
+var army_groups: Dictionary = {}
+var army_group_next_id := 0
+var army_group_log: Array = []
 ## The couriers on the road (owner 2026-09-27, CourierSystem): an Array of
 ## Dictionaries in whole metres and ints, walked in ascending id order.
 var couriers: Array = []
@@ -566,6 +572,8 @@ func to_dict() -> Dictionary:
 		# whole numbers and the player's own words only: written plain, so a
 		# name shaped like the codec's "i5" stays a name (_whole reads it back)
 		"war_plans": war_plans.duplicate(true),
+		"army_groups": army_groups.duplicate(true), "army_group_next_id": army_group_next_id,
+		"army_group_log": army_group_log.duplicate(true),
 		"next_courier_id": _encode_values(next_courier_id),
 		"missives": _encode_values(missives.duplicate(true)),
 		"next_missive_id": _encode_values(next_missive_id),
@@ -778,6 +786,10 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# Saves from before the plans carry none: an empty table.
 	s.war_plans = _whole(d.get("war_plans", WarPlans.empty()))
 	s.next_courier_id = int(_decode_values(d.get("next_courier_id", 0)))
+	# Saves from before the armies carry none: no groups (plain, like war_plans).
+	s.army_groups = _whole(d.get("army_groups", {}))
+	s.army_group_next_id = int(_whole(d.get("army_group_next_id", 0)))
+	s.army_group_log = _whole(d.get("army_group_log", []))
 	# Saves from before the Missive board carry neither key: an empty board.
 	s.missives = _decode_values(d.get("missives", []))
 	s.next_missive_id = int(_decode_values(d.get("next_missive_id", 0)))

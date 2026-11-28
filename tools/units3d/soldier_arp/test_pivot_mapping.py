@@ -4,9 +4,10 @@
 1. The uncoupled parameters rebuild the frozen (knight) feasibility references exactly (the port is faithful).
 2. The canonical pair rebuilt from the committed captures of the installed infantry passes the R-B skin
    and R-A contact audit.
-3. Baking the committed solve onto the installed GLB's own nineteen-clip prefix reproduces it byte for byte.
+3. Baking the committed solve onto the installed GLB's own export prefix (nineteen clips; the militia's too)
+   reproduces it byte for byte.
 4. The committed runtime plan (infantry_pivot_plan.json) is what the mapping generates.
-2-4 hold for every arm on the rig contract (ARMS: the infantry, the heavy infantry and the axemen).
+2-4 hold for every arm of ARMS (the infantry, the heavy infantry, the axemen, the militia and the archers).
 """
 import base64
 import hashlib
@@ -29,8 +30,8 @@ ARMS = {
         'hashes': {'baseline-native.json': '62922f40c2bb48668a86ac11cb13cdb9fde791623685de1176c613ae777b24cc',
                    'native-march.json': '9ddf149a2627a7fa4a0e75abc8b9134ca004b9c97e1d1876c8d9652310d2b370',
                    'canonical-samples.json': 'a28adcaa27a5195c37a09848b7c6766e4bf2825ea8fc0631b2a96692e2960176'},
-        'glb_sha256': '3916b9c6fac405d3d1d4ff48713c229c63bcacee8dd0f2b2ee143c035d8f4d0e',
-        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6616856}},
+        'glb_sha256': 'cde6b05ecd06ec9cd3cfa4989dd0100a431b47d6923b94c8a52f28c6eec46ef3',
+        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6525568}},
     'heavy_infantry': {
         'hashes': {'baseline-native.json': '2455c300d486217ac0882a42506ed152c8829298b6465bd0717c706a85dc433e',
                    'native-march.json': '4f4d4d4c68c1f7cd4225d867e763a8350a7bba2bf72377161876e5dd86742a35',
@@ -41,8 +42,22 @@ ARMS = {
         'hashes': {'baseline-native.json': '8bfd9acadf4e17c2cf417e889455fd36cb3040be0ba33abc809eb4919bbdf7d1',
                    'native-march.json': '2da85fa15bb11016597037050ae7a33563f545ccb548c2a961d377fdf1582475',
                    'canonical-samples.json': 'f71b54f6e5ba42e2e0101f08a7d3b9b6111d8550a9a6cb14d9e22d218927c58f'},
-        'glb_sha256': 'c69bb9e6dc20642590e471ffc03a0dff752f0c4e563bdf948a622e4c4c3087d3',
-        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6602724}},
+        'glb_sha256': 'ec83f87b4ccbd80bc1928663d77d45cd907914d7313e62b246cf227e95270cd2',
+        'old': {'animations': 19, 'accessors': 4015, 'bufferViews': 4018, 'binary': 6511372}},
+    # the militiaman: its own skeleton (mil_rig, 100 bones) and a nineteen-clip export (the ten, the duel's seven and the two falls)
+    'militia': {
+        'hashes': {'baseline-native.json': '0dcc5bd4fea742a2d40365e4df2ea159eb07f16933be1fd93f41a25e7a73a30a',
+                   'native-march.json': 'fecc3855c3d8f2c31ec2f5ddd52829b8ebe1cf8f55b53121affd86648eb8604a',
+                   'canonical-samples.json': 'e0d8eb9873b349f10695c36f1d47619ba810e98f21e7e3e32fe54a36ab058810'},
+        'glb_sha256': 'b007b1598280da875c3e7434f75dfa18a2d11fb6009d636b17cd070a89515ad8',
+        'old': {'animations': 19, 'accessors': 5725, 'bufferViews': 5728, 'binary': 7248800}},
+    # the longbowman: the infantry's rig contract, his own thirteen clips (tools/units3d/archer_parts/)
+    'archers': {
+        'hashes': {'baseline-native.json': '1f3593bcb9e1acb756db00065017fbadc6205f6fe24ba9fedde60faffb692626',
+                   'native-march.json': '8068950b09511ab097c2b4cfc69e3c08dd469f7f82317fcb7a15dfa2a68e52b1',
+                   'canonical-samples.json': '2f3523a69ab100ddeede0396357d78d00973d5305e7f7cbb005157beb90d484f'},
+        'glb_sha256': 'dd19f09e71fe86ab3ba82fee871960561ca2f2f17ddce7bb3620ff7222cbd9a8',
+        'old': {'animations': 13, 'accessors': 2822, 'bufferViews': 2825, 'binary': 6304644}},
 }
 
 
@@ -112,7 +127,7 @@ def check(arm):
         bare_source(GLB, tmp / 'source.glb')
         assert hashlib.sha256((tmp / 'source.glb').read_bytes()).hexdigest() == MAIN_GLB_SHA256, 'old nineteen changed'
         (tmp / 'samples.json').write_text(json.dumps(data['canonical-samples.json']))
-        pivot.bake(tmp / 'source.glb', tmp / 'samples.json', tmp / 'out.glb', 4.0)
+        pivot.bake(tmp / 'source.glb', tmp / 'samples.json', tmp / 'out.glb', 4.0, rig=pm.RIG)
         mine, theirs = (tmp / 'out.glb').read_bytes(), GLB.read_bytes()
         if mine != theirs:  # another BLAS may round a float32 key differently: compare values
             (a, ab), (b, bb) = pivot._read(tmp / 'out.glb'), pivot._read(GLB)

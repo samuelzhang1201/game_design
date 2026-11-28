@@ -1,6 +1,7 @@
 extends GutTest
 ## Several units selected at once on the 3D map (spec 2026-10-07-army-split-and-ground
-## §5.6; plan ruling R4: the box is Shift + left drag, a plain drag pans), and the
+## §5.6; spec 2026-11-27-map3d-rts-drag-bindings: a left drag boxes, Shift adds,
+## a right drag pans), and the
 ## order menu's orders riding to each of them — each its own action, its own
 ## courier and its own charge. Driven through the view's real input path
 ## (Map3DView._gui_input), the way tests/map3d/test_map3d_military.gd clicks
@@ -121,12 +122,13 @@ func _right_click(v: Map3DView, at: Vector2) -> void:
 	_mouse(v, MOUSE_BUTTON_RIGHT, at, false)
 
 
-func _drag_motion(v: Map3DView, from: Vector2, to: Vector2) -> void:
+func _drag_motion(v: Map3DView, from: Vector2, to: Vector2, shift := true,
+		mask: MouseButtonMask = MOUSE_BUTTON_MASK_LEFT) -> void:
 	var m := InputEventMouseMotion.new()
 	m.position = to
 	m.relative = to - from
-	m.button_mask = MOUSE_BUTTON_MASK_LEFT
-	m.shift_pressed = true
+	m.button_mask = mask
+	m.shift_pressed = shift
 	v._gui_input(m)
 
 
@@ -190,13 +192,8 @@ func _touched(v: Map3DView, box: Rect2) -> Array:
 			and _is_land(c))
 
 
-func test_shift_drag_box_selects_the_units_inside() -> void:
-	var v := _view()
-	v.look_at_pack(_capital_xy(), AT_M)
-	await wait_process_frames(2)
-	# two units whose joint box touches no third
-	var box := Rect2()
-	var pair: Array = []
+## Two land units whose joint box touches no third: [box, [codes sorted]].
+func _box_of_two(v: Map3DView) -> Array:
 	var rects: Dictionary = v.unit_rects()
 	var marks: Array = rects.keys().filter(func(c: String) -> bool: return _is_land(c))
 	marks.sort()
@@ -208,23 +205,93 @@ func test_shift_drag_box_selects_the_units_inside() -> void:
 			var want := [String(marks[i]), String(marks[j])]
 			want.sort()
 			if hit == want and r.size.length() > Map3DInput.CLICK_SLOP * 2.0:
-				box = r
-				pair = want
-				break
-		if not pair.is_empty():
-			break
-	assert_eq(pair.size(), 2, "two units stand apart from the rest")
-	if pair.is_empty():
-		return
-	var target := v.target()
-	_mouse(v, MOUSE_BUTTON_LEFT, box.position, true, true)
-	_drag_motion(v, box.position, box.position + box.size * 0.5)
+				return [r, want]
+	return []
+
+
+func _box_drag(v: Map3DView, box: Rect2, shift: bool, lit: Array = []) -> void:
+	var before := v.selected_armies().duplicate()
+	_mouse(v, MOUSE_BUTTON_LEFT, box.position, true, shift)
+	_drag_motion(v, box.position, box.position + box.size * 0.5, shift)
 	assert_true(v.box_rect.has_area(), "the box is drawn while dragging")
-	_drag_motion(v, box.position + box.size * 0.5, box.end)
-	_mouse(v, MOUSE_BUTTON_LEFT, box.end, false, true)
-	assert_eq(v.selected_armies(), pair, "exactly the units inside, sorted")
-	assert_eq(v.target(), target, "the camera did not pan")
+	_drag_motion(v, box.position + box.size * 0.5, box.end, shift)
+	if not lit.is_empty():
+		assert_eq(v.lit_armies(), lit, "the held box lights what its release will select")
+		assert_eq(v.selected_armies(), before, "and selects nothing until release")
+		var lit_glows := 0
+		for c: String in lit:
+			var host := v._units.built_piece(c).get("node") as Node3D
+			var glow := host.get_node_or_null(Map3DUnitGlow.NAME) as GeometryInstance3D if host != null else null
+			if glow != null and glow.visible:
+				lit_glows += 1
+				assert_eq(float(glow.get_instance_shader_parameter("dim")), 1.0 if before.has(c)
+					else v._repo.bal("map3d_unit_glow_preview"), "the ones it would add glow fainter: " + c)
+		assert_gt(lit_glows, 0, "the preview glows under the pieces")
+	_mouse(v, MOUSE_BUTTON_LEFT, box.end, false, shift)
 	assert_false(v.box_rect.has_area(), "the box goes on release")
+
+
+func test_a_plain_left_drag_boxes_the_units_inside_replacing_the_selection() -> void:
+	var v := _view()
+	v.look_at_pack(_capital_xy(), AT_M)
+	await wait_process_frames(2)
+	var found := _box_of_two(v)
+	assert_false(found.is_empty(), "two units stand apart from the rest")
+	if found.is_empty():
+		return
+	var pair: Array = found[1]
+	var other := ""
+	for c: String in _marchers():
+		if not pair.has(c):
+			other = c
+	var target := v.target()
+	if other != "":
+		v.select_armies([other])
+	_box_drag(v, found[0], false, pair)
+	assert_eq(v.selected_armies(), pair, "exactly the units inside, sorted, the old one gone")
+	assert_eq(v.target(), target, "the camera did not pan")
+
+
+func test_shift_drag_adds_the_units_inside_to_the_selection() -> void:
+	var v := _view()
+	v.look_at_pack(_capital_xy(), AT_M)
+	await wait_process_frames(2)
+	var found := _box_of_two(v)
+	assert_false(found.is_empty(), "two units stand apart from the rest")
+	if found.is_empty():
+		return
+	var pair: Array = found[1]
+	var other := ""
+	for c: String in _marchers():
+		if not pair.has(c):
+			other = c
+	assert_ne(other, "", "a third unit to keep")
+	v.select_armies([other])
+	var target := v.target()
+	var want := pair + [other]
+	want.sort()
+	_box_drag(v, found[0], true, want)
+	assert_eq(v.selected_armies(), want, "the box's units join the one already chosen")
+	assert_eq(v.target(), target, "the camera did not pan")
+
+
+func test_a_right_drag_from_a_unit_pans_and_opens_no_menu() -> void:
+	var v := _view()
+	var menu := _menu_on(v)
+	v.look_at_pack(_capital_xy(), AT_M)
+	await wait_process_frames(2)
+	var two := _two_on_screen(v)
+	assert_false(two.is_empty())
+	if two.is_empty():
+		return
+	var at: Vector2 = two[0][1]
+	var target := v.target()
+	_mouse(v, MOUSE_BUTTON_RIGHT, at, true)
+	_drag_motion(v, at, at + Vector2(60, 20), false, MOUSE_BUTTON_MASK_RIGHT)
+	_mouse(v, MOUSE_BUTTON_RIGHT, at + Vector2(60, 20), false)
+	assert_ne(v.target(), target, "the camera panned")
+	assert_false(menu.visible, "a drag is not a click: no order menu")
+	assert_eq(v.selected_armies(), [], "nothing was selected")
 
 
 func test_one_march_sends_a_courier_to_each() -> void:
@@ -382,9 +449,9 @@ func test_an_empty_shift_box_closes_the_card() -> void:
 	assert_signal_emitted_with_parameters(v, "object_selected", [{}])
 
 
-## A Shift press whose release was lost leaves no box armed: the next plain
-## press-drag pans the camera.
-func test_a_plain_drag_after_a_lost_shift_release_pans() -> void:
+## A Shift press whose release was lost leaves nothing armed: the next plain
+## press-drag draws a box, never pans.
+func test_a_plain_drag_after_a_lost_shift_release_boxes() -> void:
 	var v := _view()
 	v.look_at_pack(_capital_xy(), AT_M)
 	await wait_process_frames(2)
@@ -398,7 +465,7 @@ func test_a_plain_drag_after_a_lost_shift_release_pans() -> void:
 	m.button_mask = MOUSE_BUTTON_MASK_LEFT
 	v._gui_input(m)
 	await wait_process_frames(2)
-	assert_false(v.box_rect.has_area(), "no box is drawn")
-	assert_ne(v.target(), target, "the camera panned")
+	assert_true(v.box_rect.has_area(), "a box is drawn")
+	assert_eq(v.target(), target, "the camera did not pan")
 	_mouse(v, MOUSE_BUTTON_LEFT, mid + Vector2(80, 30), false)
-	assert_eq(v.selected_armies(), [], "the release toggles nothing")
+	assert_false(v.box_rect.has_area(), "the box goes on release")

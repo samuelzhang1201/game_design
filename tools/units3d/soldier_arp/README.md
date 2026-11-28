@@ -86,7 +86,7 @@ Previews: `preview.py` (EEVEE, fixed three-quarter camera) → `preview/<CLIP>/`
 `Two Hand Club Combo` is not on this figure: it belongs to a longsword, no-shield one (owner).
 
 Open: ATTACK_VAR1 swings the shield flat at frame 9 (as the source clip does); game export
-(constraint-free skeleton like `archer_arp/export.py`, the `cc_weapon.*` sockets kept); whether
+(a constraint-free skeleton, the `cc_weapon.*` sockets kept); whether
 the lunging clip keeps its travel.
 
 ## Pivot clips (PIVOT_RIGHT / PIVOT_LEFT)
@@ -104,6 +104,8 @@ out, 4 s, positive pack turn = RIGHT; body yaw stays in the engine). Built witho
 
 Another body on the rig contract (the heavy infantry, the axemen) runs the same three steps with
 `pivot_native.gd … ARM` and `pivot_mapping.py --arm ARM` (`ARMS`: what its own MARCH and scale change).
+The militiaman is another skeleton (`RIG` `mil_rig`) whose skirt holds the passing frame with the legs
+(`HELD`, `NUDGE`; `tools/units3d/militia_arp/README.md`); `pivot.bake` takes his `rig`.
 
 `test_pivot_mapping.py` re-audits the committed solve and re-bakes the installed GLB byte for byte, per arm.
 Evidence: `docs/reviews/cluster-formations/evidence/locomotion/infantry/pivot-clip-acceptance.json`.
