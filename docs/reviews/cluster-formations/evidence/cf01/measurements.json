@@ -105,8 +105,8 @@
 		"res://assets/3D/units/axemen/axemen_axemen_atlas_mr.jpg.import": "6c562853e71ae3b84e43210d42fb0ccc580734db83bf53706f82f486a509be89",
 		"res://assets/3D/units/axemen/axemen_axemen_atlas_n.jpg": "dc1149255706f7d488936c18f6b316a6f66339661dd3b3debba2f1e78ca334d5",
 		"res://assets/3D/units/axemen/axemen_axemen_atlas_n.jpg.import": "837d4a5606836554a50ce1003814c8512a9af5751208ca3e5cc9d6bc8c6ebca6",
-		"res://assets/3D/units/cavalry/cavalry.glb": "358faa790b53f0157cc74691d57f92223a65fedbcf437cf2395be948c0ac3397",
-		"res://assets/3D/units/cavalry/cavalry.glb.import": "a0aaba5c3411f28d80a62a11e8f11037d362d222ce7adfb977e5c9c10c233d30",
+		"res://assets/3D/units/cavalry/cavalry.glb": "d23edc264552a542c988234f758263ab56cc995350410fbdf39c564d901e0f69",
+		"res://assets/3D/units/cavalry/cavalry.glb.import": "d9e72ef2c7bee2763b7766d6a0995b71de5fb64bb7234344e567df9f95bb1532",
 		"res://assets/3D/units/cavalry/cavalry_cavalry_atlas.jpg": "0119d3b0e7bc66ef68877c7375ab405f9d9d2230722a89645fed2952ea719cf1",
 		"res://assets/3D/units/cavalry/cavalry_cavalry_atlas.jpg.import": "545fb109774e0763665ec1060737195152572361ac5749fa3bc2c525ae7f48ed",
 		"res://assets/3D/units/cavalry/cavalry_cavalry_atlas_mr.jpg": "e0da151ba499c0f6be2faa8deae2f08b12155519a6fe8f62072de7458d5dc13e",
@@ -145,10 +145,10 @@
 		"res://assets/3D/units/royal/royal_royal_atlas_mr.jpg.import": "ce415cba84687cbd3bf659d4dec769d6a054d6d9462172e3b45a0f0f8c5bed92",
 		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg": "87dae2d5426bf52b5f4dd43676ce6a2bf92b9ff22e922e1ba98a8628caffe2ed",
 		"res://assets/3D/units/royal/royal_royal_atlas_n.jpg.import": "8bb704bc00b6c90fa6c91368ac1fae5a33833b74ac370fcb43615f23a5bae6a8",
-		"res://data/screens/map3d/army_art.csv": "a5bf9b79375f3bf980304ec666e2f5baca9a5c45952fe9d89b47a9e530571563",
-		"res://data/screens/map3d/balance.csv": "e81186839ca6f05b399224f1c7c9543957d503e2ccd2bdc3259724178e18cc0d",
+		"res://data/screens/map3d/army_art.csv": "b7f7429e05352c6506e74d052550695ccf2c02e00355b6773d1cf396a71fb23b",
+		"res://data/screens/map3d/balance.csv": "3813020ee080ac4122864cd5712c0775a2a9ba1e8f3d3b7e042f7c9f00c0be80",
 		"res://data/world/maps.csv": "cd856ebde844cdac7b8f370c5a51b414eecbb091b3a48bcc12de9a23bd775443",
-		"res://scenes/map3d/worlds/beria.tscn": "c665914748691603c93ba9dfda0aacf6887c36f9b022e80a6a382d00f7237e81",
+		"res://scenes/map3d/worlds/beria.tscn": "8ff1e9c897b62a6ba8f6da86aa6000e5f572a9b744aea93e00f5bf12ae6fc38a",
 		"res://scenes/models/units/archers.tscn": "775cfc3a438dfb1e43365741ccd5e6745f4090a258387d0ddc209a0902607a9a",
 		"res://scenes/models/units/axemen.tscn": "bddf8c926838e8576b5d54ff4370984b521d47d3977297b48c25663df3e15adc",
 		"res://scenes/models/units/cavalry.tscn": "2f305657cfc9b84cb39acee9e73f974bf0e529a650a58571dd5f9d3e98a13046",
@@ -156,7 +156,7 @@
 		"res://scenes/models/units/infantry.tscn": "69256e86dfd2d93050522bdcef422afa3ce3d4c2472d063752b7b085da848921",
 		"res://scenes/models/units/militia.tscn": "35f1417d1c72eea009b6d37a21f7649f0b9aab20015695b16af099a8036c522f",
 		"res://scenes/models/units/royal.tscn": "b9d7b89500a6778fa24aa0c53c2a016d229874e6a8fd2411284299c152a4c375",
-		"res://scripts/engine/army_system.gd": "3d1a3c0f6c8b77ba5455ac022798b2f5745c219d125459e111a3c53f64c3c2aa",
+		"res://scripts/engine/army_system.gd": "90f7bb23411b631f6acb957fa568baf206a522ca887a58eb4df25fbcc388b4c7",
 		"res://scripts/engine/art_table.gd": "ae374d656f22d6542b66b8a6176e608c8112d4f6711bb847f1bb72dd7cae531a",
 		"res://scripts/map3d/map3d_formation.gd": "32e2ec41417dac078eac796bea104cca5982963b578ae37c6e6859c5b9d1d720",
 		"res://scripts/map3d/map3d_geometry.gd": "64797a53505cff9bd849e9245107f9be9f73fbb78cc2d27ab9f58b71bfce9e4c",
@@ -594,18 +594,30 @@
 			"uncovered": "Between samples, blend shapes, runtime IK/settling, multi-player pose combinations and future clips; unclassified carried geometry retained."
 		},
 		"cavalry": {
-			"all_mesh_radius_m": 1024.67443758231,
+			"all_mesh_radius_m": 1181.4665959195,
 			"attack_only_vertices": 2020,
 			"body_radius_m": 799,
 			"deploy_min_depth_m": 3286,
 			"deploy_min_width_m": 8350,
-			"model_hash": "b7db4774d985d7d874a3354c0a2ea69c1b5750f53077ab556864c0372f740910",
+			"model_hash": "2a789ccbb9f9feeaf52f323677f7eae5f56b9297d1cb0a7b915612fbd7550100",
 			"radius_m": 798.712549912393,
 			"rank_pitch_m": 1688,
 			"sampled_clips": [
 				{
 					"clip": "ATTACK",
 					"length_s": 2.86666655540466,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "ATTACK_ARC",
+					"length_s": 1.70000004768372,
+					"player": "AnimationPlayer",
+					"samples": 17
+				},
+				{
+					"clip": "ATTACK_CLEAVE",
+					"length_s": 2.16666674613953,
 					"player": "AnimationPlayer",
 					"samples": 17
 				},
@@ -659,7 +671,7 @@
 				"simulation_scale": 363.752535284879,
 				"size": 1.075,
 				"stand_extent": [
-					0.490478336811066,
+					0.490478157997131,
 					1.22569763660431
 				],
 				"view_h_px": 1600.0,

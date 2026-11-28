@@ -167,3 +167,21 @@ the battle and the march:
 - DEATH and the other authored clips wait for their callers (a cavalry duel / fall column).
 - STANDBY's hind hooves stand 11 mm off the ground in the source (the solver seats its own stand; the
   resting figure shows the gap only at close zoom).
+
+## Two in-place strikes (2026-11-28)
+
+Owner 2026-11-24: 「1. 双手持矛，向前下方斜劈 2. 右手持矛，从下往上划过一个弧线」; 11-25: 「attack stab保持奔跑，
+我要求在混战中，骑兵冲刺进攻敌人的单位，发生实际的位移，另外两个新加的保持在原地」; 11-26: 「双手蓄力攻击的动作，
+左手和右手一起持矛，不要松开」; approved 11-26 (arc) and 11-28 (cleave: 「通过，装进游戏」).
+
+- `ATTACK_CLEAVE` (66 frames) and `ATTACK_ARC` (52 frames) ship in `cavalry.glb` beside ATTACK (the
+  rearing three stabs); GARRISON's guard is the lowered one both start and end in. Authoring, gates and
+  what does not work on this rig: the source folder's README (`Two in-place strikes`).
+- In the melee the three play by turns (`army_art.csv` `chains` `ATTACK:ATTACK;ATTACK_CLEAVE;ATTACK_ARC`),
+  each once, the guard between them, every rider on his own order and pauses (`Map3DClipChain`). Owner
+  2026-11-28, shown the reverse-grip strike's lance turning end for end at each join: 「三招都放」.
+- MARCH and the PIVOT pair are byte-for-byte the certified ones; the body radius is unchanged (cf01:
+  the lance is attack-only geometry), so no per-arm number moves. Every certificate is re-issued for the
+  hashed inputs (`cavalry.glb`, its import, `army_art.csv`, the cf01 measurements).
+- Not in this step: `ATTACK_STAB` as a real charge with displacement in the melee; the rearing strike in
+  the usual grip.

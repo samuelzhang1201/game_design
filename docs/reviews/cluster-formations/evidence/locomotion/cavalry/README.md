@@ -1,5 +1,13 @@
 # Cavalry locomotion evidence
 
+## Two in-place strikes (2026-11-28): certificate re-issued
+
+`cavalry.glb` gained ATTACK_CLEAVE and ATTACK_ARC (and GARRISON's lowered guard); MARCH and the PIVOT
+pair are the same source frames through the same export. `certificate.json` is re-issued on the new
+GLB, its import, `army_art.csv` (the cavalry `chains`) and the cf01 measurements: status
+**NUMERIC_PASS**, digest `464e64ab…`, the same bounds (contact 32990 µm) and footprint radius (804 m). Every other
+arm's certificate is re-issued for the same hashed inputs with a report equal to the one it replaces.
+
 ## The heavy knight (2026-11-21): certificate re-issued on the new figure
 
 The cavalry piece is now the ARP heavy knight on the armoured horse

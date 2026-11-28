@@ -359,7 +359,7 @@
    "string": "4.7.2-stable (official)",
    "timestamp": 0
   },
-  "sha256": "cc116113ff50fd9f52ac0e2ba55321a0aa149eb36b66eace947a1099012dd3c5",
+  "sha256": "fa40f4d9c98e18a33feecc2af88a61471772a91a9422d966ab73936cef70580d",
   "uniform": 512
  },
  "config": {
@@ -426,13 +426,13 @@
   "assets/3D/units/militia/militia_pivot_plan.json": "7785d3eea502cf4621aeb190ef49ea5686fa5d8ce5d245fd29e92941223b12dc",
   "data/army/balance.csv": "e7789ba5f28e4cd555ed8922c3d6597c6dd0027d2208c2891b1c264270136443",
   "data/army/unit_footprints.csv": "e23478a0e864546329a9e30912c703c0d22943e739e61cabdf3e14eb20102899",
-  "data/screens/map3d/army_art.csv": "a5bf9b79375f3bf980304ec666e2f5baca9a5c45952fe9d89b47a9e530571563",
-  "data/screens/map3d/balance.csv": "31acf897722aac166845e413adf611651ca56f1b271f6071f4ceb85c86d5a7f9",
-  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "33ca5ca575e4eda37deeb57504abd9a3af4ea6681c9d58aaf079724246c4f59f",
+  "data/screens/map3d/army_art.csv": "b7f7429e05352c6506e74d052550695ccf2c02e00355b6773d1cf396a71fb23b",
+  "data/screens/map3d/balance.csv": "3813020ee080ac4122864cd5712c0775a2a9ba1e8f3d3b7e042f7c9f00c0be80",
+  "docs/reviews/cluster-formations/evidence/cf01/measurements.json": "0b55a652d95d7f86c6ca774abf674ca3212efb392feabb5e5766b565c711b934",
   "scenes/models/units/militia.tscn": "35f1417d1c72eea009b6d37a21f7649f0b9aab20015695b16af099a8036c522f",
   "scripts/map3d/guide/infantry_pivot.md": "70568813b6872608baa5752eb0e42144d2066c1f334c825a46591a4f222f172a",
   "scripts/map3d/map3d_infantry_locomotion.gd": "ec3c26c6682d1685b15103db04f1a911237b4fc6e6bdf706422407361bfb79e3",
-  "scripts/map3d/map3d_infantry_pivot.gd": "f911767017eb70b68c7d2a77558089a5ee9beebb25b802d8ba8f4ab9847ef3f0",
+  "scripts/map3d/map3d_infantry_pivot.gd": "00e8d95600b94e7c338f812022b720054e21cdc86a9e69dea4eadf95a65829fa",
   "scripts/map3d/map3d_militia_locomotion.gd": "c2c209ca8075a9b349af4eece6936e470e2ea2204a3342deca843310e3e84c26",
   "scripts/map3d/map3d_pivot_provider.gd": "fb2343488fcf22707f3dca32055d5196b8dbfd5735966667d303961fad467a08",
   "tools/units3d/archer_arp/pivot_import.gd": "c1d3d6f09e6163fd0484c35ed86fc1caf108d63cf52bef36a4f11452b7d600b9"
@@ -445,11 +445,11 @@
    "MARCH"
   ],
   "contact_um": 24202,
-  "digest": "b9b2094708704b093418c8626f3cbb9560878cf052b084055dc5c28a1111ca6d",
+  "digest": "ab5742ee96049098c9348cc3af076825f33a09a39c39d52b9e48f5e86bf636db",
   "radius_m": 927,
   "turn_q": 400000
  },
- "payload_sha256": "b9b2094708704b093418c8626f3cbb9560878cf052b084055dc5c28a1111ca6d",
+ "payload_sha256": "ab5742ee96049098c9348cc3af076825f33a09a39c39d52b9e48f5e86bf636db",
  "report": {
   "bounds_um": {
    "contact": 24202,

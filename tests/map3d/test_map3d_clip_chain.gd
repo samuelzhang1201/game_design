@@ -80,3 +80,19 @@ func test_the_infantry_answers_every_action_and_strikes_once() -> void:
 		if named != "":
 			assert_eq(anim.get_animation(named).loop_mode, Animation.LOOP_NONE, clip + " plays once")
 	root.free()
+
+
+## The installed cavalry's chained strikes are in the model and play once (a looped
+## clip never finishes: the chain would stand on it), from and back to a looping guard.
+func test_the_cavalry_strikes_once() -> void:
+	var repo := SuiteData.repo()
+	var root := (load("res://assets/3D/units/cavalry/cavalry.glb") as PackedScene).instantiate()
+	var anim := Map3DUnits.find_anim(root)
+	var clips: Array = Map3DClipChain.of_art(repo.army_art["cavalry"]).get("ATTACK", [])
+	assert_true(clips.has("ATTACK_CLEAVE") and clips.has("ATTACK_ARC"), "the two in-place strikes are chained")
+	for clip: String in clips:
+		assert_eq(Map3DUnits.clip_named(anim, clip), clip, clip + " is in the model")
+		if anim.has_animation(clip):
+			assert_eq(anim.get_animation(clip).loop_mode, Animation.LOOP_NONE, clip + " plays once")
+	assert_eq(anim.get_animation("GARRISON").loop_mode, Animation.LOOP_LINEAR, "the guard between strikes loops")
+	root.free()
